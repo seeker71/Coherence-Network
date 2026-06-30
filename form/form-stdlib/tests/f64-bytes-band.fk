@@ -1,0 +1,45 @@
+; f64-bytes-band — f64 value -> 8 IEEE754 little-endian bytes emits four-way, byte-identical to the
+; struct.pack('<d', v) / clang oracle, computing the constant-pool literals fam-poly-pool hand-wrote.
+;
+; This is the EMIT-SIDE encoder the native transcendental lane needs: poly-pool (form-asm-poly-pool 31)
+; appended 1/6 and 1/120 as KNOWN little-endian byte lists; f64-bytes computes those eight bytes from the
+; value, so a COMPUTED coefficient (ln2, 1/2!, 1/5040, a learned scale) can fill a literal pool. Seven
+; reference values, each cross-checked bit-exact against Python struct.pack('<d', v):
+;   1/6   -> 85 85 85 85 85 85 197 63     (the poly-pool coefficient, recomputed not hand-typed)
+;   1/120 -> 17 17 17 17 17 17 129 63     (the poly-pool coefficient, recomputed not hand-typed)
+;   1.0   -> 0 0 0 0 0 0 240 63           (exponent 1023, zero mantissa: the byte-6/7 boundary)
+;   2.0   -> 0 0 0 0 0 0 0 64             (a positive exponent: byte-7 high bits)
+;   -2.0  -> 0 0 0 0 0 0 0 192            (the sign-bit path: top bit of byte 7)
+;   0.0   -> 0 0 0 0 0 0 0 0              (the zero special case)
+;   0.5   -> 0 0 0 0 0 0 224 63           (a NEGATIVE exponent: fq-exponent's down branch)
+;
+; Verdict 127 when every value lands all eight bytes (1+2+4+8+16+32+64). A single wrong byte (a bad field
+; split, a non-truncating divide, a round/eq type slip) drops the matching bit and the verdict falls.
+;
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk
+(do
+    (defn fbb-eqb (g i v) (if (eq (nth g i) v) 1 0))
+    (defn fbb-eq8 (g a b c d e f h k)
+      (mul (fbb-eqb g 0 a)
+        (mul (fbb-eqb g 1 b)
+          (mul (fbb-eqb g 2 c)
+            (mul (fbb-eqb g 3 d)
+              (mul (fbb-eqb g 4 e)
+                (mul (fbb-eqb g 5 f)
+                  (mul (fbb-eqb g 6 h) (fbb-eqb g 7 k)))))))))
+
+    (let v16   (f64-bytes (div 1.0 6.0)))
+    (let v120  (f64-bytes (div 1.0 120.0)))
+    (let v1    (f64-bytes 1.0))
+    (let v2    (f64-bytes 2.0))
+    (let vn2   (f64-bytes (sub 0.0 2.0)))
+    (let v0    (f64-bytes 0.0))
+    (let vhalf (f64-bytes 0.5))
+
+    (add (mul 1  (fbb-eq8 v16   85 85 85 85 85 85 197 63))
+      (add (mul 2  (fbb-eq8 v120  17 17 17 17 17 17 129 63))
+        (add (mul 4  (fbb-eq8 v1    0 0 0 0 0 0 240 63))
+          (add (mul 8  (fbb-eq8 v2    0 0 0 0 0 0 0 64))
+            (add (mul 16 (fbb-eq8 vn2   0 0 0 0 0 0 0 192))
+              (add (mul 32 (fbb-eq8 v0    0 0 0 0 0 0 0 0))
+                   (mul 64 (fbb-eq8 vhalf 0 0 0 0 0 0 224 63)))))))))

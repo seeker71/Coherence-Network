@@ -487,6 +487,7 @@ tensor-quant fks 4095
 q4k-dequant fks 4095
 q6k-dequant fks 4095
 f16-decode fks 4095
+f64-bytes fks 127
 transformer-numerics fks 4095
 softmax fks 1023
 transformer-block fks 511

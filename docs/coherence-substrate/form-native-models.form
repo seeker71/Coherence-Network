@@ -152,9 +152,21 @@
 ;        nonlinear op needs for its coefficients: ln2, RoPE base, poly terms). Execution witness
 ;        scripts/form_asm_rsqrt_witness.sh runs the bytes on the M4 bit-exact vs 1/sqrt(x) (irrational
 ;        1/sqrt(2) full-mantissa + fp-stress 1e8/1e-8), no rustc/clang in the compute. Receipt:
-;        commit_evidence_2026-06-29_form_asm_rsqrt.json. Remaining nonlinear rungs: exp (softmax — range
-;        reduction over the present fcvtzs/scvtf + a Horner polynomial with fa-fmov-imm coefficients),
-;        sin/cos (RoPE), then ll-buffer staging + the 28-layer fold.
+;        commit_evidence_2026-06-29_form_asm_rsqrt.json.
+;     A⁗. ✓ DONE — the EVAL ENGINE + its constant pool, the transcendental approximation machinery: a
+;        polynomial is what exp/sin/cos/gelu reduce to, folded by Horner over fused multiply-adds.
+;        form-asm-horner (31): fam-horner2 lands the first fa-fmadd and a degree-2 Horner over VFP-immediate
+;        coefficients. form-asm-poly-pool (31): fam-poly-pool lands the first fa-ldr-d-lit (PC-relative
+;        literal load) + a SELF-CONTAINED 16-byte f64 pool a function carries position-independently — the
+;        real coefficients (1/6, 1/120, ln2, 1/5040) are NOT VFP-immediate-expressible, so they live in the
+;        pool. f64-bytes (127, four-way fks): the EMIT-SIDE encoder — an f64 value -> its 8 IEEE754 LE pool
+;        bytes (the inverse of f16-decode, generalized to the f64 fields; floor-truncating decomposition on
+;        the four-way arithmetic floor, byte-identical to struct.pack('<d',v)). poly-pool HAND-wrote 1/6 as
+;        (85 85 85 85 85 85 197 63); f64-bytes COMPUTES it, so a derived/learned coefficient fills the pool.
+;        Receipts: commit_evidence_2026-06-29_form_asm_poly_pool.json, commit_evidence_2026-06-29_f64_bytes.json.
+;        Remaining nonlinear rungs: exp (softmax — range reduction over the present fcvtzs/scvtf + a degree-~6
+;        Horner over the pool, coefficients now machine-encodable via f64-bytes), sin/cos (RoPE), then
+;        ll-buffer staging + the 28-layer fold.
 ;     B. ✓ DONE — scripts/form_asm_matvec_witness.sh: fam-dot2's form-asm bytes → form-macho .o → ld -dylib →
 ;        dlopen+call → d0 MATCHES bit-exact ([2,3,5,7]→31, edge cases). The bytes proven four-way are the bytes
 ;        that ran. form-macho's wrap is ABI-agnostic; in-kernel float-call later wants a small dylib_call_f64ptr.
