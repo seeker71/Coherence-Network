@@ -1,0 +1,58 @@
+; f64-bytes.fk — encode an f64 value to its 8 IEEE754 little-endian bytes (the constant-pool literal form).
+;
+; The EMIT-SIDE inverse of f16-decode.fk (bits -> value), generalized to the f64 fields and producing the
+; 8-byte little-endian image a literal pool carries. fam-poly-pool (form-asm-poly-pool 31) hand-wrote the
+; transcendental coefficients as known LE byte lists — 1/6 = (85 85 85 85 85 85 197 63), 1/120 =
+; (17 17 17 17 17 17 129 63). That is the wall named in poly-pool's own note: a HAND pattern only emits a
+; KNOWN constant. This recipe computes those bytes FROM the value, so a COMPUTED exp/sin/gelu coefficient
+; (ln2, 1/2!, 1/3!, 1/5040, a learned scale) can fill the pool — the precondition for emitting any real
+; transcendental over a pool. The next nonlinear rung (exp for softmax) needs it.
+;
+; f64 = (sign 1 | exponent 11 | mantissa 52), bias 1023. The fields land across the 8 little-endian bytes:
+;   bytes 0..5  = the low 48 mantissa bits           bit i*8 .. i*8+7
+;   byte  6     = mantissa bits 48..51 (low nibble) | exponent bits 0..3 (high nibble)
+;   byte  7     = exponent bits 4..10 (low 7 bits)   | sign (top bit)
+; Pure arithmetic decomposition on the four-way floor (the format-arith / f16-decode posture): no bitwise
+; primitive, no new asm encoder. EVERY truncating divide is `floor` (format-arith's proven idiom), the byte
+; is `round`ed to an integer so it `eq`s the integer pool literal (AUTHORING.md verdict rule). The mantissa
+; integer is reconstructed EXACTLY as a whole-valued f64: ((|v|/2^e) - 1) * 2^52 is an exact dyadic <= 2^52,
+; the inverse of how the float was built — the round-trip property f64 arithmetic guarantees.
+;
+; Scope, named honestly like its kin (format-arith normal-range, f16-decode sign+normal+subnormal+zero):
+; sign + normal + zero are encoded. inf / nan (exponent all-ones) and subnormal (exponent 0, nonzero mant)
+; are out of scope — the transcendental coefficients this serves are all finite normals. Reuses
+; format-arith.fk's fq-exponent (the e with |v|/2^e in [1,2)) and fq-pow2 (fp64-exact powers of two).
+
+; --- floor-truncating modulo: a - floor(a/n)*n, for a >= 0, n > 0 (the proven truncation, not int-div) ---
+(defn fb-fmod (a n) (sub a (mul (floor (div a n)) n)))
+
+; --- the mantissa as a whole-valued f64: ((|v|/2^e) - 1) * 2^52, exact for a normal magnitude ---
+(defn fb-mantf (av e) (mul (sub (div av (fq-pow2 e)) 1.0) (fq-pow2 52)))
+
+; --- the biased exponent as a float: e + 1023 ---
+(defn fb-bexpf (e) (add (mul 1.0 e) 1023.0))
+
+; --- low mantissa byte i (0..5): (floor(m / 256^i)) mod 256, as an integer ---
+(defn fb-mbyte (m i) (round (fb-fmod (floor (div m (fq-pow2 (mul 8 i)))) 256.0)))
+
+; --- byte 6: mantissa bits 48..51 (floor(m/2^48) mod 16) | (bexp mod 16) << 4 ---
+(defn fb-byte6 (m bexpf)
+  (round (add (fb-fmod (floor (div m (fq-pow2 48))) 16.0)
+              (mul (fb-fmod bexpf 16.0) 16.0))))
+
+; --- byte 7: high 7 exponent bits (floor(bexp/16)) | sign << 7 ---
+(defn fb-byte7 (bexpf s) (round (add (floor (div bexpf 16.0)) (mul s 128.0))))
+
+; --- assemble the 8 LE bytes from a positive magnitude's mantissa-float m, biased-exp bexpf, sign s ---
+(defn fb-assemble (m bexpf s)
+  (list (fb-mbyte m 0) (fb-mbyte m 1) (fb-mbyte m 2) (fb-mbyte m 3)
+        (fb-mbyte m 4) (fb-mbyte m 5) (fb-byte6 m bexpf) (fb-byte7 bexpf s)))
+
+; --- compute the fields once (e via parameter, mantissa via parameter) — no `let` inside a defn body ---
+(defn fb-from-e (av e s) (fb-assemble (fb-mantf av e) (fb-bexpf e) s))
+(defn fb-mag (av s) (fb-from-e av (fq-exponent av) s))
+
+; --- the encoder: zero is the all-zero image; a negative value flips the sign bit of its magnitude ---
+(defn f64-bytes (v)
+  (if (eq v 0.0) (list 0 0 0 0 0 0 0 0)
+      (if (lt v 0.0) (fb-mag (sub 0.0 v) 1.0) (fb-mag v 0.0))))
