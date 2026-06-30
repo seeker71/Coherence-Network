@@ -1,0 +1,39 @@
+{
+  "title": "form-asm-fmov-dx — the GP<->FP bit-reinterpret pair emits four-way as Form->asm bytes + runs bit-exact on the M4 (the last non-synthesizable exp-lane primitive: 2^k/ldexp)",
+  "date": "2026-06-30",
+  "author": "Sema (Opus 4.8), autonomous native-frontier walk",
+  "stone": "The named next stone in fam-frintn's own receipt (commit_evidence_2026-06-30_form_asm_frintn.json, next_stones[3]: 'ldexp / 2^k scaling on the asm lane — build the f64 from k's integer exponent field'). The native exp lane reduces as k = round(x*log2e) (fam-frintn, on the lane), r = x - k*ln2 over the pooled ln2/log2e (fam-pool-fma, on the lane), exp(x) = 2^k * Horner(r) (the Horner poly, on the lane). The LAST missing piece is BUILDING 2^k = REINTERPRET((k+1023)<<52). Every other op on the lane either computes on f64 values or numerically converts (fa-scvtf gives the integer VALUE as a float, the WRONG thing for an exponent field). The one primitive that could NOT be synthesized from existing bytes is moving raw bits BETWEEN the integer and f64 register files. This brick adds that door — fa-fmov-d-x (bits->f64) and its matched reverse fa-fmov-x-d (f64->bits). Advances form-native-models.form 'GAPS — LLM INFERENCE' rung A (the nonlinear ops as form-asm bytes): the 2^k scaling exp/softmax need, plus the bit-manipulation floor (sign, NaN/inf, softmax max-subtract) every float recipe wants.",
+  "new_encoder": [
+    "fa-fmov-d-x (rd rn) — FMOV D<rd>, X<rn> (GP i64 bits -> f64 register, BIT REINTERPRET, NOT a numeric convert; bit pattern preserved). base 0x9E670000 | rn<<5 | rd, packed (1 32). Oracle: clang -O2 lowers `double f(unsigned long x){double d;__builtin_memcpy(&d,&x,8);return d;}` to `9e670000 fmov d0,x0`. DISTINCT from fa-scvtf (0x9E620000, which numerically converts the integer VALUE 5 -> 5.0); fmov-d-x preserves the BITS (0x3FF0000000000000 -> 1.0). This is the reusable win: the integer-bits-into-f64 door that 2^k/ldexp and every float-bit recipe need.",
+    "fa-fmov-x-d (rd rn) — FMOV X<rd>, D<rn> (f64 bits -> GP i64 register, BIT REINTERPRET, the reverse door). base 0x9E660000 | rn<<5 | rd. Oracle: `unsigned long f(double d){unsigned long x;__builtin_memcpy(&x,&d,8);return x;}` -> `9e660000 fmov x0,d0`. DISTINCT word from fmov d,x (opcode field 110 vs 111) — emitting the wrong one reverses the transfer direction. Matched pair: writes bits in / reads bits out, the floor for sign extraction, NaN/inf tests, comparison-free max."
+  ],
+  "recipe": "fam-fmov-bits () = (append (fa-fmov-d-x 0 0) (fa-ret)) in form-asm-matvec.fk — ABI x0 = i64 bits, returns d0 = the f64 those bits encode. 2 instructions = 8 bytes, byte-identical to the clang -O2 memcpy-reinterpret oracle.",
+  "proof_four_way": [
+    {
+      "band": "form/form-stdlib/tests/form-asm-fmov-dx-band.fk (NEW)",
+      "manifest_row": "form-asm-fmov-dx fks 15",
+      "verdict": 15,
+      "oracle": "clang -O2 otool -tvVj of `double f(unsigned long x){double d;__builtin_memcpy(&d,&x,8);return d;}` = `9e670000 fmov d0,x0` + `d65f03c0 ret` = 8 bytes, LE list (0 0 103 158 192 3 95 214). Reverse `9e660000 fmov x0,d0` LE (0 0 102 158).",
+      "claims": [
+        "1 — the program is 2 instructions = 8 bytes (len == 8)",
+        "2 — the FULL 8-byte program byte-equals the clang -O2 oracle (fa-conviction == 1)",
+        "4 — fmov d0,x0 (9e670000) — the new bits->f64 reinterpret encoder, byte-exact (fa-conviction == 1)",
+        "8 — fmov x0,d0 (9e660000) — the reverse f64->bits encoder, a DISTINCT word, byte-exact (fa-conviction == 1)"
+      ],
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-fmov-dx-band.fk",
+      "result": "-> 15 ; fourth arm: 1 band four-way (fkwu, bootstrap binary darwin-arm64, no clang) ; 1 ok, 0 divergent — Go=Rust=TS=fkwu agree on the 8-byte image. Crossed FIRST TRY (loop-free, no forward-reference/recursion surface)."
+    }
+  ],
+  "proof_on_hardware": {
+    "script": "scripts/form_asm_fmov_dx_witness.sh",
+    "image": "0000679e (fmov d0,x0) c0035fd6 (ret) = 8 bytes",
+    "path": "Form kernel emits fam-fmov-bits' 8-byte program -> form-macho mo-object-sym -> Mach-O .o (241 bytes) exporting _recipe -> ld -dylib + ad-hoc sign -> dlopen+call. No rustc/clang in the COMPUTE (clang only builds the dumb dlopen harness; the reinterpret is the Form-emitted fmov d0,x0).",
+    "result": "12/12 MATCH on M4 (arm64 macOS). (1) raw bit patterns reinterpret bit-for-bit: 0x3FF0000000000000->1.0, 0x4000...->2.0, 0xC000...->-2.0, 0x3FF8...->1.5, 0x0->0.0, 0x7FF0...->inf. (2) the EXACT native-ldexp use: recipe((k+1023)<<52) == ldexp(1.0,k) == 2^k for k in {0,5,-3,10,-10} -> {1, 32, 0.125, 1024, 0.0009765625}, bit-for-bit.",
+    "note": "The first GP<->FP bit-reinterpret on the witnessed native lane. The exp range-reduction SCALING (2^k) is now sovereign native bytes — with fam-frintn (k=round), fam-pool-fma (r), and the Horner poly already four-way + witnessed, every range-reduction primitive exp needs is form-emitted."
+  },
+  "no_regression": "Scoped validate carries core.fk + form-asm.fk + form-asm-matvec.fk; the additive encoder edit (two new defns, no change to existing fa-* bases) leaves every prior form-asm band's image identical. Siblings frintn/exp-coef-pool/poly-pool/horner/rsqrt/ss-sqrt/matvec re-check four-way unchanged.",
+  "design_note": "Design-with-reference held: before authoring, clang -O2 was probed (otool -tvVj) on the memcpy-reinterpret in both directions to pin the EXACT byte-shape and confirm the DISTINCT words — fmov d,x = 9e670000 (opcode 111), fmov x,d = 9e660000 (opcode 110), both distinct from fa-scvtf's 9e620000 numeric convert. The bit-derived bases (0x9E670000 / 0x9E660000) matched the otool oracle exactly. READ-THE-BODY held: confirmed only fa-fmov (d->d, 0x1E604000) and fa-fmov-imm existed — no GP<->FP variant — so this was a real gap, not a re-impl. The four-way proof and the 12-case hardware witness were both seconds; finding the named ripe stone (frintn's next_stones[3]) and pinning the two distinct bit-reinterpret words was the cost.",
+  "toolchain_free_claim": "body / c-bootstrap (fkwu crosses the band four-way as the darwin-arm64 bootstrap binary) / toolchain-free in the COMPUTE (the emit + reinterpret are Form bytes; clang is the oracle that PINS the bytes and the dumb dlopen harness, never the compute; ld/codesign carry resource-access per host-kernel.form) / platforms{mac: OBSERVED 12/12 on M4 arm64; windows: pending standing form-cli build floor; android: pending} / honest-floor: four-way + native witnessed on mac; windows/android rows pending per standard-receipt.",
+  "next_stones": "(1) exp on the native lane is now FULLY UNBLOCKED — every primitive is form-emitted + witnessed: k = round(x*log2e) (fam-frintn), r = x - k*ln2 (fam-pool-fma pooled ln2/log2e), Horner(r) (the poly lane), 2^k = reinterpret((k+1023)<<52) (THIS brick). The remaining work is COMPOSING them into one fam-exp program + a runtime shift to assemble (k+1023)<<52 in-register. (2) a runtime LSL-immediate (or 64-bit MUL by 2^52) encoder so the asm lane itself builds the exponent field k currently shifted by the harness — fa-fcvtzs (f64->i64) + fa-add-x-imm (+1023) exist; only the <<52 is missing in-register. (3) generalize fam-pool-fma to an n-coefficient pool (a Horner fold over a list of computed f64) — the shape a degree-~6 exp/sin Taylor series needs. (4) stage pool + matvec over ll-buffer for a real RMSNorm/SwiGLU layer.",
+  "witness_state": "at open: breathing, 0 silences. host-independent brick (form-asm bytes + local Mach-O witness); no deploy."
+}
