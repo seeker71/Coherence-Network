@@ -1,0 +1,182 @@
+; offer-ack-core.fk — the GENERIC offer/acknowledge control core.
+;
+; ONE mechanism — offer a cell, read its ack as exactly one of four —
+; from which the five BML/Form control primitives (fail, stop, choice,
+; exceptions, async) fall out as THIN expressions. Not five special-case
+; recipes: one core every primitive routes through.
+;
+; GROUND (docs/coherence-substrate/core-axioms.form,
+;         docs/coherence-substrate/offer-and-acknowledge.form):
+;
+;   axiom-5 offer    — "to run a cell and to speak to a cell are one act:
+;                      offer a cell with 0..many arg-cells; it is acknowledged
+;                      by EXACTLY ONE of {nothing, 0, 1, node}." Invocation and
+;                      communication are the same shape — so the kernel's own
+;                      invocation (a function-value applied to its args) IS the
+;                      offer; we compose it, we do not reinvent it.
+;   axiom-1 states   — nothing is first-class, the ground always available;
+;                      a TIMEOUT is nothing, never a separate error mode.
+;   axiom-4 boundary — the receiving cell sovereignly decides what it accepts;
+;                      "choice", "catch", "stop" are all the boundary deciding
+;                      which ack it honors — never throw/catch control flow.
+;   axiom-3          — terminal acks {nothing,0,1} rest; node recurs (one
+;                      production), exactly like a closed-and-recursive grammar.
+;
+; THE OFFER AS THE KERNEL'S INVOCATION
+;   An offered cell is a recipe: a 1-arg function-value that receives ONE
+;   args-list cell and acknowledges one of the four arms. oac-offer applies it
+;   — that application IS the kernel's invocation walk (the four-way-proven
+;   indirect call, tag 44; see higher-order-fn-arg-band.fk). "0..many args"
+;   ride as the single args-list cell, faithful to axiom-5's "0..many arg-cells".
+;
+; THE ACK VOCABULARY, REIFIED AS CELLS (so it is content-addressed and
+; introspectable, the way afferent-offer.fk reifies AO-NOTHING)
+;   The four arms are nodes under four blueprints. The ONE discriminator
+;   oac-kind reads the arm-blueprint and returns its integer tag — every
+;   primitive branches on THIS, never on a per-primitive shape.
+;
+;     NOTHING  → OAC-NOTHING   silence / decline / timeout (the ground)
+;     ZERO     → OAC-ZERO      received: no / false / not-this
+;     ONE      → OAC-ONE       received: the expected result (carries a payload)
+;     NODE     → OAC-NODE      a counter-offer: a cell back (re-enters the offer)
+;
+; Proof: form-stdlib/tests/offer-ack-core-band.fk → four-way (Go/Rust/TS/fkwu).
+
+;; --- the four ack-arm blueprints (substrate-resident) ---------------
+(let OAC-NOTHING (bp "OAC-NOTHING"))
+(let OAC-ZERO    (bp "OAC-ZERO"))
+(let OAC-ONE     (bp "OAC-ONE"))
+(let OAC-NODE    (bp "OAC-NODE"))
+
+;; the discriminator's integer vocabulary — the single set everything
+;; branches on. (axiom-1: nothing is first, the ground.)
+(defn oac-tag-nothing () 0)
+(defn oac-tag-zero    () 1)
+(defn oac-tag-one     () 2)
+(defn oac-tag-node    () 3)
+
+;; --- constructing each ack arm --------------------------------------
+;; nothing is a singleton CELL (one NodeID): every silence across every
+;; primitive is the SAME nothing, by content-addressing (axiom-3).
+(defn oac-nothing () (intern_node OAC-NOTHING (list)))
+;; 0 / 1 carry the state itself as their payload; node carries the cell back.
+(defn oac-zero ()        (intern_node OAC-ZERO (list (intern_trivial_int 0))))
+(defn oac-one  (payload) (intern_node OAC-ONE  (list payload)))
+(defn oac-node (cell)    (intern_node OAC-NODE (list cell)))
+
+;; the payload an ack carries (ONE for a result, NODE for the counter-offer).
+(defn oac-payload (ack) (head (node_children ack)))
+
+;; --- THE ONE DISCRIMINATOR ------------------------------------------
+;; oac-kind reads an ack's arm by NodeID identity and returns its tag.
+;; This is the single generic branch — fail/stop/choice/try/async all
+;; dispatch through it; none re-implements an ack discrimination.
+;; An interned node carries its Blueprint NodeID; node_category recovers it,
+;; and node_eq tests it against an arm-blueprint by content-addressing — the
+;; sibling pattern offers-in-flight.fk's oif-node-value? already uses.
+(defn oac-same-bp? (node arm-bp)
+    (if (node_eq (node_category node) arm-bp) 1 0))
+
+(defn oac-kind (ack)
+    (if (eq (oac-same-bp? ack OAC-NOTHING) 1) (oac-tag-nothing)
+        (if (eq (oac-same-bp? ack OAC-ZERO) 1) (oac-tag-zero)
+            (if (eq (oac-same-bp? ack OAC-ONE) 1) (oac-tag-one)
+                (oac-tag-node)))))
+
+;; sugar — every test below reads through oac-kind, never an arm directly.
+(defn oac-nothing? (ack) (if (eq (oac-kind ack) (oac-tag-nothing)) 1 0))
+(defn oac-zero?    (ack) (if (eq (oac-kind ack) (oac-tag-zero))    1 0))
+(defn oac-one?     (ack) (if (eq (oac-kind ack) (oac-tag-one))     1 0))
+(defn oac-node?    (ack) (if (eq (oac-kind ack) (oac-tag-node))    1 0))
+
+;; --- THE ONE OFFER --------------------------------------------------
+;; offer a cell (a 1-arg recipe) with its args-list; the ack it returns
+;; is the kernel's invocation answer — one of the four arms. This is the
+;; SECOND half of the core: everything that needs to run a cell runs it
+;; through here, so "invocation == communication" stays one act.
+(defn oac-offer (cell args) (cell args))
+
+; =====================================================================
+; THE FIVE — each a THIN expression over {oac-kind, oac-offer}.
+; None carries its own dispatch chain; the generic-check greps for that.
+; =====================================================================
+
+;; (1) FAIL — failure IS the silence-ack, first-class. Not an error
+;;     object: the absence held as a value (axiom-1). To fail is to ack
+;;     nothing; to ask "did it fail?" is to ask oac-kind for NOTHING.
+(defn oac-fail () (oac-nothing))
+(defn oac-failed? (ack) (oac-nothing? ack))
+
+;; (2) STOP — halt the offer chain: no further offer is made. The
+;;     boundary stops acknowledging (axiom-4). oac-stop is the ack that
+;;     means "do not continue"; an offer-chain driver checks oac-stopped?
+;;     and makes no further offer. Modeled as the nothing-ground: a halt
+;;     produces no result and no continuation — silence is the whole
+;;     answer (offer-and-acknowledge: "nothing-is-always-coherent").
+(defn oac-stop () (oac-nothing))
+(defn oac-stopped? (ack) (oac-nothing? ack))
+
+;; oac-run-chain — offer each cell in a chain over the SAME args until one
+;; STOPS (acks nothing) or the chain ends; returns the last non-nothing ack
+;; (the boundary deciding when to stop acknowledging). The driver branches
+;; ONLY on oac-kind (via oac-stopped?), never on a per-cell shape.
+(defn oac-run-chain (cells args last)
+    (if (eq (len cells) 0) last
+        (do (let ack (oac-offer (head cells) args))
+            (if (eq (oac-stopped? ack) 1) last
+                (oac-run-chain (tail cells) args ack)))))
+
+;; (3) CHOICE — offer alternatives in order; the FIRST ack that is NOT
+;;     nothing wins (the sovereign pick, axiom-4); all-nothing → nothing
+;;     (which IS fail). Pure: alternatives are data; the branch is one
+;;     oac-kind test (oac-nothing?), never an alt-specific dispatch.
+(defn oac-choice (alts args)
+    (if (eq (len alts) 0) (oac-nothing)
+        (do (let ack (oac-offer (head alts) args))
+            (if (eq (oac-nothing? ack) 1)
+                (oac-choice (tail alts) args)
+                ack))))
+
+;; (4) TRY — exceptions WITHOUT throw/catch. Offer the cell; if it acks
+;;     NOTHING (the failure-silence), the handler cell sovereignly decides
+;;     the recovery ack (axiom-4: the receiving boundary catches by
+;;     deciding); otherwise the value passes through untouched. The
+;;     "catch" is just: did oac-kind say NOTHING? Both offer and handler
+;;     go through oac-offer; the branch is the one discriminator.
+(defn oac-try (offer-cell args handler-cell)
+    (do (let ack (oac-offer offer-cell args))
+        (if (eq (oac-nothing? ack) 1)
+            (oac-offer handler-cell args)
+            ack)))
+
+;; (5) ASYNC — a PENDING offer. oac-async returns a future that holds the
+;;     deferred (cell, args); it is NOTHING until awaited (timeout==nothing,
+;;     axiom-1); oac-await resolves it to the ack. The pure pending/await
+;;     state-machine crosses four-way: a future is the LIQUID pending-state —
+;;     a transient list (cell, args), never an interned node, because the
+;;     deferred cell is a recipe (a function-value), and a function-value
+;;     lives only in the liquid (the higher-order indirect-call value), not
+;;     in the content-addressed body (it is not a NodeID — intern_node
+;;     rejects it, the verb-router function-NAME-not-VALUE wall). So the
+;;     future is exactly that liquid: held, peeked NOTHING, then awaited
+;;     through the ONE offer, the resolved value read by oac-kind like any
+;;     direct offer.
+;;
+;;     HONEST EDGE (band-level): this is the PENDING/AWAIT state-machine,
+;;     proven four-way. A real cross-thread/cross-process CHANNEL that lets
+;;     the offerer keep running while another carrier fulfils the future is
+;;     host-io (a thread/socket carrier) — that piece cannot cross four-way
+;;     and is named as the 3-kernel/unsupported edge, never hidden. The
+;;     scheduling is the carrier's; the offer/ack shape is fully here.
+(defn oac-async (cell args) (list cell args))
+(defn oac-future-cell (f) (head f))
+(defn oac-future-args (f) (head (tail f)))
+;; a fresh future is unresolved — peeking before await is NOTHING.
+(defn oac-peek (f) (oac-nothing))
+;; await resolves the pending offer: run the held cell over its args
+;; THROUGH the one offer. The resolved value is one of the four arms,
+;; read by oac-kind exactly like any direct offer.
+(defn oac-await (f)
+    (oac-offer (oac-future-cell f) (oac-future-args f)))
+
+0
