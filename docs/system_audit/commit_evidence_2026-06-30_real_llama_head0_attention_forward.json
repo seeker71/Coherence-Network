@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-30",
+  "thread_branch": "claude/inspiring-ellis-097290",
+  "commit_scope": "Join real llama3.2:3b GGUF weights into ONE proven Form attention-head forward: real Q4_K/Q6_K dequant (bit-exact against an independent clean-room oracle) feeds the already-proven RMSNorm/RoPE/causal-attention recipes for query-head 0 / kv-head 0 of the real GQA group, over a real 2-token sequence, closing the candidate-only/fullwidth-logits gap one rung further toward full hidden-state generation while naming the remaining Wo+FFN composition as a measured (not guessed) performance-ceiling blocker.",
+  "files_owned": [
+    "form/form-stdlib/real-gguf-llama-block-fwd.fk",
+    "scripts/real_llama_head0_attention_receipt.py",
+    "docs/system_audit/real_llama3.2_3b_head0_attention_forward_receipt_2026-06-30.json",
+    "docs/system_audit/commit_evidence_2026-06-30_real_llama_head0_attention_forward.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/gguf_weight_map_receipt.py --json /tmp/wm.json <real llama3.2:3b GGUF> -> verdict=pass; architecture=llama; tensor_count=255; types Q4_K=168 Q6_K=29 F32=58",
+      "python3 -c \"dump every GGUF metadata KV\" -> real config confirmed: n_embd=3072 n_head=24 n_head_kv=8 head_dim=128 n_ff=8192 n_layer=28 rope_theta=500000.0 rms_eps=9.999999747378752e-06; no rope_scaling.* keys present",
+      "form/form-kernel-go: go build -o bin-go.exe . -> builds clean",
+      "Form-level microbenchmarks isolated two real perf cliffs on this kernel build before the final timing was reached: (1) `substring`'s UTF-8 char-boundary snap (floorCharBoundary) silently corrupts AND slows raw-byte access for binary GGUF data -- fixed by reading bytes through the native str_byte_at instead of the hyphenated str-byte-at Form recipe; (2) `nth` inside a deep Form-level recursion measured ~3ms/call on this build (isolated: 3072 bare `(nth x i)` calls alone cost ~10s) -- fixed by dequantizing each Q4_K/Q6_K superblock to a literal list and handing both operands to the native `dot_product`, which is fast (~0.5s for 3072x3072 dot-product calls)",
+      "Independent oracle cross-check: clean-room Python q4k/q6k dequant (written from q4k-dequant.fk/q6k-dequant.fk's own documented block_q4_K/block_q6_K layout, no gguf/llama.cpp library installed) matched the Form recipe BIT-EXACT on 6 sample indices each for the REAL attn_q.weight (Q4_K), attn_k.weight (Q4_K), and attn_v.weight (Q6_K) tensors; F32 attn_norm.weight decode also bit-exact",
+      "scripts/real_llama_head0_attention_receipt.py <real GGUF path> -> oracle_dequant_match all true; ctx0 min/max -0.350641/0.263946 any_nan_or_inf=False; ctx1 min/max -0.089031/0.097393 any_nan_or_inf=False; fwd_wall_seconds=188.3"
+    ],
+    "results": [
+      "Real llama3.2:3b GGUF weights (Q4_K attn_q.weight/attn_k.weight, Q6_K attn_v.weight/token_embd.weight, F32 attn_norm.weight) loaded via this repo's existing gguf-read.fk + q4k-dequant.fk/q6k-dequant.fk chain, now joined directly from real file bytes (read_file_slice) rather than toy fixtures.",
+      "GQA: real config read from the file (n_head=24, n_head_kv=8, head_dim=128) confirms query-head 0 shares kv-head 0 (group=3); ONE real head/kv-head pair was composed end to end, not all 24/8 (see measured_blocker below for why).",
+      "The forward ran end-to-end for 2 real tokens: real token embedding -> real RMSNorm (real attn_norm.weight, real eps) -> real Q4_K/Q4_K/Q6_K projections -> real RoPE (real rope_theta=500000, no piecewise NTK scaling applied -- a named gap, this GGUF carries no rope_scaling.* metadata keys and its real rope_freqs.weight per-dimension scale tensor was read-able but not wired) -> real causal softmax attention over real V -> finite, sane-magnitude (no NaN/Inf) context vectors.",
+      "Wo and the FFN (gate/up/down) were NOT composed: they need the full real row count (3072 / 8192 / 8192 / 3072 rows) instead of the 128 used here. This kernel's matvec measured ~0.26-0.3s/real-row after the two perf fixes above; at that rate Wo+FFN's ~22,528 rows over even 2 tokens runs to hours, not minutes -- a measured, named blocker, not a guess or a fake composition.",
+      "Verification level: bit-exact independent-oracle cross-check for dequant (Q4_K/Q6_K/F32, on the real file's actual bytes) plus sanity (finite, plausible-magnitude) for the full composed forward. No llama.cpp/ollama parallel decode was run as an external full-model oracle in this pass."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "This recipe is single-kernel exploration (form-kernel-go only) against a real ~2GB local GGUF blob (~/.ollama/models/blobs/...) that is not present in CI and takes ~3 minutes per run; it is not registered as a fourth-arm band and does not gate CI. The underlying Q4_K/Q6_K dequant arithmetic this recipe composes (q4k-dequant.fk, q6k-dequant.fk, weight-load.fk, gguf-read.fk) is already four-way-proven by existing bands; this commit adds a real-data, real-architecture COMPOSITION on top, proven single-kernel with an independent oracle rather than four-way. CI is expected to stay green since no existing band/workflow references this new file."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "local form-kernel-go (Windows) against a real local GGUF blob",
+    "reason": "Local Form recipe + receipt script; no public HTTP/web surface changed. The deployed surface for this task is the local form-kernel-go binary and the durable receipt JSON."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Full hidden-state Llama generation remains pending: this closes one real attention head's real-weight forward, not all 24 query heads/8 kv heads, not Wo, not the FFN, not the remaining 27 decoder blocks, not the LM head softmax/argmax/decode loop. Each remaining rung is the SAME proven architecture (lgqa-block-causal, already four-way) over more real rows -- mechanical scaling, not new design -- gated purely by this single-kernel tree-walker's measured per-row throughput in this session."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell"
+  ],
+  "task_ids": [
+    "task-2026-06-30-real-llama-head0-attention-forward"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "honesty-standard"
+      ]
+    },
+    {
+      "contributor_id": "claude-opus-4.8",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "debugging",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude",
+    "version": "Claude Opus 4.8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/real-gguf-llama-block-fwd.fk (rgl-head0-fwd / rgl-head0-fwd-flat; header names the full honest scope)",
+    "scripts/real_llama_head0_attention_receipt.py",
+    "docs/system_audit/real_llama3.2_3b_head0_attention_forward_receipt_2026-06-30.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/real-gguf-llama-block-fwd.fk",
+    "scripts/real_llama_head0_attention_receipt.py",
+    "docs/system_audit/real_llama3.2_3b_head0_attention_forward_receipt_2026-06-30.json",
+    "docs/system_audit/commit_evidence_2026-06-30_real_llama_head0_attention_forward.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A new Form recipe (rgl-head0-fwd) and receipt harness prove that real llama3.2:3b GGUF weights, read directly from the real file via the existing four-way-proven gguf-read/q4k-dequant/q6k-dequant chain, flow through the proven Form attention numerics (RMSNorm, RoPE, causal GQA-slice attention) for one real head over a real 2-token sequence, producing finite real output -- the first time a real, named open-base model's actual weights have flowed through this repo's proven Form decoder architecture and produced a real forward output.",
+    "public_endpoints": [
+      "local form-kernel-go binary: form/form-kernel-go (built from source, not committed)",
+      "local receipt: docs/system_audit/real_llama3.2_3b_head0_attention_forward_receipt_2026-06-30.json"
+    ],
+    "test_flows": [
+      "python3 scripts/real_llama_head0_attention_receipt.py <path-to-llama3.2:3b.gguf> [receipt-json-path]"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "Claude Opus 4.8 in Claude Code",
+    "native_body_share": "form-kernel-go executed the real composition (dequant + RMSNorm + RoPE + causal attention) over real file bytes; the independent Python oracle only verified samples, it did not compute the proof",
+    "rented_oracle_share": "the rented frontier model wrote the Form recipe, diagnosed the two kernel perf cliffs, wrote the clean-room oracle, and synthesized this evidence",
+    "trust_matrix": {
+      "path": "real-weight composition on the native Go walker -> independent oracle verification -> receipt",
+      "grounded": "receipt values are grounded in a real local file's real bytes and a real subprocess run, sha256/offsets read live from the file, not asserted",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for the one-head-forward claim; insufficient for any full-model or full-generation claim",
+      "observed": true
+    }
+  }
+}

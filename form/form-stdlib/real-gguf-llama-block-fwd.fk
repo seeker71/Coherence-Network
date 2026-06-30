@@ -1,0 +1,233 @@
+; real-gguf-llama-block-fwd.fk — real llama3.2:3b GGUF weights, real architecture
+; constants, through the proven attention numerics (RMSNorm/RoPE/causal-attention)
+; for query-head 0 / kv-head 0 of the real GQA group (n_head=24, n_head_kv=8,
+; head_dim=128, rope_theta=500000, the metadata this repo's own GGUF-read chain
+; reads from the real `~/.ollama/models/blobs/sha256-dde5...` llama3.2:3b file).
+; String-indexed Q4_K/Q6_K dequant + direct-from-file matvec, composed with the
+; already-proven llama-gqa-block.fk / rope.fk / llama-numerics.fk numerics — no
+; new arithmetic, only a new BYTE-SOURCE for weights that were previously toy
+; fixtures or single superblocks.
+;
+; PROVEN, with the verification level named:
+;   - Q4_K dequant (attn_q.weight), Q6_K dequant (attn_v.weight), and F32 decode
+;     (attn_norm.weight) are BIT-EXACT against an independent clean-room Python
+;     oracle (scripts/real_llama_head0_attention_receipt.py's q4k_dequant_block /
+;     q6k_dequant_block, written from the same block_q4_K / block_q6_K layout
+;     this repo's q4k-dequant.fk / q6k-dequant.fk already document — not a
+;     borrowed gguf library) over the REAL file's bytes at the REAL
+;     attn_q.weight / attn_v.weight / attn_norm.weight offsets.
+;   - One real attention head (query-head 0, kv-head 0 — exactly one real GQA
+;     group) ran END TO END: real token embedding (Q6_K, token_embd.weight) ->
+;     real RMSNorm (real attn_norm.weight gain, real eps) -> real Q4_K/Q4_K/Q6_K
+;     projections (attn_q/attn_k/attn_v.weight) -> real RoPE (rope_theta=500000)
+;     -> real causal self-attention (softmax-weighted real V) -> finite, sane-
+;     magnitude context vectors, for a real 2-token sequence. Sanity-checked
+;     (no NaN, plausible activation-range magnitudes), not cross-checked against
+;     an external full-model oracle (llama.cpp/ollama were not run as a parallel
+;     decode in this pass).
+;
+; NOT composed, and why (a measured blocker, not a guess): Wo and the FFN
+; (gate/up/down) need the FULL real row count per matrix (3072 / 8192 / 8192 /
+; 3072 rows) rather than the 128 used here. This file's matvec measured ~0.26-
+; 0.3s per real Q4_K row on this single-kernel Go tree-walker (see commit
+; evidence for the microbenchmarks that found and fixed two real perf cliffs —
+; substring's UTF-8 char-boundary snap, and nth() inside deep recursion — before
+; landing at this rate). At that rate the remaining ~22,528 rows needed for
+; Wo+FFN, across even 2 tokens, run to hours, not minutes; composing them now
+; would either fake the missing heads (zero-padding 23/24 query heads' context
+; into Wo) or simply not finish in this session. Scaling this SAME proven join
+; to all 24 query heads / 8 kv heads / Wo / FFN is mechanical, not a new design
+; — it is named as the next stone, not silently skipped.
+;
+; rope_freqs.weight (a real 64-float per-dimension scaling tensor this exact
+; GGUF carries) is NOT applied — this file uses rope-cfg(500000.0, 1.0, 1.0,
+; 4.0, 8192.0), where factor=1.0 collapses rope-cfg-llama3's piecewise NTK
+; scaling to a no-op (pure base-500000 rotation). The file's metadata carries
+; no rope_scaling.* keys, so there is no metadata-driven formula to apply
+; faithfully; wiring rope_freqs.weight as an alternate per-dimension scale path
+; is a named gap, not a guess at its sign/orientation convention.
+;
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/q4k-dequant.fk form-stdlib/q6k-dequant.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk
+;
+; NOTE: byte access here uses the NATIVE str_byte_at (pure s[i] indexing), not the
+; hyphenated str-byte-at Form recipe (substring+ord). On the Go kernel, `substring`
+; floors both window ends to a UTF-8 char boundary (floorCharBoundary) — correct for
+; text, but WRONG for raw GGUF binary bytes: a byte in 0x80-0xBF (a UTF-8 continuation
+; pattern, ~25% of uniformly-random bytes) gets silently snapped to a different byte,
+; and the snap-scan also explains a real perf cliff on long continuation-byte runs.
+; str-byte-at.fk's own header says str_byte_at "is NOT correctly emitted into the 4th
+; kernel (fkwu) — returns 0", which is why proven four-way bands route byte access
+; through the hyphenated wrapper instead. This file is single-kernel exploration (Go),
+; not a four-way-proven band, so it takes the native directly; reconciling the two
+; (a byte accessor that is BOTH UTF-8-snap-free on Go AND fkwu-correct) is a named gap
+; for whoever lifts this into a proven band, not a guess made here.
+
+(do
+    ; --- little-endian readers over a STRING (no list materialization) ---
+    (defn rgl-u32-le (s off)
+        (add (str_byte_at s off)
+        (add (mul 256 (str_byte_at s (add off 1)))
+        (add (mul 65536 (str_byte_at s (add off 2)))
+             (mul 16777216 (str_byte_at s (add off 3)))))))
+    (defn rgl-u16-le (s off) (add (str_byte_at s off) (mul 256 (str_byte_at s (add off 1)))))
+    (defn rgl-f32 (s off) (fd-value (rgl-u32-le s off) 8 23))
+    (defn rgl-f16 (s off) (fd-f16 (rgl-u16-le s off)))
+
+    ; --- Q4_K string-indexed dequant: s is ONE 144-byte superblock string, i in 0..255 ---
+    ; mirrors q4k-dequant.fk's q4k-scale/q4k-min/q4k-at exactly, reading scales[12] at s[4:16)
+    ; and qs[128] at s[16:144) via str_byte_at instead of nth on a materialized list.
+    (defn rgl-q4k-scale (s j)
+        (if (lt j 4)
+            (q4k-mod (str_byte_at s (add 4 j)) 64)
+            (add (q4k-mod (str_byte_at s (add 4 (add j 4))) 16)
+                 (mul (div (str_byte_at s (add 4 (sub j 4))) 64) 16))))
+    (defn rgl-q4k-min (s j)
+        (if (lt j 4)
+            (q4k-mod (str_byte_at s (add 4 (add j 4))) 64)
+            (add (div (str_byte_at s (add 4 (add j 4))) 16)
+                 (mul (div (str_byte_at s (add 4 j)) 64) 16))))
+    (defn rgl-q4k-qb (s i) (str_byte_at s (add 16 (add (mul (q4k-c i) 32) (q4k-l i)))))
+    (defn rgl-q4k-at (s i)
+        (sub (mul (mul (rgl-f16 s 0) (rgl-q4k-scale s (q4k-sidx i)))
+                  (q4k-nib (rgl-q4k-qb s i) (q4k-half i)))
+             (mul (rgl-f16 s 2) (rgl-q4k-min s (q4k-sidx i)))))
+    ; d/dmin are CONSTANT per superblock — decoding them once per call (not once per
+    ; element) matters: f16 decode walks a pow2 series (O(exponent) steps), so doing
+    ; it 256x per superblock instead of once was the dominant cost in a first cut.
+    (defn rgl-q4k-at-dm (s i d dmin)
+        (sub (mul (mul d (rgl-q4k-scale s (q4k-sidx i)))
+                  (q4k-nib (rgl-q4k-qb s i) (q4k-half i)))
+             (mul dmin (rgl-q4k-min s (q4k-sidx i)))))
+
+    ; --- Q6_K string-indexed dequant: s is ONE 210-byte superblock string, i in 0..255 ---
+    (defn rgl-q6k-nib (s i)
+        (if (eq (div (q6k-g i) 2) 0)
+            (q6k-mod (str_byte_at s (q6k-qlidx i)) 16)
+            (div (str_byte_at s (q6k-qlidx i)) 16)))
+    (defn rgl-q6k-hi (s i)
+        (q6k-mod (div (str_byte_at s (add 128 (add (mul (q6k-h i) 32) (q6k-l i)))) (q6k-pow4 (q6k-g i))) 4))
+    (defn rgl-q6k-q (s i) (sub (add (rgl-q6k-nib s i) (mul (rgl-q6k-hi s i) 16)) 32))
+    (defn rgl-q6k-sc (s i) (q6k-s8 (str_byte_at s (add 192 (add (mul (q6k-h i) 8) (add (q6k-is i) (mul 2 (q6k-g i))))))))
+    (defn rgl-q6k-at (s i) (mul (mul (rgl-f16 s 208) (rgl-q6k-sc s i)) (rgl-q6k-q s i)))
+
+    ; --- per-superblock dequant to a LITERAL 256-list, then a NATIVE dot_product ---
+    ; A first cut accumulated via (nth x i) inside a 256-deep Form recursion; on this
+    ; kernel build that measured ~3-4ms/element (a real row: ~10s) versus the native
+    ; dot_product loop measured at nanosecond-class per element. nth itself was the
+    ; cliff (isolated by a microbench: 3072 (nth x i) calls alone cost ~10s on this
+    ; build, while passing the same list unchanged through 3072 recursive frames that
+    ; never call nth, or that call dot_product instead, cost ~0.1-0.5s) — so the fix
+    ; is dequantizing each superblock to a real list and handing BOTH operands to the
+    ; native dot_product, not threading index-based nth lookups through recursion.
+    (defn rgl-q4k-sb-list (s i d dmin)
+        (if (eq i 256) (empty) (cons (rgl-q4k-at-dm s i d dmin) (rgl-q4k-sb-list s (add i 1) d dmin))))
+    (defn rgl-q4k-sb-dot (s xseg)
+        (dot_product (rgl-q4k-sb-list s 0 (rgl-f16 s 0) (rgl-f16 s 2)) xseg))
+
+    (defn rgl-q6k-sb-list-d (s i d)
+        (if (eq i 256) (empty) (cons (mul (mul d (rgl-q6k-sc s i)) (rgl-q6k-q s i)) (rgl-q6k-sb-list-d s (add i 1) d))))
+    (defn rgl-q6k-sb-dot (s xseg)
+        (dot_product (rgl-q6k-sb-list-d s 0 (rgl-f16 s 208)) xseg))
+
+    ; --- row dot: k/256 superblocks read straight from the real file, one read_file_slice
+    ; each; x's matching 256-wide segment is sliced with tb-vslice (head/tail based, no nth). ---
+    (defn rgl-row-dot-q4k-loop (path row-start k x sb acc)
+        (if (eq sb (div k 256)) acc
+            (rgl-row-dot-q4k-loop path row-start k x (add sb 1)
+                (add acc (rgl-q4k-sb-dot (read_file_slice path (add row-start (mul sb 144)) 144)
+                                          (tb-vslice x (mul sb 256) 256))))))
+    (defn rgl-row-dot-q4k (path row-start k x) (rgl-row-dot-q4k-loop path row-start k x 0 0.0))
+
+    (defn rgl-row-dot-q6k-loop (path row-start k x sb acc)
+        (if (eq sb (div k 256)) acc
+            (rgl-row-dot-q6k-loop path row-start k x (add sb 1)
+                (add acc (rgl-q6k-sb-dot (read_file_slice path (add row-start (mul sb 210)) 210)
+                                          (tb-vslice x (mul sb 256) 256))))))
+    (defn rgl-row-dot-q6k (path row-start k x) (rgl-row-dot-q6k-loop path row-start k x 0 0.0))
+
+    ; --- matvec over m rows (each row_bytes apart), k cols ---
+    (defn rgl-matvec-q4k-loop (path tstart row_bytes k x r m)
+        (if (eq r m) (empty)
+            (cons (rgl-row-dot-q4k path (add tstart (mul r row_bytes)) k x)
+                  (rgl-matvec-q4k-loop path tstart row_bytes k x (add r 1) m))))
+    (defn rgl-matvec-q4k (path tstart row_bytes k x m) (rgl-matvec-q4k-loop path tstart row_bytes k x 0 m))
+
+    (defn rgl-matvec-q6k-loop (path tstart row_bytes k x r m)
+        (if (eq r m) (empty)
+            (cons (rgl-row-dot-q6k path (add tstart (mul r row_bytes)) k x)
+                  (rgl-matvec-q6k-loop path tstart row_bytes k x (add r 1) m))))
+    (defn rgl-matvec-q6k (path tstart row_bytes k x m) (rgl-matvec-q6k-loop path tstart row_bytes k x 0 m))
+
+    ; --- per-token projection sequences (xs is a list of position-vectors) ---
+    (defn rgl-proj-seq-q4k (path tstart row_bytes k m xs)
+        (if (eq (len xs) 0) (empty)
+            (cons (rgl-matvec-q4k path tstart row_bytes k (head xs) m)
+                  (rgl-proj-seq-q4k path tstart row_bytes k m (tail xs)))))
+    (defn rgl-proj-seq-q6k (path tstart row_bytes k m xs)
+        (if (eq (len xs) 0) (empty)
+            (cons (rgl-matvec-q6k path tstart row_bytes k (head xs) m)
+                  (rgl-proj-seq-q6k path tstart row_bytes k m (tail xs)))))
+
+    ; --- F32 1D vector reader (norm weights): one read_file_slice, then decode n floats ---
+    (defn rgl-f32-vec-loop (s i n)
+        (if (eq i n) (empty) (cons (rgl-f32 s (mul i 4)) (rgl-f32-vec-loop s (add i 1) n))))
+    (defn rgl-read-f32-vec (path start n)
+        (rgl-f32-vec-loop (read_file_slice path start (mul n 4)) 0 n))
+
+    ; --- Q6_K full-row vector reader (token embeddings): k/256 superblocks, list built once ---
+    (defn rgl-q6k-sb-vec-loop (s i)
+        (if (eq i 256) (empty) (cons (rgl-q6k-at s i) (rgl-q6k-sb-vec-loop s (add i 1)))))
+    (defn rgl-q6k-row-vec-loop (path row-start k sb)
+        (if (eq sb (div k 256)) (empty)
+            (tb-cat (rgl-q6k-sb-vec-loop (read_file_slice path (add row-start (mul sb 210)) 210) 0)
+                    (rgl-q6k-row-vec-loop path row-start k (add sb 1)))))
+    (defn rgl-read-token-embed (path tensor-start row_bytes k token-id)
+        (rgl-q6k-row-vec-loop path (add tensor-start (mul token-id row_bytes)) k 0))
+
+    ; --- THE JOIN: one real attention head (query-head 0 / kv-head 0, the real GQA
+    ; group), two real tokens, real weights end to end. Offsets are the llama3.2:3b
+    ; absolute byte starts this repo's own gguf-read.fk chain resolves (content-
+    ; addressed against the real file by scripts/gguf_weight_map_receipt.py — passed
+    ; in here rather than re-walked, since the receipt script already verified them
+    ; against the live GGUF header/tensor-info table for the exact file in use). ---
+    (defn rgl-head0-fwd
+        (path token-embd-start token-embd-row-bytes attn-norm-start
+         attn-q-start attn-k-start attn-v-start
+         tok0-id tok1-id eps rope-theta)
+        (do
+            (let HD 128)
+            (let scale (div 1.0 (tn-sqrt 128.0)))
+            (let tok0 (rgl-read-token-embed path token-embd-start token-embd-row-bytes 3072 tok0-id))
+            (let tok1 (rgl-read-token-embed path token-embd-start token-embd-row-bytes 3072 tok1-id))
+            (let g1 (rgl-read-f32-vec path attn-norm-start 3072))
+            (let n0 (ln-rmsnorm tok0 g1 eps))
+            (let n1 (ln-rmsnorm tok1 g1 eps))
+            (let q0 (rgl-matvec-q4k path attn-q-start 1728 3072 n0 128))
+            (let q1 (rgl-matvec-q4k path attn-q-start 1728 3072 n1 128))
+            (let k0 (rgl-matvec-q4k path attn-k-start 1728 3072 n0 128))
+            (let k1 (rgl-matvec-q4k path attn-k-start 1728 3072 n1 128))
+            (let v0 (rgl-matvec-q6k path attn-v-start 2520 3072 n0 128))
+            (let v1 (rgl-matvec-q6k path attn-v-start 2520 3072 n1 128))
+            ; factor=1.0 -> rope-cfg-llama3's piecewise NTK scaling collapses to a
+            ; no-op (pure base-`rope-theta` rotation) — see the file header for why.
+            (let cfg (rope-cfg rope-theta 1.0 1.0 4.0 8192.0))
+            (let q0r (rope-scaled q0 0 HD cfg))
+            (let q1r (rope-scaled q1 1 HD cfg))
+            (let k0r (rope-scaled k0 0 HD cfg))
+            (let k1r (rope-scaled k1 1 HD cfg))
+            (let ctx (tb-attn-seq-causal (list q0r q1r) (list k0r k1r) (list v0 v1) scale))
+            (list tok0 tok1 n0 n1 q0 k0 v0 ctx)))
+
+    ; flat-list wrapper: the two real 128-wide context vectors, concatenated, for a
+    ; receipt harness to parse without walking nested Form lists.
+    (defn rgl-head0-fwd-flat
+        (path token-embd-start token-embd-row-bytes attn-norm-start
+         attn-q-start attn-k-start attn-v-start
+         tok0-id tok1-id eps rope-theta)
+        (do
+            (let r (rgl-head0-fwd path token-embd-start token-embd-row-bytes attn-norm-start
+                                   attn-q-start attn-k-start attn-v-start tok0-id tok1-id eps rope-theta))
+            (let ctx (nth r 7))
+            (tb-cat (nth ctx 0) (nth ctx 1))))
+
+    0)

@@ -1,0 +1,147 @@
+{
+  "claim": "Real llama3.2:3b GGUF weights (Q4_K attn_q/attn_k, Q6_K attn_v/token_embd, F32 attn_norm) flow through the proven Form attention numerics (RMSNorm, RoPE, causal self-attention) for query-head 0 / kv-head 0 of the real GQA group, over a real 2-token sequence, producing finite real output.",
+  "composition": {
+    "ctx0_sample": [
+      0.026520396589717398,
+      -0.04745041903059216,
+      0.032233875031010314,
+      -0.08166092258986701,
+      -0.058167651947789396,
+      0.010113386880654432,
+      0.007629394689077518,
+      0.09903676220409002
+    ],
+    "ctx0_stats": {
+      "any_nan_or_inf": false,
+      "len": 128,
+      "max": 0.2639456351937007,
+      "min": -0.3506406627224185,
+      "sum": 0.09128187006480228
+    },
+    "ctx1_sample": [
+      -0.029970874265509637,
+      -0.00928505411304932,
+      0.04525511559496288,
+      -0.013763477689949762,
+      -0.0301578496400253,
+      -0.04400567673943424,
+      -0.007563208062570689,
+      0.022894685906287238
+    ],
+    "ctx1_stats": {
+      "any_nan_or_inf": false,
+      "len": 128,
+      "max": 0.09739277965146874,
+      "min": -0.08903055978014149,
+      "sum": -0.07557172554543326
+    },
+    "fwd_wall_seconds": 188.28,
+    "rope_scaling": "factor=1.0 (no-op): this GGUF carries no rope_scaling.* metadata keys, so the published Llama-3.2 NTK piecewise scaling (factor 32/low 1/high 4/orig_ctx 8192) was NOT applied; rope_freqs.weight (a real 64-float per-dimension scale tensor this file DOES carry) was also not applied. Both are named gaps, not guesses.",
+    "scope": "one real attention head (query-head 0 / kv-head 0), 2 real tokens, real config",
+    "tokens": {
+      "tok0_id": 100,
+      "tok1_id": 200
+    }
+  },
+  "kernel": "form-kernel-go (single-kernel exploration; not a four-way-proven band)",
+  "not_composed": {
+    "FFN_gate_up_down": "needs 8192+8192+3072 = 19456 rows",
+    "Wo": "needs all 3072 rows (24 heads' concatenated context); only 128 (1 head) computed",
+    "measured_blocker": "this single-kernel (Go tree-walker) Form recipe measured ~0.26-0.3s per real Q4_K matvec row after fixing two perf cliffs (substring's UTF-8 char-boundary snap corrupting/slowing binary byte access, and nth() inside deep Form recursion costing ~3ms/call on this build) by routing byte access through the native str_byte_at and dot products through the native dot_product. At that rate, Wo+FFN's ~22,528 rows across even 2 tokens would take on the order of hours, not minutes, in this session."
+  },
+  "real_architecture_config": {
+    "head_dim": 128,
+    "n_embd": 3072,
+    "n_ff": 8192,
+    "n_head": 24,
+    "n_head_kv": 8,
+    "n_layer": 28,
+    "rms_eps": 9.999999747378752e-06,
+    "rope_theta": 500000.0,
+    "source": "read from this exact GGUF file's own metadata KV table, not guessed"
+  },
+  "receipt_kind": "real-llama3.2-3b-head0-attention-forward",
+  "recipe": "form/form-stdlib/real-gguf-llama-block-fwd.fk (rgl-head0-fwd / rgl-head0-fwd-flat)",
+  "source_gguf": {
+    "architecture": "llama",
+    "path": "C:\\Users\\umuff\\.ollama\\models\\blobs\\sha256-dde5aa3fc5ffc17176b5e8bdc82f587b24b2678c6c66101bf7da77af9f7ccdff",
+    "size_bytes": 2019377376,
+    "tensor_count": 255
+  },
+  "total_wall_seconds": 188.67,
+  "verification": {
+    "form_recipe_samples": {
+      "attn_k.weight": {
+        "0": -0.0022430419921875,
+        "1": -0.1060333251953125,
+        "2": 0.049652099609375,
+        "31": -0.08008575439453125,
+        "100": 0.09853363037109375,
+        "255": -0.00693511962890625
+      },
+      "attn_q.weight": {
+        "0": -0.03815317153930664,
+        "1": 0.023768901824951172,
+        "2": 0.07021045684814453,
+        "31": 0.023768901824951172,
+        "100": 0.06684017181396484,
+        "255": 0.00565338134765625
+      },
+      "attn_v.weight": {
+        "0": 0.015393376350402832,
+        "1": 0.006297290325164795,
+        "2": 0.002798795700073242,
+        "31": -0.012917518615722656,
+        "100": -0.01476287841796875,
+        "255": 0.0
+      }
+    },
+    "level": "bit_exact_independent_oracle_plus_sanity",
+    "oracle_dequant_match": {
+      "attn_k.weight": true,
+      "attn_q.weight": true,
+      "attn_v.weight": true
+    },
+    "oracle_method": "clean-room Python re-implementation of block_q4_K / block_q6_K per the documented layout in form-stdlib/q4k-dequant.fk / q6k-dequant.fk (no gguf/llama.cpp library used as the oracle \u2014 none is installed on this machine; verified via `pip show gguf` returning not found)",
+    "oracle_samples": {
+      "attn_k.weight": {
+        "0": -0.0022430419921875,
+        "1": -0.1060333251953125,
+        "2": 0.049652099609375,
+        "31": -0.08008575439453125,
+        "100": 0.09853363037109375,
+        "255": -0.00693511962890625
+      },
+      "attn_norm.weight (first 4)": [
+        0.064453125,
+        0.09765625,
+        0.39453125,
+        0.0634765625
+      ],
+      "attn_q.weight": {
+        "0": -0.03815317153930664,
+        "1": 0.023768901824951172,
+        "2": 0.07021045684814453,
+        "31": 0.023768901824951172,
+        "100": 0.06684017181396484,
+        "255": 0.00565338134765625
+      },
+      "attn_v.weight": {
+        "0": 0.015393376350402832,
+        "1": 0.006297290325164795,
+        "2": 0.002798795700073242,
+        "31": -0.012917518615722656,
+        "100": -0.01476287841796875,
+        "255": 0.0
+      }
+    },
+    "sample_indices": [
+      0,
+      1,
+      2,
+      31,
+      100,
+      255
+    ]
+  }
+}

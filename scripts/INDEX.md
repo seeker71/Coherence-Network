@@ -280,6 +280,7 @@
 | [public_api_rendezvous_receipt.sh](public_api_rendezvous_receipt.sh) | public_api_rendezvous_receipt.sh — live public API nonce-hash rendezvous receipt. |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
+| [real_llama_head0_attention_receipt.py](real_llama_head0_attention_receipt.py) | real_llama_head0_attention_receipt.py — proves real llama3.2:3b GGUF weights flow |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
 | [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | regen_fkwu_bootstrap.sh — maintainer-only: emit form-stdlib/bootstrap/fkwu-uni.c via bin-go. |
