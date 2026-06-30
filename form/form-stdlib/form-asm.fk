@@ -190,6 +190,19 @@
     (defn fa-scvtf (rd rn) (fa-asm 2657222656 (list 1 32) (list rd rn)))
     ; fcvtzs x<rd>, d<rn> (f64 -> signed i64, toward zero) : base 0x9E780000 | rn<<5 | rd (oracle 9e780020)
     (defn fa-fcvtzs (rd rn) (fa-asm 2658664448 (list 1 32) (list rd rn)))
+    ; fmov d<rd>, x<rn> (GP i64 bits -> f64 register, BIT REINTERPRET — NOT a numeric convert) :
+    ; base 0x9E670000 | rn<<5 | rd  (oracle 9e670000 = fmov d0,x0). The keystone for 2^k/ldexp: build the
+    ; IEEE754 exponent field ((k+1023)<<52) in an integer register, then REINTERPRET those bits as the f64
+    ; 2^k. DISTINCT from fa-scvtf, which numerically converts the integer VALUE (5 -> 5.0); here the bit
+    ; pattern is PRESERVED (0x3FF0000000000000 -> 1.0). Also the floor for every float-bit recipe: sign
+    ; extraction, softmax max-subtract, NaN/inf tests — the bit-ops q4k-dequant had to fold in integer
+    ; arithmetic for lack of this door. fcvtzs reads bits OUT of an integer; this writes bits INTO an f64.
+    (defn fa-fmov-d-x (rd rn) (fa-asm 2657550336 (list 1 32) (list rd rn)))
+    ; fmov x<rd>, d<rn> (f64 bits -> GP i64 register, BIT REINTERPRET) : base 0x9E660000 | rn<<5 | rd
+    ; (oracle 9e660000 = fmov x0,d0). The reverse door: read an f64's raw bits to test sign/exponent/mantissa
+    ; with integer ops. DISTINCT word from fmov d,x (opcode 110 vs 111) — emitting the wrong one reverses the
+    ; transfer direction. Matched pair: fa-fmov-d-x writes bits in, fa-fmov-x-d reads bits out.
+    (defn fa-fmov-x-d (rd rn) (fa-asm 2657484800 (list 1 32) (list rd rn)))
     ; frintn d<rd>, d<rn> (round f64 to nearest INTEGRAL, ties to EVEN; result stays f64) :
     ; base 0x1E644000 | rn<<5 | rd  (oracle 1e644000 = frintn d0,d0). The range-reduction rounding floor:
     ; exp/softmax compute k = round(x*log2e), then r = x - k*ln2 over the pooled ln2/log2e (fam-pool-fma).
