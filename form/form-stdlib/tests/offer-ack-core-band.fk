@@ -1,0 +1,88 @@
+; preludes: form-stdlib/offer-ack-core.fk
+;
+; offer-ack-core-band — the five control primitives (fail, stop, choice,
+; exceptions, async) each WITNESSED as an instance of the ONE offer/ack
+; core. Every claim routes through oac-kind (the single discriminator) and
+; oac-offer (the single invocation); none has its own dispatch chain.
+;
+; The strange-minimal edge that pins the whole shape: oac-fail and the
+; failure-branch of oac-try are the SAME nothing-arm — failure being the
+; silence-ack (axiom-1, first-class) is what lets try "catch" with no throw.
+;
+; The offered cells are 1-arg recipes (axiom-5: a cell + its args-list);
+; oac-offer applies them through the kernel's invocation (tag-44 indirect
+; call, four-way-proven). The ack each returns is one of {nothing,0,1,node}.
+;
+; Verdict 1023 when every claim lands:
+;   1    oac-fail acks the NOTHING kind (failure IS first-class silence)
+;   2    oac-choice over (nothing, nothing, →1) picks the ONE ack = 5
+;   4    oac-choice over (nothing, nothing) → nothing (all-decline = fail)
+;   8    oac-try on a FAILING offer recovers via the handler → recovery value
+;   16   oac-try on a SUCCEEDING offer passes the value through untouched
+;   32   oac-async + oac-await resolves a pending offer to its ack
+;   64   a fresh future peeks NOTHING before await (timeout==nothing)
+;   128  oac-stop halts the offer chain: the driver makes no further offer
+;   256  oac-run-chain returns the last ack BEFORE the stop (boundary halt)
+;   512  the discriminator is total: each of the four arms reads its own tag
+(do
+    ;; --- offered cells: 1-arg recipes, args is the single args-list ----
+    ;; a cell that always declines (silence): the fail/stop building block.
+    (defn cell-silent (args) (oac-nothing))
+    ;; a cell that acks ONE carrying the int 5 (ignores args).
+    (defn cell-five (args) (oac-one (intern_trivial_int 5)))
+    ;; a cell that acks ONE carrying the int 9 — the try recovery value.
+    (defn cell-nine (args) (oac-one (intern_trivial_int 9)))
+    ;; a cell that acks ZERO (received-no).
+    (defn cell-zero-ack (args) (oac-zero))
+    ;; a cell that acks a NODE counter-offer carrying a marker cell.
+    (defn cell-counter (args) (oac-node (intern_trivial_int 7)))
+
+    ;; the payload-int an ONE ack carries, read through the core accessor.
+    (defn ack-int (ack) (node_value (oac-payload ack)))
+
+    ;; (1) FAIL — failure is the nothing-kind.
+    (let c1 (if (eq (oac-kind (oac-fail)) (oac-tag-nothing)) 1 0))
+
+    ;; (2) CHOICE picks the first non-nothing — (silent, silent, five) → 5.
+    (let pick (oac-choice (list cell-silent cell-silent cell-five) (list)))
+    (let c2 (if (and (eq (oac-one? pick) 1) (eq (ack-int pick) 5)) 2 0))
+
+    ;; (3) CHOICE all-decline → nothing (= fail).
+    (let all-none (oac-choice (list cell-silent cell-silent) (list)))
+    (let c3 (if (eq (oac-nothing? all-none) 1) 4 0))
+
+    ;; (4) TRY on a failing offer recovers via the handler → 9.
+    (let recovered (oac-try cell-silent (list) cell-nine))
+    (let c4 (if (and (eq (oac-one? recovered) 1) (eq (ack-int recovered) 9)) 8 0))
+
+    ;; (5) TRY on a succeeding offer passes the value through → 5 (handler unused).
+    (let passed (oac-try cell-five (list) cell-nine))
+    (let c5 (if (and (eq (oac-one? passed) 1) (eq (ack-int passed) 5)) 16 0))
+
+    ;; (6) ASYNC + AWAIT resolves a pending offer to its ack → 5.
+    (let fut (oac-async cell-five (list)))
+    (let resolved (oac-await fut))
+    (let c6 (if (and (eq (oac-one? resolved) 1) (eq (ack-int resolved) 5)) 32 0))
+
+    ;; (7) a fresh future peeks NOTHING before await (timeout==nothing).
+    (let c7 (if (eq (oac-nothing? (oac-peek fut)) 1) 64 0))
+
+    ;; (8) STOP halts the chain: oac-stop acks nothing, oac-stopped? sees it.
+    (let c8 (if (eq (oac-stopped? (oac-stop)) 1) 128 0))
+
+    ;; (9) the chain runs offers over the SAME args until one STOPS; here the
+    ;; middle cell stops (acks nothing), so the last ack BEFORE it (5) is kept.
+    (let chained (oac-run-chain (list cell-five cell-silent cell-nine) (list) (oac-nothing)))
+    (let c9 (if (and (eq (oac-one? chained) 1) (eq (ack-int chained) 5)) 256 0))
+
+    ;; (10) the discriminator is TOTAL across all four arms — each arm reads
+    ;; its own tag through the ONE oac-kind, proving the core's completeness.
+    (let zero-ack (cell-zero-ack (list)))
+    (let node-ack (cell-counter (list)))
+    (let c10 (if (and (eq (oac-kind (oac-nothing)) (oac-tag-nothing))
+                      (and (eq (oac-kind zero-ack) (oac-tag-zero))
+                           (and (eq (oac-kind (cell-five (list))) (oac-tag-one))
+                                (eq (oac-kind node-ack) (oac-tag-node)))))
+                 512 0))
+
+    (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10))))))))))
