@@ -251,4 +251,32 @@
             (append (fa-fmax 0 0 1)
                 (fa-ret))))
 
+    ; fam-max-loop: the MAX-REDUCTION max_j x[j] over a buffer as Form->asm bytes — the HEADLINE consumer of
+    ; fa-fmax (#3937). fam-relu proved fa-fmax scalar; this folds it across a whole buffer, which is exactly
+    ; stable softmax's max-subtract: softmax(x)_i = exp(x_i - m) / sum_j exp(x_j - m) with m = max_j x[j], so
+    ; the largest exponent is 0 and exp never overflows. Every attention block runs this reduction before the
+    ; softmax. It is fam-ss-sqrt's exact twin — the counted accumulate loop (matvec-loop discipline) — with the
+    ; square-and-add fold replaced by a single fmax and NO trailing transcendental. The one structural
+    ; difference from ss-sqrt: the accumulator cannot init to 0.0 (all-negative logits would wrongly return 0),
+    ; so it inits to x[0] via ldr d0,[x0] — the max identity for n>=1 (a softmax always has >=1 logit); the
+    ; loop then folds fmax over all n including x[0] again (fmax(x0,x0)=x0, idempotent, no n=0 special case).
+    ; This composes ONLY encoders proven in prior bands (fa-ldr-d/fa-movz-x/fa-cmp-r/fa-bcond/fa-fmax/
+    ; fa-add-x-imm/fa-b-off/fa-ret) — no new primitive; the claim is the COMPOSITION emits the exact 40-byte
+    ; program four-way. ABI: x0 = x base, w1 = n (n>=1), returns d0 = max_j x[j]. 10 instructions = 40 bytes,
+    ; byte-identical to the M4-assembled oracle (otool -t of the exact instruction sequence):
+    ;   0 ldr d0,[x0] (fd400000, acc=x[0])   1 mov x3,#0 (j)   2 cmp w3,w1   3 b.ge +6(end)
+    ;   4 ldr d1,[x0]   5 fmax d0,d0,d1   6 add x0,#8   7 add x3,#1   8 b -6(loop)   9 ret
+    ; Branch offsets in INSTRUCTIONS (lo-streq discipline): b.ge exits +6 to the ret, b loops -6 to the compare.
+    (defn fam-max-loop ()
+        (append (fa-ldr-d 0 0 0)
+            (append (fa-movz-x 3 0)
+                (append (fa-cmp-r 3 1)
+                    (append (fa-bcond 10 6)
+                        (append (fa-ldr-d 1 0 0)
+                            (append (fa-fmax 0 0 1)
+                                (append (fa-add-x-imm 0 0 8)
+                                    (append (fa-add-x-imm 3 3 1)
+                                        (append (fa-b-off -6)
+                                            (fa-ret)))))))))))
+
     0)

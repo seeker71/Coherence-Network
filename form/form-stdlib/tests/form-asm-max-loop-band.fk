@@ -1,0 +1,43 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-max-loop-band — the MAX-REDUCTION max_j x[j] over a buffer emits four-way as Form->asm bytes, no
+; rustc. fam-max-loop is the HEADLINE consumer of fa-fmax (#3937): fam-relu proved fa-fmax scalar, this folds
+; it across a whole buffer — exactly stable softmax's max-subtract. softmax(x)_i = exp(x_i - m)/sum_j exp(x_j - m)
+; with m = max_j x[j]; subtracting the max makes the largest exponent 0 so exp never overflows. Every attention
+; block runs this reduction before its softmax; it is the numerically-critical half of the softmax the native
+; lane still lacked.
+;
+; The new ground vs form-asm-ss-sqrt (its exact loop twin): the accumulator init. ss-sqrt inits acc=0.0 (movz+
+; scvtf) because 0 is the sum identity; max has identity -inf, and 0.0 would be WRONG for all-negative logits
+; (a real softmax input after a bias/mask). So fam-max-loop inits acc = x[0] via `ldr d0,[x0]` — the max identity
+; for n>=1 (a softmax always has >=1 logit) — then folds fmax over all n, x[0] included (fmax(x0,x0)=x0,
+; idempotent), with no n=0 special case and no -inf constant to materialize (toolchain-pure). The fold op is one
+; fa-fmax; every op is proven byte-identical in prior bands (form-asm-float 2047 / form-asm-relu 15 / matvec-loop
+; 127), so the new claim is that the COMPOSITION emits the exact 40-byte arm64 program four-way.
+; ABI: x0 = x base, w1 = n (n>=1), returns d0 = max_j x[j].
+;
+; The 10-instruction program, otool -t of the M4-assembled oracle (the reference each byte must match):
+;   fd400000 ldr d0,[x0] (acc=x[0])  d2800003 mov x3,#0   6b01007f cmp w3,w1   540000ca b.ge +6(end)
+;   fd400001 ldr d1,[x0]             1e614800 fmax d0,d0,d1  91002000 add x0,#8  91000463 add x3,#1
+;   17fffffa b -6(loop)             d65f03c0 ret
+;
+; Verdict 63 when every claim lands:
+;   1    the program is 10 instructions = 40 bytes                 (len == 40)
+;   2    the FULL program byte-equals the 40-byte M4 oracle        (fa-conviction == 1)
+;   4    fmax d0,d0,d1 — the max-fold, the headline fa-fmax consumer(fa-conviction == 1)
+;   8    ldr d0,[x0] — accumulator INIT to x[0] (max identity, not 0)(fa-conviction == 1)
+;   16   b.ge +6 exit branch (scaled offset to the ret)            (fa-conviction == 1)
+;   32   b -6 back-edge (26-bit signed offset to the compare)      (fa-conviction == 1)
+(do
+    (let prog (fam-max-loop))
+    (let oracle (list
+        0 0 64 253     3 0 128 210    127 0 1 107    202 0 0 84
+        1 0 64 253     0 72 97 30     0 32 0 145     99 4 0 145
+        250 255 255 23 192 3 95 214))
+    (let c0 (if (eq (len prog) 40)                                            1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                          1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmax 0 0 1)  (list 0 72 97 30))   1)   4 0))
+    (let c3 (if (eq (fa-conviction (fa-ldr-d 0 0 0) (list 0 0 64 253))   1)   8 0))
+    (let c4 (if (eq (fa-conviction (fa-bcond 10 6)  (list 202 0 0 84))   1)  16 0))
+    (let c5 (if (eq (fa-conviction (fa-b-off -6)    (list 250 255 255 23)) 1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
