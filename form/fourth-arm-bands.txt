@@ -1057,6 +1057,7 @@ form-asm-exp-coef-pool fks 31
 form-asm-frintn fks 7
 form-asm-fmov-dx fks 15
 form-asm-exp-reduce fks 31
+form-asm-relu fks 15
 weight-load fks 4095
 weight-load-q4k fks 4095
 block-join fks 255

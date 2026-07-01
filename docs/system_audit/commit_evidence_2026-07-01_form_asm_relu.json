@@ -1,0 +1,36 @@
+{
+ "title": "fam-relu — the rectified-linear activation relu(x) = max(x, 0) emits four-way as Form->asm bytes AND runs bit-exact on the M4; the first NONLINEARITY on the native lane, + the missing fa-fmax / fa-fmin encoders",
+ "date": "2026-07-01",
+ "author": "Sema (Opus 4.8), autonomous native-ML walk",
+ "stone": "form-native-models.form 'GAPS — LLM INFERENCE' rung A: the nonlinear ops as form-asm bytes. The form-asm float lane carried arithmetic (fadd/fsub/fmul/fdiv/fmadd), the transcendental floor (fsqrt/frintn/fmov-d-x, and exp's range reduction, fam-exp-reduce 31), and comparison (fcmp) — but had NO min/max, so no ACTIVATION and no stable-softmax max-subtract. A transformer/MLP block is (matvec, add-bias, NONLINEARITY) repeated; the matvec lane is on bytes (form-asm-matvec), the nonlinearity was not. This brick adds the plain arm64 FP min/max (fa-fmax / fa-fmin) and composes the simplest nonlinearity, relu(x) = max(x, 0), as a runnable native function. The SAME fa-fmax is the max-subtract that keeps softmax numerically stable (subtract max_j(logit_j) so exp never overflows) and, paired with fa-fmin, the clamp clamp(x,lo,hi) = fmin(fmax(x,lo),hi).",
+ "new_encoder": "fa-fmax (rd rn rm) — FMAX d<rd>, d<rn>, d<rm> (larger of two f64, propagates NaN). base 0x1E604800 (509626368) | rm<<16 | rn<<5 | rd, packed (1 32 65536). fa-fmin (rd rn rm) — FMIN, base 0x1E605800 (509630464). Oracle (arm64 assembler, otool of the M4-assembled words): fmax d0,d0,d1 = 1e614800, fmin d0,d0,d1 = 1e615800. Oracle-as-teacher, not master: clang -O2 lowers `x>0?x:0` to `movi d1,#0` + `fmaxNM d0,d0,d1` (1e616800) — the NaN-QUIETING variant, a HEALTHY DIFFERENCE from plain fmax (identical on every finite input, differing only on NaN: fmax propagates, fmaxnm quiets). fmax/fmin are the FUNDAMENTAL primitives the model block composes from; fmaxnm is the variant. The reusable win: the branchless min/max the activation + clamp + softmax-stability floor is built from, with no fcmp+branch and no data-dependent control flow.",
+ "recipe": "form/form-stdlib/form-asm-matvec.fk :: (defn fam-relu () (append (fa-fmov-d-x 1 31) (append (fa-fmax 0 0 1) (fa-ret)))) — the zero is reinterpreted from the xzr register (reg 31) through the existing fa-fmov-d-x (fmov d1, xzr = 9e6703e1); no new constant machinery. ABI d0 = x, returns d0 = max(x, 0). 3 arm64 instructions = 12 bytes.",
+ "proof_four_way": [
+  {
+   "band": "form/form-stdlib/tests/form-asm-relu-band.fk (NEW)",
+   "manifest_row": "form-asm-relu fks 15",
+   "verdict": 15,
+   "oracle": "M4-assembled words (otool -tvVj): fmov d1,xzr (9e6703e1) + fmax d0,d0,d1 (1e614800) + ret (d65f03c0) = 12 bytes, LE list (225 3 103 158 0 72 97 30 192 3 95 214).",
+   "claims": [
+    "1 — the program is 3 instructions = 12 bytes (len == 12)",
+    "2 — the FULL 12-byte program byte-equals the M4-assembled oracle (fa-conviction == 1)",
+    "4 — fmax d0,d0,d1 (1e614800) — the new plain-max encoder, byte-exact (fa-conviction == 1)",
+    "8 — fmin d0,d0,d1 (1e615800) — the twin plain-min encoder for clamp, byte-exact (fa-conviction == 1)"
+   ],
+   "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-relu-band.fk",
+   "result": "-> 15 ; fourth arm four-way (fkwu, bootstrap binary darwin-arm64, no clang) ; 1 ok, 0 divergent — Go=Rust=TS=fkwu agree on the 12-byte image. Loop-free (no forward-reference/recursion surface). First run returned 15-masked verdict 1 from a decimal-conversion slip in the fa-fmax base (510330880 vs the correct 0x1E604800 = 509626368); the four kernels AGREED on the wrong bytes (deterministic emit) which is exactly how a wrong constant shows — caught by the byte oracle, fixed, re-crossed to 15."
+  }
+ ],
+ "proof_on_hardware": {
+  "script": "scripts/form_asm_relu_witness.sh",
+  "image": "e103679e (fmov d1,xzr) 0048611e (fmax d0,d0,d1) c0035fd6 (ret) = 12 bytes",
+  "path": "Form kernel emits fam-relu's 12-byte program -> form-macho mo-object-sym -> Mach-O .o (245 bytes) exporting _recipe -> ld -dylib + ad-hoc sign -> dlopen+call. No rustc/clang in the COMPUTE (clang only builds the dumb dlopen harness; the activation is the Form-emitted fmax). otool of the .o confirms the words disassemble to fmov/fmax/ret (the assembler is the byte oracle).",
+  "result": "7/7 MATCH on M4 (arm64 macOS): recipe(x) == (x > 0.0 ? x : 0.0) bit-for-bit at x in {3.0->3, -2.0->0, 0.0->0, -0.0->0, 0.5->0.5, -1e8->0, 1e8->1e8}. The x=0 and signed-zero -0.0 cases check the boundary (relu(0)=0, relu(-0)=0); large +/- confirm pass-through and clamp.",
+  "note": "The first NONLINEARITY on the witnessed native lane. relu is the smallest runnable witness of fa-fmax; the same encoder carries stable-softmax's max-subtract and the clamp — the activation floor of a model block, now sovereign native bytes."
+ },
+ "no_regression": "fa-fmax / fa-fmin are purely additive to form-asm.fk (two new encoder defns); fam-relu is purely additive to form-asm-matvec.fk (a new recipe). Re-validated form-asm-matvec.fk siblings four-way after the additive edits — form-asm-exp-reduce (31), form-asm-fmov-dx (15), form-asm-frintn (7) — all 0 divergent, fkwu crossed.",
+ "design_note": "Design-with-reference held: before authoring, `fmax d0,d0,d1` / `fmin d0,d0,d1` / `fmov d1,xzr` were assembled with clang -c on THIS M4 and read back with otool to pin the EXACT byte-shape (1e614800 / 1e615800 / 9e6703e1); clang's own relu lowering was probed (movi + fmaxnm) and named as the healthy difference. The bit-derived bases had to be re-derived after a hand-decimal slip — the byte oracle caught it instantly. Finding a genuinely uncontested stone was most of the discernment: the exp-lane (sibling claude/form-asm-exp-reduce), full-llama-generation (codex), and Metal GPU dispatch (codex) frontiers were all actively tended tonight; the min/max activation floor is non-transcendental (not the exp sibling's turf), not a llama-gen composition, and reuses the merged fa-fmov-d-x for zero.",
+ "toolchain_free_claim": "Honest floor: a Form recipe proven four-way (Go=Rust=TS=fkwu) through validate.sh (bash) PLUS an on-M4 execution witness (form-macho -> ld -dylib -> dlopen, no rustc/clang in the compute). bin-go is the bootstrap that runs the flattener/emitter. Platform rows (mac four-way + on-hardware observed; windows/android form-cli pending) per docs/coherence-substrate/standard-receipt.form.",
+ "next_stones": "(1) fam-gelu / fam-silu on the lane — now that exp's range reduction (fam-exp-reduce) and the pooled Horner are on bytes, the smooth activations gelu(x) = x*Phi(x) and silu(x) = x*sigmoid(x) compose from exp + fmul + the pooled poly. (2) a fam-softmax-max reduction: fold fa-fmax over an ll-buffer of logits (max_j) then subtract-and-exp — the numerically-stable softmax the attention block needs, fa-fmax's headline consumer. (3) fam-clamp using fa-fmin+fa-fmax over a pooled (lo,hi). (4) stage the matvec + bias + fam-relu over ll-buffer for a real MLP layer end-to-end on bytes.",
+ "witness_state": "pulse.coherencycoin.com at open: overall STRAINED, 0 recorded silences, web organ not breathing (noted, not repaired this run — no deploy taken; brick is host-independent: Form recipe + two encoders + band + witness + receipt + manifest row)."
+}
