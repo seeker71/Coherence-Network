@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 400
+**Total files**: 402
 
 | File | Purpose |
 |---|---|
@@ -117,7 +117,9 @@
 | [form_asm_horner_witness.sh](form_asm_horner_witness.sh) | form_asm_horner_witness.sh — the EXECUTION WITNESS for fam-horner2: the Form-emitted degree-2 Horner |
 | [form_asm_matvec_2d_witness.sh](form_asm_matvec_2d_witness.sh) | form_asm_matvec_2d_witness.sh — the EXECUTION WITNESS for fam-matvec: the Form-emitted |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
+| [form_asm_max_loop_witness.sh](form_asm_max_loop_witness.sh) | form_asm_max_loop_witness.sh — the EXECUTION WITNESS for fam-max-loop: the Form-emitted max-reduction |
 | [form_asm_poly_pool_witness.sh](form_asm_poly_pool_witness.sh) | form_asm_poly_pool_witness.sh — the EXECUTION WITNESS for fam-poly-pool: the Form-emitted Horner step |
+| [form_asm_pow2_witness.sh](form_asm_pow2_witness.sh) | form_asm_pow2_witness.sh — the EXECUTION WITNESS for fam-pow2: the Form-emitted 2^k / ldexp(1,k) step |
 | [form_asm_relu_witness.sh](form_asm_relu_witness.sh) | form_asm_relu_witness.sh — the EXECUTION WITNESS for fam-relu: the Form-emitted rectified-linear activation |
 | [form_asm_rsqrt_witness.sh](form_asm_rsqrt_witness.sh) | form_asm_rsqrt_witness.sh — the EXECUTION WITNESS for fam-rsqrt: the Form-emitted reciprocal-sqrt |
 | [form_asm_ss_sqrt_witness.sh](form_asm_ss_sqrt_witness.sh) | form_asm_ss_sqrt_witness.sh — the EXECUTION WITNESS for fam-ss-sqrt: the Form-emitted RMSNorm/LayerNorm |

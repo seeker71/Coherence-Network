@@ -279,4 +279,23 @@
                                         (append (fa-b-off -6)
                                             (fa-ret)))))))))))
 
+    ; fam-pow2: 2^k / ldexp(1,k) for an INTEGER exponent k, as Form->asm bytes — the exponent-ASSEMBLY step the
+    ; whole native exp lane still lacked. exp(x) = 2^k * exp(r) with k = round(x*log2e) (fam-frintn -> fa-fcvtzs)
+    ; and r the pooled range reduction (fam-exp-reduce); the Horner poly evaluates exp(r) on the lane. The one
+    ; missing piece was BUILDING 2^k: an IEEE754 f64 with exponent field (k+1023) and zero mantissa IS exactly
+    ; 2^k, so add the bias then shift it into the exponent bits and REINTERPRET. fa-add-x-imm biases, the new
+    ; fa-lsl-x-imm shifts <<52 (the last non-present primitive, named in fa-fmov-d-x's own comment), fa-fmov-d-x
+    ; reinterprets the bits (NOT fa-scvtf, which would give k's VALUE as a float). ABI: x0 = k (signed int,
+    ; -1022..1023 for a normal 2^k), returns d0 = 2^k. 4 instructions = 16 bytes, byte-identical to the M4
+    ; assembler oracle (otool -t of the exact sequence for `double f(long k){union{unsigned long u;double d;}v;
+    ; v.u=((unsigned long)(k+1023))<<52; return v.d;}`):
+    ;   0 add x0,x0,#1023 (910ffc00)   1 lsl x0,x0,#52 (d34c2c00)   2 fmov d0,x0 (9e670000)   3 ret (d65f03c0)
+    ; This completes every exp-lane PRIMITIVE as asm bytes: k=round (fam-frintn), r (fam-exp-reduce), Horner
+    ; (fam-pool-fma), and now 2^k (this). What remains is composing them into one fam-exp function.
+    (defn fam-pow2 ()
+        (append (fa-add-x-imm 0 0 1023)
+            (append (fa-lsl-x-imm 0 0 52)
+                (append (fa-fmov-d-x 0 0)
+                    (fa-ret)))))
+
     0)

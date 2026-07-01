@@ -1,0 +1,38 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-pow2-band — 2^k / ldexp(1,k) for an INTEGER exponent emits four-way as Form->asm bytes, no rustc.
+; fam-pow2 is the exponent-ASSEMBLY step the whole native exp lane still lacked. exp(x) = 2^k * exp(r):
+; fam-frintn gives k = round(x*log2e), fam-exp-reduce gives r, fam-pool-fma's Horner evaluates exp(r) — but
+; BUILDING 2^k had no path. The key fact: an IEEE754 f64 with biased exponent field (k+1023) and zero mantissa
+; IS exactly 2^k. So bias k, shift it up into the exponent bits, and reinterpret the raw bits as an f64.
+;
+; The new ground: fa-lsl-x-imm — arm64's logical-shift-left-immediate, an alias of UBFM with immr=64-shift,
+; imms=63-shift (the shift is DATA, one encoder for every amount). It was the LAST non-present primitive on the
+; exp lane, named in fa-fmov-d-x's OWN comment ("build (k+1023)<<52 ... then fmov d,x"). fa-add-x-imm biases,
+; fa-lsl-x-imm shifts <<52, fa-fmov-d-x reinterprets the BITS (fa-scvtf would give k's VALUE as a float, wrong).
+; Every op is byte-verified against the M4 assembler oracle (otool -tvVj of clang -c), so the claim is that the
+; COMPOSITION emits the exact 16-byte program four-way, AND that fa-lsl-x-imm's immr/imms math generalizes.
+; ABI: x0 = k (signed int, -1022..1023 for a normal 2^k), returns d0 = 2^k.
+;
+; The 4-instruction program, otool -t of the M4-assembled oracle (the reference each byte must match):
+;   910ffc00 add x0,x0,#1023 (bias)   d34c2c00 lsl x0,x0,#52 (into exp field)   9e670000 fmov d0,x0 (reinterpret)
+;   d65f03c0 ret
+;
+; Verdict 63 when every claim lands:
+;   1    the program is 4 instructions = 16 bytes                    (len == 16)
+;   2    the FULL program byte-equals the 16-byte M4 oracle          (fa-conviction == 1)
+;   4    lsl x0,x0,#52 — the NEW fa-lsl-x-imm, the <<52 exp-field shift(fa-conviction == 1)
+;   8    lsl x0,x0,#1  — fa-lsl-x-imm generalizes to shift=1         (fa-conviction == 1)
+;   16   lsl x1,x2,#12 — fa-lsl-x-imm generalizes across registers   (fa-conviction == 1)
+;   32   lsl x3,x5,#63 — fa-lsl-x-imm at the shift boundary          (fa-conviction == 1)
+(do
+    (let prog (fam-pow2))
+    (let oracle (list
+        0 252 15 145     0 44 76 211    0 0 103 158    192 3 95 214))
+    (let c0 (if (eq (len prog) 16)                                              1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                            1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-lsl-x-imm 0 0 52) (list 0 44 76 211))  1)   4 0))
+    (let c3 (if (eq (fa-conviction (fa-lsl-x-imm 0 0 1)  (list 0 248 127 211)) 1)   8 0))
+    (let c4 (if (eq (fa-conviction (fa-lsl-x-imm 1 2 12) (list 65 204 116 211)) 1) 16 0))
+    (let c5 (if (eq (fa-conviction (fa-lsl-x-imm 3 5 63) (list 163 0 65 211)) 1)  32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

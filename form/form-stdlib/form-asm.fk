@@ -121,6 +121,16 @@
             (append-list (fa-movk-hw rd bs 1)
                 (append-list (fa-movk-hw rd bs 2)
                     (fa-movk-hw rd bs 3)))))
+    ; lsl x<rd>, x<rn>, #shift  (64-bit logical shift LEFT by a compile-time amount) — the LAST primitive the
+    ; native 2^k/ldexp step needed: build the IEEE754 exponent field (k+1023)<<52 in a GP register, then
+    ; fa-fmov-d-x reinterprets those bits as the f64 2^k. arm64 has no dedicated LSL-immediate word — it is an
+    ; alias of UBFM x<rd>,x<rn>,#(-shift MOD 64),#(63-shift): base 0xD3400000 | immr<<16 | imms<<10 | rn<<5 | rd,
+    ; with immr = 64-shift, imms = 63-shift for 1<=shift<=63 (the shift is DATA, one encoder for every amount —
+    ; core-lift, no per-shift row). Byte-verified against the M4 assembler oracle (otool -tvVj of clang -c):
+    ;   lsl x0,x0,#52 == d34c2c00 (immr=12,imms=11)   lsl x0,x0,#1 == d37ff800   lsl x1,x2,#12 == d374cc41
+    ;   lsl x3,x5,#63 == d34100a3   — so fa-conviction licenses it too.
+    (defn fa-lsl-x-imm (rd rn shift)
+        (fa-asm 3544186880 (list 65536 1024 32 1) (list (sub 64 shift) (sub 63 shift) rn rd)))
     ; strb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39000000 | imm<<10 | rn<<5 | rt
     (defn fa-strb (rt rn imm)   (fa-asm 956301312 (list 1 32 1024) (list rt rn imm)))
     ; add x<rd>, x<rn>, #imm12  (64-bit) : base 0x91000000 | imm<<10 | rn<<5 | rd
