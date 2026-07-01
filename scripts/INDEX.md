@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 399
+**Total files**: 400
 
 | File | Purpose |
 |---|---|
@@ -118,6 +118,7 @@
 | [form_asm_matvec_2d_witness.sh](form_asm_matvec_2d_witness.sh) | form_asm_matvec_2d_witness.sh — the EXECUTION WITNESS for fam-matvec: the Form-emitted |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
 | [form_asm_poly_pool_witness.sh](form_asm_poly_pool_witness.sh) | form_asm_poly_pool_witness.sh — the EXECUTION WITNESS for fam-poly-pool: the Form-emitted Horner step |
+| [form_asm_relu_witness.sh](form_asm_relu_witness.sh) | form_asm_relu_witness.sh — the EXECUTION WITNESS for fam-relu: the Form-emitted rectified-linear activation |
 | [form_asm_rsqrt_witness.sh](form_asm_rsqrt_witness.sh) | form_asm_rsqrt_witness.sh — the EXECUTION WITNESS for fam-rsqrt: the Form-emitted reciprocal-sqrt |
 | [form_asm_ss_sqrt_witness.sh](form_asm_ss_sqrt_witness.sh) | form_asm_ss_sqrt_witness.sh — the EXECUTION WITNESS for fam-ss-sqrt: the Form-emitted RMSNorm/LayerNorm |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
