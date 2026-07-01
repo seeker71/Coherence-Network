@@ -103,6 +103,24 @@
     (defn fa-movz-x (rd imm)    (fa-asm 3531603968 (list 1 32) (list rd imm)))
     ; movk x<rd>, #imm16, lsl #16  (64-bit, hw=1) : base 0xF2A00000 | imm<<5 | rd
     (defn fa-movk-x-16 (rd imm) (fa-asm 4070572032 (list 1 32) (list rd imm)))
+    ; movk x<rd>, #imm16, lsl #(16*hw)  (64-bit, hw in 0..3) : base 0xF2800000 | hw<<21 | imm<<5 | rd
+    ; the SHIFT as DATA — one encoder for all four halfword positions (core-abstraction-first), so a full
+    ; 64-bit immediate is 4 rows, not 4 near-duplicate encoders. hw=1 reproduces fa-movk-x-16 exactly.
+    (defn fa-movk-x (rd imm hw) (fa-asm 4068474880 (list 1 32 2097152) (list rd imm hw)))
+    ; fa-mov-imm64: materialize a full 64-bit constant (its 8 little-endian bytes) into x<rd> as movz + 3 movk —
+    ; the way clang -O2 inlines an f64 constant when it does NOT pool it: build the IEEE754 bit pattern in a GP
+    ; register, then fa-fmov-d-x REINTERPRETS those bits as the f64. The companion to fa-fmov-d-x for every
+    ; inlined float constant (exp's ln2/log2e, RoPE base, poly coeffs) AND the 2^k/ldexp step (assemble
+    ; (k+1023)<<52, then fmov d,x). Emits the FULL 4-move form; byte-identical to clang for any constant whose
+    ; four halfwords are all nonzero (clang skips a zero halfword — a named zero-skip follow-up, not needed by
+    ; the transcendental constants, which are all nonzero-halfword). bs = (b0 b1 b2 b3 b4 b5 b6 b7), little-endian.
+    (defn fa-movk-hw (rd bs i)
+        (fa-movk-x rd (add (nth bs (mul i 2)) (mul (nth bs (add (mul i 2) 1)) 256)) i))
+    (defn fa-mov-imm64 (rd bs)
+        (append-list (fa-movz-x rd (add (nth bs 0) (mul (nth bs 1) 256)))
+            (append-list (fa-movk-hw rd bs 1)
+                (append-list (fa-movk-hw rd bs 2)
+                    (fa-movk-hw rd bs 3)))))
     ; strb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39000000 | imm<<10 | rn<<5 | rt
     (defn fa-strb (rt rn imm)   (fa-asm 956301312 (list 1 32 1024) (list rt rn imm)))
     ; add x<rd>, x<rn>, #imm12  (64-bit) : base 0x91000000 | imm<<10 | rn<<5 | rd
