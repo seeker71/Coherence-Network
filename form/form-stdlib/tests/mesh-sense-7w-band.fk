@@ -1,0 +1,62 @@
+; preludes: form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk
+;
+; mesh-sense-7w-band — fuse a FIXED multi-cell wmg-sense stream into coherent per-plane answers,
+; demonstrating the WHERE plane (place-sense room buckets fused across device-cells) and the WHO plane
+; (speaker-ids fused across device-cells), each confidence-weighted and attributed. Made falsifiable.
+;
+; THE OBSERVATION SET — three device-cells (mac, phone, watch) each report into the mesh stream:
+;
+;   WHERE (place-sense room bucket; band 2 = "study", band 1 = "kitchen"):
+;     mac    band 2, channel gps,   confidence 4  -> weight 4*fit(where,gps  =3) = 12
+;     phone  band 2, channel wifi,  confidence 3  -> weight 3*fit(where,wifi =2) =  6
+;     watch  band 1, channel relay, confidence 5  -> weight 5*fit(where,relay=1) =  5
+;   Summed: band 2 = 12+6 = 18, band 1 = 5. The fused room is band 2 (study) — mac & phone agree and
+;   outweigh the watch's lone kitchen guess relayed in. Two cells read the consensus -> agree 2.
+;
+;   WHO (speaker-id / field-identity label):
+;     mac    "ilena", channel mic,   confidence 3 -> weight 3*fit(who,mic  =3) = 9
+;     phone  "ilena", channel field, confidence 2 -> weight 2*fit(who,field=2) = 4
+;     watch  "axiel", channel relay, confidence 5 -> weight 5*fit(who,relay=1) = 5
+;   Summed trust: "ilena" = 9+4 = 13, "axiel" = 5. Who is present: ilena — two cells over the fitter
+;   mic+field channels outweigh the watch's lone relayed guess. Contributors: mac & phone.
+;
+; The channel-protocol-choice weighting is what flips the watch's RAW confidence-5 lead: by raw
+; confidence the watch (5) outweighs each single agreeing cell, but the right-channel fitness lets the
+; two coherent cells fuse past it on both planes — the right channel for the right info, made numeric.
+;
+; Verdict 255 when every claim lands:
+;   1    WHERE fuses to the coherent room, band 2 (study)            (ms-a-value where  == 2)
+;   2    WHERE confidence is the summed weight 18                     (ms-a-confidence where == 18)
+;   4    WHERE agreement = two cells read the consensus room          (ms-a-agree where  == 2)
+;   8    WHERE attribution names two contributing cells               (len cells where   == 2)
+;   16   WHO fuses to who is present: ilena (summed trust 13)         (str_eq value who "ilena")
+;   32   WHO confidence is the summed trust 13                        (ms-a-confidence who == 13)
+;   64   WHO attribution names two contributing cells (mac & phone)   (len cells who     == 2)
+;   128  channel weighting flipped the raw-confidence-5 watch lead    (watch raw 5 < fused 13 AND 18)
+(do
+    ; ── the fixed multi-cell stream — interleaved readings, every cell reports both planes ──
+    (let stream (list
+        (reading "where" 2 "mac"   "gps"   4)
+        (reading "who"   "ilena" "mac"   "mic"   3)
+        (reading "where" 2 "phone" "wifi"  3)
+        (reading "who"   "ilena" "phone" "field" 2)
+        (reading "where" 1 "watch" "relay" 5)
+        (reading "who"   "axiel" "watch" "relay" 5)))
+
+    ; ── fuse the whole stream across all seven planes, then pick WHERE and WHO ──
+    (let fused (ms-fuse stream))
+    (let aw (ms-pick fused "where"))
+    (let ah (ms-pick fused "who"))
+
+    (let c0 (if (eq (ms-a-value aw) 2)                    1 0))
+    (let c1 (if (eq (ms-a-confidence aw) 18)              2 0))
+    (let c2 (if (eq (ms-a-agree aw) 2)                    4 0))
+    (let c3 (if (eq (len (ms-a-cells aw)) 2)              8 0))
+    (let c4 (if (str_eq (ms-a-value ah) "ilena")         16 0))
+    (let c5 (if (eq (ms-a-confidence ah) 13)             32 0))
+    (let c6 (if (eq (len (ms-a-cells ah)) 2)             64 0))
+    ; the watch reported raw confidence 5 on both planes; the fused trust (18 where, 13 who) crossed it
+    ; only because channel fitness let the two coherent cells fuse past the lone relayed reading.
+    (let c7 (if (and (lt 5 (ms-a-confidence aw)) (lt 5 (ms-a-confidence ah))) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

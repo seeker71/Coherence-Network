@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/mesh-join.fk
+;
+; mesh-join-band — a device becomes a live member of the device mesh.
+;
+; Verdict 1023 when every claim lands:
+;   1    the roster holds exactly three device-cells (Mac + Android + Windows)
+;   2    Windows is on the roster as a device-cell
+;   4    Windows sees five organs (mic, speaker, camera, screen, network)
+;   8    Windows speaks five cross-cell-interface channels (sense/ask/share/learn/build)
+;   16   mj-join turns the Windows device-cell into a live member (present)
+;   32   the joined Windows member offers the 'sense' and 'build' channel verbs (consent)
+;   64   joining the whole roster yields three membership entries
+;   128  every joined member is live — the board's live count equals the roster size
+;   256  an absent name finds no device-cell (mj-roster-find is honest about absence)
+;   512  Mac and Android also each see five organs (Windows is a peer ROW, not special)
+(do
+    (let roster (mj-roster))
+    (let windows (mj-roster-find roster "windows-binary"))
+    (let mac (mj-roster-find roster "macos-binary"))
+    (let android (mj-roster-find roster "android-phone"))
+    (let win-member (mj-join windows))
+    (let board (mj-board roster))
+
+    (let c0 (if (eq (mj-roster-size) 3) 1 0))
+    (let c1 (if (gt (len windows) 0) 2 0))
+    (let c2 (if (eq (mj-device-organ-count windows) 5) 4 0))
+    (let c3 (if (eq (mj-device-channel-count windows) 5) 8 0))
+    (let c4 (if (eq (mj-present? windows) 1) 16 0))
+    (let c5 (if (and (eq (mj-offers? win-member "sense") 1)
+                     (eq (mj-offers? win-member "build") 1)) 32 0))
+    (let c6 (if (eq (len board) 3) 64 0))
+    (let c7 (if (eq (mj-live-count board) (mj-roster-size)) 128 0))
+    (let c8 (if (eq (len (mj-roster-find roster "linux-binary")) 0) 256 0))
+    (let c9 (if (and (eq (mj-device-organ-count mac) 5)
+                     (eq (mj-device-organ-count android) 5)) 512 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))

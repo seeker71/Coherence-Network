@@ -1,0 +1,52 @@
+; preludes: form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk
+;
+; sound-classify-band — classify ambient sound into bird-call / human-voice / music / ambient from a
+; frequency spectrum (the bird noises we can identify), four-way. Composes spectrum.fk's 8-band
+; spectrum shape (0..9 band levels) with speaker-embed.fk's nearest-by-cosine DECISION (se-dot /
+; se-nearest): a sound-print is the same shape as a voiceprint, so recognizing "this is a bird"
+; reuses the voice recognizer verbatim — only the roster (sound classes, not speakers) changes.
+;
+; The roster carries one exemplar feature vector per class; sc-features(spectrum) -> a 5-d sound-
+; print [low·30/T, mid·30/T, high·30/T, chirp, loud]; sc-classify -> nearest class by se-dot, or
+; "unknown" below the floor. sc-enroll adds an exemplar (self-heard learning enrolls a heard+labeled
+; sound). Verdict 255 when every claim lands (numeric — the label string is carrier-read):
+;   1   a bird-chirp spectrum (energy + tonal chirp in the high bands) -> "bird"   (sim 1957)
+;   2   a voice-formant spectrum (mid formants, no high) -> "voice"                (sim 1346)
+;   4   a flat quiet spectrum -> "ambient"                                          (sim 906)
+;   8   a far spectrum (a lone faint mid tick) -> "unknown" below floor 600        (sim 420)
+;   16  sc-features computes the bird sound-print exactly  ([2 8 19 30 25])
+;   32  sc-enroll grows the roster, and the new exemplar classifies to its own label
+(do
+    ; --- the class roster: one exemplar sound-print per class, from a representative spectrum -----
+    (let bird-spec  (list 0 0 1 1 2 3 8 9))   ; energy rides the high bands, tonal chirp
+    (let voice-spec (list 6 9 7 4 2 1 0 0))   ; mid formants dominate, no high
+    (let music-spec (list 4 5 7 8 7 6 5 4))   ; broadband structured
+    (let amb-spec   (list 1 1 1 0 0 0 0 0))   ; flat and quiet
+
+    (let roster (list (list "bird"    (sc-features bird-spec))
+                      (list "voice"   (sc-features voice-spec))
+                      (list "music"   (sc-features music-spec))
+                      (list "ambient" (sc-features amb-spec))))
+    (let floor 600)
+
+    ; --- queries (slightly off the exemplars, as a live mic frame would be) ----------------------
+    (let q-bird  (sc-features (list 0 1 1 2 2 3 8 8)))
+    (let q-voice (sc-features (list 7 9 6 3 1 1 0 0)))
+    (let q-amb   (sc-features (list 1 1 0 0 0 0 0 0)))
+    (let q-far   (sc-features (list 0 0 0 1 0 0 0 0)))   ; a lone faint mid tick — far from all
+
+    (let c0 (if (str_eq (sc-classify q-bird  roster floor) "bird")    1  0))
+    (let c1 (if (str_eq (sc-classify q-voice roster floor) "voice")   2  0))
+    (let c2 (if (str_eq (sc-classify q-amb   roster floor) "ambient") 4  0))
+    (let c3 (if (str_eq (sc-classify q-far   roster floor) "unknown") 8  0))
+
+    ; the bird sound-print is computed exactly: [low·30/T, mid·30/T, high·30/T, chirp, loud] = [2 8 19 30 25]
+    (let bf (sc-features (list 0 1 1 2 2 3 8 8)))
+    (let c4 (if (eq (se-dot bf (list 1 1 1 1 1)) 84) 16 0))
+
+    ; sc-enroll: a heard+labeled cricket spectrum joins the roster and classifies to its own label
+    (let cricket-spec (list 0 0 0 0 1 2 9 9))
+    (let roster2 (sc-enroll roster "cricket" (sc-features cricket-spec)))
+    (let c5 (if (str_eq (sc-classify (sc-features cricket-spec) roster2 floor) "cricket") 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

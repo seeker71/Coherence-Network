@@ -1,0 +1,118 @@
+; speaking-mesh.fk — the talking-learning loop: the body's parts SPEAK their summaries + surprises, the
+; mics HEAR it back, and the agreement between said and heard is FREE self-supervision. Speaking is not
+; just sound: when a part voices its line and the mesh's mics transcribe it, said≈heard is a label no
+; oracle handed us — the parts teach each other through voice.
+;
+; voice-self-learn.fk already closed the inward loop for ONE emitted utterance (the body says a known
+; string, N mics hear it, vsl-agree counts matches, vsl-learn flips authority on the champion-challenger
+; window). speaking-mesh ORCHESTRATES that loop over the WHOLE observed cell: it takes the single fused
+; observation (fused-observation.fk's fo-fuse) and the cycle's surprise (surprise-kernel.fk's sk-surprise),
+; turns them into the LINES the parts voice (one row per part: summary / surprise / learning / mesh), then
+; scores said≈heard and lets the spoken mesh learn to trust its own voice. It composes — it re-derives none
+; of the fusion, the surprise, the said→heard accuracy, or the trust window.
+;
+; COMPOSED, never re-derived:
+;   fused-observation.fk   fo-o-present/who/what/where/confidence — the ONE observed cell each cycle; the
+;                          summary line is read straight off it (the body's parts already fused to one set).
+;   surprise-kernel.fk     sk-surprise — the cycle's prediction-error magnitude; the surprise line is what
+;                          the body voices about what it did NOT expect.
+;   stt-agree.fk           sa-accuracy / sa-agree? — said≈heard word-overlap accuracy: did the mics hear
+;                          what was spoken? The SAME metric voice-self-learn scores a mic transcript with.
+;   champion-challenger.fk cc-chall-score / cc-authority — confidence climbs as said≈heard across cycles;
+;                          authority flips home (native, oracle rests) only on a PROVEN trust window.
+;
+; A cycle's spoken witness:
+;   sm-utterance(observation, surprise)  -> the parts' lines: a list of (part word-list) rows. The summary
+;       from fo-* , the surprise from sk-surprise, the learning (confidence so far), the mesh (cross-device
+;       state). word-list because the line is meant to be VOICED and heard back — sa-accuracy scores words.
+;   sm-witness(said, heard)              -> did the mics hear what was said? sa-agree?-style match of the
+;       spoken utterance's words vs the heard transcript's words -> 1 heard / 0 missed (the self-supervision
+;       coin); sm-witness-score is the raw 0..100 accuracy (the learning frontier read).
+;   sm-learn(witness-history)            -> the parts learn from each other's voice: confidence = how many
+;       cycles said≈heard (cc-chall-score), authority flips to the native spoken mesh once the trust window
+;       is long enough and reached (cc-authority). When it crosses, the mesh trusts its own voice; the
+;       oracle rests.
+;
+; Integers only; str_eq + counting + the composed accuracy/window; no floats. (empty) for an empty utterance.
+; Self-contained over core + the four composed bodies. Four-way by tests/speaking-mesh-band.fk.
+;
+; preludes: form-stdlib/fused-observation.fk form-stdlib/surprise-kernel.fk form-stdlib/stt-agree.fk form-stdlib/champion-challenger.fk
+
+(do
+    ; ── a VOICED LINE: (part word-list). `part` names which part is speaking ("summary"/"surprise"/
+    ;    "learning"/"mesh"); the word-list is what it voices, as words so the mics can hear it back and
+    ;    sa-accuracy can score the heard transcript against it. ──
+    (defn sm-line  (part words) (list part words))
+    (defn sm-part  (l) (nth l 0))
+    (defn sm-words (l) (nth l 1))
+
+    ; ── int->word: name the small integer bands the summary/surprise voice (so the spoken line is words a
+    ;    mic transcribes, not a raw int). 0/1 occupancy and a coarse magnitude band cover what the parts say. ──
+    (defn sm-band-word (n)
+        (if (eq n 0) "none"
+            (if (eq n 1) "one"
+                (if (lt n 10) "few" "many"))))
+
+    ; ── THE PARTS' LINES. Each row is one part voicing its share of the cycle, read straight off the fused
+    ;    observation and the surprise — no new computation, just what the parts already know, spoken:
+    ;      summary  <- present/who/what/where: the ONE observed set fo-fuse produced, voiced.
+    ;      surprise <- the cycle's prediction-error magnitude band: what the body did NOT expect.
+    ;      learning <- the confidence-so-far band: how much the spoken mesh already trusts its own voice.
+    ;      mesh     <- the cross-witness confidence band: how many devices agree right now.
+    ;    observation = (observed present who what where confidence) (fused-observation's fo-observed cell). ──
+    (defn sm-summary-line (observation)
+        (sm-line "summary"
+            (list "present" (sm-band-word (fo-o-present observation))
+                  "who" (fo-o-who observation)
+                  "what" (fo-o-what observation)
+                  "where" (sm-band-word (fo-o-where observation)))))
+
+    (defn sm-surprise-line (surprise)
+        (sm-line "surprise" (list "surprise" (sm-band-word surprise))))
+
+    (defn sm-learning-line (confidence)
+        (sm-line "learning" (list "confidence" (sm-band-word confidence))))
+
+    (defn sm-mesh-line (observation)
+        (sm-line "mesh" (list "mesh" (sm-band-word (fo-o-confidence observation)))))
+
+    ; ── sm-utterance: the whole spoken witness for one cycle — the parts' lines in voice order. confidence
+    ;    is the learning-so-far (the climbing self-trust, threaded from sm-learn over prior cycles). ──
+    (defn sm-utterance (observation surprise confidence)
+        (list (sm-summary-line observation)
+              (sm-surprise-line surprise)
+              (sm-learning-line confidence)
+              (sm-mesh-line observation)))
+
+    ; ── flatten the utterance to the FLAT word stream that was actually voiced into the room (append every
+    ;    line's words in order). This is the "said" transcript the mics are trying to hear back. The append
+    ;    is the cons-spine every stdlib body carries; here scoped local so speaking-mesh stays self-contained. ──
+    (defn sm-append (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (sm-append (tail xs) ys))))
+    (defn sm-spoken (utterance)
+        (if (eq (len utterance) 0) (empty)
+            (sm-append (sm-words (head utterance)) (sm-spoken (tail utterance)))))
+
+    ; ── sm-witness: did the mics HEAR what was said? sa-accuracy scores the heard transcript against the
+    ;    flat spoken stream — the SAME word-overlap metric voice-self-learn scores a mic with. ──
+    (defn sm-witness-score (said heard) (sa-accuracy (sm-spoken said) heard))
+    ; the self-supervision COIN: 1 when said≈heard clears the floor (the mics heard the voice), else 0 —
+    ; a clean cycle is a won trial; a divergent transcript is 0, named below as the learning frontier.
+    (defn sm-witness (said heard floor) (sa-agree? (sm-spoken said) heard floor))
+
+    ; ── one cycle as a champion-challenger trial = (oracle-correct native-correct). The rented oracle is
+    ;    assumed right on the body's own emission (champ = 1); the spoken mesh (challenger) earns its 1 only
+    ;    when the mics heard back what it said. This bridges a said≈heard cycle to the proven trust window. ──
+    (defn sm-trial (said heard floor) (list 1 (sm-witness said heard floor)))
+
+    ; ── sm-confidence: the climbing self-trust = how many cycles the spoken mesh was heard correctly
+    ;    (cc-chall-score over the trial history). It can only climb as more said≈heard cycles arrive. ──
+    (defn sm-confidence (witness-history) (cc-chall-score witness-history))
+
+    ; ── sm-learn: the parts learn from each other's voice. Authority flips to the native spoken mesh — the
+    ;    oracle rests — only when the trust window is long enough (>= min-cycles) AND the spoken mesh has
+    ;    reached the oracle within margin (cc-authority). "challenger" = the mesh trusts its own voice now;
+    ;    "champion" = still leaning on the oracle. Proven self-heard competition, never asserted. ──
+    (defn sm-learn  (witness-history min-cycles margin) (cc-authority witness-history min-cycles margin))
+    (defn sm-home?  (witness-history min-cycles margin) (cc-promote?  witness-history min-cycles margin))
+
+    0)

@@ -1,0 +1,98 @@
+; tests/perception-cascade-band.fk — the SAME presence across N encounters; the cascade converges to
+; native sovereignty (surprise→0, oracle retires), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/surprise-receipt.fk form-stdlib/tier-router.fk form-stdlib/self-heard-learning.fk form-stdlib/champion-challenger.fk form-stdlib/perception-cascade.fk
+;
+; ONE presence (e.g. a recurring voice / sound / face), six encounters. The REMOTE oracle's settled
+; verdict for this presence is 7 (the true identity). Native starts far off and learns from the settled
+; answer fed back each encounter; its reading climbs 0→3→5→6→7→7 and STAYS at 7. floor=2.
+;
+;   enc  native  local  remote  surprise(native vs settled-higher)   cascade settles at
+;    1     0       0       7      |0−7| = 7  HIGH → escalate to remote, settle REMOTE(2)
+;    2     3       7       7      |3−7| = 4  HIGH → escalate to remote, settle REMOTE(2)
+;    3     5       7       7      |5−7| = 2  HIGH (≥floor) → escalate, settle REMOTE(2)
+;    4     6       7       7      |6−7| = 1  LOW  → native vs local |6−7|=1<2 settle… local 7? no:
+;                                            native-vs-local surprise 1<floor → settle NATIVE(0)
+;    5     7       7       7      |7−7| = 0  LOW → settle NATIVE(0)  (sovereign)
+;    6     7       7       7      |7−7| = 0  LOW → settle NATIVE(0)  (sovereign)
+;
+; surprise history (native vs the SETTLED answer 7 each tick): (7 4 2 1 0 0) — monotone non-increasing,
+; falls to 0 and STAYS. With window=2 the trailing-window converges first at encounter 5 (ticks 4,5? no:
+; surprise@4 = |6−7| = 1 ≠ 0). The convergence handle counts ZERO-surprise ticks: a 0 is (1 1), a nonzero
+; is (1 0); cc-promote? clears only when the last `window` ticks are ALL zero. Ticks 5 and 6 are the first
+; window-of-2 that are all zero → pc-converge-tick = 6, and settled-tier is NATIVE at the end.
+;
+; Verdict 1048575 (= sum of all bits below) when every claim lands — a stable integer:
+;   1       enc1 surprise is HIGH (7 ≥ floor)                          → cascade escalates to remote
+;   2       enc1 cascade settles at REMOTE (tier 2)                    (the teacher of last resort answers)
+;   4       enc1 settled verdict is the oracle's 7                     (remote gave the truth)
+;   8       enc1 feeds back a self-label keyed to the settled answer   (pc-feedback label = native reading)
+;   16      surprise FALLS monotonically enc1→enc5: 7≥4≥2≥1≥0          (the native learns; error drops)
+;   32      surprise reaches 0 by enc5 and STAYS 0 at enc6            (native agrees with settled — sovereign)
+;   64      pc-escalate? flips 1→0 as surprise crosses the floor       (high escalates, low stops)
+;   128     by enc5 cascade settles at NATIVE (tier 0)                 (no escalation — cheapest sufficient)
+;   256     enc6 also settles NATIVE (tier 0)                          (settled-tier-is-native at the end)
+;   512     NOT converged at enc4 (window not yet all-zero-surprise)   (one low tick is not convergence)
+;   1024    CONVERGED at enc5..enc6 over window=2 (last two = 0,0)     (proven, long-window — oracle retired)
+;   2048    pc-converge-tick = 6 (first trailing window-of-2 all-zero) (the encounter the oracle retires)
+;   4096    pc-surprise is symmetric: |3−7| = |7−3|                    (sr-surprise abs — direction-free)
+;   8192    enc1 native-vs-local surprise also HIGH (|0−3| = 3 ≥ floor) — escalation chains tiers
+;   16384   the feedback pair's LABEL is ground-truth from the settled answer (self-supervision, no human)
+;   32768   an already-sovereign tick needs NO oracle spend (tier 0)   (the flywheel: native handles it free)
+;   65536   convergence is PROVEN over the window, not one lucky tick  (cc-promote? long-window gate)
+;   131072  surprise@enc3 = floor exactly still escalates (≥ floor)    (the boundary is inclusive)
+;   262144  surprise@enc4 < floor stops at native                     (the cheapest sufficient tier)
+;   524288  the settled answer is conserved as the convergence target  (history measured vs 7 throughout)
+(do
+    (let floor 2)
+    (let settled 7)            ; the oracle's true verdict for this presence
+    (let window 2)             ; the long-window convergence gate
+
+    ; per-encounter tier readings (native climbs as it learns; local/remote hold the truth)
+    (let nat1 0) (let nat2 3) (let nat3 5) (let nat4 6) (let nat5 7) (let nat6 7)
+    (let loc  7) (let rem  7)
+    (let loc1 3)               ; at enc1 local is ALSO unsure (off from remote) — only the oracle knows → remote
+    (let obs  0)               ; the observation handle (shape parity)
+
+    ; ── encounter 1: native far off, local cold → escalate to remote ──
+    (let r1 (pc-cascade obs nat1 loc1 rem floor))
+    (let s1 (pc-surprise nat1 settled))          ; |0−7| = 7
+
+    ; ── encounters 2..6: native learns; local now holds truth ──
+    (let s2 (pc-surprise nat2 settled))          ; 4
+    (let s3 (pc-surprise nat3 settled))          ; 2
+    (let s4 (pc-surprise nat4 settled))          ; 1
+    (let s5 (pc-surprise nat5 settled))          ; 0
+    (let s6 (pc-surprise nat6 settled))          ; 0
+    (let r4 (pc-cascade obs nat4 loc rem floor))
+    (let r5 (pc-cascade obs nat5 loc rem floor))
+    (let r6 (pc-cascade obs nat6 loc rem floor))
+
+    ; the surprise history vs the settled answer, oldest→newest
+    (let hist (list s1 s2 s3 s4 s5 s6))
+
+    ; the feedback self-label from encounter 1 (native read 0, settled 7)
+    (let fb1 (pc-feedback nat1 settled))
+
+    (let c0  (if (eq (pc-escalate? s1 floor) 1) 1 0))
+    (let c1  (if (eq (pc-settled-tier r1) 2) 2 0))
+    (let c2  (if (eq (pc-settled-verdict r1) settled) 4 0))
+    (let c3  (if (eq (len fb1) 2) 8 0))
+    (let c4  (if (and (ge s1 s2) (and (ge s2 s3) (and (ge s3 s4) (and (ge s4 s5) (ge s5 s6))))) 16 0))
+    (let c5  (if (and (eq s5 0) (eq s6 0)) 32 0))
+    (let c6  (if (and (eq (pc-escalate? s1 floor) 1) (eq (pc-escalate? s4 floor) 0)) 64 0))
+    (let c7  (if (eq (pc-settled-tier r5) 0) 128 0))
+    (let c8  (if (eq (pc-settled-tier r6) 0) 256 0))
+    (let c9  (if (eq (pc-converged? (pc-take hist 4) window) 0) 512 0))
+    (let c10 (if (eq (pc-converged? hist window) 1) 1024 0))
+    (let c11 (if (eq (pc-converge-tick hist window) 6) 2048 0))
+    (let c12 (if (eq (pc-surprise nat2 settled) (pc-surprise settled nat2)) 4096 0))
+    (let c13 (if (eq (pc-escalate? (pc-surprise nat1 loc1) floor) 1) 8192 0))   ; |0−3|=3 native-vs-local HIGH → escalation chains tiers
+    (let c14 (if (str_eq (shl-pair-label fb1) (pc-label settled)) 16384 0))
+    (let c15 (if (eq (pc-settled-tier r6) 0) 32768 0))
+    (let c16 (if (eq (cc-promote? (pc-trials (pc-last hist window)) window 0) 1) 65536 0))
+    (let c17 (if (eq (pc-escalate? s3 floor) 1) 131072 0))
+    (let c18 (if (eq (pc-escalate? s4 floor) 0) 262144 0))
+    (let c19 (if (and (eq (pc-surprise nat5 settled) 0) (eq (pc-surprise nat6 settled) 0)) 524288 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9
+    (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 (add c16 (add c17 (add c18 c19))))))))))))))))))))

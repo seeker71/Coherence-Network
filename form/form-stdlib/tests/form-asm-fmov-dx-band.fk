@@ -1,0 +1,35 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-fmov-dx-band — the GP<->FP BIT-REINTERPRET pair emits four-way as Form->asm bytes, no rustc.
+; fa-fmov-d-x is the keystone the native 2^k/ldexp step needs — the LAST missing piece of the exp lane.
+; The native exp reduces as k = round(x*log2e) (fam-frintn, on the lane), r = x - k*ln2 over the pooled
+; ln2/log2e (fam-pool-fma, on the lane), exp(x) = 2^k * Horner(r) (the Horner poly, on the lane). The one
+; primitive that could NOT be synthesized from existing bytes is BUILDING 2^k: assemble the IEEE754 exponent
+; field (k+1023)<<52 in an integer register, then REINTERPRET those bits as the f64 2^k. fa-scvtf converts the
+; integer VALUE (numeric); fa-fmov-d-x preserves the BIT PATTERN — a different instruction, a different word.
+;
+; The new ground vs the prior bricks: every float op so far (fmul/fadd/fmadd/fsqrt/frintn/scvtf/fcvtzs) either
+; computes on f64 values or numerically converts. fa-fmov-d-x is the FIRST op that moves raw bits BETWEEN the
+; integer and f64 register files with NO numeric transformation — the door to 2^k, sign extraction, softmax
+; max-subtract, NaN/inf tests (the bit-ops q4k-dequant had to fold in integer arithmetic for lack of it).
+; ABI: x0 = i64 bits, returns d0 = the f64 those bits encode.
+;
+; The 2-instruction program, otool -tvVj of the clang -O2 oracle
+; (`double f(unsigned long x){double d;__builtin_memcpy(&d,&x,8);return d;}`):
+;   9e670000 fmov d0,x0     d65f03c0 ret
+; The reverse encoder (read bits OUT) is fmov x0,d0 (9e660000), the matched door for f64->bits.
+;
+; Verdict 15 when every claim lands:
+;   1    the program is 2 instructions = 8 bytes                                     (len == 8)
+;   2    the FULL program byte-equals the 8-byte clang oracle                        (fa-conviction == 1)
+;   4    fmov d0,x0 — the new bits->f64 reinterpret encoder (9e670000)               (fa-conviction == 1)
+;   8    fmov x0,d0 — the reverse f64->bits encoder, a DISTINCT word (9e660000)      (fa-conviction == 1)
+(do
+    (let prog (fam-fmov-bits))
+    (let oracle (list
+        0 0 103 158    192 3 95 214))
+    (let c0 (if (eq (len prog) 8)                                              1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                          1)    2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmov-d-x 0 0) (list 0 0 103 158)) 1)    4 0))
+    (let c3 (if (eq (fa-conviction (fa-fmov-x-d 0 0) (list 0 0 102 158)) 1)    8 0))
+    (add c0 (add c1 (add c2 c3))))

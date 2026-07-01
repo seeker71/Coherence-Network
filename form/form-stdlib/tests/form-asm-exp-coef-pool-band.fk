@@ -1,0 +1,41 @@
+; form-asm-exp-coef-pool-band — the coefficient-parameterized constant-pool emitter fam-pool-fma carries a REAL
+; transcendental coefficient pair (ln2, log2e — exp's range-reduction constants) into a self-contained arm64
+; literal pool, COMPUTED by f64-bytes, byte-identical to the independent struct.pack oracle, four-way. No rustc.
+;
+; The lane so far: fam-poly-pool (form-asm-poly-pool 31) proved the FIRST self-contained constant pool, but it
+; HAND-wrote its coefficients as known little-endian byte lists (1/6 = 55 55 55 55 55 55 c5 3f). f64-bytes
+; (f64-bytes 127) lifted those bytes to a COMPUTED encoding. This band closes the loop: fam-pool-fma (the
+; coefficient-parameterized engine — one engine, coefficients as DATA) fills the pool by calling f64-bytes on
+; the VALUES, so the pool can carry ANY constant — including the irregular-mantissa transcendental constants no
+; repeating-nibble hand-pattern can produce. ln2 = 0.6931471805599453 (mantissa 62E42FEFA39EF) and
+; log2e = 1.4426950408889634 (mantissa 71547652B82FE) are EXACTLY the two constants exp's range reduction uses
+; (x = n*ln2 + r, n = round(x*log2e)) — the next nonlinear rung, here proven to emit byte-exact in the pool.
+;
+; The image, fam-pool-fma 0.6931471805599453 1.4426950408889634 (same proven code shape as poly-pool, new pool):
+;   0 ldr d1,+16 (5c000081)   4 ldr d2,+20 (5c0000a2)   8 fmadd d0,d0,d1,d2 (1f410800)   12 ret (d65f03c0)
+;   16 ef 39 fa fe 42 2e e6 3f (.quad ln2)               24 fe 82 2b 65 47 15 f7 3f (.quad log2e)
+;
+; Verdict 31 when every claim lands:
+;   1    the program is 4 instructions + 2 pooled f64 = 32 bytes                              (len == 32)
+;   2    the FULL 32-byte program byte-equals the independent struct.pack('<d') oracle        (fa-conviction == 1)
+;   4    f64-bytes computes ln2's irregular-mantissa 8 bytes (NOT a hand repeating-nibble)    (fa-conviction == 1)
+;   8    f64-bytes computes log2e's irregular-mantissa 8 bytes                                (fa-conviction == 1)
+;   16   the SAME engine, given 1/6 & 1/120, still emits the proven poly-pool image (core-lift) (fa-conviction == 1)
+;
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-pool-fma 0.6931471805599453 1.4426950408889634))
+    (let oracle (list
+        129 0 0 92      162 0 0 92      0 8 65 31      192 3 95 214
+        239 57 250 254 66 46 230 63     254 130 43 101 71 21 247 63))
+    (let pp-oracle (list
+        129 0 0 92      162 0 0 92      0 8 65 31      192 3 95 214
+        85 85 85 85 85 85 197 63        17 17 17 17 17 17 129 63))
+    (let c1 (if (eq (len prog) 32)                                                          1 0))
+    (let c2 (if (eq (fa-conviction prog oracle)                                       1)   2 0))
+    (let c3 (if (eq (fa-conviction (f64-bytes 0.6931471805599453)
+                                   (list 239 57 250 254 66 46 230 63))               1)   4 0))
+    (let c4 (if (eq (fa-conviction (f64-bytes 1.4426950408889634)
+                                   (list 254 130 43 101 71 21 247 63))               1)   8 0))
+    (let c5 (if (eq (fa-conviction (fam-pool-fma (div 1.0 6.0) (div 1.0 120.0)) pp-oracle) 1) 16 0))
+    (add c1 (add c2 (add c3 (add c4 c5)))))

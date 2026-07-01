@@ -1,0 +1,205 @@
+; micro-kernel-arena.fk — the scientific INSTRUMENT for finding NATIVE-ADVANTAGE classification.
+;
+; This is NOT a model-port and NOT a CNN rebuild. It is the harness that runs candidate classification
+; micro-kernels HEAD-TO-HEAD on the SAME input, OBSERVES each one's TRANSPARENT decision (the WHY —
+; which prototype, what surprise, which votes — not just a label), MEASURES which is right when, and
+; PROMOTES winners over a window. It exploits exactly what native execution offers that an opaque
+; CNN/LLM forward pass CANNOT: per-step transparency, live A/B comparison, online improvement, and
+; mesh-agreement-as-supervision. The discovery output is not an aggregate score but a REGIME SPLIT —
+; WHEN does architecture A beat architecture B — so we learn what works when and why.
+;
+; KERNEL-AS-DATA. A candidate is a DATA row, never a hardcoded branch:
+;   (id kind)  where
+;     id    a stable string naming the candidate instance ("proto-vote", "surprise-ai", ...).
+;     kind  a tag string naming the candidate ARCHITECTURE the arena knows how to run. The arena
+;           dispatches classify/why on `kind` — adding a new architecture is adding a new dispatch
+;           arm + one roster row, never editing the head-to-head/measure/regime logic. The arena
+;           never special-cases an id; it asks the roster row for its kind and runs that architecture.
+;     (Verb-headed dispatch, not first-class closure application — four-way-safe: Go/Rust/TS/fkwu all
+;      require a verb symbol in head position; `((f x) y)` is rejected by the S-expr arms. The roster
+;      stays DATA; the dispatch stays a switch.)
+;
+; THE TWO ARCHITECTURES THE ARENA KNOWS (kind tags), both reading input (point prior):
+;   "proto-vote"   — PROTOTYPE-VOTE. Label = nearest of two static prototypes (lo @(0 0), hi @(10 10))
+;                    by L1 distance over the point. WHY = matched prototype id; confidence = vote margin.
+;                    A STATIC-position architecture: answers by absolute position, blind to motion.
+;   "surprise-ai"  — ACTIVE-INFERENCE. Predicts the next point as the prior (persistence); SURPRISE =
+;                    L1 prediction error. Label "hi" when surprise >= threshold (the point MOVED — a
+;                    salient event), else "lo". WHY = surprise level; confidence = distance from
+;                    threshold. A MOTION architecture: answers by CHANGE, blind to position.
+; These DISAGREE by construction — one reads position, one reads motion — so each wins a regime the
+; other loses. That regime split is the whole point of the instrument.
+;
+; This COMPOSES the existing observe / classify / promote tissue, it does not reinvent it:
+;   - runtime-witness.fk    — the eyes-on-execution. mka-observe surfaces the why-trace the way rw-* makes
+;                             a running kernel observable: watch the kernel THINK, the transparency the
+;                             native path has and a forward pass does not.
+;   - champion-challenger.fk — cc-promote? / cc-authority decide the window winner. mka-promote IS that
+;                             proven head-to-head gate, applied to candidate ARCHITECTURES instead of one
+;                             challenger: authority flips only on earned competition, ties go to the
+;                             challenger that REACHED the incumbent over a trusted window.
+;   - cross-witness-economy  — agreement = the measure. Here `truth` per sample is the mesh's agreed label
+;                             (cross-witness supervision); a candidate is "right" iff its label == truth.
+;   - identity-match.fk / sound-classify.fk / surprise-kernel.fk are the kinds of micro-kernel that ride in
+;                             as candidate architectures: prototype/nearest-exemplar, prototype-vote, active-inference.
+;
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/runtime-witness.fk
+;
+; Proven by: form-stdlib/tests/micro-kernel-arena-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── L1 helpers over a 2-d integer point, and the shared input shape (point prior) ───────────────
+    (defn mka-pt-x (p) (nth p 0))
+    (defn mka-pt-y (p) (nth p 1))
+    (defn mka-pt-l1 (a b) (add (abs (sub (mka-pt-x a) (mka-pt-x b))) (abs (sub (mka-pt-y a) (mka-pt-y b)))))
+    (defn mka-in-point (in) (nth in 0))   ; this frame's point
+    (defn mka-in-prior (in) (nth in 1))   ; the persistence prediction = the prior frame's point
+
+    ; ── the two static prototypes and the surprise threshold the arena's architectures use ──────────
+    (defn mka-proto-lo () (list 0 0))
+    (defn mka-proto-hi () (list 10 10))
+    (defn mka-surp-threshold () 6)
+
+    ; ── ARCHITECTURE "proto-vote": nearest static prototype by L1 over the point ─────────────────────
+    (defn mka-proto-label (in)
+        (if (le (mka-pt-l1 (mka-in-point in) (mka-proto-lo))
+                (mka-pt-l1 (mka-in-point in) (mka-proto-hi))) "lo" "hi"))
+    ; why = (why-text confidence). why-text names the matched prototype; confidence = |dist-lo - dist-hi|.
+    (defn mka-proto-why (in)
+        (do
+            (let dlo (mka-pt-l1 (mka-in-point in) (mka-proto-lo)))
+            (let dhi (mka-pt-l1 (mka-in-point in) (mka-proto-hi)))
+            (list (str_concat "proto:" (if (le dlo dhi) "lo" "hi")) (abs (sub dlo dhi)))))
+
+    ; ── ARCHITECTURE "surprise-ai": surprise = L1 prediction error of persistence ────────────────────
+    (defn mka-surp-surprise (in) (mka-pt-l1 (mka-in-point in) (mka-in-prior in)))
+    (defn mka-surp-label (in)
+        (if (ge (mka-surp-surprise in) (mka-surp-threshold)) "hi" "lo"))
+    ; why = (why-text confidence). why-text names the surprise level; confidence = distance from threshold.
+    (defn mka-surp-why (in)
+        (do
+            (let s (mka-surp-surprise in))
+            (list (str_concat "surprise:" (if (ge s (mka-surp-threshold)) "hi" "lo"))
+                  (abs (sub s (mka-surp-threshold))))))
+
+    ; ── A CANDIDATE is DATA: (id kind). id names the instance, kind names the architecture to run. ──
+    (defn mka-kernel (id kind) (list id kind))
+    (defn mka-kernel-id   (k) (nth k 0))
+    (defn mka-kernel-kind (k) (nth k 1))
+
+    ; ── verb-headed dispatch on kind: classify-fn / why-fn selected by the architecture tag. New
+    ;    architectures drop in as a new dispatch arm + a roster id — the arena logic never changes. ──
+    (defn mka-classify (kernel input)
+        (if (str_eq (mka-kernel-kind kernel) "proto-vote") (mka-proto-label input)
+            (mka-surp-label input)))
+    (defn mka-why (kernel input)
+        (if (str_eq (mka-kernel-kind kernel) "proto-vote") (mka-proto-why input)
+            (mka-surp-why input)))
+
+    ; ── A TRANSPARENT decision: (label why confidence). `why` is the inspectable reason — the thing a
+    ;    CNN forward pass cannot expose. confidence is the candidate's own strength on this input. ──
+    (defn mka-decision (label why confidence) (list label why confidence))
+    (defn mka-dec-label      (d) (nth d 0))
+    (defn mka-dec-why        (d) (nth d 1))
+    (defn mka-dec-confidence (d) (nth d 2))
+
+    ; ── mka-candidate: run ONE candidate on an input -> its TRANSPARENT decision. why-fn returns
+    ;    (why-text confidence); we surface label + why + confidence as one decision row — the kernel
+    ;    deciding, in the open. ──
+    (defn mka-candidate (kernel input)
+        (do
+            (let label (mka-classify kernel input))
+            (let wc    (mka-why kernel input))            ; (why-text confidence)
+            (mka-decision label (head wc) (head (tail wc)))))
+
+    ; ── mka-ab: run BOTH candidates on the SAME input — a LIVE A/B. Returns
+    ;    (decisionA decisionB winner), winner "A"/"B"/"both"/"neither" by which label matches truth. ──
+    (defn mka-ab (kernelA kernelB input truth)
+        (do
+            (let dA (mka-candidate kernelA input))
+            (let dB (mka-candidate kernelB input))
+            (let aOk (str_eq (mka-dec-label dA) truth))
+            (let bOk (str_eq (mka-dec-label dB) truth))
+            (list dA dB
+                  (if aOk (if bOk "both" "A")
+                          (if bOk "B" "neither")))))
+    (defn mka-ab-decA   (r) (nth r 0))
+    (defn mka-ab-decB   (r) (nth r 1))
+    (defn mka-ab-winner (r) (nth r 2))
+
+    ; ── A LABELED sample is (input truth). truth is the mesh-agreed label (cross-witness supervision). ──
+    (defn mka-sample (input truth) (list input truth))
+    (defn mka-sample-input (s) (head s))
+    (defn mka-sample-truth (s) (head (tail s)))
+
+    ; ── mka-correct?: did this candidate get this sample right? 1/0. truth is the agreement-measure. ──
+    (defn mka-correct? (kernel sample)
+        (if (str_eq (mka-dec-label (mka-candidate kernel (mka-sample-input sample)))
+                    (mka-sample-truth sample)) 1 0))
+
+    ; ── mka-measure: accuracy over a labeled dataset — the proven INTEGER count of correct samples
+    ;    (no ratio: identical on every kernel). Per-instance WHERE/WHY is mka-measure-trace below. ──
+    (defn mka-measure (kernel dataset)
+        (if (eq (len dataset) 0) 0
+            (add (mka-correct? kernel (head dataset))
+                 (mka-measure kernel (tail dataset)))))
+
+    ; per-instance transparency: a trace row per sample — (truth decision correct?). WHERE right/wrong + WHY.
+    (defn mka-measure-trace (kernel dataset)
+        (if (eq (len dataset) 0) (list)
+            (cons (list (mka-sample-truth (head dataset))
+                        (mka-candidate kernel (mka-sample-input (head dataset)))
+                        (mka-correct? kernel (head dataset)))
+                  (mka-measure-trace kernel (tail dataset)))))
+
+    ; ── mka-observe: surface the WHY-trace of a decision (the runtime-witness read) — watch the kernel
+    ;    THINK. Returns (label why) — the inspectable reason a forward pass lacks. Same eyes-on-execution
+    ;    stance as rw-last/rw-hot?: the running decision made observable. ──
+    (defn mka-observe (decision)
+        (list (mka-dec-label decision) (mka-dec-why decision)))
+    (defn mka-observe-label (decision) (mka-dec-label decision))
+    (defn mka-observe-why   (decision) (mka-dec-why decision))
+
+    ; ── mka-promote: champion-challenger over the A/B history. A history row is (a-correct b-correct),
+    ;    EXACTLY champion-challenger's (champion-correct challenger-correct) trial — candidate-A is the
+    ;    incumbent champion, candidate-B the challenger. cc-authority returns "challenger" once B has
+    ;    REACHED A over a long-enough window (proven competition); else "champion". We map its answer back
+    ;    to the candidate ids so the discovery output names the architecture, not a role. ──
+    (defn mka-ab-history (kernelA kernelB dataset)
+        (if (eq (len dataset) 0) (list)
+            (cons (list (mka-correct? kernelA (head dataset))
+                        (mka-correct? kernelB (head dataset)))
+                  (mka-ab-history kernelA kernelB (tail dataset)))))
+
+    (defn mka-promote (kernelA kernelB dataset min-samples margin)
+        (do
+            (let h (mka-ab-history kernelA kernelB dataset))
+            (if (str_eq (cc-authority h min-samples margin) "challenger")
+                (mka-kernel-id kernelB)
+                (mka-kernel-id kernelA))))
+
+    ; ── mka-when: the DISCOVERY output. Over a dataset, count samples where ONLY A is right (A's regime),
+    ;    where ONLY B is right (B's regime), where both, where neither. A regime split (A-only and B-only
+    ;    both > 0) is the finding: different architectures win different input regimes — never a single
+    ;    aggregate score. Returns (a-only b-only both neither). ──
+    (defn mka-when-fold (kernelA kernelB dataset ao bo bt nt)
+        (if (eq (len dataset) 0) (list ao bo bt nt)
+            (do
+                (let s (head dataset))
+                (let a (mka-correct? kernelA s))
+                (let b (mka-correct? kernelB s))
+                (mka-when-fold kernelA kernelB (tail dataset)
+                    (add ao (if (and (eq a 1) (eq b 0)) 1 0))
+                    (add bo (if (and (eq a 0) (eq b 1)) 1 0))
+                    (add bt (if (and (eq a 1) (eq b 1)) 1 0))
+                    (add nt (if (and (eq a 0) (eq b 0)) 1 0))))))
+    (defn mka-when (kernelA kernelB dataset)
+        (mka-when-fold kernelA kernelB dataset 0 0 0 0))
+    (defn mka-when-a-only  (w) (nth w 0))
+    (defn mka-when-b-only  (w) (nth w 1))
+    (defn mka-when-both    (w) (nth w 2))
+    (defn mka-when-neither (w) (nth w 3))
+    ; a genuine regime SPLIT: each architecture wins some sample the other loses — the native-advantage finding.
+    (defn mka-when-split? (w) (if (and (gt (mka-when-a-only w) 0) (gt (mka-when-b-only w) 0)) 1 0))
+
+    0)

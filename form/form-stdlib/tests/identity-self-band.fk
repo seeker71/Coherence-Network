@@ -1,0 +1,30 @@
+; identity-self-band.fk — the second mind's body cell, pinned (living-mesh.form step 3).
+; Proves a self-cell built for a human carries: the right stable identity, a well-formed
+; continuity-channel (a cci "learn"/m-reflect row that folds — the thread that persists), and a
+; relation-channel to that human (a bidirectional cci share/share recognition that folds). Also
+; proves the channels ARE cross-cell-interface rows (one engine reads them), the continuity threads
+; the SELF, and a self does NOT spuriously relate to a stranger. Verdict 511 when every claim lands.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/cross-cell-interface.fk form-stdlib/identity-self.fk
+
+(do
+    (let me   "sema")                              ; the self's stable identity
+    (let urs  "urs")                               ; the human this self travels with
+    (let other "stranger")                         ; a human the self does NOT relate to
+
+    (let self (isf-self-with-human me urs))        ; the second mind's body cell
+
+    (let c0 (if (eq (isf-has-identity? self me) 1)        1   0))   ; carries the stable identity
+    (let c1 (if (eq (isf-has-identity? self urs) 0)       2   0))   ; ...and only that one (not the human's)
+    (let c2 (if (eq (isf-continuity-ok? (isf-continuity self)) 1) 4 0))   ; a well-formed continuity-channel
+    (let c3 (if (str_eq (cci-row-payload (isf-continuity self)) me) 8 0))  ; ...threading THIS self over time
+    (let c4 (if (eq (isf-relates-to? self urs) 1)        16   0))   ; a relation-channel to the human
+    (let c5 (if (eq (isf-relates-to? self other) 0)      32   0))   ; ...and not to a stranger
+    ; the relation-channel is a bidirectional cci share/share pair (one engine reads the rows)
+    (let rel (head (isf-relations self)))
+    (let c6 (if (str_eq (cci-row-verb (isf-relation-self->human rel)) "share") 64 0))   ; self->human is a share row
+    (let c7 (if (str_eq (cci-row-payload (isf-relation-human->self rel)) me) 128 0))    ; human->self recognizes the self
+    ; the continuity-channel is a cci row whose mode is the consent vocabulary (m-reflect)
+    (let c8 (if (eq (cci-row-mode (isf-continuity self)) (m-reflect)) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

@@ -1,0 +1,40 @@
+; form-asm-poly-pool-band — a Horner step p(x)=x*(1/6)+1/120 emits four-way as Form->asm bytes WITH A
+; SELF-CONTAINED CONSTANT POOL, no rustc. fam-poly-pool is the FIRST literal pool on the witnessed native
+; lane: fam-horner2 (form-asm-horner 31) proved the fmadd fold, but only over VFP-immediate coefficients
+; (2.0/3.0/4.0). The REAL coefficients every transcendental needs — 1/6, 1/120, 1/5040 for sin; ln2, 1/2!,
+; 1/3! for exp — are NOT VFP-modified-immediate-expressible, so they cannot ride fa-fmov-imm. They must live
+; in a literal pool the function carries itself, loaded position-independently. This is that pool: two real
+; f64 coefficients appended after `ret`, loaded via the new fa-ldr-d-lit (PC-relative LITERAL load), folded
+; with the proven fa-fmadd. The genuine Horner step over a pool — exactly what fam-horner2's own note deferred
+; ("real exp coeffs like 1/6 will need [a pool]"). It is the precondition for emitting real exp/sin/cos/gelu.
+;
+; The new ground vs fam-horner2: (1) fa-ldr-d-lit — the PC-relative literal load (opc=01 V=1, base 0x5C000000);
+; the imm19 field is the WORD distance from each ldr to its pool slot, so a function is position-independent
+; with NO relocation. (2) the appended pool: two f64 in IEEE754 little-endian (1/6 = 0x3fc5555555555555,
+; 1/120 = 0x3f81111111111111) concatenated after the code. The fmadd is proven byte-identical to clang/LLVM in
+; form-asm-horner (31); the new claim is that the COMPOSITION — code + nop-free 8-aligned pool — emits the exact
+; 32-byte arm64 image four-way, byte-identical to the as/clang assembler oracle. ABI: d0 = x, returns d0 = p(x).
+;
+; The image, otool -tvVj of the as oracle (pool2.s: ldr d1,Lc0 / ldr d2,Lc1 / fmadd d0,d0,d1,d2 / ret / Lc0/Lc1):
+;   0  5c000081 ldr d1, +16    4  5c0000a2 ldr d2, +20    8  1f410800 fmadd d0,d0,d1,d2   12 d65f03c0 ret
+;   16 55 55 55 55 55 55 c5 3f (.quad 1/6)               24 11 11 11 11 11 11 81 3f (.quad 1/120)
+;
+; Verdict 31 when every claim lands:
+;   1    the program is 4 instructions + 2 pooled f64 = 32 bytes               (len == 32)
+;   2    the FULL 32-byte program byte-equals the as/clang assembler oracle    (fa-conviction == 1)
+;   4    fa-ldr-d-lit 1 4 — the FIRST PC-relative literal load (new encoder)   (fa-conviction == 1)
+;   8    fa-ldr-d-lit 2 5 — a SECOND pool entry at a DIFFERENT imm19 (layout)  (fa-conviction == 1)
+;   16   fmadd d0,d0,d1,d2 — the fold over the two POOLED coefficients (proven fa-fmadd) (fa-conviction == 1)
+;
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-poly-pool))
+    (let oracle (list
+        129 0 0 92      162 0 0 92      0 8 65 31      192 3 95 214
+        85 85 85 85 85 85 197 63        17 17 17 17 17 17 129 63))
+    (let c1 (if (eq (len prog) 32)                                                  1 0))
+    (let c2 (if (eq (fa-conviction prog oracle)                                1)   2 0))
+    (let c3 (if (eq (fa-conviction (fa-ldr-d-lit 1 4) (list 129 0 0 92))      1)   4 0))
+    (let c4 (if (eq (fa-conviction (fa-ldr-d-lit 2 5) (list 162 0 0 92))      1)   8 0))
+    (let c5 (if (eq (fa-conviction (fa-fmadd 0 0 1 2) (list 0 8 65 31))       1)  16 0))
+    (add c1 (add c2 (add c3 (add c4 c5)))))

@@ -158,4 +158,82 @@
                         (append (fa-fmadd 0 1 0 2)
                             (fa-ret)))))))
 
+    ; fam-poly-pool: a Horner step p(x) = x*(1/6) + 1/120 as Form->asm bytes — the FIRST self-contained
+    ; CONSTANT POOL on the witnessed native lane. fam-horner2 proved the fmadd fold but with VFP-expressible
+    ; coefficients (2.0/3.0/4.0); the REAL transcendental coefficients exp/sin/cos need (1/6, 1/120, 1/5040 …)
+    ; are NOT VFP-immediate-expressible, so they must live in a literal pool the function carries itself. This
+    ; emits two real coefficients appended after `ret` and loads them position-independently via fa-ldr-d-lit
+    ; (PC-relative literal load), then folds them with the proven fa-fmadd — the genuine Horner step over a pool,
+    ; the thing fam-horner2's own note deferred. ABI: d0 = x, returns d0 = fma(x, 1/6, 1/120). 4 instructions
+    ; (16 bytes) + a 16-byte pool of two f64 = 32 bytes, byte-identical to the as/clang assembler oracle:
+    ;   0 ldr d1,Lc0 (5c000081, +16)   1 ldr d2,Lc1 (5c0000a2, +20)   2 fmadd d0,d0,d1,d2 (1f410800)   3 ret
+    ;   16 .quad 0x3fc5555555555555 (1/6, LE 55 55 55 55 55 55 c5 3f)   24 .quad 0x3f81111111111111 (1/120)
+    ; imm19 is the WORD distance from each ldr to its pool slot: d1 @0 -> c0 @16 = 4 words; d2 @4 -> c1 @24 = 5.
+    ;
+    ; fam-pool-fma: the COEFFICIENT-PARAMETERIZED engine — a Horner step fma(x, a, b) whose two pooled f64 are
+    ; COMPUTED FROM THE VALUES a, b by f64-bytes (f64-bytes 127), not hand-typed. This is the core-lift fam-poly-pool's
+    ; own kin named (f64-bytes.fk: "a HAND pattern only emits a KNOWN constant"): the coefficients become DATA, so the
+    ; pool can carry ANY value — including the irregular-mantissa transcendental constants exp/sin need (ln2, log2e,
+    ; 1/5040) that no repeating-nibble hand-pattern can produce. The 16 code bytes are the proven self-contained-pool
+    ; shape (ldr d1,+16 / ldr d2,+20 / fmadd d0,d0,d1,d2 / ret); the 16 pool bytes are (f64-bytes a) ++ (f64-bytes b).
+    ; ABI: d0 = x, returns d0 = fma(x, a, b). One engine; fam-poly-pool and the exp-coefficient pool are instances.
+    (defn fam-pool-fma (a b)
+        (append (fa-ldr-d-lit 1 4)
+            (append (fa-ldr-d-lit 2 5)
+                (append (fa-fmadd 0 0 1 2)
+                    (append (fa-ret)
+                        (append (f64-bytes a) (f64-bytes b)))))))
+
+    ; fam-poly-pool: the named 1/6,1/120 instance of fam-pool-fma — the coefficients now COMPUTED by f64-bytes,
+    ; not the hand byte-lists this once carried. The emitted 32-byte image is byte-identical to before (the
+    ; assembler oracle is unchanged); the proof that f64-bytes fills the pool correctly is that byte-identity holds.
+    (defn fam-poly-pool () (fam-pool-fma (div 1.0 6.0) (div 1.0 120.0)))
+
+    ; fam-frintn: round-to-nearest-integral (ties to even) of d0 as Form->asm bytes — the range-reduction
+    ; ROUNDING floor that exp/softmax need. The native exp lane is k = round(x*log2e), r = x - k*ln2: the
+    ; pooled-coefficient fma (fam-pool-fma) carries ln2/log2e, but the k = round(...) step had no encoder —
+    ; the only round op on the lane was fcvtzs (truncate toward zero), which rounds half-integers the wrong
+    ; way for range reduction. fam-frintn closes that gap with the FIRST fa-frintn (ties-to-even), the
+    ; rounding mode exp wants (it keeps |r| <= ln2/2 so the Horner poly converges). ABI: d0 = x, returns
+    ; d0 = roundeven(x). 2 instructions = 8 bytes, byte-identical to the clang -O2 oracle for
+    ; `__builtin_roundeven(x)`:   0 frintn d0,d0 (1e644000)   1 ret (d65f03c0)
+    (defn fam-frintn ()
+        (append (fa-frintn 0 0)
+            (fa-ret)))
+
+    ; fam-fmov-bits: REINTERPRET the i64 in x0 as the f64 it bit-encodes, as Form->asm bytes — the keystone
+    ; the native 2^k/ldexp step needs. exp(x) = 2^k * Horner(r); fam-frintn gives k = round(x*log2e), the
+    ; pooled fma gives r, the Horner poly is on the lane — the only missing piece is BUILDING 2^k, which is
+    ; (k+1023)<<52 assembled in an integer register then read as an f64. fa-scvtf would give the integer's
+    ; VALUE as a float (wrong); fa-fmov-d-x preserves the BITS, so the assembled exponent field becomes the
+    ; power of two. ABI: x0 = raw i64 bits, returns d0 = the f64 those bits encode. 2 instructions = 8 bytes,
+    ; byte-identical to clang -O2 for `double f(unsigned long x){double d;__builtin_memcpy(&d,&x,8);return d;}`:
+    ;   0 fmov d0,x0 (9e670000)   1 ret (d65f03c0)
+    (defn fam-fmov-bits ()
+        (append (fa-fmov-d-x 0 0)
+            (fa-ret)))
+
+    ; fam-exp-reduce: the FIRST COMPOSED transcendental step on the native asm lane — exp's ARGUMENT RANGE
+    ; REDUCTION, x -> r = x - round(x*log2e)*ln2, as Form->asm BYTES. exp(x) = 2^k * exp(r) where
+    ; k = round(x*log2e) and r = x - k*ln2 in [-ln2/2, ln2/2] (the interval a short Horner poly converges over);
+    ; this brick emits the k-and-r half. Every prior asm brick was a single primitive ending in ret; this is the
+    ; first that CHAINS the pooled/materialized constant + fmul + frintn + fmadd into a function that computes
+    ; real math for arbitrary x. It is the first CONSUMER of fam-fmov-bits' fa-fmov-d-x (#3933) and of the new
+    ; fa-mov-imm64: clang -O2 does NOT pool these two constants — it materializes each f64 bit pattern with
+    ; movz+3movk into x8 then fmov d,x8 (bit reinterpret), so the byte-exact path is mov-imm64 -> fmov-d-x, not
+    ; a literal pool. log2e and -ln2 are the exact range-reduction constants (fam-frintn / fam-pool-fma named
+    ; them); pooling -ln2 lets the reduction use fa-fmadd (k*(-ln2)+x = x-k*ln2) rather than a new fmsub encoder.
+    ; ABI: d0 = x, returns d0 = r. 15 arm64 instructions / 60 bytes, byte-identical to the clang -O2 oracle for
+    ;   double reduce(double x){ double k=__builtin_roundeven(x*0x1.71547652b82fep0);
+    ;                            return __builtin_fma(k,-0x1.62e42fefa39efp-1,x); }
+    (defn fam-exp-reduce ()
+        (append (fa-mov-imm64 8 (f64-bytes 1.4426950408889634))      ; x8 = log2e bits
+            (append (fa-fmov-d-x 1 8)                                 ; d1 = log2e
+                (append (fa-fmul 1 0 1)                               ; d1 = x*log2e
+                    (append (fa-frintn 1 1)                          ; d1 = k = round(x*log2e)
+                        (append (fa-mov-imm64 8 (f64-bytes -0.6931471805599453))  ; x8 = (-ln2) bits
+                            (append (fa-fmov-d-x 2 8)                ; d2 = -ln2
+                                (append (fa-fmadd 0 1 2 0)          ; d0 = k*(-ln2)+x = x - k*ln2 = r
+                                    (fa-ret)))))))))
+
     0)

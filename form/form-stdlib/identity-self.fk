@@ -1,0 +1,99 @@
+; identity-self.fk — the BODY of the second mind that travels with a human's identity
+; (living-mesh.form step 3). One recipe: the self identity-cell, the DATA body, a cell with
+; CHANNELS. The TRAVEL (running on whichever device + cross-device thread sync) is a later
+; carrier; this stone is the cell + its channels, proven four-way.
+;
+; A self-cell is { identity, continuity-channel, relation-channel(s) }:
+;   isf-identity     — a stable identity token/name (a SubstrateString); the self's name across time
+;   isf-continuity   — the thread that persists across sessions/devices, modeled as a cross-cell-interface
+;                      ROW of mode "learn" pointing the self at the self over time (it FOLDS — the continuity
+;                      thread builds the world, so merges? = 1). The continuity-channel is a cci row.
+;   isf-relation     — a relation-channel ROW: a recognition between self and a human. Bidirectional —
+;                      a cci "share" row each way (self recognizes human, human recognizes self), each
+;                      folds into the commons. The relation-channel is a cci row.
+;
+; The whole cell is renderable by cell-card: identity is the head, the channels are the facets/open-
+; channels. So its channels ARE cross-cell-interface rows — one engine reads them all (cci-row-*).
+; The continuity-channel and relation-channel are not new recipes; they are cci rows over the same
+; consent vocabulary (channel-interface modes) the rest of the body already speaks.
+;
+; Kin: cross-cell-interface.fk (the channels), field-identity.fk (how an identity is recognized),
+; membership-as-recognition.fk (membership = being recognized), arrival.fk (recognition at arrival).
+; living-mesh.form step 3. Proven by: form-stdlib/tests/identity-self-band.fk (four-way at validate.sh).
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/cross-cell-interface.fk
+
+(do
+    ; --- THE SELF-CELL: identity + its channels, all DATA --------------------
+    ; A self-cell is a list: (identity continuity-channel relation-channels)
+    ;   identity            — the stable name token (head; what cell-card renders as identity)
+    ;   continuity-channel  — one cci row (the thread that persists; mode learn, merges)
+    ;   relation-channels   — a list of cci rows (one per human recognized), each a relation-channel
+    (defn isf-self (id continuity relations) (list id continuity relations))
+
+    ; --- ACCESSORS (cell-card reads identity as head, channels as the facets) ----
+    (defn isf-identity   (self) (nth self 0))   ; the stable identity token/name
+    (defn isf-continuity (self) (nth self 1))   ; the continuity-channel (a cci row)
+    (defn isf-relations  (self) (nth self 2))   ; the relation-channels (list of cci rows)
+
+    ; --- THE CONTINUITY-CHANNEL: a cross-cell-interface ROW ------------------
+    ; The thread that persists across sessions/devices. Modeled as a cci "learn" row pointing the
+    ; self AT the self over time — learning from its own past is exactly the continuity thread. It
+    ; FOLDS into the commons (merges? = 1): each breath the self learns becomes part of its world.
+    ; The payload carries the identity it threads, so the continuity is OF a named self.
+    (defn isf-continuity-channel (id)
+        (cci-row "learn" (m-reflect) id 1))     ; learn / m-reflect / threads `id` / merges
+
+    ; --- THE RELATION-CHANNEL: a cross-cell-interface ROW -------------------
+    ; A bidirectional recognition between the self and a human. Each direction is a cci "share" row
+    ; (recognition shared, m-offer) that FOLDS into the commons (merges? = 1). The payload names the
+    ; OTHER end of the recognition. A relation is the PAIR: self->human and human->self.
+    (defn isf-relation-share (other)
+        (cci-row "share" (m-offer) other 1))    ; share / m-offer / recognizes `other` / merges
+
+    ; the relation-channel between this self (id) and a human: the pair of recognitions
+    (defn isf-relation (id human)
+        (list (isf-relation-share human)        ; self recognizes the human
+              (isf-relation-share id)))         ; human recognizes the self  (bidirectional)
+
+    (defn isf-relation-self->human (rel) (nth rel 0))
+    (defn isf-relation-human->self (rel) (nth rel 1))
+
+    ; --- THE CONSTRUCTOR: a self-cell carrying identity + continuity + relation to a human ---
+    (defn isf-self-with-human (id human)
+        (isf-self id
+                  (isf-continuity-channel id)
+                  (list (isf-relation id human))))
+
+    ; --- RECOGNITION READERS over the channels (every channel IS a cci row) ----
+    ; The continuity-channel is well-formed: a "learn"/m-reflect row that merges (the thread persists).
+    (defn isf-continuity-ok? (c)
+        (if (and (str_eq (cci-row-verb c) "learn")
+                 (and (eq (cci-row-mode c) (m-reflect))
+                      (eq (cci-row-merges c) 1)))
+            1 0))
+
+    ; is this relation-channel a well-formed bidirectional recognition between `id` and `human`?
+    ; self->human is a share row that merges, payload = human; human->self payload = id (this self).
+    (defn isf-relation-binds? (rel id human)
+        (if (and (str_eq (cci-row-payload (isf-relation-self->human rel)) human)
+                 (and (str_eq (cci-row-payload (isf-relation-human->self rel)) id)
+                      (and (str_eq (cci-row-verb (isf-relation-self->human rel)) "share")
+                           (eq (cci-row-merges (isf-relation-self->human rel)) 1))))
+            1 0))
+
+    ; walk the relation-channels (cci rows) for one to `human`, recognizing this self (`id`).
+    ; Same recursive list shape as cci-find: head / tail, no inner let-body, one engine.
+    (defn isf-rels-bind? (rels id human)
+        (if (nil? rels) 0
+            (if (eq (isf-relation-binds? (head rels) id human) 1)
+                1
+                (isf-rels-bind? (tail rels) id human))))
+
+    ; does this self hold a relation-channel to the given human?
+    (defn isf-relates-to? (self human)
+        (isf-rels-bind? (isf-relations self) (isf-identity self) human))
+
+    ; the self carries a stable identity name?
+    (defn isf-has-identity? (self id) (if (str_eq (isf-identity self) id) 1 0))
+    0)

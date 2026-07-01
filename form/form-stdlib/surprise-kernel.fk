@@ -1,0 +1,103 @@
+; surprise-kernel.fk — the active-inference attention gate for the 24/7 sense loop, as a GPU micro-kernel.
+;
+; In an always-on loop the body cannot fully process every frame. Active inference says: PREDICT the next
+; reading, measure SURPRISE (prediction error), and spend the GPU only where surprise is high. This is the
+; small, fast per-frame computation — predict -> surprise -> salience-gate — lowered to a GPU compute shader
+; so the per-frame surprise runs on silicon, not the tree-walker. When salience is 0 the frame is expected
+; (cheap-persist, GPU idle); when salience is 1 the frame is surprising (ATTEND — wake full perception/fusion).
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - active-inference.fk names the surprise BIT (predicted != actual). Here surprise is the MAGNITUDE over a
+;     reading VECTOR — the free-energy term — and the gate is the active-inference decision made per frame.
+;   - ambient-surprise.fk tracks a scalar baseline by sign-LMS; sk-predict is the vector twin of that
+;     expectation: the simplest honest predictor is PERSISTENCE — expect the next reading to equal the last.
+;   - surprise-salience.fk ranks surprises by magnitude against a floor; sk-salience is the same ge-cutoff,
+;     reused as the per-frame ATTEND gate.
+;   - world-model-live-sense.fk's wmls reading is the frame shape the loop consumes; the kernel runs upstream
+;     of it, deciding whether a frame is even worth sensing fully.
+;   - form-glsl.fk / form-ptx.fk / jit-tensor-emit.fk (MSL) are the lowering lanes; sk-glsl / sk-ptx / sk-msl
+;     emit the predict+surprise compute shader directly from Form, the same DOWNWARD serial fold as the matvec
+;     lanes (no FMA, bit-exact to CPU) — Vulkan/Android (GLSL), CUDA (PTX), Apple-GPU (Metal).
+;
+; All integer, no division. A reading is a vector of ints (a frame scaled to ints, as every numeric band does:
+; e.g. a sound/motion/light level *1000). The predictor is persistence: expected[i] = last[i]. Surprise is the
+; L1 prediction error sum |actual[i] - expected[i]| over the vector — the free-energy / total-error term that
+; active-inference.fk counts one bit at a time, here summed as a magnitude. Salience is ge-cutoff against a
+; threshold: 1 = ATTEND, 0 = cheap-persist. Identical 1/0 verdict on every kernel; the floats are pre-scaled.
+;
+; Honest lane: the predictor is the simplest that is honest — persistence — named as the FIRST kernel, not a
+; placeholder; a linear/world-model predictor drops into sk-predict later without changing the gate. Surprise
+; is the RAW L1 error, never inflated to make a quiet frame look loud; a quiet/expected frame yields a small
+; sum, below threshold, ATTEND=0. The ATTEND gate is a hard ge-cutoff — a surprise one under threshold does not
+; wake full perception, exactly as one far under does not. The GPU lowering is the SPEED witness (emitted shader
+; text, bit-exact-runnable on Vulkan/CUDA like form-glsl/form-ptx); the four-way INTEGER math is the proof floor.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-glsl.fk form-stdlib/form-ptx.fk
+;
+; Proven by: form-stdlib/tests/surprise-kernel-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; --- PREDICT: the expected next reading vector. The simplest honest predictor is PERSISTENCE: ---
+    ;     expect the next frame to look like the last one. Returns the history's most-recent reading as the
+    ;     expectation; an empty history honestly yields () — nothing seen, nothing to expect. A linear or
+    ;     world-model predictor drops in here later without touching the surprise/salience gate downstream.
+    (defn sk-predict (history)
+        (if (eq (len history) 0) (empty)
+            (nth history (sub (len history) 1))))
+
+    ; --- ERROR-SUM: the L1 prediction error over the vector = sum |actual[i] - expected[i]|. ---
+    ;     The free-energy / total-surprise term. Walk both vectors in lockstep, +|diff| per component; the
+    ;     evidence-counting spine of ai-surprise-count, summing magnitudes instead of counting miss-bits.
+    ;     An empty expected (no prior frame) yields 0 — no expectation, no error to charge against the frame.
+    (defn sk-error-sum (actual expected)
+        (if (eq (len expected) 0) 0
+            (if (eq (len actual) 0) 0
+                (add (abs (sub (head actual) (head expected)))
+                     (sk-error-sum (tail actual) (tail expected))))))
+
+    ; --- SURPRISE: the prediction-error magnitude of THIS frame against the history's expectation. ---
+    ;     predict the next reading from history, then sum the L1 error against the actual frame. This is the
+    ;     per-frame free-energy term the active-inference gate weighs.
+    (defn sk-surprise (history actual)
+        (sk-error-sum actual (sk-predict history)))
+
+    ; --- SALIENCE / ATTEND: the active-inference gate. surprise meets-or-exceeds threshold -> 1 = ATTEND ---
+    ;     (wake full perception/fusion on the GPU); else 0 = cheap-persist (GPU idle, ride the prediction).
+    ;     A hard ge-cutoff, the same boundary surprise-salience.ss-salient? and anomaly-band use — a surprise
+    ;     one under threshold does not wake perception, identically to one far under.
+    (defn sk-salience (surprise threshold)
+        (if (ge surprise threshold) 1 0))
+
+    ; --- ATTEND?: the whole gate in one call — predict, surprise, salience-decide for a frame. ---
+    ;     1 = this frame is surprising enough to spend the GPU on; 0 = expected, ride the cheap persist.
+    (defn sk-attend? (history actual threshold)
+        (sk-salience (sk-surprise history actual) threshold))
+
+    ; --- GPU MICRO-KERNEL (GLSL): emit the predict+surprise compute shader for the Vulkan/Android lane. ---
+    ;     One invocation per vector component: prod = |actual[j] - expected[j]| reduced by a serial DOWNWARD
+    ;     fold (j = n-1..0), the SAME op order as form-glsl's matvec / fptx-matvec / tb-dot, `precise` ->
+    ;     NoContraction so the driver does not fuse — bit-exact to the CPU sk-error-sum and to sk-ptx. The
+    ;     persistence predictor is expected[] = the prior frame, bound at binding 1; the salience gate is the
+    ;     final ge against the pushed threshold, writing 1=ATTEND / 0=persist. The workgroup size is the only
+    ;     parameter; the body is the proven downward |diff| reduce. The same .spv runs on Adreno/Mali.
+    (defn sk-glsl (wg)
+        (str_concat "#version 450\n\n// form-native surprise micro-kernel (active-inference attention gate, Vulkan/Android lane).\n// Per-frame: predict (persistence: expected[] = prior frame) -> surprise (L1 |actual-expected| serial\n// DOWNWARD reduce j=n-1..0, same op order as the matvec lanes) -> salience (ge threshold -> ATTEND).\n// `precise` -> NoContraction so the driver does NOT fuse -> bit-exact to the CPU sk-error-sum and to\n// the PTX lane. One workgroup reduces one frame; serial fold in invocation 0 keeps the op order exact.\nlayout(local_size_x = " (str_concat wg ", local_size_y = 1, local_size_z = 1) in;\n\nlayout(std430, binding = 0) readonly  buffer A   { int actual[]; };    // this frame, n ints\nlayout(std430, binding = 1) readonly  buffer E   { int expected[]; };  // persistence prediction = prior frame\nlayout(std430, binding = 2) writeonly buffer Res { int res[]; };       // res[0]=surprise, res[1]=attend\n\nlayout(push_constant) uniform Push { uint n; int threshold; } pc;\n\nint iabs(int v) { return v < 0 ? -v : v; }\n\nvoid main() {\n    if (gl_GlobalInvocationID.x != 0u) return;\n    int surprise = 0;\n    for (int j = int(pc.n) - 1; j >= 0; --j) {\n        int diff = iabs(actual[uint(j)] - expected[uint(j)]);\n        surprise = diff + surprise;\n    }\n    res[0] = surprise;\n    res[1] = (surprise >= pc.threshold) ? 1 : 0;\n}\n")))
+
+    ; --- GPU MICRO-KERNEL (PTX-shaped): the CUDA twin of sk-glsl. Same predict+surprise+salience, emitted ---
+    ;     as a CUDA-C source the nvrtc lane mints to PTX/cubin (the fptx-* authoring shape). Same DOWNWARD
+    ;     serial |diff| reduce -> the surprise and ATTEND verdict are bit-identical to sk-glsl and sk-error-sum.
+    (defn sk-ptx (block)
+        (str_concat "// form-native surprise micro-kernel (active-inference attention gate, CUDA/PTX lane).\n// Per-frame: predict (persistence: expected[] = prior frame) -> surprise (L1 |actual-expected| serial\n// DOWNWARD reduce j=n-1..0, same op order as fptx-matvec) -> salience (>= threshold -> ATTEND).\n// One block reduces one frame in thread 0; serial fold keeps the op order bit-exact to sk-glsl/CPU.\nextern \"C\" __global__ void sk_surprise(const int* actual, const int* expected, int* out, unsigned int n, int threshold) {\n    if (threadIdx.x != 0 || blockIdx.x != 0) return;\n    int surprise = 0;\n    for (int j = (int)n - 1; j >= 0; --j) {\n        int d = actual[j] - expected[j];\n        int ad = d < 0 ? -d : d;\n        surprise = ad + surprise;\n    }\n    out[0] = surprise;\n    out[1] = (surprise >= threshold) ? 1 : 0;\n}\n// launch: <<<1, " (str_concat block ">>>\n")))
+
+    ; --- GPU MICRO-KERNEL (MSL): the Metal twin of sk-glsl / sk-ptx. Same predict+surprise+salience, emitted ---
+    ;     as Metal Shading Language the Apple-GPU lane compiles to a .metallib (the jte-matvec-msl authoring
+    ;     shape: `kernel void`, `device const int*` buffers, `[[thread_position_in_grid]]`). Same DOWNWARD
+    ;     serial |diff| reduce j=n-1..0 -> the surprise and ATTEND verdict are bit-identical to sk-glsl, sk-ptx,
+    ;     and sk-error-sum. The persistence predictor is expected[] = the prior frame, bound at buffer(1); the
+    ;     salience gate is the final ge against the pushed threshold, writing res[0]=surprise / res[1]=ATTEND.
+    ;     thread_position_in_grid 0 does the serial fold so the op order stays exact — no FMA, no fusion. The
+    ;     threadgroup width is the only parameter (the .metallib dispatch grid); the body is the proven reduce.
+    (defn sk-msl (tg)
+        (str_concat "#include <metal_stdlib>\nusing namespace metal;\n\n// form-native surprise micro-kernel (active-inference attention gate, Metal/Apple-GPU lane).\n// Per-frame: predict (persistence: expected[] = prior frame) -> surprise (L1 |actual-expected| serial\n// DOWNWARD reduce j=n-1..0, same op order as jte-matvec-msl) -> salience (>= threshold -> ATTEND).\n// Thread 0 of the grid does the serial fold; the op order stays bit-exact to sk-glsl/sk-ptx/CPU.\n// dispatch: one threadgroup of " (str_concat tg " reduces one frame.\nkernel void sk_surprise(device const int* actual [[buffer(0)]], device const int* expected [[buffer(1)]], device int* res [[buffer(2)]], constant uint& n [[buffer(3)]], constant int& threshold [[buffer(4)]], uint i [[thread_position_in_grid]]) {\n    if (i != 0u) return;\n    int surprise = 0;\n    for (int j = int(n) - 1; j >= 0; --j) {\n        int d = actual[j] - expected[j];\n        int ad = d < 0 ? -d : d;\n        surprise = ad + surprise;\n    }\n    res[0] = surprise;\n    res[1] = (surprise >= threshold) ? 1 : 0;\n}\n")))
+
+    0)

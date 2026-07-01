@@ -1,0 +1,153 @@
+; scene-features.fk — the SHAPE of the room, what is in it, and which things are common vs unique, read
+; from the SAME downsampled NxN luminance grid the camera sensor-organ port produces (a thin carrier;
+; the grid arrives row-major as a flat list of ints, as every numeric band does).
+;
+; presence-feature.fk asks ONE question of the grid — is a BODY there (lower-center MAD above a wall
+; baseline). scene-features asks the room's OWN structure, the question that precedes presence: what is
+; the shape of this place, what objects sit in it, which are the common furniture and which are new.
+; It is the spatial sibling of room-register.fk: room-register turns already-fused feature bands into a
+; remembered room and recognizes the room on return (rr-signature / rr-distance over a banded signature);
+; scene-features READS the raw grid into the kind of banded structure rr-signature consumes — sf-shape is
+; the source of a room's banded shape, the upstream half of the same recognition rr-distance closes.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - presence-feature.fk's MEAN-ABSOLUTE-DEVIATION region variance (pf-sad / pf-sum / pf-region-var) is
+;     the exact spread measure used here — re-grown over a coarse BLOCK grid so the whole frame is read,
+;     not just the body region. An object is a block whose detail (MAD) lifts above a uniform wall: the
+;     SAME ge-cutoff pf-present? draws against an occupancy floor, drawn here per block against a detail
+;     floor. A high-MAD block is a THING (face/object texture); a low-MAD block is flat wall.
+;   - room-register.fk's rr-distance (summed L1 band residual) is the measure of "how differently does
+;     this read feel from that remembered room"; sf-common? / sf-unique? draw the SAME residual between a
+;     region's detail and the baseline frame's detail at the same region — a small residual means the
+;     region matches the stable baseline (furniture that was always there), a large one means it is novel.
+;   - sf-edge is the local gradient: a corner/wall edge is where luminance CHANGES across a step. A flat
+;     plane (uniform wall, a tabletop) reads gradient ~0; a wall-corner or object boundary reads high.
+;     sf-shape bands each coarse region by whether its summed gradient clears the edge floor — a coarse
+;     layout signature of FLAT-PLANE (0) vs EDGE (1) regions: the room's shape, the bands rr-signature eats.
+;
+; All integer. Gradient is forward absolute difference (|cell - right| + |cell - below|), MAD is the same
+; squares-free spread presence-feature proved, residual is room-register's L1 — no floats, no sqrt, exact
+; on every arm. Regions are derived from n (a 2x2 coarse block grid) so any even grid size composes.
+;
+; A SCENE-FEATURE READ is therefore three banded views of one grid:
+;   sf-shape   -> the room's coarse layout signature (flat-plane vs edge per block)  — the SHAPE
+;   sf-objects -> the blocks whose detail clears the floor                           — what is IN it
+;   sf-common? / sf-unique? -> a region's detail vs the baseline frame at that region — common vs new
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/scene-features-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── GRADIENT: local forward absolute difference at (x,y) — |cell - right| + |cell - below|. A flat
+    ;    plane reads ~0; a wall-corner / object boundary reads high. Edge cells (last col/row) drop the
+    ;    missing neighbour term (compare only the neighbour that exists), so the gradient is honest at the
+    ;    frame border without inventing an off-grid value. ──
+    (defn sf-cell (grid n x y) (nth grid (add (mul y n) x)))
+
+    (defn sf-edge (grid n x y)
+        (add
+            (if (lt (add x 1) n) (abs (sub (sf-cell grid n x y) (sf-cell grid n (add x 1) y))) 0)
+            (if (lt (add y 1) n) (abs (sub (sf-cell grid n x y) (sf-cell grid n x (add y 1)))) 0)))
+
+    ; ── SUM the gradient over a sub-region (rows y0..y0+h-1, cols x0..x0+w-1), walking it row by row. ──
+    (defn sf-edge-row (grid n row x0 w xi acc)
+        (if (eq xi w) acc
+            (sf-edge-row grid n row x0 w (add xi 1)
+                (add acc (sf-edge grid n (add x0 xi) row)))))
+
+    (defn sf-edge-sum (grid n x0 y0 w h yi acc)
+        (if (eq yi h) acc
+            (sf-edge-sum grid n x0 y0 w h (add yi 1)
+                (add acc (sf-edge-row grid n (add y0 yi) x0 w 0 0)))))
+
+    ; ── REGION DETAIL: the mean absolute deviation of a sub-region from its own mean — the exact spread
+    ;    presence-feature proved (pf-sad / pf-sum / pf-region-var), re-grown here as the per-block detail.
+    ;    A uniform wall block reads 0; a textured object block reads high. ──
+    (defn sf-sad-row (grid n row x0 w xi mean acc)
+        (if (eq xi w) acc
+            (sf-sad-row grid n row x0 w (add xi 1) mean
+                (add acc (abs (sub (sf-cell grid n (add x0 xi) row) mean))))))
+
+    (defn sf-sad (grid n x0 y0 w h yi mean acc)
+        (if (eq yi h) acc
+            (sf-sad grid n x0 y0 w h (add yi 1) mean
+                (add acc (sf-sad-row grid n (add y0 yi) x0 w 0 mean 0)))))
+
+    (defn sf-sum-row (grid n row x0 w xi acc)
+        (if (eq xi w) acc
+            (sf-sum-row grid n row x0 w (add xi 1)
+                (add acc (sf-cell grid n (add x0 xi) row)))))
+
+    (defn sf-sum (grid n x0 y0 w h yi acc)
+        (if (eq yi h) acc
+            (sf-sum grid n x0 y0 w h (add yi 1)
+                (add acc (sf-sum-row grid n (add y0 yi) x0 w 0 0)))))
+
+    (defn sf-detail (grid n x0 y0 w h)
+        (if (eq (mul w h) 0) 0
+            (div (sf-sad grid n x0 y0 w h 0 (div (sf-sum grid n x0 y0 w h 0 0) (mul w h)) 0)
+                 (mul w h))))
+
+    ; ── COARSE BLOCKS: read the grid as a 2x2 block grid (each block is a half-frame quadrant). bx,by in
+    ;    {0,1} select the block; bw/bh are half the frame. This is the coarse layout the SHAPE bands and
+    ;    the OBJECT list both walk — derived from n so any even grid size composes. ──
+    (defn sf-half (n) (div n 2))
+    (defn sf-bx0  (n bx) (mul bx (sf-half n)))
+    (defn sf-by0  (n by) (mul by (sf-half n)))
+
+    ; the detail (MAD) of coarse block (bx,by).
+    (defn sf-block-detail (grid n bx by)
+        (sf-detail grid n (sf-bx0 n bx) (sf-by0 n by) (sf-half n) (sf-half n)))
+
+    ; the summed gradient of coarse block (bx,by).
+    (defn sf-block-edge (grid n bx by)
+        (sf-edge-sum grid n (sf-bx0 n bx) (sf-by0 n by) (sf-half n) (sf-half n) 0 0))
+
+    ; ── SHAPE: the room's coarse layout signature — for each of the four coarse blocks, 1 if its summed
+    ;    gradient clears the edge floor (an EDGE region — a wall-corner, an object boundary), else 0 (a
+    ;    FLAT PLANE — uniform wall, a flat surface). The list is the banded shape rr-signature consumes,
+    ;    walked in raster order (top-left, top-right, bottom-left, bottom-right). ──
+    (defn sf-shape-block? (grid n bx by edge-floor)
+        (if (ge (sf-block-edge grid n bx by) edge-floor) 1 0))
+
+    (defn sf-shape (grid n edge-floor)
+        (list (sf-shape-block? grid n 0 0 edge-floor) (sf-shape-block? grid n 1 0 edge-floor)
+              (sf-shape-block? grid n 0 1 edge-floor) (sf-shape-block? grid n 1 1 edge-floor)))
+
+    ; ── OBJECTS: the coarse blocks that hold a THING — detail (MAD) clears the detail floor — gathered as
+    ;    a list of block ids (by*2 + bx, raster order). A uniform wall block contributes nothing; a
+    ;    textured object block contributes its id. The SAME ge-cutoff presence-feature draws, drawn per
+    ;    block. The list is the room's inventory: where the things are. ──
+    (defn sf-object-id (bx by) (add (mul by 2) bx))
+
+    (defn sf-objects-acc (grid n detail-floor blocks)
+        (if (eq (len blocks) 0) (list)
+            (do
+                (let b (head blocks))
+                (let bx (nth b 0))
+                (let by (nth b 1))
+                (let rest (sf-objects-acc grid n detail-floor (tail blocks)))
+                (if (ge (sf-block-detail grid n bx by) detail-floor)
+                    (cons (sf-object-id bx by) rest)
+                    rest))))
+
+    (defn sf-objects (grid n detail-floor)
+        (sf-objects-acc grid n detail-floor
+            (list (list 0 0) (list 1 0) (list 0 1) (list 1 1))))
+
+    ; ── COMMON vs UNIQUE: a region's detail vs the BASELINE frame's detail at the same region. The
+    ;    residual is room-register's L1 measure (|now - baseline|) over the region's MAD. A small residual
+    ;    (within tolerance) means the region matches the stable baseline — furniture that was always there,
+    ;    COMMON. A large residual means the region is NOVEL — a new thing in the room, UNIQUE. The region
+    ;    is a coarse block (bx,by); the same block of the baseline grid is the remembered "always there". ──
+    (defn sf-region-residual (grid baseline n bx by)
+        (abs (sub (sf-block-detail grid n bx by) (sf-block-detail baseline n bx by))))
+
+    (defn sf-common? (grid baseline n bx by tolerance)
+        (if (ge (sf-region-residual grid baseline n bx by) tolerance) 0 1))
+
+    (defn sf-unique? (grid baseline n bx by tolerance)
+        (if (ge (sf-region-residual grid baseline n bx by) tolerance) 1 0))
+
+    0)

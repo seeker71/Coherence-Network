@@ -1,0 +1,135 @@
+; tests/world-model-band.fk — the mesh's TRUE NATIVE WORLD MODEL, computed and four-way.
+;
+; ONE multi-camera scene. The room holds, all recognized by the ONE recognition engine (kind as DATA,
+; never a per-kind branch):
+;   · a PERSON  — Urs, one face embedding, seen by TWO cameras (mac & android) at near-identical vectors.
+;   · THREE DEVICES — mac / android / windows (device-model entities, located by the pinhole).
+;   · TWO OBJECTS — a chair and a lamp (sf-objects texture blocks), the room's anchors.
+; plus a NOVEL object the world has never met — it must come back HELD-OPEN (namable, unnamed).
+;
+; The persistent world the model already holds (im-cells the world has met before):
+;   urs   : person, champion embedding (10 0 0 0), floor 60
+;   chair : object, champion embedding (0 0 10 0), floor 50
+;   lamp  : object, champion embedding (0 0 0 10), floor 50
+; (devices persist by their own dm identity; here the world-cells the PERSON + OBJECTS de-dup against.)
+;
+; The whole point: wm-observe finds ALL entities in ONE walk; wm-persist DE-DUPS the person across the
+; two cameras into ONE cell (not two), keeps devices + objects distinct; a re-encounter resolves to the
+; same cell; a novel object comes back held-open; wm-orient answers who is present / where the devices
+; are / what anchors the room — every answer one filter over the kind field.
+;
+; Verdict 8191 when every claim lands on Go / Rust / TypeScript / fkwu:
+;   1     wm-observe finds ALL entities in ONE frame walk (person + 3 devices + 2 objects = 6 rows)
+;   2     kind is DATA: the person row, a device row, an object row carry their kind, one engine
+;   4     wm-persist de-dups the person seen from camera A onto the urs cell (match, not new)
+;   8     wm-persist de-dups the person seen from camera B onto the SAME urs cell (one cell, not two)
+;   16    a device persists onto its own cell (distinct from the person)
+;   32    an object (chair) persists onto the chair cell, kept distinct from the person + lamp
+;   64    a re-encounter of the person later resolves to the SAME urs cell (persistence across time)
+;   128   a NOVEL object matches nothing -> held-open (id "new", namable, unnamed — cell-sovereignty)
+;   256   wm-locate fuses the person's position across the two cameras (spatial-fusion consensus)
+;   512   wm-orient "person": who is present -> exactly the one person (Urs)
+;   1024  wm-orient "device": where the devices are -> the three devices
+;   2048  wm-orient "object": what anchors the room -> the two objects
+;   4096  wm-model projects the navigable (kind id position persistence) map of the whole world
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/identity-match.fk form-stdlib/face-embed.fk form-stdlib/spatial-fusion.fk form-stdlib/world-model.fk
+
+(do
+    ; ── the persistent world's known im-cells (what the world has met before) ──
+    (let urs   (im-cell "urs"   "person" (list 10 0 0 0) 60))
+    (let chair (im-cell "chair" "object" (list 0 0 10 0) 50))
+    (let lamp  (im-cell "lamp"  "object" (list 0 0 0 10) 50))
+    (let known (list urs chair lamp))
+
+    ; ── ONE multi-camera frame: the detector regions, each (kind embedding position). People, devices,
+    ;    and objects are NOT three lists — they are six rows differing only in the kind field. ──
+    ;    The person seen by camera A (mac): face embedding near urs' champion, position band 7.
+    (let person-a  (list "person" (list 9 1 0 0) 7))
+    ;    Three devices (device-model entities): positions are their fused depth bands (mac 20, android 10,
+    ;    windows 25). Their embeddings are the device fiducial signatures.
+    (let dev-mac     (list "device" (list 5 5 0 0) 20))
+    (let dev-android (list "device" (list 5 0 5 0) 10))
+    (let dev-windows (list "device" (list 0 5 5 0) 25))
+    ;    Two objects (sf-objects texture blocks): chair + lamp, the room's anchors.
+    (let obj-chair (list "object" (list 1 0 9 0) 3))
+    (let obj-lamp  (list "object" (list 0 1 0 9) 4))
+
+    (let frame (list person-a dev-mac dev-android dev-windows obj-chair obj-lamp))
+    (let roster (list))
+
+    ; ── OBSERVE: all six entities in ONE walk ──
+    (let observed (wm-observe frame roster))
+    (let c-observe (if (eq (len observed) 6) 1 0))
+
+    ; ── kind is DATA: row 0 is person, row 1 device, row 4 object — one engine, three kind values ──
+    (let c-kind (if (and (str_eq (wm-ent-kind (nth observed 0)) "person")
+                         (and (str_eq (wm-ent-kind (nth observed 1)) "device")
+                              (str_eq (wm-ent-kind (nth observed 4)) "object"))) 2 0))
+
+    ; ── PERSIST the person from camera A onto the urs cell (de-dup: match, not new) ──
+    (let ent-person-a (nth observed 0))
+    (let persisted-a  (wm-persist ent-person-a "mac" 1000 known))
+    (let c-dedup-a (if (str_eq (wm-ent-id persisted-a) "urs") 4 0))
+
+    ; ── PERSIST the SAME person from camera B (android), a slightly different vector -> the SAME urs
+    ;    cell (one persistent cell, not two — the cross-camera de-dup) ──
+    (let person-b     (list "person" (list 8 2 0 0) 9))
+    (let ent-person-b (wm-entity-embed person-b))
+    (let persisted-b  (wm-persist ent-person-b "android" 1100 known))
+    (let c-dedup-b (if (str_eq (wm-ent-id persisted-b) "urs") 8 0))
+
+    ; ── a DEVICE persists onto its own cell, distinct from the person. The world also holds a device
+    ;    cell; matching within the "device" category keeps it off the person. ──
+    (let dev-cell  (im-cell "mac-dev" "device" (list 5 5 0 0) 40))
+    (let known-dev (list urs chair lamp dev-cell))
+    (let ent-dev   (nth observed 1))
+    (let persisted-dev (wm-persist ent-dev "android" 1000 known-dev))
+    (let c-device (if (str_eq (wm-ent-id persisted-dev) "mac-dev") 16 0))
+
+    ; ── an OBJECT (chair) persists onto the chair cell, kept distinct from the person + lamp ──
+    (let ent-chair (nth observed 4))
+    (let persisted-chair (wm-persist ent-chair "mac" 1000 known))
+    (let c-object (if (str_eq (wm-ent-id persisted-chair) "chair") 32 0))
+
+    ; ── a RE-ENCOUNTER of the person later resolves to the SAME urs cell (persistence across time) ──
+    (let person-later  (list "person" (list 9 0 1 0) 7))
+    (let ent-later     (wm-entity-embed person-later))
+    (let persisted-later (wm-persist ent-later "mac" 5000 known))
+    (let c-reencounter (if (str_eq (wm-ent-id persisted-later) "urs") 64 0))
+
+    ; ── a NOVEL object the world has never met -> held-open (id "new", namable, unnamed) ──
+    (let novel-region (list "object" (list 9 9 0 0) 6))
+    (let ent-novel    (wm-entity novel-region "object"))
+    (let persisted-novel (wm-persist ent-novel "mac" 1000 known))
+    (let c-heldopen (if (eq (wm-held-open? persisted-novel) 1) 128 0))
+
+    ; ── LOCATE: fuse the person's position across the two cameras. Camera A read band 7, camera B band 7
+    ;    (both place Urs at the same spot); ballots weight them, sf-consensus fuses to band 7. ──
+    (let person-ballots (list (list 7 3) (list 7 2)))
+    (let person-cands   (list 7 9))
+    (let person-fused   (wm-locate person-ballots person-cands))
+    (let c-locate (if (eq person-fused 7) 256 0))
+
+    ; ── the persistent WORLD the model holds (the persisted entities, kind on each row) ──
+    (let world (list
+        (wm-ent "person" (list 10 0 0 0) 7  3 "urs")
+        (wm-ent "device" (list 5 5 0 0)  20 2 "mac-dev")
+        (wm-ent "device" (list 5 0 5 0)  10 2 "android-dev")
+        (wm-ent "device" (list 0 5 5 0)  25 2 "windows-dev")
+        (wm-ent "object" (list 0 0 10 0) 3  2 "chair")
+        (wm-ent "object" (list 0 0 0 10) 4  2 "lamp")))
+
+    ; ── ORIENT: who is present / where the devices are / what anchors the room — one filter, kind as arg ──
+    (let c-who     (if (eq (wm-orient-count world "person") 1) 512 0))
+    (let c-devices (if (eq (wm-orient-count world "device") 3) 1024 0))
+    (let c-anchors (if (eq (wm-orient-count world "object") 2) 2048 0))
+
+    ; ── MODEL: the navigable (kind id position persistence) map of the whole world (6 entries) ──
+    (let model (wm-model world))
+    (let c-model (if (and (eq (len model) 6)
+                          (and (str_eq (nth (nth model 0) 0) "person")
+                               (str_eq (nth (nth model 0) 1) "urs"))) 4096 0))
+
+    (sum (list c-observe c-kind c-dedup-a c-dedup-b c-device c-object c-reencounter
+               c-heldopen c-locate c-who c-devices c-anchors c-model)))

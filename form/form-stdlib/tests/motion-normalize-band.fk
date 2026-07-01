@@ -1,0 +1,67 @@
+; preludes: form-stdlib/core.fk form-stdlib/surprise-kernel.fk form-stdlib/motion-normalize.fk
+;
+; motion-normalize-band — mean-removal makes the motion gate EXPOSURE-INVARIANT: the camera auto-exposing
+; dark -> bright no longer reads as motion, while a real local change still does. n=16 flat grid (4x4).
+;
+; This falsifies the real, observed bug: two frames that differ only in OVERALL brightness (the camera
+; auto-exposing) produced a huge surprise though nothing moved. Mean-remove each frame first and that
+; uniform offset cancels exactly; only LOCAL change (true motion) survives the normalization.
+;
+;   EXPOSURE  prev_e, frame_e = prev_e + 30 in EVERY cell (the camera brightened dark -> bright):
+;       raw sk-error-sum(frame_e, prev_e) = 16*30 = 480  -> large, the bug: light read as motion.
+;       mn-surprise(prev_e, frame_e, 16)  = 0            -> the +30 lifts each mean by 30, cancels exactly.
+;       The light changed, not the room. Mean-removal makes the gate light-blind.
+;
+;   MOTION    prev_m (uniform 100), frame_m: a bright block appears (+80 in cells 5,6,9,10) while a dark
+;             block holds the overall mean (-80 in cells 0,1,2,3) — same total brightness, real LOCAL change:
+;       mean(prev_m) = mean(frame_m) = 100 (sums identical) -> exposure did NOT change, only structure did.
+;       mn-surprise(prev_m, frame_m, 16) = 640                  -> large, true motion survives normalization.
+;
+; The single integer verdict encodes both: exposure -> low (0), motion -> high (640). A gate that fired on
+; the sunrise now fires only on the body that walked in.
+;
+; Verdict 63 when every claim lands:
+;   1    raw frame-diff INFLATES on a pure exposure shift   (sk-error-sum frame_e prev_e == 480, the bug)
+;   2    mn-surprise CANCELS the exposure shift -> ~0        (mn-surprise prev_e frame_e 16 == 0, fixed: low)
+;   4    the mean lifts by exactly the offset               (mn-mean frame_e - mn-mean prev_e == 30)
+;   8    mn-normalize is offset-invariant cell-for-cell      (mn-normalize frame_e == mn-normalize prev_e)
+;   16   a real LOCAL change leaves the mean untouched       (mn-mean prev_m == mn-mean frame_m == 100)
+;   32   mn-surprise SURVIVES on true motion -> high         (mn-surprise prev_m frame_m 16 == 640)
+(do
+    ; EXPOSURE pair: frame_e is prev_e with a uniform +30 brightness lift in every cell (auto-exposure).
+    (let prev_e  (list 120 118 121 119
+                       122 117 120 123
+                       119 121 118 120
+                       121 119 122 118))
+    (let frame_e (list 150 148 151 149
+                       152 147 150 153
+                       149 151 148 150
+                       151 149 152 148))
+
+    ; MOTION pair: prev_m uniform (100); frame_m gains a bright block (+80) and holds the mean with a dark
+    ; block (-80) — identical total brightness, a real local change. Exposure unchanged, structure changed.
+    (let prev_m  (list 100 100 100 100
+                       100 100 100 100
+                       100 100 100 100
+                       100 100 100 100))
+    (let frame_m (list  20  20  20  20
+                       100 180 180 100
+                       100 180 180 100
+                       100 100 100 100))
+
+    ; raw frame-diff (the prediction is the prior frame, sk-error-sum over the RAW grids) inflates on exposure.
+    (let c0 (if (eq (sk-error-sum frame_e prev_e) 480)              1 0))
+    ; mn-surprise cancels the uniform offset -> 0 (the bug is fixed: exposure reads LOW).
+    (let c1 (if (eq (mn-surprise prev_e frame_e 16) 0)              2 0))
+    ; the +30 offset lifts the grid mean by exactly 30 (no remainder drift) -> the cancellation is exact.
+    (let c2 (if (eq (sub (mn-mean frame_e 16) (mn-mean prev_e 16)) 30) 4 0))
+    ; mn-normalize is offset-invariant cell-for-cell: head of each mean-removed grid matches (120-119 ==
+    ; 150-149 == 1), proving the +30 vanishes per cell, not just in the summed diff.
+    (let c3 (if (eq (head (mn-normalize prev_e 16)) (head (mn-normalize frame_e 16))) 8 0))
+    ; a true local change leaves the overall mean untouched (both 100) -> it is motion, not exposure.
+    (let c4 (if (and (eq (mn-mean prev_m 16) 100)
+                     (eq (mn-mean frame_m 16) 100))                16 0))
+    ; mn-surprise SURVIVES on true motion -> high (640): local change is not cancelled by normalization.
+    (let c5 (if (eq (mn-surprise prev_m frame_m 16) 640)          32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

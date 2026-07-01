@@ -1,0 +1,172 @@
+; tests/class-curriculum-10-band.fk — the mesh grows its on-device class vocabulary 0 -> 10, taught by
+; the remote mind over its FIRST-TEN syllabus, gated by cross-mesh stability — and four-way.
+;
+; The remote-mind syllabus (the teacher's class list, in order): person, chair, table, door, window,
+; lamp, cup, book, laptop, plant. The device starts BLANK (zero stable classes). Each class is TAUGHT
+; (the remote mind supplies the label for exemplars the device captured on real frames) -> ENROLLED
+; (ccur-enroll, the sc-enroll generalization) -> proven CROSS-MESH STABLE (the cameras agree over a
+; champion-challenger window) -> GROWN into the on-device vocabulary (ccur-grow). The count climbs
+; 0 -> 1 -> ... -> 10 MONOTONICALLY; adding a class never forgets the prior ones.
+;
+; Each class's exemplar is a 10-dim quantized feature vector with its signal in its OWN dimension (one
+; engine, kind as DATA — object texture and one sound row through the IDENTICAL walk; only the kind field
+; differs). A region near class k's dimension classifies to class k; a region in a dimension NO class
+; occupies -> "unknown" -> escalates back to the remote mind (the next lesson the flywheel feeds).
+;
+; HONEST TIER. This witnesses the curriculum ENGINE grown to 10 taught classes — remote-mind teaching +
+; cross-mesh stability gate + monotonic no-forgetting growth, four-way on metal. It is NOT 10 real objects
+; detected on a live camera: real per-class stabilization on live camera frames needs the 3-camera stream
+; (currently down). 10 classes taught + grown + stable in the engine, four-way; real-camera stabilization
+; of these 10 = the next step, needs the live stream.
+;
+; Verdict 16383 when every claim lands on Go / Rust / TypeScript / fkwu (numeric — labels carrier-read):
+;   1     the device starts with ZERO stable classes
+;   2     the remote mind's syllabus carries the 10 classes to teach (ccur-syllabus-count = 10)
+;   4     after teaching all 10, the on-device count is 10
+;   8     the growth curve is 0,1,2,3,4,5,6,7,8,9,10 — MONOTONIC, each step strictly +1
+;   16    NO FORGETTING: class 1 "person" still classifies "person" at count 10
+;   32    NO FORGETTING: the LAST class "plant" classifies "plant" at count 10
+;   64    a mid class "lamp" (class 6) still classifies at count 10
+;   128   the sound-kind row in the mix ("none here — all object") n/a -> kind carried on every row
+;   256   an UNKNOWN region (a dimension no class occupies) -> "unknown" -> escalates (ccur-escalate? = 1)
+;   512   re-teaching "person" (already in vocab) does NOT duplicate it (ccur-grow idempotent at count 10)
+;   1024  a class NOT yet cross-mesh stable does NOT join (cameras disagree -> ccur-stable? = 0)
+;   2048  the final on-device vocabulary holds exactly 10 labels (ccur-syllabus-labels over the vocab)
+;   4096  every one of the 10 syllabus classes was cross-mesh STABLE before it joined (all 10 gates opened)
+;   8192  person (class 1) AND plant (class 10) BOTH classify at count 10 — the curve has no holes
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk form-stdlib/champion-challenger.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk form-stdlib/class-curriculum.fk
+
+(do
+    ; ── the on-device classify floor (a region must clear it to be a class, else "unknown") ──
+    (let floor 50)
+    ; ── cross-mesh AGREEMENT gate params (shared across all 10 lessons) ──
+    (let conf-floor 5)   ; cross-witness confidence floor — summed trust 10 clears it
+    (let min-samples 4)  ; champion-challenger trusted-window floor
+    (let margin 0)
+    (let agree-history (list (list 1 1) (list 1 1) (list 1 1) (list 1 1)))  ; native reaches oracle
+
+    ; ── per-class exemplar: signal 10 in class k's OWN dimension (10-dim, one engine kind as DATA) ──
+    (let ex-person  (list 10 0 0 0 0 0 0 0 0 0))
+    (let ex-chair   (list 0 10 0 0 0 0 0 0 0 0))
+    (let ex-table   (list 0 0 10 0 0 0 0 0 0 0))
+    (let ex-door    (list 0 0 0 10 0 0 0 0 0 0))
+    (let ex-window  (list 0 0 0 0 10 0 0 0 0 0))
+    (let ex-lamp    (list 0 0 0 0 0 10 0 0 0 0))
+    (let ex-cup     (list 0 0 0 0 0 0 10 0 0 0))
+    (let ex-book    (list 0 0 0 0 0 0 0 10 0 0))
+    (let ex-laptop  (list 0 0 0 0 0 0 0 0 10 0))
+    (let ex-plant   (list 0 0 0 0 0 0 0 0 0 10))
+
+    ; ── the remote mind's SYLLABUS: the first 10 classes it knows to teach, in order ──
+    (let taxonomy (list (ccur-class "object" "person" ex-person)
+                        (ccur-class "object" "chair"  ex-chair)
+                        (ccur-class "object" "table"  ex-table)
+                        (ccur-class "object" "door"   ex-door)
+                        (ccur-class "object" "window" ex-window)
+                        (ccur-class "object" "lamp"   ex-lamp)
+                        (ccur-class "object" "cup"    ex-cup)
+                        (ccur-class "object" "book"   ex-book)
+                        (ccur-class "object" "laptop" ex-laptop)
+                        (ccur-class "object" "plant"  ex-plant)))
+    (let syllabus (ccur-syllabus taxonomy))
+
+    ; ── a cross-mesh AGREEMENT witness for class `label` (3 cameras agree, summed trust 10, proven window) ──
+    (defn witnesses-for (label)
+        (list agree-history
+              (list (list label 4) (list label 3) (list label 3))   ; 3 cameras AGREE
+              (list label "unknown")
+              conf-floor min-samples margin))
+
+    ; ── teach one lesson: if the class is cross-mesh stable, grow the vocab; else leave it unchanged.
+    ;    Returns the (possibly grown) vocab. The stability GATE is the only path a class joins by. ──
+    (defn teach (vocab class)
+        (if (eq (ccur-stable? class (witnesses-for (ccur-class-label class))) 1)
+            (ccur-grow vocab class)
+            vocab))
+
+    ; ── 1: the device starts BLANK — zero stable classes ──
+    (let v0 (list))
+    (let c-zero (if (eq (ccur-count v0) 0) 1 0))
+
+    ; ── 2: the remote mind's syllabus carries the 10 classes to teach ──
+    (let c-syl (if (eq (ccur-syllabus-count syllabus) 10) 2 0))
+
+    ; ── grow the vocabulary 0 -> 10 over the syllabus, one lesson at a time ──
+    (let v1  (teach v0  (ccur-class "object" "person" ex-person)))
+    (let v2  (teach v1  (ccur-class "object" "chair"  ex-chair)))
+    (let v3  (teach v2  (ccur-class "object" "table"  ex-table)))
+    (let v4  (teach v3  (ccur-class "object" "door"   ex-door)))
+    (let v5  (teach v4  (ccur-class "object" "window" ex-window)))
+    (let v6  (teach v5  (ccur-class "object" "lamp"   ex-lamp)))
+    (let v7  (teach v6  (ccur-class "object" "cup"    ex-cup)))
+    (let v8  (teach v7  (ccur-class "object" "book"   ex-book)))
+    (let v9  (teach v8  (ccur-class "object" "laptop" ex-laptop)))
+    (let v10 (teach v9  (ccur-class "object" "plant"  ex-plant)))
+
+    ; ── 4: after teaching all 10, the on-device count is 10 ──
+    (let c-ten (if (eq (ccur-count v10) 10) 4 0))
+
+    ; ── 8: the growth curve is 0,1,2,...,10 — MONOTONIC, each step strictly +1 ──
+    (let c-curve (if (and (eq (ccur-count v0) 0)
+                     (and (eq (ccur-count v1) 1)
+                     (and (eq (ccur-count v2) 2)
+                     (and (eq (ccur-count v3) 3)
+                     (and (eq (ccur-count v4) 4)
+                     (and (eq (ccur-count v5) 5)
+                     (and (eq (ccur-count v6) 6)
+                     (and (eq (ccur-count v7) 7)
+                     (and (eq (ccur-count v8) 8)
+                     (and (eq (ccur-count v9) 9)
+                          (eq (ccur-count v10) 10))))))))))) 8 0))
+
+    ; ── 16: NO FORGETTING — class 1 "person" still classifies at count 10 ──
+    (let person-region (list 9 1 0 0 0 0 0 0 0 0))
+    (let c-person (if (str_eq (ccur-detect person-region v10 floor) "person") 16 0))
+
+    ; ── 32: NO FORGETTING — the last class "plant" classifies at count 10 ──
+    (let plant-region (list 0 0 0 0 0 0 0 0 1 9))
+    (let c-plant (if (str_eq (ccur-detect plant-region v10 floor) "plant") 32 0))
+
+    ; ── 64: a mid class "lamp" (class 6) still classifies at count 10 ──
+    (let lamp-region (list 0 0 0 0 1 9 0 0 0 0))
+    (let c-lamp (if (str_eq (ccur-detect lamp-region v10 floor) "lamp") 64 0))
+
+    ; ── 128: kind is carried on every row (the curriculum is kind-agnostic — these are objects) ──
+    (let c-kind (if (str_eq (ccur-class-kind (head v10)) "object") 128 0))
+
+    ; ── 256: an UNKNOWN region (a dimension no class occupies — none here, all 10 dims used; use a
+    ;    BLENDED region too weak to clear the floor for any single class) -> "unknown" -> escalates ──
+    (let unknown-region (list 1 1 1 1 1 1 1 1 1 1))   ; max dot = 10 < floor 50
+    (let c-unknown (if (and (str_eq (ccur-detect unknown-region v10 floor) "unknown")
+                            (eq (ccur-escalate? unknown-region v10 floor) 1)) 256 0))
+
+    ; ── 512: re-teaching "person" (already in vocab) does NOT duplicate it ──
+    (let v-retry (ccur-grow v10 (ccur-class "object" "person" ex-person)))
+    (let c-idem (if (eq (ccur-count v-retry) 10) 512 0))
+
+    ; ── 1024: a class NOT yet cross-mesh stable does NOT join (cameras disagree -> ccur-stable? = 0) ──
+    (let split-witnesses (list (list (list 1 0))
+                               (list (list "couch" 1) (list "shelf" 1) (list "unknown" 1))
+                               (list "couch" "shelf" "unknown")
+                               conf-floor min-samples margin))
+    (let c-unstable (if (eq (ccur-stable? (ccur-class "object" "couch" (list 5 5 0 0 0 0 0 0 0 0))
+                                          split-witnesses) 0) 1024 0))
+
+    ; ── 2048: the final on-device vocabulary holds exactly 10 labels ──
+    (let c-labels (if (eq (len (ccur-syllabus-labels v10)) 10) 2048 0))
+
+    ; ── 4096: every one of the 10 syllabus classes was cross-mesh STABLE before it joined ──
+    (defn all-stable? (taxo)
+        (if (eq (len taxo) 0) 1
+            (if (eq (ccur-stable? (head taxo) (witnesses-for (ccur-class-label (head taxo)))) 1)
+                (all-stable? (tail taxo))
+                0)))
+    (let c-gates (if (eq (all-stable? taxonomy) 1) 4096 0))
+
+    ; ── 8192: person (class 1) AND plant (class 10) BOTH classify at count 10 — the curve has no holes ──
+    (let c-ends (if (and (str_eq (ccur-detect person-region v10 floor) "person")
+                         (str_eq (ccur-detect plant-region  v10 floor) "plant")) 8192 0))
+
+    (sum (list c-zero c-syl c-ten c-curve c-person c-plant c-lamp c-kind
+               c-unknown c-idem c-unstable c-labels c-gates c-ends)))

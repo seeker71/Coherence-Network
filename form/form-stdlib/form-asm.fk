@@ -103,6 +103,24 @@
     (defn fa-movz-x (rd imm)    (fa-asm 3531603968 (list 1 32) (list rd imm)))
     ; movk x<rd>, #imm16, lsl #16  (64-bit, hw=1) : base 0xF2A00000 | imm<<5 | rd
     (defn fa-movk-x-16 (rd imm) (fa-asm 4070572032 (list 1 32) (list rd imm)))
+    ; movk x<rd>, #imm16, lsl #(16*hw)  (64-bit, hw in 0..3) : base 0xF2800000 | hw<<21 | imm<<5 | rd
+    ; the SHIFT as DATA — one encoder for all four halfword positions (core-abstraction-first), so a full
+    ; 64-bit immediate is 4 rows, not 4 near-duplicate encoders. hw=1 reproduces fa-movk-x-16 exactly.
+    (defn fa-movk-x (rd imm hw) (fa-asm 4068474880 (list 1 32 2097152) (list rd imm hw)))
+    ; fa-mov-imm64: materialize a full 64-bit constant (its 8 little-endian bytes) into x<rd> as movz + 3 movk —
+    ; the way clang -O2 inlines an f64 constant when it does NOT pool it: build the IEEE754 bit pattern in a GP
+    ; register, then fa-fmov-d-x REINTERPRETS those bits as the f64. The companion to fa-fmov-d-x for every
+    ; inlined float constant (exp's ln2/log2e, RoPE base, poly coeffs) AND the 2^k/ldexp step (assemble
+    ; (k+1023)<<52, then fmov d,x). Emits the FULL 4-move form; byte-identical to clang for any constant whose
+    ; four halfwords are all nonzero (clang skips a zero halfword — a named zero-skip follow-up, not needed by
+    ; the transcendental constants, which are all nonzero-halfword). bs = (b0 b1 b2 b3 b4 b5 b6 b7), little-endian.
+    (defn fa-movk-hw (rd bs i)
+        (fa-movk-x rd (add (nth bs (mul i 2)) (mul (nth bs (add (mul i 2) 1)) 256)) i))
+    (defn fa-mov-imm64 (rd bs)
+        (append-list (fa-movz-x rd (add (nth bs 0) (mul (nth bs 1) 256)))
+            (append-list (fa-movk-hw rd bs 1)
+                (append-list (fa-movk-hw rd bs 2)
+                    (fa-movk-hw rd bs 3)))))
     ; strb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39000000 | imm<<10 | rn<<5 | rt
     (defn fa-strb (rt rn imm)   (fa-asm 956301312 (list 1 32 1024) (list rt rn imm)))
     ; add x<rd>, x<rn>, #imm12  (64-bit) : base 0x91000000 | imm<<10 | rn<<5 | rd
@@ -190,10 +208,36 @@
     (defn fa-scvtf (rd rn) (fa-asm 2657222656 (list 1 32) (list rd rn)))
     ; fcvtzs x<rd>, d<rn> (f64 -> signed i64, toward zero) : base 0x9E780000 | rn<<5 | rd (oracle 9e780020)
     (defn fa-fcvtzs (rd rn) (fa-asm 2658664448 (list 1 32) (list rd rn)))
+    ; fmov d<rd>, x<rn> (GP i64 bits -> f64 register, BIT REINTERPRET — NOT a numeric convert) :
+    ; base 0x9E670000 | rn<<5 | rd  (oracle 9e670000 = fmov d0,x0). The keystone for 2^k/ldexp: build the
+    ; IEEE754 exponent field ((k+1023)<<52) in an integer register, then REINTERPRET those bits as the f64
+    ; 2^k. DISTINCT from fa-scvtf, which numerically converts the integer VALUE (5 -> 5.0); here the bit
+    ; pattern is PRESERVED (0x3FF0000000000000 -> 1.0). Also the floor for every float-bit recipe: sign
+    ; extraction, softmax max-subtract, NaN/inf tests — the bit-ops q4k-dequant had to fold in integer
+    ; arithmetic for lack of this door. fcvtzs reads bits OUT of an integer; this writes bits INTO an f64.
+    (defn fa-fmov-d-x (rd rn) (fa-asm 2657550336 (list 1 32) (list rd rn)))
+    ; fmov x<rd>, d<rn> (f64 bits -> GP i64 register, BIT REINTERPRET) : base 0x9E660000 | rn<<5 | rd
+    ; (oracle 9e660000 = fmov x0,d0). The reverse door: read an f64's raw bits to test sign/exponent/mantissa
+    ; with integer ops. DISTINCT word from fmov d,x (opcode 110 vs 111) — emitting the wrong one reverses the
+    ; transfer direction. Matched pair: fa-fmov-d-x writes bits in, fa-fmov-x-d reads bits out.
+    (defn fa-fmov-x-d (rd rn) (fa-asm 2657484800 (list 1 32) (list rd rn)))
+    ; frintn d<rd>, d<rn> (round f64 to nearest INTEGRAL, ties to EVEN; result stays f64) :
+    ; base 0x1E644000 | rn<<5 | rd  (oracle 1e644000 = frintn d0,d0). The range-reduction rounding floor:
+    ; exp/softmax compute k = round(x*log2e), then r = x - k*ln2 over the pooled ln2/log2e (fam-pool-fma).
+    ; Ties-to-even (frintn), DISTINCT from frinta's ties-away (0x1E664000) — clang lowers __builtin_roundeven
+    ; here, __builtin_round to frinta; emitting the wrong word would round half-integers the wrong way.
+    (defn fa-frintn (rd rn) (fa-asm 509886464 (list 1 32) (list rd rn)))
     ; ldr d<rt>, [x<rn>, #imm] (f64 load; caller passes imm/8) : base 0xFD400000 | imm<<10 | rn<<5 | rt (oracle fd400420)
     (defn fa-ldr-d (rt rn imm) (fa-asm 4248829952 (list 1 32 1024) (list rt rn imm)))
     ; str d<rt>, [x<rn>, #imm] (f64 store; caller passes imm/8) : base 0xFD000000                       (oracle fd000420)
     (defn fa-str-d (rt rn imm) (fa-asm 4244635648 (list 1 32 1024) (list rt rn imm)))
+    ; ldr d<rt>, <pcrel> (PC-relative LITERAL load: opc=01 V=1) : base 0x5C000000 | imm19<<5 | rt
+    ; imm19 = (pool_byte_offset - this_instr_byte_offset)/4, the WORD distance from THIS instruction to the
+    ; pooled f64. This is the SELF-CONTAINED CONSTANT POOL: a function carries its OWN real coefficients
+    ; (1/6, 1/120, ln2, the RoPE base) appended after `ret`, loaded position-independently with NO relocation.
+    ; fa-fmov-imm (the VFP modified-immediate) reaches only ~64 constants; this reaches ALL of them — the
+    ; precondition for emitting real exp/sin/cos/gelu. (oracle 5c000081 = ldr d1, +16 ; 5c0000a2 = ldr d2, +20)
+    (defn fa-ldr-d-lit (rt imm19) (fa-asm 1543503872 (list 1 32) (list rt imm19)))
 
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))

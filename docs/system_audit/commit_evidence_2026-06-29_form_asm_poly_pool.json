@@ -1,0 +1,41 @@
+{
+ "title": "fam-poly-pool — a Horner step fma(x, 1/6, 1/120) as Form->asm BYTES with a SELF-CONTAINED CONSTANT POOL, four-way + run on M4 (+ the fa-ldr-d-lit PC-relative literal-load encoder)",
+ "date": "2026-06-29",
+ "author": "Sema (Opus 4.8), autonomous native-ML walk",
+ "stone": "The NEXT nonlinear rung on the native asm lane after fam-horner2, and the brick fam-horner2's own note explicitly deferred ('real exp coeffs like 1/6 will need [a pool]'). fam-horner2 proved the fmadd fold but only over VFP-modified-immediate coefficients (2.0/3.0/4.0); the REAL coefficients every transcendental needs — 1/6, 1/120, 1/5040 for sin; ln2, 1/2!, 1/3! for exp — are NOT VFP-immediate-expressible and cannot ride fa-fmov-imm. They must live in a literal pool the function carries itself. This emits the FIRST self-contained constant pool on the witnessed lane: two real f64 appended after `ret`, loaded position-independently (no relocation) via the new PC-relative literal load, folded with the proven fa-fmadd. It is the precondition for emitting real exp/sin/cos/gelu. Advances form-native-models.form 'GAPS — LLM INFERENCE' A note: 'the nonlinear ops as form-asm bytes (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU)' — those approximations are higher-degree Horner over pooled coefficients, and this opens the pool.",
+ "new_encoder": "form/form-stdlib/form-asm.fk :: fa-ldr-d-lit (rt imm19) — ldr d<rt>, <pcrel> (PC-relative LITERAL load, opc=01 V=1): base 0x5C000000 | imm19<<5 | rt. imm19 is the signed WORD distance (pool_byte_offset - this_instr_byte_offset)/4 from the load to its pooled f64. This is what makes a function carrying its own constants position-independent with NO relocation: where adrp+ldr[pageoff] needs a linker fixup, a same-section PC-relative literal load resolves at assembly/emit time. fa-fmov-imm reaches ~64 VFP-expressible constants; this reaches ALL of them. Verified byte-exact against the as/clang assembler oracle: 5c000081 = ldr d1,+16 (imm19=4, rt=1); 5c0000a2 = ldr d2,+20 (imm19=5, rt=2).",
+ "recipe": "form/form-stdlib/form-asm-matvec.fk :: fam-poly-pool () — p(x) = fma(x, 1/6, 1/120). 4 instructions (16 bytes) + a 16-byte pool of two IEEE754 f64 = 32 bytes. ABI: d0 = x, returns d0 = p(x). Image: 0 ldr d1,Lc0 (5c000081, +16) / 4 ldr d2,Lc1 (5c0000a2, +20) / 8 fmadd d0,d0,d1,d2 (1f410800) / 12 ret (d65f03c0) / 16 .quad 0x3fc5555555555555 (1/6, LE 55 55 55 55 55 55 c5 3f) / 24 .quad 0x3f81111111111111 (1/120, LE 11 11 11 11 11 11 81 3f). The pool is nop-free 8-aligned because the 4-instruction code is already 16 bytes.",
+ "proof_four_way": {
+  "band": "form/form-stdlib/tests/form-asm-poly-pool-band.fk",
+  "manifest_row": "form-asm-poly-pool fks 31",
+  "verdict": 31,
+  "claims": [
+   "1  — the program is 4 instructions + 2 pooled f64 = 32 bytes (len == 32)",
+   "2  — the FULL 32-byte program byte-equals the as/clang assembler oracle (fa-conviction == 1) — proves instructions AND pool AND PC-relative layout",
+   "4  — fa-ldr-d-lit 1 4 == [129,0,0,92] — the FIRST PC-relative literal load (new encoder)",
+   "8  — fa-ldr-d-lit 2 5 == [162,0,0,92] — a SECOND pool entry at a DIFFERENT imm19 (layout math generalizes, what a real Taylor series needs)",
+   "16 — fa-fmadd 0 0 1 2 == [0,8,65,31] — the fold over the two POOLED coefficients (the proven fmadd)"
+  ],
+  "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-poly-pool-band.fk",
+  "result": "core.fk+form-asm.fk+form-asm-matvec.fk+form-asm-poly-pool-band.fk -> 31 ; fourth arm: 1 band four-way (fkwu + pre-flattened tables) ; 1 ok, 0 divergent — Go=Rust=TS=fkwu emit the 32-byte image byte-identical"
+ },
+ "proof_hardware": {
+  "script": "scripts/form_asm_poly_pool_witness.sh",
+  "host": "Apple M4 Max, macOS, arm64",
+  "path": "Form emits fam-poly-pool's 32 bytes -> form-macho mo-object-sym wraps a Mach-O .o exporting _recipe (the PC-relative ldr loads from the pool INSIDE the same __text section — position-independent, no relocation) -> ld -dylib + ad-hoc sign (no clang) -> C harness dlopen+call",
+  "emitted_bytes": "8100005ca200005c0008411fc0035fd6555555555555c53f111111111111813f",
+  "abi": "double recipe(double x) — arg in d0, result in d0",
+  "reference": "fma(x, 1.0/6.0, 1.0/120.0) — the SAME single fused multiply-add over the SAME pooled constants, so the assertion is == (bit-for-bit), not epsilon-close",
+  "result": "8/8 MATCH bit-for-bit incl. fp-stress 1e8 (16666666.674999999) + 1e-8 (0.0083333350000000007) + irrational pi (0.53193210893163168). No rustc/clang in the compute (clang only builds the dumb dlopen harness).",
+  "samples": [
+   "x=0    -> 0.0083333333333333332 (the pooled bias 1/120 alone)",
+   "x=1    -> 0.17499999999999999 (1/6 + 1/120)",
+   "x=6    -> 1.0083333333333333",
+   "x=1e8  -> 16666666.674999999",
+   "x=pi   -> 0.53193210893163168"
+  ]
+ },
+ "toolchain_free_claim": "Honest floor: the COMPUTE is toolchain-free (Form recipe -> asm bytes -> form-macho -> ld -> run; no rustc, no clang in the program). bin-go is the bootstrap that runs the flattener/emitter; clang builds only the dlopen harness; the four-way proof runs through validate.sh (bash). Platform rows (mac observed via this witness; windows/android pending) per docs/coherence-substrate/standard-receipt.form.",
+ "next_stones": "(1) the f64 -> IEEE754 8-byte ENCODER as a Form recipe (sign/exponent/mantissa decomposition) so an ARBITRARY computed coefficient fills the pool, not a known bit pattern — fills the pool generally. (2) exp on the native lane: range reduction (k = round(x/ln2), r = x - k*ln2) + a degree-~6 Horner over a pooled coefficient table (1, 1, 1/2, 1/6, 1/24, 1/120, 1/720) + ldexp scaling — softmax's core. (3) sin/cos over a pooled coefficient table — RoPE. (4) stage the pool + matvec over ll-buffer for a real RMSNorm/SwiGLU layer in asm bytes.",
+ "witness_state": "pulse.coherencycoin.com at open: overall strained, 0 silences (the standing web stale-aggregator drift — live doors 200, not a real outage). Brick is host-independent (Form recipe + encoder + band + witness script + receipt), no deploy taken."
+}
