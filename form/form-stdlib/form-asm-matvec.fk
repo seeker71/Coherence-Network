@@ -236,4 +236,19 @@
                                 (append (fa-fmadd 0 1 2 0)          ; d0 = k*(-ln2)+x = x - k*ln2 = r
                                     (fa-ret)))))))))
 
+    ; fam-relu: the rectified-linear ACTIVATION relu(x) = max(x, 0) as Form->asm bytes — the first NONLINEARITY
+    ; on the native lane. Every transformer/MLP block needs a nonlinearity; relu is the simplest, and it is one
+    ; fmax against zero. The zero is materialized by reinterpreting the xzr register (reg 31) as an f64 through
+    ; the existing fa-fmov-d-x (fmov d1, xzr = 9e6703e1) — no new constant machinery. Then fmax d0,d0,d1 keeps
+    ; the larger, so negatives clamp to 0 and positives pass. The SAME fa-fmax is stable-softmax's max-subtract
+    ; and (with fa-fmin) the clamp; relu is its smallest runnable witness. ABI: d0 = x, returns d0 = max(x, 0).
+    ; 3 instructions = 12 bytes:  0 fmov d1,xzr (9e6703e1)   1 fmax d0,d0,d1 (1e614800)   2 ret (d65f03c0).
+    ; clang -O2 lowers `x>0?x:0` to movi-zero + fmaxnm (the NaN-QUIETING variant, 1e616800) — identical on every
+    ; finite input; fmax is the fundamental primitive (oracle-as-teacher: the arm64 assembler confirms the word,
+    ; the healthy difference is fmax propagates NaN where clang's fmaxnm quiets it).
+    (defn fam-relu ()
+        (append (fa-fmov-d-x 1 31)
+            (append (fa-fmax 0 0 1)
+                (fa-ret))))
+
     0)

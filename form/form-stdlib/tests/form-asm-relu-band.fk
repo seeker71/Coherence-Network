@@ -1,0 +1,39 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-relu-band — the rectified-linear ACTIVATION relu(x) = max(x, 0) emits four-way as Form->asm bytes,
+; no rustc. fam-relu is the FIRST NONLINEARITY on the native asm lane: every transformer/MLP block needs one,
+; and relu is the simplest — a single fmax against zero. The new primitives are fa-fmax / fa-fmin, the plain
+; arm64 FP min/max; the SAME fa-fmax is stable-softmax's max-subtract (subtract max_j(logit_j) so exp never
+; overflows) and, paired with fa-fmin, the clamp clamp(x,lo,hi) = fmin(fmax(x,lo),hi). relu is their smallest
+; runnable witness; the execution witness (scripts/form_asm_relu_witness.sh) runs it bit-exact on this M4.
+;
+; The new ground vs the prior float bricks: every op so far (fmul/fadd/fmadd/fsqrt/frintn/fmov-d-x) computes or
+; converts a single value; fa-fmax / fa-fmin SELECT between two values by magnitude — the branchless conditional
+; the activation/clamp/softmax-stability floor is built from (no fcmp+branch, no data-dependent control flow).
+; The zero relu needs is materialized by reinterpreting the xzr register (reg 31) through the existing
+; fa-fmov-d-x (fmov d1, xzr = 9e6703e1) — no new constant machinery.
+;
+; Oracle-as-teacher, not master: clang -O2 lowers `double r(double x){return x>0.0?x:0.0;}` to
+;   2f00e401 movi d1,#0   1e616800 fmaxNM d0,d0,d1   d65f03c0 ret
+; — the NaN-QUIETING fmaxnm, a HEALTHY DIFFERENCE from plain fmax: identical on every finite input, differing
+; only on NaN (fmax propagates it, fmaxnm returns the number). fmax/fmin are the FUNDAMENTAL primitives the
+; model block composes from; the arm64 assembler (otool of the M4-assembled words) is the byte oracle here,
+; confirming fa-fmax = fmax (1e604800 base) and fa-fmin = fmin (1e605800 base), not clang's variant choice.
+;
+; The 3-instruction program (fam-relu), ABI d0 = x -> d0 = max(x, 0):
+;   0 fmov d1,xzr (9e6703e1)   1 fmax d0,d0,d1 (1e614800)   2 ret (d65f03c0)
+;
+; Verdict 15 when every claim lands:
+;   1    the program is 3 instructions = 12 bytes                                (len == 12)
+;   2    the FULL program byte-equals the 12-byte M4-assembled oracle            (fa-conviction == 1)
+;   4    fmax d0,d0,d1 — the new plain-max encoder (1e614800)                     (fa-conviction == 1)
+;   8    fmin d0,d0,d1 — the twin plain-min encoder (1e615800), for clamp        (fa-conviction == 1)
+(do
+    (let prog (fam-relu))
+    (let oracle (list
+        225 3 103 158    0 72 97 30    192 3 95 214))
+    (let c0 (if (eq (len prog) 12)                                        1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                     1)    2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmax 0 0 1) (list 0 72 97 30)) 1)  4 0))
+    (let c3 (if (eq (fa-conviction (fa-fmin 0 0 1) (list 0 88 97 30)) 1)  8 0))
+    (add c0 (add c1 (add c2 c3))))
