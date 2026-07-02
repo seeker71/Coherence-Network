@@ -322,6 +322,107 @@ _BUILTIN_IDENTIFIERS: Dict[str, Any] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Public-door safety boundary
+# ---------------------------------------------------------------------------
+#
+# Form is a real computational language: a guest who knows the grammar can and
+# SHOULD be able to run code (arithmetic, recursion, defn, list ops, cell
+# lookup) against the body and get a computed value back — that is the mind,
+# not a database. A few builtins, though, reach the HOST MACHINE: `pytest_
+# passes` runs a subprocess, and the `file_*` / `symbol_in_file` predicates
+# read the container filesystem. Those exist for in-process spec-proving
+# (called directly by the pipeline with its own session), NEVER for an
+# anonymous caller on the public HTTP door — a public guest has no business
+# probing the container's disk or spawning processes. `public_form_safety_
+# violation` walks a parsed expression and refuses any reference to one.
+#
+# Deliberately NOT denied: `ask` / `await_answer`. Those open and read a human
+# question in the consent channel (agent_question_service) — the project's
+# offer/consent heartbeat, and a public playground feature (web ChannelDemo,
+# KernelSpace). They touch no host resource; worst case is channel spam, which
+# is a rate-limit concern, not a host-safety one. Blocking them would wall off
+# the very consent surface the commons is built on.
+#
+# RETIRING BRIDGE — this denylist exists only because a Python evaluator gives
+# ambient host access (subprocess, open()) that any expression can name, so
+# safety must be an enumerated blocklist we can never fully prove complete.
+# The form-native destination inverts this: on the fkwu kernel, host resources
+# are reached only through offered PORTs (surface/minimal-surface.fk — the
+# OFFER/PORT families), and axiom-4 makes it structural — "passage not through
+# the offered interface is breach, and breach is observable" (coherence-kernel
+# axioms/core-axioms.form). There, a public guest's boundary simply offers no
+# filesystem/subprocess port; nothing is ambient, so there is nothing to deny,
+# and trust rests on watchable structure (four-way proven) rather than on this
+# blocklist's claim to completeness. Delete this guard when the endpoint runs
+# form-native. Until then it is the honest Python-era bridge, named as one.
+_PUBLIC_DENIED_BUILTINS: frozenset[str] = frozenset(
+    {
+        "file_exists",
+        "file_contains",
+        "file_size",
+        "symbol_in_file",
+        "pytest_passes",
+    }
+)
+
+# Cap the one unbounded allocation amplifier. `range(n)` materializes a list;
+# an anonymous caller asking for range(10**9) would spike a worker's memory.
+# 100k rows is generous for any legitimate structural query and cheap to hold.
+_MAX_RANGE_SIZE = 100_000
+
+
+def _bounded_range(*args: Any) -> list:
+    r = range(*args)
+    if len(r) > _MAX_RANGE_SIZE:
+        raise ValueError(
+            f"range too large ({len(r)} > {_MAX_RANGE_SIZE}); "
+            "bounded on the public compute path"
+        )
+    return list(r)
+
+
+def public_form_safety_violation(text: str) -> Optional[str]:
+    """Return a comma-joined list of host-effect verbs a public expression
+    references, or None if it is safe to evaluate on the public door.
+
+    Evaluator-agnostic by construction: it walks the *parsed* AST (shared by
+    both the `ast` and `run` evaluators) generically over dataclass fields, so
+    it catches an impure name whether it appears as a call (`file_exists(x)`)
+    or is passed by name to a higher-order builtin (`map(file_exists, xs)`).
+    Fails closed: an unparseable expression returns None here and is rejected
+    by the evaluator itself downstream (nothing runs). A guest who shadows an
+    impure name with their own `defn` is over-rejected — the safe direction.
+    """
+    from dataclasses import fields, is_dataclass
+
+    try:
+        ast = form_parse(text)
+    except Exception:
+        return None
+
+    found: set[str] = set()
+
+    def walk(node: Any) -> None:
+        if is_dataclass(node) and not isinstance(node, type):
+            # A call name can live on `.name` (FnCall/Identifier), `.method`
+            # (MethodCall), or `.field` (Access). Method/Access dispatch has no
+            # path to _BUILTIN_FUNCTIONS today, so these are inert — but checking
+            # all three keeps the guard true if that ever changes.
+            for attr in ("name", "method", "field"):
+                val = getattr(node, attr, None)
+                if isinstance(val, str) and val in _PUBLIC_DENIED_BUILTINS:
+                    found.add(val)
+            for f in fields(node):
+                walk(getattr(node, f.name))
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                walk(item)
+
+    walk(ast)
+    return ", ".join(sorted(found)) if found else None
+
+
 # Built-in functions — invokable from FnCall when the name isn't bound to a Closure.
 # Each value is a Python callable receiving the evaluated positional args.
 def _builtin_map(fn, xs):
@@ -639,7 +740,7 @@ _BUILTIN_FUNCTIONS: Dict[str, Any] = {
     "map": _builtin_map,
     "filter": _builtin_filter,
     "fold": _builtin_fold,
-    "range": lambda *args: list(range(*args)),
+    "range": lambda *args: _bounded_range(*args),
     # Type coercion
     "str": lambda x: str(x),
     "int": lambda x: int(x),
@@ -1443,10 +1544,35 @@ def _parse_nodeid(s: str) -> NodeID:
 
 def _apply_binop(op: str, left: Any, right: Any) -> Any:
     if op == "+":
+        if (
+            isinstance(left, (list, str))
+            and isinstance(right, (list, str))
+            and len(left) + len(right) > _MAX_RANGE_SIZE
+        ):
+            raise ValueError(
+                f"sequence too large ({len(left) + len(right)} > "
+                f"{_MAX_RANGE_SIZE}); bounded on the public compute path"
+            )
         return left + right
     if op == "-":
         return left - right
     if op == "*":
+        # Sequence repetition (`[0] * n`, `"a" * n`) is the direct allocation
+        # amplifier `range`'s cap missed: 14 chars can ask for 20M elements.
+        # Same ceiling as range/concat — pure arithmetic (`int * int`) is
+        # untouched.
+        if isinstance(left, (list, str)) and isinstance(right, int):
+            if len(left) * right > _MAX_RANGE_SIZE:
+                raise ValueError(
+                    f"sequence too large ({len(left) * right} > "
+                    f"{_MAX_RANGE_SIZE}); bounded on the public compute path"
+                )
+        elif isinstance(right, (list, str)) and isinstance(left, int):
+            if len(right) * left > _MAX_RANGE_SIZE:
+                raise ValueError(
+                    f"sequence too large ({len(right) * left} > "
+                    f"{_MAX_RANGE_SIZE}); bounded on the public compute path"
+                )
         return left * right
     if op == "/":
         return left / right if isinstance(left, float) or isinstance(right, float) else left // right

@@ -138,19 +138,16 @@ async def test_form_get_lane_evaluates_same_as_post() -> None:
 
 
 @pytest.mark.asyncio
-async def test_form_get_lane_is_read_only() -> None:
-    """The GET lane accepts no mode parameter — 'run' and 'streaming' stay
-    POST-only, because a GET must observe and never mutate or execute."""
+async def test_form_get_lane_holds_streaming_to_post() -> None:
+    """The GET lane offers ast + run (compute is the point) but refuses
+    'streaming' Recipe emission — that write path stays POST-only. An
+    out-of-pattern mode is a 422 before any evaluation."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
             "/api/substrate/form",
-            params={"expression": "1 + 2", "mode": "run"},
+            params={"expression": "1 + 2", "mode": "streaming"},
         )
-    # The unknown query param is ignored by FastAPI; the expression still
-    # evaluates on the read-only ast path and returns a recipe node — the
-    # host-executing 'run' path is unreachable via GET.
-    assert response.status_code == 200, response.text
-    assert response.json()["kind"] == "recipe"
+    assert response.status_code == 422, response.text
 
 
 @pytest.mark.asyncio
@@ -159,3 +156,109 @@ async def test_form_get_lane_requires_expression() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/substrate/form")
     assert response.status_code == 422
+
+# ----- public-door host-effect guard + GET run compute ----------------------
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize(
+    "expression",
+    [
+        'file_exists("README.md")',
+        'file_contains("README.md", "x")',
+        'file_size("README.md")',
+        'symbol_in_file("README.md", "x")',
+        'pytest_passes("tests/x.py")',
+        'map(file_exists, list("README.md"))',  # impure passed by name
+    ],
+)
+@pytest.mark.asyncio
+async def test_public_form_refuses_host_effect_verbs_post(expression) -> None:
+    """No public caller can reach the filesystem, subprocess, or oracle."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/substrate/form", json={"expression": expression, "mode": "run"}
+        )
+    assert response.status_code == 400, response.text
+    assert "host machine" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_public_form_refuses_host_effect_verbs_get() -> None:
+    """The guard covers the GET lane too — same boundary, both doors."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/substrate/form",
+            params={"expression": 'file_exists("README.md")', "mode": "run"},
+        )
+    assert response.status_code == 400, response.text
+    assert "host machine" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_get_run_lane_computes_a_value() -> None:
+    """A guest can RUN code they know the grammar for and get a value back."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/substrate/form",
+            params={"expression": "1 + 2 * 3", "mode": "run"},
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["kind"] == "value"
+    assert body["value"] == 7
+
+
+@pytest.mark.asyncio
+async def test_get_run_lane_runs_recursion() -> None:
+    """Recursion through a user defn computes natively on the public door."""
+    expr = "do { defn fib(n) = if n <= 1 then n else fib(n - 1) + fib(n - 2); fib(10) }"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/substrate/form", params={"expression": expr, "mode": "run"}
+        )
+    assert response.status_code == 200, response.text
+    assert response.json()["value"] == 55
+
+
+@pytest.mark.asyncio
+async def test_public_form_bounds_range_allocation() -> None:
+    """The range amplifier is capped so a public caller can't OOM a worker."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/substrate/form",
+            json={"expression": "range(100000000)", "mode": "run"},
+        )
+    assert response.status_code == 400, response.text
+    assert "range too large" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "[0] * 20000000",      # list repetition — the 14-char memory bomb
+        '"AAAAAAAAAA" * 100000000',  # string repetition
+        "([0] * 5000) * 5000",  # nested amplification
+    ],
+)
+@pytest.mark.asyncio
+async def test_public_form_bounds_sequence_multiplication(expression) -> None:
+    """Sequence repetition can't OOM a worker — the amplifier `range`'s cap
+    missed. Pure int arithmetic is untouched (tested elsewhere)."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/substrate/form", json={"expression": expression, "mode": "run"}
+        )
+    assert response.status_code == 400, response.text
+    assert "too large" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_public_form_still_computes_ordinary_arithmetic() -> None:
+    """The sequence bound does not touch int math or small lists."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r1 = await client.post("/api/substrate/form", json={"expression": "7 * 6", "mode": "run"})
+        r2 = await client.post("/api/substrate/form", json={"expression": "[1, 2] * 3", "mode": "run"})
+    assert r1.json()["value"] == 42
+    assert r2.json()["value"] == [1, 2, 1, 2, 1, 2]
