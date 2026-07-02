@@ -42,3 +42,23 @@ nowhere in `docs/coherence-substrate/living-axioms.form`.)
 localhost with 300s → timeout) while the freshly-restarted API re-interned the
 substrate (postgres 82% CPU, pulse organ `substrate_form` silent). Reads stayed
 healthy throughout. Re-offer when the pulse reads breathing.
+
+---
+
+## frontier-q-0002 — 2026-07-02
+
+**Question**: What one fresh word names what a should-not protects?
+
+**Native attempt**: nothing (no generative organ — honest ack).
+
+**Rented answer**: **ripeness** — a true refusal protects the not-yet: the
+conditions under which a later yes stays true. (Anthropic `claude-fable-5`,
+2026-07-02.)
+
+**Substrate**: pending — and the pending deepened into a finding. At 00:18 MDT
+the pulse read `breathing` with zero silent organs, yet the 0001 re-offer 504'd
+at 60s and a minimal 140-byte probe (`idea/write-path-probe-0702`) 504'd at 45s:
+**the public write lane is down while the witness reads healthy.** The pulse
+tests reads, not writes — a blind spot now named. Next tending: root-cause the
+ingest hang, then give the pulse a write-path canary so silence on the offer
+lane can never again wear a breathing face.
