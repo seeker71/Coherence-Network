@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 404
+**Total files**: 408
 
 | File | Purpose |
 |---|---|
@@ -114,6 +114,8 @@
 | [form_asm_exp_poly_witness.sh](form_asm_exp_poly_witness.sh) | form_asm_exp_poly_witness.sh — the EXECUTION WITNESS for fam-exp-poly: the Form-emitted degree-6 Horner |
 | [form_asm_exp_reduce_witness.sh](form_asm_exp_reduce_witness.sh) | form_asm_exp_reduce_witness.sh — the EXECUTION WITNESS for fam-exp-reduce: exp's argument RANGE REDUCTION |
 | [form_asm_fam_exp_witness.sh](form_asm_fam_exp_witness.sh) | form_asm_fam_exp_witness.sh — the EXECUTION WITNESS for fam-exp: exp(x) END-TO-END as Form->asm bytes |
+| [form_asm_fam_silu_witness.sh](form_asm_fam_silu_witness.sh) | form_asm_fam_silu_witness.sh — the EXECUTION WITNESS for fam-silu: silu(x) = x*sigmoid(x) = x*e^x/(e^x+1) |
+| [form_asm_fam_tanh_witness.sh](form_asm_fam_tanh_witness.sh) | form_asm_fam_tanh_witness.sh — the EXECUTION WITNESS for fam-tanh: tanh(x) = (e^{2x}-1)/(e^{2x}+1) |
 | [form_asm_fmov_dx_witness.sh](form_asm_fmov_dx_witness.sh) | form_asm_fmov_dx_witness.sh — the EXECUTION WITNESS for fam-fmov-bits: the Form-emitted GP->FP bit |
 | [form_asm_frintn_witness.sh](form_asm_frintn_witness.sh) | form_asm_frintn_witness.sh — the EXECUTION WITNESS for fam-frintn: the Form-emitted round-to-nearest |
 | [form_asm_horner_witness.sh](form_asm_horner_witness.sh) | form_asm_horner_witness.sh — the EXECUTION WITNESS for fam-horner2: the Form-emitted degree-2 Horner |
@@ -274,6 +276,8 @@
 | [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
 | [native_thought_receipt.sh](native_thought_receipt.sh) | native_thought_receipt.sh — record ONE native-thought-execution routing decision, ON THE FKWU LANE. |
+| [nl_embed_featurize.py](nl_embed_featurize.py) | nl_embed_featurize.py — fix the "floats pending" assumption and move the |
+| [nl_meaning_featurize.py](nl_meaning_featurize.py) | nl_meaning_featurize.py — the first native training on WORD MEANING, not tool |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
