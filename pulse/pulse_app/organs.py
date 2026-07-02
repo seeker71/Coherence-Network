@@ -78,6 +78,7 @@ class Organ:
 
 UPSTREAM_API_HEALTH = "api_health"     # {API_BASE}/api/health
 UPSTREAM_API_READY = "api_ready"       # {API_BASE}/api/ready
+UPSTREAM_API_DB_CONTENTION = "api_db_contention"  # GET {API_BASE}/api/health/db-contention
 UPSTREAM_API_IDEAS = "api_ideas"       # {API_BASE}/api/ideas?limit=1
 UPSTREAM_API_VITALITY = "api_vitality"  # {API_BASE}/api/workspaces/coherence-network/vitality
 UPSTREAM_WEB_ROOT = "web_root"         # {WEB_BASE}/
@@ -340,6 +341,34 @@ def extract_substrate_page(r: "UpstreamResult") -> OrganVerdict:
     return OrganVerdict(True)
 
 
+def extract_db_contention(r: "UpstreamResult") -> OrganVerdict:
+    """DB write-lane contention leading indicator: /api/health/db-contention.
+
+    Reads the oldest open transaction's age and the lock-waiter count. The
+    endpoint sets `healthy=false` when a transaction is aging past ~25s or
+    lock-waiters pile up — i.e. BEFORE the write lane wedges (2026-07-02 saw
+    3 wedges that each needed a manual pg_terminate_backend). A false here is
+    the leading edge of that class; the witness surfaces it while there is
+    still time to act. `healthy=null` means the probe couldn't read the DB —
+    also worth a nudge. Only `healthy is True` breathes.
+    """
+    if r.status == 0:
+        return OrganVerdict(False, r.error or "transport failure")
+    if r.status >= 400:
+        return OrganVerdict(False, f"HTTP {r.status}")
+    body = _require_body(r)
+    if body is None:
+        return OrganVerdict(False, "empty response body")
+    healthy = body.get("healthy")
+    if healthy is True:
+        return OrganVerdict(True)
+    if healthy is None:
+        return OrganVerdict(False, "db-contention probe could not read the DB")
+    age = body.get("max_txn_age_seconds")
+    waiters = body.get("lock_waiters")
+    return OrganVerdict(False, f"write-lane strain: oldest txn {age}s, {waiters} lock-waiter(s)")
+
+
 def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     """Substrate Form evaluator: POST /api/substrate/form returns kind=node_id.
 
@@ -443,6 +472,19 @@ ORGANS: list[Organ] = [
         description="Long memory — the relational store where facts persist.",
         upstream=UPSTREAM_API_READY,
         extractor=extract_postgres,
+    ),
+    Organ(
+        name="db_contention",
+        label="DB write-lane",
+        description=(
+            "Leading indicator of lock contention on the write lane — oldest "
+            "open transaction + lock-waiters. Reports strain BEFORE a wedge, so "
+            "the 2026-07-02 hot-row hang (which needed a manual kill) is seen "
+            "coming, not discovered after."
+        ),
+        upstream=UPSTREAM_API_DB_CONTENTION,
+        extractor=extract_db_contention,
+        latency_threshold_ms=1500,
     ),
     Organ(
         name="neo4j",

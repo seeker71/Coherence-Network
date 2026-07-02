@@ -11,6 +11,14 @@ from pulse_app.analysis import status_from_last_sample
 from pulse_app.probe import probe_all
 
 
+HEALTHY_DB_CONTENTION = {
+    "timestamp": "2026-04-15T12:00:00Z",
+    "backend": "postgresql",
+    "max_txn_age_seconds": 0.4,
+    "lock_waiters": 0,
+    "healthy": True,
+}
+
 HEALTHY_HEALTH = {
     "status": "ok",
     "version": "1.0.0",
@@ -156,6 +164,12 @@ def _handler(
 ):
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
+        if path == "/api/health/db-contention":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_DB_CONTENTION),
+                headers={"content-type": "application/json"},
+            )
         if path == "/api/health":
             return httpx.Response(
                 200,
@@ -239,6 +253,7 @@ async def _run(handler) -> dict[str, object]:
 async def test_all_healthy():
     by = await _run(_handler())
     expected = {
+        "db_contention",
         "api", "web", "postgres", "neo4j", "schema", "audit_integrity",
         "page_pulse", "page_vitality", "endpoint_ideas", "endpoint_vitality",
         "substrate_badge", "substrate_form", "substrate_offer",
@@ -258,6 +273,12 @@ async def test_docker_local_bases_probe_public_witness_path():
         path = request.url.path
         seen.append((host, path))
 
+        if host == "api.coherencycoin.com" and path == "/api/health/db-contention":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_DB_CONTENTION),
+                headers={"content-type": "application/json"},
+            )
         if host == "api.coherencycoin.com" and path == "/api/health":
             return httpx.Response(
                 200,
@@ -725,3 +746,46 @@ async def test_network_error_marks_everything_down():
     for s in samples:
         assert s.ok is False
         assert s.detail is not None
+
+
+def test_db_contention_flags_write_lane_strain():
+    """healthy=false (a transaction aging past threshold / lock-waiters piling)
+    is the LEADING edge of the 2026-07-02 wedge — flagged before it hangs."""
+    from pulse_app import organs, probe
+
+    r = probe.UpstreamResult(
+        status=200,
+        body={"backend": "postgresql", "max_txn_age_seconds": 47.0,
+              "lock_waiters": 3, "healthy": False},
+        text="", latency_ms=12, error=None,
+    )
+    v = organs.extract_db_contention(r)
+    assert v.ok is False
+    assert "47.0s" in (v.detail or "") and "3 lock-waiter" in (v.detail or "")
+
+
+def test_db_contention_flags_unreadable_db():
+    """healthy=null means the probe couldn't read the DB — also a nudge."""
+    from pulse_app import organs, probe
+
+    r = probe.UpstreamResult(
+        status=200,
+        body={"backend": None, "max_txn_age_seconds": None,
+              "lock_waiters": None, "healthy": None},
+        text="", latency_ms=8, error=None,
+    )
+    v = organs.extract_db_contention(r)
+    assert v.ok is False
+    assert "could not read" in (v.detail or "")
+
+
+def test_db_contention_breathes_when_healthy():
+    from pulse_app import organs, probe
+
+    r = probe.UpstreamResult(
+        status=200,
+        body={"backend": "postgresql", "max_txn_age_seconds": 0.3,
+              "lock_waiters": 0, "healthy": True},
+        text="", latency_ms=8, error=None,
+    )
+    assert organs.extract_db_contention(r).ok is True

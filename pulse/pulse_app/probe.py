@@ -222,6 +222,9 @@ def _build_url(
     mapping: dict[str, tuple[str, str, str, dict[str, Any] | None]] = {
         "api_health": (f"{api}/api/health", "json", "GET", None),
         "api_ready": (f"{api}/api/ready", "json", "GET", None),
+        # Leading indicator of write-lane lock contention — reports unhealthy
+        # BEFORE a wedge, not after (2026-07-02 wedge prevention).
+        "api_db_contention": (f"{api}/api/health/db-contention", "json", "GET", None),
         "api_ideas": (
             f"{api}/api/ideas?limit=1&offset=0&sort=marginal_cc",
             "json",
