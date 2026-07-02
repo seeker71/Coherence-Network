@@ -70,11 +70,29 @@ def database_url() -> str:
 
 
 
+# Per-session Postgres GUCs (libpq startup `options`) that end the wedge class:
+#   lock_timeout=5s                          — a lock-waiter fails, not hangs
+#   idle_in_transaction_session_timeout=30s  — reap txns holding locks idle
+#   statement_timeout=60s                    — generous runaway backstop
+POSTGRES_STARTUP_OPTIONS = (
+    "-c lock_timeout=5000"
+    " -c idle_in_transaction_session_timeout=30000"
+    " -c statement_timeout=60000"
+)
+
+
 def _create_engine(url: str):
     kwargs: dict[str, Any] = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
         kwargs["poolclass"] = NullPool
+    elif url.startswith("postgres"):
+        # Stone: bound how long any statement waits on a lock or sits idle in a
+        # transaction, so a hot-row write can NEVER wedge the whole write lane
+        # for hours (as substrate_nodes.count did, 3x on 2026-07-02, each time
+        # needing a manual pg_terminate_backend). A blocked writer now fails
+        # fast and the app retries; a stuck-open transaction is reaped.
+        kwargs["connect_args"] = {"options": POSTGRES_STARTUP_OPTIONS}
     eng = create_engine(url, **kwargs)
     # Enable WAL mode for SQLite — better concurrent read/write performance
     if url.startswith("sqlite"):
