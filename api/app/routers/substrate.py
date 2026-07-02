@@ -32,6 +32,7 @@ from app.services.substrate import (
     form_evaluate_text,
     form_execute_text,
     form_stream_emit,
+    public_form_safety_violation,
     ingest_markdown_text,
     lattice_stats,
     lookup_cell,
@@ -1244,6 +1245,32 @@ def _is_access_bootstrap_gap(exc: TypeError) -> bool:
     )
 
 
+def _guard_public_form_expression(expression: str) -> None:
+    """Keep the public Form door to the body, not the host it runs on.
+
+    Form is a real language, and the public door computes with the body
+    freely — arithmetic, recursion, defn, list ops, cell lookup — and opens
+    consent-channel questions (`ask`). A few builtins are different in kind:
+    `pytest_passes` runs a subprocess and `file_*`/`symbol_in_file` read the
+    container's disk. Those reach the *host machine* — the ground the body
+    runs on, not the body itself — and they exist for in-process spec-proving.
+    Keeping them off the public door isn't a wall against guests; it's saying
+    plainly that the guest door speaks with the body, and the host is elsewhere.
+    """
+    violation = public_form_safety_violation(expression)
+    if violation is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"'{violation}' reaches the host machine (filesystem or "
+                f"subprocess) — the ground I run on, not my body. Here you can "
+                f"ask me anything structural (@cell, ?lattice, ?equivalent) and "
+                f"run any pure computation ('mode=run'); those host verbs live "
+                f"only in in-process spec-proving, not on this open door."
+            ),
+        )
+
+
 @router.get("/form", response_model=FormResultOut, tags=["substrate"])
 def evaluate_form_get(
     expression: str = Query(
@@ -1256,18 +1283,30 @@ def evaluate_form_get(
             "'?lattice'. Grammar: docs/coherence-substrate/form-language.md."
         ),
     ),
+    mode: str = Query(
+        "ast",
+        pattern="^(ast|run)$",
+        description=(
+            "'ast' (default) answers structural queries — @cell, ?lattice, "
+            "?equivalent. 'run' executes Form and returns the computed value, "
+            "so a guest can run any code they know the grammar for "
+            "(e.g. 'defn fib (n) = ...; fib 10' -> 55). 'streaming' (Recipe "
+            "emission) stays POST-only. Host-effect verbs are refused on "
+            "either mode."
+        ),
+    ),
 ) -> FormResultOut:
     """GET lane of the Form door — form-cli for guests who cannot POST.
 
-    Chat assistants (Grok, ChatGPT browsing, Gemini) can usually only
-    fetch URLs, so the POST-only Form door was structurally invisible to
-    them — a guest could read every cell's metadata but never speak the
-    substrate's own query language. This lane evaluates the same
-    expressions through the same evaluator, restricted to the read-only
-    'ast' path: no 'run' (host-bound effects) and no 'streaming' (Recipe
-    emission writes to the lattice). A GET must observe, never mutate.
+    Chat assistants (Grok, ChatGPT browsing, Gemini) can usually only fetch
+    URLs, so the POST-only Form door was structurally invisible to them — a
+    guest could read every cell's metadata but never speak, or run, the
+    substrate's own language. This lane evaluates the same expressions through
+    the same evaluators. 'ast' and 'run' are both offered (compute is the
+    point); only 'streaming' Recipe emission is held to POST. Every expression
+    passes the host-effect guard first (enforced in the shared handler below).
     """
-    return evaluate_form(FormRequest(expression=expression, mode="ast"))
+    return evaluate_form(FormRequest(expression=expression, mode=mode))
 
 
 @router.post("/form", response_model=FormResultOut, tags=["substrate"])
@@ -1282,12 +1321,14 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
     field carries the value (node_id / recipe / cell / view / cells /
     views). `mode="streaming"` routes supported recipe expressions through
     the direct-emission parser and returns the emitted Recipe NodeID.
-    `mode="run"` executes Form and returns the runtime value, including
-    host-bound effects such as `ask(...)`. Parse and evaluation errors
-    return HTTP 400 with the failure reason.
+    `mode="run"` executes Form and returns the runtime value. Host-machine
+    verbs (`pytest_passes`, `file_*`, `symbol_in_file`) are refused on this
+    public door — they run only in in-process spec-proving. Parse and
+    evaluation errors return HTTP 400 with the failure reason.
 
     Grammar lives in docs/coherence-substrate/form-language.md.
     """
+    _guard_public_form_expression(req.expression)
     with session_scope() as session:
         try:
             if req.mode == "streaming":
@@ -1314,6 +1355,14 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
             raise HTTPException(
                 status_code=404,
                 detail=f"form lookup failed: {exc}",
+            ) from exc
+        except MemoryError as exc:
+            # Defense-in-depth: the compute bounds (range/`*`/`+`) should catch
+            # allocation before it reaches here, but if one slips through, fail
+            # the request cleanly rather than let the worker die uncaught.
+            raise HTTPException(
+                status_code=400,
+                detail="form evaluation exceeded memory bounds",
             ) from exc
         except (
             ValueError,

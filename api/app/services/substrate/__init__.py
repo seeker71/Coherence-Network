@@ -57,6 +57,7 @@ from app.services.substrate.form_runtime import (
     Frame as FormFrame,
     execute as form_execute,
     form_execute_text,
+    public_form_safety_violation,
 )
 from app.services.substrate.form_check import (
     Diagnostic as FormDiagnostic,
@@ -302,6 +303,7 @@ __all__ = [
     "form_evaluate_text",
     "form_execute",
     "form_execute_text",
+    "public_form_safety_violation",
     "form_check_text",
     "form_check_ast",
     "FormDiagnostic",
