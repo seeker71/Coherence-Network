@@ -68,7 +68,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 | `_plus`, `abs`, `max`, `min` | Trivial in Form (`if (lt a b) b a` etc.) |
 | `math_pi` | Just a constant (3.14159...) — a Form let-binding |
 | `math_sqrt`, `math_pow`, `math_floor`, `math_ceil` | Newton's method (sqrt) / iteration (pow) in Form |
-| `make_float32`, `make_float64` | Wrappers; could be composed once `intern_trivial_float` is the primitive |
+| `make_float32`, `make_float64` | Wrappers; composable NOW — `intern_trivial_float` IS the primitive (form-stdlib/core.fk) and float arithmetic/asm are four-way (form-asm-float 2047). The remaining float gap is JIT bit-identity (JIT_GAP_LEDGER #10/#11), not the leaf primitive. |
 | `scan_run` | A while-loop scanning predicate — Form-native shape |
 
 ### Algorithmic natives that SHOULD compost to Form recipes (~6)
