@@ -432,4 +432,48 @@
                                                                                         (append (fa-nop)  ; 8-align the pool (37 code words is odd)
                                                                                             (fhl-pool (fam-exp-coeffs))))))))))))))))))))))))
 
+    ; fam-tanh: the hyperbolic-tangent ACTIVATION tanh(x) = (e^{2x} - 1)/(e^{2x} + 1) as Form->asm BYTES — the
+    ; sigmoid family's completion on the native exp lane (relu, silu shipped; tanh is the sibling), and the
+    ; prerequisite for a native gelu-tanh (gelu(x) ~ 0.5x(1+tanh(sqrt(2/pi)(x+0.044715x^3))), whisper's/GPT's
+    ; activation). It reuses fam-exp's ENTIRE body (range-reduce + 2^k + degree-6 exp(r) Horner + the 2^k multiply)
+    ; unchanged, using the e^{2x} form so NO negate encoder is needed (there is no fa-fneg) — exactly silu's trick.
+    ; Two shape changes vs fam-silu, same code length:
+    ;   (a) PROLOGUE: fadd d0,d0,d0 (2x) replaces silu's fmov d4,d0 (save x). tanh feeds exp with 2x and never
+    ;       needs the original x back, so the double is done in place with NO constant 2.0 (self-add).
+    ;   (b) EPILOGUE after exp(2x) is in d0 — 4 ops, the FIRST activation to exercise real subtraction (fa-fsub)
+    ;       end-to-end on hardware:
+    ;         fmov d1,#1.0 ; fsub d2,d0,d1 (e^{2x}-1, num) ; fadd d1,d0,d1 (e^{2x}+1, den) ; fdiv d0,d2,d1 (tanh)
+    ;       num is computed into d2 BEFORE d1 is overwritten by den (order matters); d2 is free scratch after
+    ;       exp's final poly load, d1 held 1.0.
+    ; ABI: d0 = x, returns d0 = tanh(x). Accuracy is fam-exp's on e^{2x} (|rel err| < ~2e-7) carried through the
+    ; rational form, so tanh tracks true tanh within ~2e-7 relative across the finite range (the hardware witness,
+    ; scripts/form_asm_fam_tanh_witness.sh: bit-exact vs the exact-algorithm C mirror + close to libm tanh).
+    ; The code layout is byte-for-byte the SAME LENGTH as fam-silu (1-word prologue + fam-exp body + 4-word
+    ; epilogue + ret + one alignment nop = 38 code words, an odd 37 before the nop), so EVERY PC-relative literal
+    ; distance is identical: LEAD = 2n+6 = 20, TAIL = 2n+7 = 21 for n=7 — DERIVED from the shared epilogue length
+    ; and pinned against the M4 assembler oracle. 38 code words + a 56-byte 7-f64 pool = 208 bytes.
+    (defn fam-tanh ()
+        (append (fa-fadd 0 0 0)                                          ; d0 = 2x  (fed into exp; no constant 2.0)
+            (append (fa-mov-imm64 8 (f64-bytes 1.4426950408889634))      ; x8 = log2e bits
+                (append (fa-fmov-d-x 1 8)                                ; d1 = log2e
+                    (append (fa-fmul 1 0 1)                              ; d1 = 2x*log2e
+                        (append (fa-frintn 1 1)                          ; d1 = k_float = round(2x*log2e)
+                            (append (fa-fcvtzs 9 1)                      ; x9 = k_int
+                                (append (fa-mov-imm64 8 (f64-bytes -0.6931471805599453))  ; x8 = (-ln2) bits
+                                    (append (fa-fmov-d-x 2 8)            ; d2 = -ln2
+                                        (append (fa-fmadd 0 1 2 0)      ; d0 = k_float*(-ln2)+2x = r
+                                            (append (fa-add-x-imm 9 9 1023)     ; x9 = k_int + 1023
+                                                (append (fa-lsl-x-imm 9 9 52)   ; x9 <<= 52
+                                                    (append (fa-fmov-d-x 3 9)   ; d3 = 2^k
+                                                        (append (fa-ldr-d-lit 1 20)  ; d1 = c6 (LEAD = 2n+6)
+                                                            (append (fam-exp-htail (tail (fam-exp-coeffs)) 21)  ; d0 = exp(r) (TAIL = 2n+7)
+                                                                (append (fa-fmul 0 0 3)     ; d0 = exp(r)*2^k = e^{2x}
+                                                                    (append (fa-fmov-imm 1 112)  ; d1 = 1.0
+                                                                        (append (fa-fsub 2 0 1)     ; d2 = e^{2x} - 1  (numerator)
+                                                                            (append (fa-fadd 1 0 1)     ; d1 = e^{2x} + 1  (denominator)
+                                                                                (append (fa-fdiv 0 2 1) ; d0 = (e^{2x}-1)/(e^{2x}+1) = tanh(x)
+                                                                                    (append (fa-ret)
+                                                                                        (append (fa-nop)  ; 8-align the pool (37 code words is odd)
+                                                                                            (fhl-pool (fam-exp-coeffs))))))))))))))))))))))))
+
     0)

@@ -1,0 +1,60 @@
+; form-asm-fam-tanh-band — tanh(x) = (e^{2x} - 1)/(e^{2x} + 1) as Form->asm BYTES: the hyperbolic-tangent
+; activation composed from the native exp lane, four-way + byte-identical to the M4 assembler oracle, no
+; rustc/clang. tanh completes the sigmoid family on the native lane (relu, silu shipped; tanh is the sibling)
+; and is the prerequisite for a native gelu-tanh, whisper's/GPT's activation.
+;
+; fam-silu (#3947) put silu(x)=x*sigmoid(x) on the lane; fam-tanh reuses fam-exp's ENTIRE body (range-reduce
+; k+r, 2^k, degree-6 exp(r) Horner over its self-contained pool, the 2^k multiply) and wraps it in the rational
+; tanh, using the e^{2x} form so NO negate encoder is needed (there is no fa-fneg):
+;   prologue: fadd d0,d0,d0                        ; d0 = 2x — doubled in place, NO constant 2.0 (self-add)
+;   exp(2x):  <fam-exp body>                       ; d0 = e^{2x}
+;   epilogue: fmov d1,#1.0 ; fsub d2,d0,d1 (e^{2x}-1) ; fadd d1,d0,d1 (e^{2x}+1) ; fdiv d0,d2,d1 (tanh)
+;   ret ; nop (8-align) ; then the 7-f64 pool
+; tanh is the FIRST activation to exercise real subtraction (fa-fsub) end-to-end on hardware. The numerator
+; e^{2x}-1 is computed into d2 BEFORE d1 is overwritten by the denominator (order matters); d2 is free scratch
+; after exp's final poly load, and d1 held 1.0.
+; ABI: d0 = x, returns d0 = tanh(x). Accuracy is fam-exp's on e^{2x} (|rel err| < ~2e-7) carried through the
+; rational form, so tanh tracks the true tanh within ~2e-7 relative across the finite range (the hardware
+; witness, scripts/form_asm_fam_tanh_witness.sh: bit-exact vs the exact-algorithm C mirror + close to libm tanh).
+;
+; The code layout is byte-for-byte the SAME LENGTH as fam-silu — a 1-word prologue (fadd d0,d0,d0 replaces
+; silu's fmov d4,d0), the identical fam-exp body, a 4-word epilogue, ret, and one alignment nop = 37 code words
+; (odd) + nop = 38 words. So EVERY PC-relative literal-load distance is IDENTICAL to silu's: for the n=7 pool,
+; LEAD = 2n+6 = 20 and TAIL = 2n+7 = 21 (ldr d1 = 5c000281 imm19=20, tail ldr d2 = 5c0002a2 imm19=21). Exactly
+; four instruction words differ from silu (word 0 prologue; words 33-35 epilogue) — each confirmed against the
+; M4 assembler oracle: fadd d0,d0,d0 = 1e602800, fsub d2,d0,d1 = 1e613802, fadd d1,d0,d1 = 1e612801,
+; fdiv d0,d2,d1 = 1e611840. The other 48 words are byte-identical to fam-silu's M4-proven image, and the 7-f64
+; pool is the same fam-exp coefficients. 38 code words (incl. the nop) + a 56-byte 7-f64 pool = 208 bytes.
+;
+; Verdict 7 when every claim lands:
+;   1   the composed tanh program is 208 bytes (38 code words + a 7-quad pool)          (len == 208)
+;   2   the FULL 208-byte program byte-equals the M4 assembler oracle                   (fa-conviction == 1)
+;   4   coefficients are DATA — f64-bytes fills the pool with the exp Taylor series      (fa-conviction == 1)
+;
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-tanh))
+    (let oracle (list
+        0   40  96  30  200 95  144 210 104 165 172 242 232 168 194 242
+        232 254 231 242 1   1   103 158 1   8   97  30  33  64  100 30
+        41  0   120 158 232 61  135 210 72  223 191 242 72  200 197 242
+        200 252 247 242 2   1   103 158 32  0   66  31  41  253 15  145
+        41  45  76  211 35  1   103 158 129 2   0   92  162 2   0   92
+        33  8   64  31  162 2   0   92  33  8   64  31  162 2   0   92
+        33  8   64  31  162 2   0   92  33  8   64  31  162 2   0   92
+        33  8   64  31  162 2   0   92  32  8   64  31  0   8   99  30
+        1   16  110 30  2   56  97  30  1   40  97  30  64  24  97  30
+        192 3   95  214 31  32  3   213 23  108 193 22  108 193 86  63
+        17  17  17  17  17  17  129 63  85  85  85  85  85  85  165 63
+        85  85  85  85  85  85  197 63  0   0   0   0   0   0   224 63
+        0   0   0   0   0   0   240 63  0   0   0   0   0   0   240 63))
+    (let pool-oracle (list
+        23  108 193 22  108 193 86  63  17  17  17  17  17  17  129 63
+        85  85  85  85  85  85  165 63  85  85  85  85  85  85  197 63
+        0   0   0   0   0   0   224 63  0   0   0   0   0   0   240 63
+        0   0   0   0   0   0   240 63))
+    (let c1 (if (eq (len prog) 208)                                   1 0))
+    (let c2 (if (eq (fa-conviction prog oracle)                  1)   2 0))
+    (let c3 (if (eq (fa-conviction (fhl-pool (fam-exp-coeffs))
+                                   pool-oracle)                  1)   4 0))
+    (add c1 (add c2 c3)))

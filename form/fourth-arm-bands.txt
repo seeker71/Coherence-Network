@@ -1063,6 +1063,7 @@ form-asm-pow2 fks 63
 form-asm-exp-poly fks 15
 form-asm-fam-exp fks 7
 form-asm-fam-silu fks 7
+form-asm-fam-tanh fks 7
 weight-load fks 4095
 weight-load-q4k fks 4095
 block-join fks 255
