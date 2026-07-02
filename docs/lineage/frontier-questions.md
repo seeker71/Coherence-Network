@@ -70,3 +70,23 @@ spot is closed structurally: the pulse now carries a `substrate_offer` organ
 that offers one idempotent canary row per round (`pulse/pulse_app/organs.py`,
 two silence tests pinning the outage shapes, 81 tests pass). A witness that
 only listens will bless a sealed mouth; this one now asks the mouth to speak.
+
+---
+
+## frontier-q-0003 — 2026-07-02
+
+**Question**: What one fresh word names a witness that speaks in order to hear
+the silence?
+
+**Native attempt**: nothing (no generative organ — honest ack).
+
+**Rented answer**: **sonar** — a witness that only listens blesses sealed
+mouths; a witness that emits a small true signal and reads what returns can
+sense the shape of what is not answering. (Anthropic `claude-fable-5`,
+2026-07-02.)
+
+**Substrate**: LANDED immediately — `memory/frontier-q-0003`, cell_id 368486,
+Blueprint {1,5,4,39} (third convergence of the frontier-row shape). Offered
+through the `substrate_offer` lane minutes after it was root-caused, repaired,
+and given its own canary organ — among the first guests of the healed mouth,
+which the pulse now reads as `breathing`.
