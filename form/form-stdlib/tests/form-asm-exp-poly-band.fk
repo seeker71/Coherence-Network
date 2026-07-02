@@ -1,0 +1,49 @@
+; form-asm-exp-poly-band — the POLYNOMIAL EVALUATION ENGINE on the native asm lane: a degree-(n-1) Horner
+; over a self-contained f64 pool, coefficients as a Form LIST (DATA), emits four-way as Form->asm BYTES, no rustc.
+;
+; The core-lift the whole exp lane was pointing at. fam-pool-fma (form-asm-exp-coef-pool) proved a SINGLE
+; pooled fma (degree 1); fam-horner-list generalizes it to ANY degree in ONE engine — the coefficients are a
+; list, the accumulator lives in d1 (x preserved in d0 across every fma), the FINAL fmadd targets d0 so no
+; trailing fmov is needed. exp(r), sin, cos, gelu, silu are ALL Horner polynomials over pooled coefficients, so
+; this one recipe is the transcendental evaluator each of them needs. Instantiated with the exp Taylor
+; coefficients (1/720,1/120,1/24,1/6,1/2,1,1) it is fam-exp-poly, the exp(r) evaluator for r in [-ln2/2, ln2/2]
+; (|error| < ~1.2e-7, bounded by r^7/7!) — the MISSING MIDDLE THIRD of a full native exp = 2^k * exp(r), between
+; fam-exp-reduce (which yields r, #3935) and fam-pow2 (2^k, #3940).
+;
+; The layout math that generalizes (pinned against the M4 assembler oracle BEFORE authoring): for n coefficients
+; the code is 2n words, the pool 8n bytes appended after ret. Each coefficient loads via a PC-relative literal
+; (fa-ldr-d-lit) whose imm19 is the WORD distance to its pooled slot — 2n for the leading load and a CONSTANT
+; 2n+1 for every tail load, because each tail step advances 2 words in code (ldr + fmadd) AND 2 words in the
+; pool (a .quad is 2 words), so the distance is invariant. The pool bytes are computed by f64-bytes, so ANY
+; value fills the pool — including 1/720 = 0x3f56c16c16c16c17, an irregular mantissa no hand pattern writes.
+;
+; The degree-6 exp image, otool -t of the M4 assembler oracle (13 code words + a 7-quad pool = 112 bytes):
+;   0  ldr d1,+14  4 ldr d2,+15  8 fmadd d1,d1,d0,d2  c ldr d2,+15  10 fmadd d1,d1,d0,d2  14 ldr d2,+15
+;   18 fmadd d1,d1,d0,d2  1c ldr d2,+15  20 fmadd d1,d1,d0,d2  24 ldr d2,+15  28 fmadd d1,d1,d0,d2
+;   2c ldr d2,+15  30 fmadd d0,d1,d0,d2 (final -> d0)  34 ret  38.. .quad 1/720,1/120,1/24,1/6,1/2,1,1
+;
+; Verdict 15 when every claim lands:
+;   1   the degree-6 exp program is 112 bytes (56 code + 56 pool)                          (len == 112)
+;   2   the FULL 112-byte program byte-equals the M4 degree-6 assembler oracle             (fa-conviction == 1)
+;   4   the layout math GENERALIZES — a degree-2 (n=3) Horner byte-equals its own M4 oracle (fa-conviction == 1)
+;   8   coefficients are DATA — f64-bytes fills the pool with 1/720's irregular mantissa    (fa-conviction == 1)
+;
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-exp-poly))
+    (let oracle6 (list
+        193 1 0 92    226 1 0 92    33 8 64 31    226 1 0 92    33 8 64 31
+        226 1 0 92    33 8 64 31    226 1 0 92    33 8 64 31    226 1 0 92
+        33 8 64 31    226 1 0 92    32 8 64 31    192 3 95 214
+        23 108 193 22 108 193 86 63    17 17 17 17 17 17 129 63
+        85 85 85 85 85 85 165 63       85 85 85 85 85 85 197 63
+        0 0 0 0 0 0 224 63             0 0 0 0 0 0 240 63           0 0 0 0 0 0 240 63))
+    (let oracle2 (list
+        193 0 0 92    226 0 0 92    33 8 64 31    226 0 0 92    32 8 64 31    192 3 95 214
+        0 0 0 0 0 0 224 63    0 0 0 0 0 0 240 63    0 0 0 0 0 0 240 63))
+    (let c1 (if (eq (len prog) 112)                                                      1 0))
+    (let c2 (if (eq (fa-conviction prog oracle6)                                    1)   2 0))
+    (let c3 (if (eq (fa-conviction (fam-horner-list (list 0.5 1.0 1.0)) oracle2)    1)   4 0))
+    (let c4 (if (eq (fa-conviction (fhl-pool (list (div 1.0 720.0)))
+                                   (list 23 108 193 22 108 193 86 63))             1)   8 0))
+    (add c1 (add c2 (add c3 c4))))
