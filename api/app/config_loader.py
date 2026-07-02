@@ -158,6 +158,8 @@ def _default_runtime_config() -> dict[str, Any]:
             "endpoint_cache_ttl_seconds": 120.0,
             "endpoint_cache_max_workers": 4,
             "telemetry_enabled": True,
+            "aggregate_noisy_routes": True,
+            "aggregate_bucket_seconds": 60.0,
         },
         "friction": {
             "events_path": None,

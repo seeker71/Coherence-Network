@@ -1,0 +1,147 @@
+{
+  "date": "2026-07-02",
+  "thread_branch": "codex/vps-disk-cleanup-20260702",
+  "commit_scope": "runtime telemetry flood cleanup and aggregation",
+  "change_intent": "runtime_fix",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/data_retention_service.py",
+    "api/app/config_loader.py",
+    "api/config/api.json",
+    "api/tests/test_runtime_mode_and_events.py",
+    "docs/system_audit/commit_evidence_2026-07-02_runtime_event_aggregation.json"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/data_retention_service.py",
+    "api/app/config_loader.py",
+    "api/config/api.json",
+    "api/tests/test_runtime_mode_and_events.py",
+    "docs/system_audit/commit_evidence_2026-07-02_runtime_event_aggregation.json"
+  ],
+  "change_summary": [
+    "Cleaned Hostinger VPS disk pressure by pruning BuildKit/containerd cache, old dump backups, and stale runtime_events telemetry.",
+    "Aggregates POST /api/agent/tasks/{task_id}/activity request telemetry into 60-second in-memory buckets before durable runtime_events writes.",
+    "Preserves represented event_count and total_runtime_ms in aggregate metadata, and weights runtime endpoint/idea/daily retention summaries by those counts."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "make prompt-guide",
+        "result": "passed after attaching detached worktree to codex/vps-disk-cleanup-20260702"
+      },
+      {
+        "command": "make wellness",
+        "result": "passed; deploy aligned and witness trace within budget"
+      },
+      {
+        "command": "cd api && python3 -m ruff check app/main.py app/services/runtime_service.py app/services/data_retention_service.py tests/test_runtime_mode_and_events.py",
+        "result": "All checks passed"
+      },
+      {
+        "command": "cd api && python3 -m pytest -q tests/test_runtime_mode_and_events.py",
+        "result": "7 passed"
+      },
+      {
+        "command": "python3 -m json.tool api/config/api.json >/dev/null",
+        "result": "passed"
+      },
+      {
+        "command": "cd api && python3 -m pytest -q tests/test_runtime_api.py tests/test_request_outcomes_middleware.py",
+        "result": "13 passed"
+      },
+      {
+        "command": "cd form/form-kernel-rust && cargo build --release --quiet",
+        "result": "passed; restored local form-kernel-rust binary required by full API vitality tests"
+      },
+      {
+        "command": "cd api && python3 -m pytest -q tests/test_portfolio_governance.py::test_vitality_returns_six_signals tests/test_flow_vitality.py::test_vitality_and_meeting_flow",
+        "result": "2 passed"
+      },
+      {
+        "command": "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+        "result": "passed"
+      },
+      {
+        "command": "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+        "result": "passed; ready_for_push=True"
+      }
+    ],
+    "notes": "api/.venv was absent in this worktree, so focused checks were run through host python3 where pytest 9.0.2 and ruff 0.15.8 were available."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push/PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pre-change production health passed; deployment of aggregation patch pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production should stop writing one runtime_events row per task activity ping; the noisy endpoint should produce at most one aggregate row per minute/status/source while preserving represented event_count.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/api/health-proxy",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary"
+    ],
+    "test_flows": [
+      "Call task activity route repeatedly and verify runtime_events records aggregate metadata rather than one durable row per call.",
+      "Read runtime endpoint summary and verify aggregate rows count by represented event_count."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "runtime-telemetry-db-precedence",
+    "grounded-cost-value-measurement"
+  ],
+  "task_ids": [
+    "vps-disk-cleanup-20260702",
+    "runtime-event-aggregation-20260702"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-operator"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "vps-cleanup",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "VPS before cleanup: / 193G size, 157G used, 37G available, 81% used",
+    "VPS after cleanup: / 193G size, 69G used, 125G available, 36% used",
+    "Postgres before DB cleanup: coherence database 10GB; runtime_events 10073MB and 15058565 rows",
+    "Postgres after DB cleanup: coherence database 1378MB; runtime_events 862MB and 1241157 rows",
+    "Docker cleanup: docker builder prune -af reclaimed 82.8GB; containerd fell from 95G to 19G",
+    "Backup cleanup: retained dump backups from 2026-06-18 through 2026-07-02; backup directory fell from 9.8G to 6.3G",
+    "Public health pre-deploy: /api/health and /api/health-proxy returned status=ok on deployed_sha 6e762a9f4736ffac1bc43ff48181fe8e765c5837",
+    "Form-first lookup: form-cli ask had path:native grounded:no suffic:no, so direct VPS evidence was used"
+  ],
+  "risk": "Aggregate buckets live in process memory and flush after the bucket closes on the next captured request; a hard process kill can lose at most one current noisy-route bucket. That is acceptable for request telemetry and prevents durable flood logging.",
+  "next_attention": "Move the Python bridge aggregation into the Form/runtime observation cell and add a scheduled retention/compaction routine so high-volume telemetry rolls up without manual VPS intervention."
+}
