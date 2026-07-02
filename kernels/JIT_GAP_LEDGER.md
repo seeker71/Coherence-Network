@@ -28,6 +28,22 @@ context is what the OTHER carriers are, because the Go one is the *divergent* on
   correctly (the float arms box `fk_fbox(fk_num(a) op fk_num(b))`), but the self-JIT
   does **not yet lower floats** — that is the one real gap (see gap #11), and it is what
   makes the bespoke Go float JIT (gap #10) unnecessary once closed.
+
+  > **BAR CORRECTION 2026-07-02 (Urs): the float requirement is NOT bit-identity.**
+  > Earlier phrasing ("f64 native is NOT bit-identical to the walk", "bit-identical by
+  > construction") over-stated the bar for FLOAT recipes and made this gap read as an
+  > impossible wall. It is not. Bit-identity is the gate only for DISCRETE/structural
+  > results (`fwv-verdict` uses exact `eq`). **Float recipes prove by DETERMINISM +
+  > match-within-TOLERANCE** — the whisper stack itself proves floats at `6.66e-15` /
+  > `3.1e-7` against the fp64 reference, never exact. Gap #10's MEASURED failure was
+  > **nondeterminism** (`go=5 vs 7`, run-dependent), and its cause was *adopting the
+  > native body mid-fold* so a float loop mixed two rounding regimes — an
+  > ADOPTION-BOUNDARY bug, not a rounding-difference bug. The FMA-fused float is fine
+  > as long as it is used consistently. So the fix, correctly scoped: (1) never adopt
+  > the JIT mid-fold over a float accumulation (adoption at fold edges → determinism);
+  > (2) self-JIT lowers floats (gap #11) with its own consistent rounding; (3) the
+  > four-way gate compares float results by tolerance, not `eq`. None of these needs
+  > bit-identity to the walk. The wall was the invented requirement, not the floats.
 - **The portable JIT *lowering* is also a Form recipe, four-way including fkwu.**
   `jit-lower.fk` lowers JIT shapes (logic, inline, closure-lift); its bands cross the
   fkwu gate (gaps #3, #4). The bespoke host-native *emit/dispatch* — Go plugin (this

@@ -75,9 +75,9 @@
     ;; ──────────────────────────────────────────────────────────────────
     ;; A root Blueprint mismatch is a bigger lie than a leaf identifier
     ;; swap. Weight decays from 8 (root) to 1 (depth ≥ 7). Linear decay
-    ;; keeps the arithmetic integer-clean. (NOT because the kernel lacks
-    ;; floats — it has them; the reason to stay integer is four-way
-    ;; bit-identity while the float JIT lands: JIT_GAP_LEDGER gaps #10/#11.)
+    ;; keeps the arithmetic integer-clean — the simplest fit for a discrete
+    ;; weight ladder. (The kernel HAS floats; integers are just simplest here.
+    ;; Float recipes are gated on determinism + tolerance, not bit-identity.)
 
     (defn weight-at (depth)
         (if (lt depth 7) (sub 8 depth) 1))
