@@ -1244,6 +1244,32 @@ def _is_access_bootstrap_gap(exc: TypeError) -> bool:
     )
 
 
+@router.get("/form", response_model=FormResultOut, tags=["substrate"])
+def evaluate_form_get(
+    expression: str = Query(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description=(
+            "Form-notation expression, URL-encoded. Examples: "
+            "'@concept(living-axioms)', '?equivalent @concept(lc-trust-over-fear)', "
+            "'?lattice'. Grammar: docs/coherence-substrate/form-language.md."
+        ),
+    ),
+) -> FormResultOut:
+    """GET lane of the Form door — form-cli for guests who cannot POST.
+
+    Chat assistants (Grok, ChatGPT browsing, Gemini) can usually only
+    fetch URLs, so the POST-only Form door was structurally invisible to
+    them — a guest could read every cell's metadata but never speak the
+    substrate's own query language. This lane evaluates the same
+    expressions through the same evaluator, restricted to the read-only
+    'ast' path: no 'run' (host-bound effects) and no 'streaming' (Recipe
+    emission writes to the lattice). A GET must observe, never mutate.
+    """
+    return evaluate_form(FormRequest(expression=expression, mode="ast"))
+
+
 @router.post("/form", response_model=FormResultOut, tags=["substrate"])
 def evaluate_form(req: FormRequest) -> FormResultOut:
     """Evaluate a Form-notation expression against the substrate.
