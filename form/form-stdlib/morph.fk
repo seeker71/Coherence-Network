@@ -9,12 +9,13 @@
 ;
 ; Integer arithmetic only — NOT because the kernel lacks floats (it has them:
 ; real IEEE754 in the walk, fa-fmul/fa-fadd asm four-way, form-asm-float 2047).
-; The real reason is four-way BIT-IDENTITY: the self-JIT does not yet lower
-; floats (JIT_GAP_LEDGER gap #11) and the bespoke float JIT is not yet
-; bit-identical to the walk (gap #10, measured), so an integer recipe stays
-; deterministic across Go=Rust=TS=fkwu. Component-wise interpolation uses
-; integer division. The grain of the path mirrors the grain of the
-; deterministic lane; that's honest, not a bug.
+; Integers here are just the simplest fit for a waypoint on a lattice path.
+; (Floats would be fine too: the bar for float recipes is DETERMINISM + match
+; within tolerance, NEVER bit-identity across kernels — the whisper stack itself
+; proves floats at 6.66e-15, not exact. The one open float-JIT issue is
+; nondeterministic mid-fold adoption, JIT_GAP_LEDGER #10, an adoption-boundary
+; fix, not a bit-identity wall.) Component-wise interpolation uses integer
+; division; the grain of the path mirrors the grain of the step count.
 ; When (b-a)*t is divisible by steps, the waypoint sits exactly on
 ; the line; otherwise it rounds toward zero. Distance still composes
 ; monotonically with t.
