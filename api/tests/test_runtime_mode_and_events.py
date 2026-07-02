@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import pytest
+from datetime import datetime, timezone
 
-from app.models.runtime import RuntimeEventCreate
+from app.models.runtime import RuntimeEvent, RuntimeEventCreate
+from app.services import runtime_service
 from app.services import idea_service
 from app.services.runtime import cache as runtime_cache
 from app.services.runtime import events as runtime_events
@@ -49,6 +50,74 @@ def test_record_event_uses_normalized_endpoint_value(monkeypatch):
     assert event.raw_endpoint == "/api/ideas/demo-123"
     assert event.metadata["normalized_from"] == "/api/ideas/demo-123"
     assert store["events"], "record_event should persist the event payload"
+
+
+def test_noisy_activity_runtime_events_flush_as_bucket_summary(monkeypatch):
+    from app import main as api_main
+
+    api_main._RUNTIME_AGGREGATE_BUCKETS.clear()
+    monkeypatch.setattr(api_main, "_runtime_aggregate_bucket_seconds", lambda: 60)
+    monkeypatch.setattr(api_main, "_runtime_aggregate_enabled", lambda: True)
+
+    first = RuntimeEventCreate(
+        source="api",
+        endpoint="/api/agent/tasks/{task_id}/activity",
+        raw_endpoint="/api/agent/tasks/task-a/activity",
+        method="POST",
+        status_code=201,
+        runtime_ms=10.0,
+        metadata={"req_id": "req-a"},
+    )
+    second = first.model_copy(update={"runtime_ms": 20.0})
+
+    assert api_main._record_or_aggregate_runtime_event(first, now_ts=60.0) == []
+    assert api_main._record_or_aggregate_runtime_event(second, now_ts=65.0) == []
+
+    flushed = api_main._flush_due_runtime_aggregates(now_ts=120.0)
+    api_main._RUNTIME_AGGREGATE_BUCKETS.clear()
+
+    assert len(flushed) == 1
+    summary = flushed[0]
+    assert summary.endpoint == "/api/agent/tasks/{task_id}/activity"
+    assert summary.runtime_ms == 15.0
+    assert summary.metadata["tracking_kind"] == "api_route_request_aggregate"
+    assert summary.metadata["event_count"] == 2
+    assert summary.metadata["total_runtime_ms"] == 30.0
+
+
+def test_endpoint_summary_weights_aggregate_runtime_events(monkeypatch):
+    now = datetime.now(timezone.utc)
+    rows = [
+        RuntimeEvent(
+            id="rt_aggregate",
+            source="api",
+            endpoint="/api/agent/tasks/{task_id}/activity",
+            raw_endpoint="/api/agent/tasks/{task_id}/activity",
+            method="POST",
+            status_code=201,
+            runtime_ms=15.0,
+            idea_id="oss-interface-alignment",
+            origin_idea_id="oss-interface-alignment",
+            metadata={
+                "tracking_kind": "api_route_request_aggregate",
+                "event_count": 4,
+                "total_runtime_ms": 60.0,
+            },
+            runtime_cost_estimate=0.01,
+            recorded_at=now,
+        )
+    ]
+
+    monkeypatch.setattr(runtime_service, "list_events", lambda **_: rows)
+    monkeypatch.setattr(runtime_service, "resolve_origin_idea_id", lambda idea_id: idea_id)
+
+    summary = runtime_service.summarize_by_endpoint(seconds=3600)[0]
+
+    assert summary.event_count == 4
+    assert summary.total_runtime_ms == 60.0
+    assert summary.average_runtime_ms == 15.0
+    assert summary.by_source == {"api": 4}
+    assert summary.status_counts == {"201": 4}
 
 
 def test_runtime_route_registry_covers_live_idea_realization_family():
