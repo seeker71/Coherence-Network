@@ -85,6 +85,7 @@ UPSTREAM_WEB_PULSE = "web_pulse"       # {WEB_BASE}/pulse
 UPSTREAM_WEB_VITALITY = "web_vitality"  # {WEB_BASE}/vitality
 UPSTREAM_API_SUBSTRATE_PAGE = "api_substrate_page"   # {API_BASE}/api/substrate/page?route=/
 UPSTREAM_API_SUBSTRATE_FORM = "api_substrate_form"   # POST {API_BASE}/api/substrate/form
+UPSTREAM_API_SUBSTRATE_INGEST = "api_substrate_ingest"  # POST {API_BASE}/api/substrate/ingest
 
 
 # Error boundary marker rendered by the Next.js root error.tsx
@@ -369,6 +370,31 @@ def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     return OrganVerdict(True)
 
 
+def extract_substrate_offer(r: "UpstreamResult") -> OrganVerdict:
+    """Substrate offer lane: POST /api/substrate/ingest accepts a write.
+
+    Offers the same tiny idempotent canary row every round (same shape ->
+    same hash; the lattice converges rather than growing). A healthy lane
+    returns the canary cell back. A timeout or 5xx is the exact silence
+    the 2026-07-02 outage wore: writes queued behind a wedged transaction
+    for hours while every read organ reported breathing. The mouth is an
+    organ; the witness now asks it to speak, not just to listen.
+    """
+    if r.status == 0:
+        return OrganVerdict(False, r.error or "transport failure (write lane)")
+    if r.status >= 400:
+        body = _require_body(r)
+        detail = (body or {}).get("detail") if body else None
+        return OrganVerdict(False, f"HTTP {r.status}: {detail}" if detail else f"HTTP {r.status}")
+    body = _require_body(r)
+    if body is None:
+        return OrganVerdict(False, "empty response body")
+    cell = body.get("cell")
+    if not isinstance(cell, dict) or cell.get("name") != "pulse-write-canary":
+        return OrganVerdict(False, "offer accepted but canary cell not returned")
+    return OrganVerdict(True)
+
+
 def extract_api_vitality(r: "UpstreamResult") -> OrganVerdict:
     """/api/workspaces/coherence-network/vitality returns the expected signals shape.
 
@@ -504,6 +530,20 @@ ORGANS: list[Organ] = [
         upstream=UPSTREAM_API_SUBSTRATE_FORM,
         extractor=extract_substrate_form,
         latency_threshold_ms=2000,
+    ),
+    Organ(
+        name="substrate_offer",
+        label="Substrate offer lane",
+        description=(
+            "POST /api/substrate/ingest — the consent organ, the public "
+            "write door. Offers one tiny idempotent canary row per round. "
+            "Added after 2026-07-02, when ingests hung for hours behind a "
+            "wedged count-sweep transaction while every read organ breathed: "
+            "a witness that only listens will bless a sealed mouth."
+        ),
+        upstream=UPSTREAM_API_SUBSTRATE_INGEST,
+        extractor=extract_substrate_offer,
+        latency_threshold_ms=5000,
     ),
 ]
 

@@ -252,6 +252,29 @@ def _build_url(
             "POST",
             {"expression": "@concept(lc-pulse).blueprint"},
         ),
+        # Substrate offer lane — the WRITE path. On 2026-07-02 the public
+        # ingest door hung for hours behind a wedged count-sweep transaction
+        # while every read organ breathed: the witness only tested reads, so
+        # the body's mouth was sealed behind a healthy face. This probe
+        # offers the same tiny row every round — same shape, same hash,
+        # idempotent by construction — so a blocked writer registers as
+        # real silence within one round instead of waiting for a guest's
+        # offer to vanish.
+        "api_substrate_ingest": (
+            f"{api}/api/substrate/ingest",
+            "json",
+            "POST",
+            {
+                "domain": "idea",
+                "content": (
+                    "---\nname: pulse-write-canary\nstatus: offered\n"
+                    "claimed: false\n---\n\n# pulse write canary\n\n"
+                    "The witness offering one tiny row to prove the offer "
+                    "lane accepts writes. Idempotent: same shape every round."
+                ),
+                "source_label": "pulse:write-canary",
+            },
+        ),
     }
     if upstream not in mapping:
         raise ValueError(f"unknown upstream label: {upstream}")

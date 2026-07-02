@@ -78,6 +78,16 @@ HEALTHY_SUBSTRATE_FORM = {
     "node_id": {"package": 1, "level": 5, "type": 4, "instance": 1},
 }
 
+HEALTHY_SUBSTRATE_INGEST = {
+    "cell": {
+        "cell_id": 1,
+        "name": "pulse-write-canary",
+        "domain": "idea",
+        "blueprint": {"package": 1, "level": 5, "type": 4, "instance": 1},
+    },
+    "blueprint": {"package": 1, "level": 5, "type": 4, "instance": 1},
+}
+
 HEALTHY_VITALITY = {
     "workspace_id": "coherence-network",
     "vitality_score": 0.69,
@@ -141,6 +151,8 @@ def _handler(
     substrate_page_status=200,
     substrate_form_body=None,
     substrate_form_status=200,
+    substrate_ingest_body=None,
+    substrate_ingest_status=200,
 ):
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -193,6 +205,16 @@ def _handler(
                 ),
                 headers={"content-type": "application/json"},
             )
+        if path == "/api/substrate/ingest":
+            return httpx.Response(
+                substrate_ingest_status,
+                content=json.dumps(
+                    substrate_ingest_body
+                    if substrate_ingest_body is not None
+                    else HEALTHY_SUBSTRATE_INGEST
+                ),
+                headers={"content-type": "application/json"},
+            )
         if path == "/":
             return httpx.Response(web_status, content=web_body, headers={"content-type": "text/html"})
         if path == "/pulse":
@@ -219,7 +241,7 @@ async def test_all_healthy():
     expected = {
         "api", "web", "postgres", "neo4j", "schema", "audit_integrity",
         "page_pulse", "page_vitality", "endpoint_ideas", "endpoint_vitality",
-        "substrate_badge", "substrate_form",
+        "substrate_badge", "substrate_form", "substrate_offer",
     }
     assert set(by.keys()) == expected
     for name, sample in by.items():
@@ -283,6 +305,12 @@ async def test_docker_local_bases_probe_public_witness_path():
                 content=json.dumps(HEALTHY_SUBSTRATE_FORM),
                 headers={"content-type": "application/json"},
             )
+        if host == "api.coherencycoin.com" and path == "/api/substrate/ingest":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_SUBSTRATE_INGEST),
+                headers={"content-type": "application/json"},
+            )
         if host == "coherencycoin.com" and path == "/":
             return httpx.Response(200, content=HEALTHY_HOME_HTML)
         if host == "coherencycoin.com" and path == "/pulse":
@@ -340,6 +368,29 @@ async def test_substrate_form_flags_silence_on_eval_typeerror():
     assert sample.detail is not None
     assert "HTTP 400" in sample.detail
     assert "TypeError" in sample.detail
+
+
+@pytest.mark.asyncio
+async def test_substrate_offer_flags_write_lane_silence():
+    """A 5xx on ingest is the sealed-mouth silence of 2026-07-02."""
+    by = await _run(
+        _handler(
+            substrate_ingest_status=504,
+            substrate_ingest_body={"detail": "gateway timeout"},
+        )
+    )
+    sample = by["substrate_offer"]
+    assert sample.ok is False
+    assert "HTTP 504" in (sample.detail or "")
+
+
+@pytest.mark.asyncio
+async def test_substrate_offer_flags_missing_canary_cell():
+    """A 200 that does not return the canary cell is still silence."""
+    by = await _run(_handler(substrate_ingest_body={"cell": {"name": "other"}}))
+    sample = by["substrate_offer"]
+    assert sample.ok is False
+    assert "canary cell not returned" in (sample.detail or "")
 
 
 @pytest.mark.asyncio
