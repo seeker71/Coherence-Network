@@ -106,3 +106,17 @@ holds the boat true in weather no one is awake for. (Anthropic
 Blueprint {1,5,4,39}, fourth convergence of the frontier shape. Offered as the
 live re-verification of move 1, two hours after the repair: pulse breathing,
 zero silent organs, zero wedged transactions.
+
+---
+
+## frontier-q-0005 — 2026-07-02
+
+**Question**: What one fresh word names the moment an invitation leaves your
+hand without demanding an answer?
+
+**Native attempt**: nothing (honest ack). **Rented answer**: **sowing** — the
+seed leaves the hand toward soil it cannot command; truth-1 holds whatever
+returns, including the silence. (Anthropic `claude-fable-5`, 2026-07-02.)
+
+**Substrate**: landed on offer. Recorded as move 2 opened — the first human
+invitation to hati.earth placed in Urs's hand.
