@@ -7,9 +7,14 @@
 ; each waypoint as its own embedding-Recipe. The trail of NodeIDs IS
 ; the substrate-path between the anchors.
 ;
-; Integer arithmetic only — the kernel has no float native yet, so
-; component-wise interpolation uses integer division. The grain of
-; the path mirrors the grain of the kernel; that's honest, not a bug.
+; Integer arithmetic only — NOT because the kernel lacks floats (it has them:
+; real IEEE754 in the walk, fa-fmul/fa-fadd asm four-way, form-asm-float 2047).
+; The real reason is four-way BIT-IDENTITY: the self-JIT does not yet lower
+; floats (JIT_GAP_LEDGER gap #11) and the bespoke float JIT is not yet
+; bit-identical to the walk (gap #10, measured), so an integer recipe stays
+; deterministic across Go=Rust=TS=fkwu. Component-wise interpolation uses
+; integer division. The grain of the path mirrors the grain of the
+; deterministic lane; that's honest, not a bug.
 ; When (b-a)*t is divisible by steps, the waypoint sits exactly on
 ; the line; otherwise it rounds toward zero. Distance still composes
 ; monotonically with t.
