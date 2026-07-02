@@ -11,14 +11,31 @@ database access, native kernel DB probes, or deployment credentials.
 
 ## Quick Deploy
 
-After merge to `main`:
+**The images do NOT build from the VPS repo checkout.** Each service in
+`/docker/coherence-network/docker-compose.yml` builds from a GitHub context
+**pinned to a commit SHA**:
+
+```yaml
+context: https://github.com/seeker71/Coherence-Network.git#<sha>
+```
+
+`git pull` in `/docker/coherence-network/repo` alone deploys nothing (a real
+hour was nearly lost to this on 2026-07-01 — the container rebuilt cleanly and
+still served the old code). After merge to `main`:
 
 ```bash
+NEW_SHA=$(git rev-parse origin/main)   # run in a Coherence-Network checkout — NOT another repo
 ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
-  'cd /docker/coherence-network/repo && git pull origin main && \
-   cd /docker/coherence-network && docker compose build --no-cache api web && \
-   docker compose up -d api web'
+  "cd /docker/coherence-network && \
+   cp docker-compose.yml docker-compose.yml.bak && \
+   sed -i \"s|Coherence-Network.git#[0-9a-f]\\{40\\}|Coherence-Network.git#$NEW_SHA|g\" docker-compose.yml && \
+   docker compose build api web && docker compose up -d api web"
 ```
+
+Note: the SHA pin is shared across services (api, web, kernel-router, pulse);
+updating it moves them all, and `up -d` recreates containers whose config
+changed even if their image did not rebuild. Verify the SHA is a commit in
+*this* repo before patching — `git branch --contains $NEW_SHA` should answer.
 
 Verify:
 
