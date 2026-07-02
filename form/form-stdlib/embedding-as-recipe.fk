@@ -10,9 +10,15 @@
 ; content-addressed intern means same children → same NodeID, regardless of
 ; whether the embedding came from text, image, audio, or any other modality.
 ;
-; Float kernel-natives don't exist yet; we use ints as stand-in components
-; (e.g. quantized to 0..1000). That's enough to PROVE the substrate primitive
-; — the same hashing machinery applies once intern_trivial_float lands.
+; STALE-CLAIM CORRECTED 2026-07-02: this header used to say "float kernel-natives
+; don't exist yet ... once intern_trivial_float lands." Both are now false.
+; `intern_trivial_float` EXISTS (form-stdlib/core.fk) and real IEEE754 float
+; arithmetic runs on fkwu — witnessed: (div 1.0 3.0) -> 0.333333333333333, float
+; vector dot products, fam-matvec / fam-rsqrt / exp / sqrt. The int-component
+; stand-in below is now a LEGACY simplicity choice, NOT a necessity: real float
+; components (intern_trivial_float, quantize off) are available. Remaining
+; verification: exercise node-level float interning on the FOUR-WAY lane (the
+; narrow `--src` runner's leaf-intern is limited, same as composite intern).
 ;
 ; Uses kernel natives: make_nodeid, intern_trivial_int, intern_node, node_eq,
 ; node_children, node_value.
