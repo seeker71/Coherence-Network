@@ -113,3 +113,49 @@ async def test_form_endpoint_requires_expression() -> None:
         response = await client.post("/api/substrate/form", json={})
 
     assert response.status_code == 422
+
+# ----- GET lane — form-cli for guests who cannot POST -----------------------
+
+
+@pytest.mark.asyncio
+async def test_form_get_lane_evaluates_same_as_post() -> None:
+    """GET /api/substrate/form?expression=... returns the same result as POST.
+
+    Chat assistants (Grok, ChatGPT browsing) can only fetch URLs; the GET
+    lane is their form-cli. Same expression, same evaluator, same shape.
+    """
+    expr = '?cells where domain == "no_such_domain_for_test"'
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        get_response = await client.get(
+            "/api/substrate/form", params={"expression": expr}
+        )
+        post_response = await client.post(
+            "/api/substrate/form", json={"expression": expr}
+        )
+
+    assert get_response.status_code == 200, get_response.text
+    assert get_response.json() == post_response.json()
+
+
+@pytest.mark.asyncio
+async def test_form_get_lane_is_read_only() -> None:
+    """The GET lane accepts no mode parameter — 'run' and 'streaming' stay
+    POST-only, because a GET must observe and never mutate or execute."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/substrate/form",
+            params={"expression": "1 + 2", "mode": "run"},
+        )
+    # The unknown query param is ignored by FastAPI; the expression still
+    # evaluates on the read-only ast path and returns a recipe node — the
+    # host-executing 'run' path is unreachable via GET.
+    assert response.status_code == 200, response.text
+    assert response.json()["kind"] == "recipe"
+
+
+@pytest.mark.asyncio
+async def test_form_get_lane_requires_expression() -> None:
+    """GET without ?expression= is a 422, mirroring the POST contract."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/substrate/form")
+    assert response.status_code == 422
