@@ -224,7 +224,9 @@
     "tool_success_streak_target": 3,
     "endpoint_cache_ttl_seconds": 120.0,
     "endpoint_cache_max_workers": 4,
-    "telemetry_enabled": true
+    "telemetry_enabled": true,
+    "aggregate_noisy_routes": true,
+    "aggregate_bucket_seconds": 60.0
   },
 
   "api": {

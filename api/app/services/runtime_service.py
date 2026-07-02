@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import base64
 import hashlib
@@ -808,6 +807,37 @@ def live_change_token(force_refresh: bool = False) -> dict[str, Any]:
     return dict(payload)
 
 
+def _event_count_weight(event: RuntimeEvent) -> int:
+    metadata = event.metadata if isinstance(event.metadata, dict) else {}
+    raw_count = metadata.get("event_count") or metadata.get("sample_count") or 1
+    try:
+        return max(1, int(raw_count))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _event_total_runtime_ms(event: RuntimeEvent) -> float:
+    metadata = event.metadata if isinstance(event.metadata, dict) else {}
+    raw_total = metadata.get("total_runtime_ms")
+    if raw_total is not None:
+        try:
+            return max(0.0, float(raw_total))
+        except (TypeError, ValueError):
+            pass
+    return float(event.runtime_ms or 0.0) * _event_count_weight(event)
+
+
+def _event_total_runtime_cost(event: RuntimeEvent) -> float:
+    metadata = event.metadata if isinstance(event.metadata, dict) else {}
+    raw_total = metadata.get("total_runtime_cost_estimate")
+    if raw_total is not None:
+        try:
+            return max(0.0, float(raw_total))
+        except (TypeError, ValueError):
+            pass
+    return float(event.runtime_cost_estimate or 0.0) * _event_count_weight(event)
+
+
 def summarize_by_idea(
     seconds: int = 3600,
     event_limit: int = 2000,
@@ -828,17 +858,18 @@ def summarize_by_idea(
 
     summaries: list[IdeaRuntimeSummary] = []
     for idea_id, events in grouped.items():
-        total_runtime = round(sum(e.runtime_ms for e in events), 4)
-        total_cost = round(sum(e.runtime_cost_estimate for e in events), 8)
+        event_count = sum(_event_count_weight(e) for e in events)
+        total_runtime = round(sum(_event_total_runtime_ms(e) for e in events), 4)
+        total_cost = round(sum(_event_total_runtime_cost(e) for e in events), 8)
         by_source: dict[str, int] = {}
         for event in events:
-            by_source[event.source] = by_source.get(event.source, 0) + 1
+            by_source[event.source] = by_source.get(event.source, 0) + _event_count_weight(event)
         summaries.append(
             IdeaRuntimeSummary(
                 idea_id=idea_id,
-                event_count=len(events),
+                event_count=event_count,
                 total_runtime_ms=total_runtime,
-                average_runtime_ms=round(total_runtime / len(events), 4),
+                average_runtime_ms=round(total_runtime / event_count, 4) if event_count else 0.0,
                 runtime_cost_estimate=total_cost,
                 by_source=by_source,
             )
@@ -1590,33 +1621,36 @@ def summarize_by_endpoint(
         paid_tool_failure_count = 0
         paid_tool_runtime_ms = 0.0
         paid_tool_runtime_cost = 0.0
+        event_count = 0
 
         for event in events:
-            by_source[event.source] = by_source.get(event.source, 0) + 1
+            weight = _event_count_weight(event)
+            event_count += weight
+            by_source[event.source] = by_source.get(event.source, 0) + weight
             status_key = str(event.status_code)
-            status_counts[status_key] = status_counts.get(status_key, 0) + 1
+            status_counts[status_key] = status_counts.get(status_key, 0) + weight
             idea_key = str(event.idea_id or "unmapped")
-            idea_counts[idea_key] = idea_counts.get(idea_key, 0) + 1
+            idea_counts[idea_key] = idea_counts.get(idea_key, 0) + weight
 
             metadata = event.metadata if isinstance(event.metadata, dict) else {}
             if bool(metadata.get("is_paid_provider")):
-                paid_tool_event_count += 1
-                paid_tool_runtime_ms += float(event.runtime_ms or 0.0)
+                paid_tool_event_count += weight
+                paid_tool_runtime_ms += _event_total_runtime_ms(event)
                 raw_runtime_cost = metadata.get("runtime_cost_usd")
                 if raw_runtime_cost is not None:
                     try:
-                        paid_tool_runtime_cost += float(raw_runtime_cost)
+                        paid_tool_runtime_cost += float(raw_runtime_cost) * weight
                     except (TypeError, ValueError):
-                        paid_tool_runtime_cost += float(event.runtime_cost_estimate)
+                        paid_tool_runtime_cost += _event_total_runtime_cost(event)
                 else:
-                    paid_tool_runtime_cost += float(event.runtime_cost_estimate)
+                    paid_tool_runtime_cost += _event_total_runtime_cost(event)
                 if event.status_code >= 400:
-                    paid_tool_failure_count += 1
+                    paid_tool_failure_count += weight
 
         primary_idea_id = max(idea_counts.items(), key=lambda item: item[1])[0]
-        total_runtime = round(sum(e.runtime_ms for e in events), 4)
-        total_cost = round(sum(e.runtime_cost_estimate for e in events), 8)
-        paid_tool_ratio = float(paid_tool_event_count) / float(len(events)) if events else 0.0
+        total_runtime = round(sum(_event_total_runtime_ms(e) for e in events), 4)
+        total_cost = round(sum(_event_total_runtime_cost(e) for e in events), 8)
+        paid_tool_ratio = float(paid_tool_event_count) / float(event_count) if event_count else 0.0
         paid_tool_average_runtime_ms = (
             round((paid_tool_runtime_ms / paid_tool_event_count), 4) if paid_tool_event_count else 0.0
         )
@@ -1626,9 +1660,9 @@ def summarize_by_endpoint(
                 methods=methods,
                 idea_id=primary_idea_id,
                 origin_idea_id=resolve_origin_idea_id(primary_idea_id),
-                event_count=len(events),
+                event_count=event_count,
                 total_runtime_ms=total_runtime,
-                average_runtime_ms=round(total_runtime / len(events), 4),
+                average_runtime_ms=round(total_runtime / event_count, 4) if event_count else 0.0,
                 runtime_cost_estimate=total_cost,
                 paid_tool_event_count=paid_tool_event_count,
                 paid_tool_failure_count=paid_tool_failure_count,

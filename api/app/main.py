@@ -112,6 +112,11 @@ from app.middleware.request_outcomes import RequestOutcomesMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 _startup_logger = logging.getLogger("coherence.api.slow")
+_RUNTIME_AGGREGATE_LOCK = threading.Lock()
+_RUNTIME_AGGREGATE_BUCKETS: dict[tuple[str, str, str, int, int], dict[str, object]] = {}
+_RUNTIME_AGGREGATED_ROUTES = {
+    ("POST", "/api/agent/tasks/{task_id}/activity"),
+}
 
 def _startup_compat_row(node: dict) -> dict:
     row = dict(node)
@@ -516,6 +521,117 @@ def _runtime_event_source(request) -> str:
     ):
         return "web_api"
     return "api"
+
+
+def _runtime_aggregate_bucket_seconds() -> int:
+    configured = get_float("runtime", "aggregate_bucket_seconds", 60.0)
+    return max(10, min(int(configured), 3600))
+
+
+def _runtime_aggregate_enabled() -> bool:
+    return get_bool("runtime", "aggregate_noisy_routes", True)
+
+
+def _should_aggregate_runtime_event(payload: RuntimeEventCreate) -> bool:
+    if not _runtime_aggregate_enabled():
+        return False
+    return (payload.method.upper(), payload.endpoint) in _RUNTIME_AGGREGATED_ROUTES
+
+
+def _runtime_bucket_payload(bucket: dict[str, object]) -> RuntimeEventCreate:
+    count = max(1, int(bucket.get("count") or 1))
+    total_ms = float(bucket.get("total_runtime_ms") or 0.0)
+    avg_ms = max(0.1, total_ms / count)
+    bucket_start = int(bucket.get("bucket_start") or 0)
+    bucket_seconds = int(bucket.get("bucket_seconds") or _runtime_aggregate_bucket_seconds())
+    metadata = {
+        "tracking_kind": "api_route_request_aggregate",
+        "aggregate_kind": "minute_bucket",
+        "compressed_from": "api_route_request",
+        "event_count": count,
+        "sample_count": count,
+        "total_runtime_ms": round(total_ms, 4),
+        "average_runtime_ms": round(avg_ms, 4),
+        "min_runtime_ms": round(float(bucket.get("min_runtime_ms") or avg_ms), 4),
+        "max_runtime_ms": round(float(bucket.get("max_runtime_ms") or avg_ms), 4),
+        "bucket_start_epoch": bucket_start,
+        "bucket_seconds": bucket_seconds,
+        "first_seen_at": str(bucket.get("first_seen_at") or ""),
+        "last_seen_at": str(bucket.get("last_seen_at") or ""),
+        "sample_raw_endpoint": str(bucket.get("sample_raw_endpoint") or ""),
+        "sample_req_id": str(bucket.get("sample_req_id") or ""),
+    }
+    return RuntimeEventCreate(
+        source=str(bucket.get("source") or "api"),  # type: ignore[arg-type]
+        endpoint=str(bucket.get("endpoint") or "/api/unknown"),
+        raw_endpoint=str(bucket.get("endpoint") or "/api/unknown"),
+        method=str(bucket.get("method") or "GET"),
+        status_code=int(bucket.get("status_code") or 200),
+        runtime_ms=avg_ms,
+        idea_id=str(bucket.get("idea_id") or "") or None,
+        metadata=metadata,
+    )
+
+
+def _flush_due_runtime_aggregates(now_ts: float | None = None, *, flush_all: bool = False) -> list[RuntimeEventCreate]:
+    bucket_seconds = _runtime_aggregate_bucket_seconds()
+    current_bucket = int((now_ts if now_ts is not None else time.time()) // bucket_seconds) * bucket_seconds
+    due: list[dict[str, object]] = []
+    with _RUNTIME_AGGREGATE_LOCK:
+        for key, bucket in list(_RUNTIME_AGGREGATE_BUCKETS.items()):
+            bucket_start = int(bucket.get("bucket_start") or 0)
+            if flush_all or bucket_start < current_bucket:
+                due.append(bucket)
+                _RUNTIME_AGGREGATE_BUCKETS.pop(key, None)
+    return [_runtime_bucket_payload(bucket) for bucket in due]
+
+
+def _record_or_aggregate_runtime_event(payload: RuntimeEventCreate, now_ts: float | None = None) -> list[RuntimeEventCreate]:
+    out = _flush_due_runtime_aggregates(now_ts)
+    if not _should_aggregate_runtime_event(payload):
+        out.append(payload)
+        return out
+
+    bucket_seconds = _runtime_aggregate_bucket_seconds()
+    now_value = now_ts if now_ts is not None else time.time()
+    bucket_start = int(now_value // bucket_seconds) * bucket_seconds
+    key = (
+        payload.source,
+        payload.endpoint,
+        payload.method.upper(),
+        int(payload.status_code),
+        bucket_start,
+    )
+    seen_at = datetime.fromtimestamp(now_value, tz=timezone.utc).isoformat()
+    runtime_ms = max(0.1, float(payload.runtime_ms))
+    metadata = payload.metadata if isinstance(payload.metadata, dict) else {}
+    with _RUNTIME_AGGREGATE_LOCK:
+        bucket = _RUNTIME_AGGREGATE_BUCKETS.get(key)
+        if bucket is None:
+            bucket = {
+                "source": payload.source,
+                "endpoint": payload.endpoint,
+                "method": payload.method.upper(),
+                "status_code": int(payload.status_code),
+                "idea_id": payload.idea_id or "",
+                "bucket_start": bucket_start,
+                "bucket_seconds": bucket_seconds,
+                "count": 0,
+                "total_runtime_ms": 0.0,
+                "min_runtime_ms": runtime_ms,
+                "max_runtime_ms": runtime_ms,
+                "first_seen_at": seen_at,
+                "last_seen_at": seen_at,
+                "sample_raw_endpoint": payload.raw_endpoint or payload.endpoint,
+                "sample_req_id": str(metadata.get("req_id") or ""),
+            }
+            _RUNTIME_AGGREGATE_BUCKETS[key] = bucket
+        bucket["count"] = int(bucket.get("count") or 0) + 1
+        bucket["total_runtime_ms"] = float(bucket.get("total_runtime_ms") or 0.0) + runtime_ms
+        bucket["min_runtime_ms"] = min(float(bucket.get("min_runtime_ms") or runtime_ms), runtime_ms)
+        bucket["max_runtime_ms"] = max(float(bucket.get("max_runtime_ms") or runtime_ms), runtime_ms)
+        bucket["last_seen_at"] = seen_at
+    return out
 
 
 def _safe_int_or_none(value: str | None) -> int | None:
@@ -1055,18 +1171,18 @@ async def capture_runtime_metrics(request: Request, call_next):
                     "web_route": str(request.headers.get("x-web-route") or "").strip(),
                     "web_proxy": str(request.headers.get("x-coherence-web-proxy") or "").strip(),
                 }
-                runtime_service.record_event(
-                    RuntimeEventCreate(
-                        source=_runtime_event_source(request),
-                        endpoint=capture_path,
-                        raw_endpoint=raw_path,
-                        method=method,
-                        status_code=status_code,
-                        runtime_ms=max(0.1, elapsed_ms),
-                        idea_id=request.headers.get("x-idea-id"),
-                        metadata=metadata,
-                    )
+                runtime_payload = RuntimeEventCreate(
+                    source=_runtime_event_source(request),
+                    endpoint=capture_path,
+                    raw_endpoint=raw_path,
+                    method=method,
+                    status_code=status_code,
+                    runtime_ms=max(0.1, elapsed_ms),
+                    idea_id=request.headers.get("x-idea-id"),
+                    metadata=metadata,
                 )
+                for event_payload in _record_or_aggregate_runtime_event(runtime_payload):
+                    runtime_service.record_event(event_payload)
             except Exception:
                 # Telemetry should not affect request success.
                 logger.debug("Telemetry recording failed", exc_info=True)

@@ -133,6 +133,34 @@ def _parse_ts(ts_raw: Any) -> datetime:
     return _now_utc()
 
 
+def _runtime_row_metadata(row: RuntimeEventRecord) -> dict[str, Any]:
+    try:
+        metadata = json.loads(row.metadata_json) if row.metadata_json else {}
+    except Exception:
+        metadata = {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _runtime_row_event_count(row: RuntimeEventRecord) -> int:
+    metadata = _runtime_row_metadata(row)
+    raw_count = metadata.get("event_count") or metadata.get("sample_count") or 1
+    try:
+        return max(1, int(raw_count))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _runtime_row_total_ms(row: RuntimeEventRecord) -> float:
+    metadata = _runtime_row_metadata(row)
+    raw_total = metadata.get("total_runtime_ms")
+    if raw_total is not None:
+        try:
+            return max(0.0, float(raw_total))
+        except (TypeError, ValueError):
+            pass
+    return float(row.runtime_ms or 0.0) * _runtime_row_event_count(row)
+
+
 def _append_backup(table: str, records: list[dict[str, Any]]) -> int:
     """Append records to monthly JSONL backup files. Returns count written."""
     if not records:
@@ -361,12 +389,12 @@ def _compute_daily_runtime_summary(date_str: str) -> dict[str, Any] | None:
         )
     if not rows:
         return None
-    count = len(rows)
-    total_ms = sum(float(r.runtime_ms or 0) for r in rows)
-    error_count = sum(1 for r in rows if int(r.status_code or 0) >= 400)
+    count = sum(_runtime_row_event_count(r) for r in rows)
+    total_ms = sum(_runtime_row_total_ms(r) for r in rows)
+    error_count = sum(_runtime_row_event_count(r) for r in rows if int(r.status_code or 0) >= 400)
     ep_counts: dict[str, int] = defaultdict(int)
     for r in rows:
-        ep_counts[r.endpoint] += 1
+        ep_counts[r.endpoint] += _runtime_row_event_count(r)
     top = sorted(ep_counts.items(), key=lambda x: x[1], reverse=True)[:10]
     return {
         "date": date_str,
