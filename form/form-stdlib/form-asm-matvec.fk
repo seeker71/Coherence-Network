@@ -298,4 +298,43 @@
                 (append (fa-fmov-d-x 0 0)
                     (fa-ret)))))
 
+    ; fam-horner-list: a degree-(n-1) Horner polynomial p(x) = (..(c_{n-1}*x + c_{n-2})*x + ..)*x + c_0
+    ; evaluated over a SELF-CONTAINED f64 pool, coefficients as a Form LIST (DATA) — the core-lift that
+    ; generalizes fam-pool-fma (a single pooled fma, degree 1) to ANY degree in ONE engine. This is the
+    ; polynomial EVALUATION ENGINE every transcendental is built from: exp(r), sin, cos, gelu, silu are all
+    ; Horner polynomials over pooled coefficients. ABI: d0 = x, returns d0 = p(x). The accumulator lives in d1
+    ; (x is preserved in d0 across every fma); the FINAL fmadd targets d0 so no trailing fmov is needed. For n
+    ; coefficients the code is 2n words (56 bytes for n=7), the pool 8n bytes; each coefficient loads via a
+    ; PC-relative literal whose imm19 (word distance to its pooled slot) is 2n for the leading load and a
+    ; CONSTANT 2n+1 for every tail load — each tail step advances 2 words in code AND 2 words in the pool
+    ; (a .quad is 2 words), so the distance is invariant. That is the layout math that generalizes, pinned
+    ; against the M4 assembler oracle. coeffs are ordered c_{n-1} (highest power) first .. c_0 last; each
+    ; pooled f64 is computed by f64-bytes so ANY value fills the pool (irregular transcendental mantissas
+    ; included). fhl-tail emits the (n-1) trailing (ldr d2 ; fmadd) pairs then ret; fhl-pool concatenates the
+    ; f64-bytes of every coefficient, in order, right after ret (position-independent, no relocation).
+    (defn fhl-tail (cs imm)
+        (if (nil? cs)
+            (append (fa-fmov 0 1) (fa-ret))
+            (if (nil? (tail cs))
+                (append (fa-ldr-d-lit 2 imm) (append (fa-fmadd 0 1 0 2) (fa-ret)))
+                (append (fa-ldr-d-lit 2 imm)
+                    (append (fa-fmadd 1 1 0 2)
+                        (fhl-tail (tail cs) imm))))))
+    (defn fhl-pool (cs)
+        (if (nil? cs) (list)
+            (append (f64-bytes (head cs)) (fhl-pool (tail cs)))))
+    (defn fam-horner-list (coeffs)
+        (append (fa-ldr-d-lit 1 (mul 2 (len coeffs)))
+            (append (fhl-tail (tail coeffs) (add (mul 2 (len coeffs)) 1))
+                (fhl-pool coeffs))))
+
+    ; fam-exp-poly: the degree-6 Taylor evaluator of exp(r) for r in [-ln2/2, ln2/2] — the fam-horner-list
+    ; instance carrying the exp coefficients (1/720,1/120,1/24,1/6,1/2,1,1). |error| < ~1.2e-7 on the reduced
+    ; interval (bounded by r^7/7!), so composed with fam-exp-reduce (which yields r) and fam-pow2 (2^k) it is
+    ; the full native exp = 2^k * exp(r) — the softmax/gelu transcendental core, as Form->asm bytes.
+    (defn fam-exp-poly ()
+        (fam-horner-list (list
+            (div 1.0 720.0) (div 1.0 120.0) (div 1.0 24.0)
+            (div 1.0 6.0) (div 1.0 2.0) 1.0 1.0)))
+
     0)

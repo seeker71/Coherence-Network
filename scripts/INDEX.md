@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 402
+**Total files**: 403
 
 | File | Purpose |
 |---|---|
@@ -111,6 +111,7 @@
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_exp_coef_pool_witness.sh](form_asm_exp_coef_pool_witness.sh) | form_asm_exp_coef_pool_witness.sh — the EXECUTION WITNESS for fam-pool-fma carrying REAL transcendental |
+| [form_asm_exp_poly_witness.sh](form_asm_exp_poly_witness.sh) | form_asm_exp_poly_witness.sh — the EXECUTION WITNESS for fam-exp-poly: the Form-emitted degree-6 Horner |
 | [form_asm_exp_reduce_witness.sh](form_asm_exp_reduce_witness.sh) | form_asm_exp_reduce_witness.sh — the EXECUTION WITNESS for fam-exp-reduce: exp's argument RANGE REDUCTION |
 | [form_asm_fmov_dx_witness.sh](form_asm_fmov_dx_witness.sh) | form_asm_fmov_dx_witness.sh — the EXECUTION WITNESS for fam-fmov-bits: the Form-emitted GP->FP bit |
 | [form_asm_frintn_witness.sh](form_asm_frintn_witness.sh) | form_asm_frintn_witness.sh — the EXECUTION WITNESS for fam-frintn: the Form-emitted round-to-nearest |
