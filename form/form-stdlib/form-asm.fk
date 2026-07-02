@@ -50,6 +50,12 @@
     ; ret : fixed 0xd65f03c0 — its base has the high bit set, so it is given as the
     ; 4 little-endian bytes directly (c0 03 5f d6), not a > 2^31 word literal
     (defn fa-ret  ()          (list 192 3 95 214))
+    ; nop : fixed 0xd503201f — the assembler's alignment filler (what `.align 3` inserts to 8-align a
+    ; literal pool after an ODD-word code body). Given as its 4 little-endian bytes, like fa-ret. Any
+    ; pool-bearing recipe whose code word-count is odd needs one nop so the trailing f64 pool lands
+    ; 8-aligned (an LDR-literal target must be 8-byte aligned); the alternative — padding the algorithm —
+    ; would change the compute, so a single nop is the honest filler.
+    (defn fa-nop  ()          (list 31 32 3 213))
 
     ; ── control flow + register operands (the full-program instructions) ─
     ; mov w<rd>, w<rm>  (orr rd, wzr, rm) : base 0x2A0003E0 | rm<<16 | rd

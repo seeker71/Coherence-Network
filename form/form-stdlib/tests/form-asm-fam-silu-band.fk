@@ -1,0 +1,54 @@
+; form-asm-fam-silu-band — silu(x) = x * sigmoid(x) = x * e^x/(e^x + 1) as Form->asm BYTES: the FIRST
+; activation composed from the native exp lane, four-way + byte-identical to the M4 assembler oracle, no
+; rustc/clang. This is the exact gate llama3.2's SwiGLU MLP runs (silu(x*W_gate) * (x*W_up)).
+;
+; fam-exp (#3942) put the whole transcendental exp(x) on the native lane. fam-silu reuses fam-exp's ENTIRE
+; body (range-reduce k+r, 2^k, degree-6 exp(r) Horner over its self-contained pool, the 2^k multiply) and
+; wraps it in a scalar sigmoid, using the e^x form so NO negate encoder is needed (there is no fa-fneg):
+;   prologue: fmov d4,d0                         ; save x — exp clobbers d0/d1/d2/d3/x8/x9 but never d4
+;   exp(x):   <fam-exp body>                     ; d0 = e^x
+;   epilogue: fmov d1,#1.0 ; fadd d1,d0,d1 (e^x+1) ; fdiv d0,d0,d1 (sigmoid) ; fmul d0,d4,d0 (x*sigmoid)
+;   ret ; nop (8-align) ; then the 7-f64 pool
+; ABI: d0 = x, returns d0 = silu(x). Accuracy is fam-exp's on e^x (|rel err| < ~2e-7) carried through the
+; sigmoid, so silu tracks the true silu within ~2e-7 relative across the finite range (the hardware witness,
+; scripts/form_asm_fam_silu_witness.sh: bit-exact vs the exact-algorithm C mirror + close to libm x/(1+e^-x)).
+;
+; The only NEW instruction shape beyond fam-exp is the save prologue + the 4-op epilogue, which grows exp's
+; epilogue from 2 words (fmul+ret) to 6, making the code 37 words — an ODD count, so `.align 3` inserts one
+; nop (fa-nop, 0xd503201f) to 8-align the trailing pool (an LDR-literal target must be 8-byte aligned). Because
+; the epilogue is 5 words longer than fam-exp's, every PC-relative literal-load distance grows by 5: for n=7,
+; LEAD = 2n+6 = 20 (fam-exp's 15 + 5) and TAIL = 2n+7 = 21 (fam-exp's 16 + 5) — DERIVED from the epilogue
+; length and pinned against the M4 otool oracle (leading ldr d1 = 5c000281 imm19=20, tail ldr d2 = 5c0002a2
+; imm19=21). 38 code words (incl. the nop) + a 56-byte 7-f64 pool = 208 bytes.
+;
+; Verdict 7 when every claim lands:
+;   1   the composed silu program is 208 bytes (38 code words + a 7-quad pool)          (len == 208)
+;   2   the FULL 208-byte program byte-equals the M4 assembler oracle                   (fa-conviction == 1)
+;   4   coefficients are DATA — f64-bytes fills the pool with the exp Taylor series      (fa-conviction == 1)
+;
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-silu))
+    (let oracle (list
+        4 64 96 30        200 95 144 210     104 165 172 242    232 168 194 242
+        232 254 231 242   1 1 103 158        1 8 97 30          33 64 100 30
+        41 0 120 158      232 61 135 210     72 223 191 242     72 200 197 242
+        200 252 247 242   2 1 103 158        32 0 66 31         41 253 15 145
+        41 45 76 211      35 1 103 158       129 2 0 92         162 2 0 92
+        33 8 64 31        162 2 0 92         33 8 64 31         162 2 0 92
+        33 8 64 31        162 2 0 92         33 8 64 31         162 2 0 92
+        33 8 64 31        162 2 0 92         32 8 64 31         0 8 99 30
+        1 16 110 30       1 40 97 30         0 24 97 30         128 8 96 30
+        192 3 95 214      31 32 3 213
+        23 108 193 22 108 193 86 63    17 17 17 17 17 17 129 63
+        85 85 85 85 85 85 165 63       85 85 85 85 85 85 197 63
+        0 0 0 0 0 0 224 63             0 0 0 0 0 0 240 63           0 0 0 0 0 0 240 63))
+    (let pool-oracle (list
+        23 108 193 22 108 193 86 63    17 17 17 17 17 17 129 63
+        85 85 85 85 85 85 165 63       85 85 85 85 85 85 197 63
+        0 0 0 0 0 0 224 63             0 0 0 0 0 0 240 63           0 0 0 0 0 0 240 63))
+    (let c1 (if (eq (len prog) 208)                                   1 0))
+    (let c2 (if (eq (fa-conviction prog oracle)                  1)   2 0))
+    (let c3 (if (eq (fa-conviction (fhl-pool (fam-exp-coeffs))
+                                   pool-oracle)                  1)   4 0))
+    (add c1 (add c2 c3)))

@@ -387,4 +387,49 @@
                                                                 (append (fa-ret)
                                                                     (fhl-pool (fam-exp-coeffs))))))))))))))))))
 
+    ; fam-silu: the SiLU / swish ACTIVATION silu(x) = x * sigmoid(x) = x * e^x/(e^x + 1) as Form->asm BYTES —
+    ; the FIRST activation composed from the native exp lane, and the exact gate llama3.2's SwiGLU MLP runs
+    ; (silu(x*W_gate) * (x*W_up)). fam-exp (#3942) put the whole transcendental exp(x) on the lane; silu wraps
+    ; it in a scalar sigmoid: sigmoid(x) = e^x/(e^x + 1) (the e^x form, so NO negate encoder is needed — there is
+    ; no fa-fneg), then one fmul by x. It reuses fam-exp's ENTIRE body (range-reduce + 2^k + degree-6 exp(r)
+    ; Horner + the 2^k multiply) unchanged; the only new instruction shape is (a) a save of x into d4 BEFORE exp
+    ; runs (exp takes d0=x and clobbers d0/d1/d2/d3/x8/x9 — d4 it never touches, so x survives), and (b) the
+    ; 4-instruction epilogue after exp(x) is in d0:
+    ;   fmov d1,#1.0 ; fadd d1,d0,d1 (e^x+1) ; fdiv d0,d0,d1 (sigmoid) ; fmul d0,d4,d0 (x*sigmoid = silu)
+    ; ABI: d0 = x, returns d0 = silu(x). Accuracy is fam-exp's on e^x (|rel err| < ~2e-7) carried through the
+    ; sigmoid/multiply, so silu tracks the true silu within ~2e-7 relative across the finite range (the hardware
+    ; witness, scripts/form_asm_fam_silu_witness.sh, checks both bit-exactness vs the exact-algorithm C mirror
+    ; and closeness to libm-based x/(1+exp(-x))). No new asm ENCODER except fa-nop (the alignment filler): the
+    ; save prologue grows exp's epilogue from 2 words (fmul+ret) to 6 (fmul + the 4 sigmoid/silu ops + ret) =
+    ; 37 code words, an ODD count, so `.align 3` inserts one nop to 8-align the trailing 7-f64 pool. Because the
+    ; epilogue is longer by 5 words than fam-exp's, EVERY PC-relative literal-load distance grows by 5: for the
+    ; n=7 pool, LEAD = 2n+6 = 20 (fam-exp's 15 + 5) and TAIL = 2n+7 = 21 (fam-exp's 16 + 5) — DERIVED from the
+    ; epilogue length and pinned against the M4 assembler oracle (leading ldr d1 = 5c000281 imm19=20, tail ldr
+    ; d2 = 5c0002a2 imm19=21). 38 code words (incl. the nop) + a 56-byte 7-f64 pool = 208 bytes, byte-identical
+    ; to the oracle. A standalone fam-sigmoid (drop the x-save + final fmul, its own shorter offsets) is the
+    ; named follow-up; silu is the llama-relevant one and lands first.
+    (defn fam-silu ()
+        (append (fa-fmov 4 0)                                            ; d4 = x  (survives exp)
+            (append (fa-mov-imm64 8 (f64-bytes 1.4426950408889634))      ; x8 = log2e bits
+                (append (fa-fmov-d-x 1 8)                                ; d1 = log2e
+                    (append (fa-fmul 1 0 1)                              ; d1 = x*log2e
+                        (append (fa-frintn 1 1)                          ; d1 = k_float = round(x*log2e)
+                            (append (fa-fcvtzs 9 1)                      ; x9 = k_int
+                                (append (fa-mov-imm64 8 (f64-bytes -0.6931471805599453))  ; x8 = (-ln2) bits
+                                    (append (fa-fmov-d-x 2 8)            ; d2 = -ln2
+                                        (append (fa-fmadd 0 1 2 0)      ; d0 = k_float*(-ln2)+x = r
+                                            (append (fa-add-x-imm 9 9 1023)     ; x9 = k_int + 1023
+                                                (append (fa-lsl-x-imm 9 9 52)   ; x9 <<= 52
+                                                    (append (fa-fmov-d-x 3 9)   ; d3 = 2^k
+                                                        (append (fa-ldr-d-lit 1 20)  ; d1 = c6 (LEAD = 2n+6)
+                                                            (append (fam-exp-htail (tail (fam-exp-coeffs)) 21)  ; d0 = exp(r) (TAIL = 2n+7)
+                                                                (append (fa-fmul 0 0 3)     ; d0 = exp(r)*2^k = e^x
+                                                                    (append (fa-fmov-imm 1 112)  ; d1 = 1.0
+                                                                        (append (fa-fadd 1 0 1)     ; d1 = e^x + 1
+                                                                            (append (fa-fdiv 0 0 1) ; d0 = e^x/(e^x+1) = sigmoid(x)
+                                                                                (append (fa-fmul 0 4 0) ; d0 = x*sigmoid = silu(x)
+                                                                                    (append (fa-ret)
+                                                                                        (append (fa-nop)  ; 8-align the pool (37 code words is odd)
+                                                                                            (fhl-pool (fam-exp-coeffs))))))))))))))))))))))))
+
     0)
