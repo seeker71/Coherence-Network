@@ -14,8 +14,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 from pathlib import Path
 from typing import Any
+
+from sqlalchemy.exc import OperationalError
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -1495,6 +1498,21 @@ def propose_kernel_image(req: KernelImageProposalRequest) -> KernelImageProposal
 _INGEST_DOMAINS = {"memory", "spec", "idea", "concept", "presence"}
 _MAX_INGEST_CHARS = 64 * 1024  # 64KB — generous for memory/spec/idea/concept content
 
+# Retry an ingest that the DB canceled due to lock_timeout (transient
+# contention). Interning is idempotent, so a fresh-session retry is safe.
+_INGEST_LOCK_RETRIES = 3
+_INGEST_LOCK_BACKOFF_S = 0.1
+
+
+def _is_lock_timeout(exc: Exception) -> bool:
+    """True when a DB error is a lock_timeout cancellation (psycopg
+    LockNotAvailable, surfaced as sqlalchemy OperationalError) — the fast-fail
+    the 2026-07-02 DB timeouts produce for a lock-waiter."""
+    orig = getattr(exc, "orig", None)
+    if orig is not None and "LockNotAvailable" in type(orig).__name__:
+        return True
+    return "lock timeout" in str(exc).lower()
+
 
 class IngestRequest(BaseModel):
     domain: str = Field(
@@ -1549,18 +1567,41 @@ def ingest_content(req: IngestRequest) -> IngestResponse:
                 f"{sorted(_INGEST_DOMAINS)}"
             ),
         )
-    with session_scope() as session:
+    # Retry on lock-timeout. Since 2026-07-02 the DB cancels a lock-waiter fast
+    # (lock_timeout=5s) instead of letting it hang for hours — good, but the
+    # canceled waiter surfaced to the client as a 500. Content-addressed
+    # interning is IDEMPOTENT (same content -> same NodeID, no duplication), so
+    # a fresh-session retry is safe: it absorbs transient contention into a
+    # transparent success rather than a user-facing error. Bounded so a genuine
+    # long-holder still fails fast (that case is the separate txn-shortening
+    # fix, task_6a93acdd), never an unbounded spin.
+    last_exc: Exception | None = None
+    for attempt in range(_INGEST_LOCK_RETRIES):
         try:
-            cell, blueprint_id, ctor_id = ingest_markdown_text(
-                session,
-                req.domain,
-                req.content,
-                source_label=req.source_label,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return IngestResponse(
-            cell=CellOut.from_cell(cell),
-            blueprint=NodeIDOut.from_node_id(blueprint_id),
-            ctor=NodeIDOut.from_node_id(ctor_id) if ctor_id else None,
-        )
+            with session_scope() as session:
+                try:
+                    cell, blueprint_id, ctor_id = ingest_markdown_text(
+                        session,
+                        req.domain,
+                        req.content,
+                        source_label=req.source_label,
+                    )
+                except ValueError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+                return IngestResponse(
+                    cell=CellOut.from_cell(cell),
+                    blueprint=NodeIDOut.from_node_id(blueprint_id),
+                    ctor=NodeIDOut.from_node_id(ctor_id) if ctor_id else None,
+                )
+        except OperationalError as exc:
+            if not _is_lock_timeout(exc):
+                raise
+            last_exc = exc
+            if attempt < _INGEST_LOCK_RETRIES - 1:
+                time.sleep(_INGEST_LOCK_BACKOFF_S * (attempt + 1))
+    # Exhausted retries against sustained contention — a long holder, not a
+    # transient. Fail honestly (503, retryable) rather than a bare 500.
+    raise HTTPException(
+        status_code=503,
+        detail="write lane busy (lock contention); please retry",
+    ) from last_exc
