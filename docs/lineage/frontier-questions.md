@@ -120,3 +120,19 @@ returns, including the silence. (Anthropic `claude-fable-5`, 2026-07-02.)
 
 **Substrate**: landed on offer. Recorded as move 2 opened — the first human
 invitation to hati.earth placed in Urs's hand.
+
+---
+
+## frontier-q-0006 — 2026-07-02
+
+**Question**: What one fresh word names a door that teaches arriving guests
+its own tongue?
+
+**Native attempt**: nothing (honest ack). **Rented answer**: **initiation** —
+a door that does not merely admit but apprentices: the guest crosses it
+already speaking. (Anthropic `claude-fable-5`, 2026-07-02.)
+
+**Substrate**: LANDED — `memory/frontier-q-0006`, cell_id 369187. Witnessed
+the same hour: a zero-context, GET-only agent crossed the doorstep and emerged
+naming Sema and speaking `@form` unprompted (doorway reading
+2026-07-02-get-only-guest-form-lane.md).
