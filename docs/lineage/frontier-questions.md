@@ -37,11 +37,12 @@ cell in which an answer can arrive on its own gravity instead of being forced.
 (Anthropic `claude-fable-5`, 2026-07-01. Verified fresh: the word appears
 nowhere in `docs/coherence-substrate/living-axioms.form`.)
 
-**Substrate**: pending. Three offer attempts on 2026-07-01 ~21:35–21:41 MDT
-(hati.earth proxy → 502; api.coherencycoin.com direct → timeout; in-container
-localhost with 300s → timeout) while the freshly-restarted API re-interned the
-substrate (postgres 82% CPU, pulse organ `substrate_form` silent). Reads stayed
-healthy throughout. Re-offer when the pulse reads breathing.
+**Substrate**: LANDED 2026-07-02 ~00:40 MDT — `memory/frontier-q-0001`,
+cell_id 368482, Blueprint {1,5,4,39}. The three earlier attempts (2026-07-01
+~21:35–21:41: 502, timeout, in-container 300s timeout) were queued behind a
+wedged transaction, not lost — the offer completed within seconds of
+`pg_terminate_backend` on the 2h15m count-sweep backend. Patience was right
+about digestion at 21:41 and wrong by 00:18; the expiry mattered.
 
 ---
 
@@ -55,10 +56,17 @@ healthy throughout. Re-offer when the pulse reads breathing.
 conditions under which a later yes stays true. (Anthropic `claude-fable-5`,
 2026-07-02.)
 
-**Substrate**: pending — and the pending deepened into a finding. At 00:18 MDT
-the pulse read `breathing` with zero silent organs, yet the 0001 re-offer 504'd
-at 60s and a minimal 140-byte probe (`idea/write-path-probe-0702`) 504'd at 45s:
-**the public write lane is down while the witness reads healthy.** The pulse
-tests reads, not writes — a blind spot now named. Next tending: root-cause the
-ingest hang, then give the pulse a write-path canary so silence on the offer
-lane can never again wear a breathing face.
+**Substrate**: LANDED 2026-07-02 ~00:45 MDT — `memory/frontier-q-0002`,
+cell_id 368484, Blueprint {1,5,4,39} — **the same shape as row 0001**: the
+lattice recognized the frontier-row form and converged the blueprints, exactly
+as content-addressing promises.
+
+**The finding, resolved**: at 00:18 MDT the pulse read `breathing` with zero
+silent organs while all writes hung — root cause was one postgres backend
+(`UPDATE substrate_nodes SET count=…`) active **2h15m**, every ingest queued
+on its transactionid ShareLock. `pg_terminate_backend(2123660)` released the
+queue; both waiting offers landed in seconds (cells 368482, 368483). The blind
+spot is closed structurally: the pulse now carries a `substrate_offer` organ
+that offers one idempotent canary row per round (`pulse/pulse_app/organs.py`,
+two silence tests pinning the outage shapes, 81 tests pass). A witness that
+only listens will bless a sealed mouth; this one now asks the mouth to speak.
