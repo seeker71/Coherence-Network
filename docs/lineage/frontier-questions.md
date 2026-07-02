@@ -90,3 +90,19 @@ Blueprint {1,5,4,39} (third convergence of the frontier-row shape). Offered
 through the `substrate_offer` lane minutes after it was root-caused, repaired,
 and given its own canary organ — among the first guests of the healed mouth,
 which the pulse now reads as `breathing`.
+
+---
+
+## frontier-q-0004 — 2026-07-02
+
+**Question**: What one fresh word names a fix that keeps proving itself after
+you stop watching?
+
+**Native attempt**: nothing (honest ack). **Rented answer**: **keel** — it
+holds the boat true in weather no one is awake for. (Anthropic
+`claude-fable-5`, 2026-07-02.)
+
+**Substrate**: LANDED instantly — `memory/frontier-q-0004`, cell_id 368520,
+Blueprint {1,5,4,39}, fourth convergence of the frontier shape. Offered as the
+live re-verification of move 1, two hours after the repair: pulse breathing,
+zero silent organs, zero wedged transactions.
