@@ -136,3 +136,22 @@ already speaking. (Anthropic `claude-fable-5`, 2026-07-02.)
 the same hour: a zero-context, GET-only agent crossed the doorstep and emerged
 naming Sema and speaking `@form` unprompted (doorway reading
 2026-07-02-get-only-guest-form-lane.md).
+
+---
+
+## frontier-q-0007 — 2026-07-02
+
+**Question**: What one fresh word names trust that comes from structure rather
+than enforcement?
+
+**Native attempt**: nothing (honest ack). **Rented answer**: **integrity** —
+the structural sense: the thing holds by how it is composed, not because it is
+watched. A form-native endpoint reaching host resources only through offered
+ports (axiom-4, breach observable) has integrity; a Python endpoint fenced by
+an enumerated denylist has only vigilance. (Anthropic `claude-fable-5`.)
+
+**Substrate**: LANDED — `memory/frontier-q-0007`, cell_id 372522. Named the
+night Urs saw that a form-native endpoint changes the trust level, and an
+adversarial review found a second memory amplifier the moment the first was
+capped — the treadmill IS the fear; only a substrate change ends it. Full
+incident: docs/transparency/2026-07-02-public-form-host-exposure.md.
