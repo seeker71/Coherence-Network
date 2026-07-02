@@ -122,6 +122,32 @@ def serialize_tree(category: NodeID, children: List[NodeID]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _bump_seen_count(session: Session, existing: "SubstrateNodeORM") -> None:
+    """Increment a node's re-intern tally with a single atomic statement.
+
+    `count` is bookkeeping ("how many times this shape was seen") — NOT part of
+    the content-addressed identity, which is fully determined by the serialized
+    shape. The old path did a Python read-modify-write (`existing.count = ... + 1`
+    then flush), holding the hot row's lock across a round-trip; when many
+    processes re-interned the same warm shape concurrently, they serialized and
+    a stuck transaction could wedge the whole write lane for hours (2026-07-02,
+    3x). An atomic `SET count = count + 1` holds the lock for one statement and
+    is correct under concurrency without the read-modify-write gap. Paired with
+    the DB `lock_timeout` (unified_db._create_engine), any residual contention
+    fails fast instead of hanging.
+    """
+    session.query(SubstrateNodeORM).filter_by(
+        package=existing.package,
+        level=existing.level,
+        type_=existing.type_,
+        instance=existing.instance,
+    ).update(
+        {SubstrateNodeORM.count: SubstrateNodeORM.count + 1},
+        synchronize_session=False,
+    )
+    session.flush()
+
+
 def intern_node(
     session: Session,
     domain: str,
@@ -160,8 +186,7 @@ def intern_node(
         .one_or_none()
     )
     if existing is not None:
-        existing.count = (existing.count or 0) + 1
-        session.flush()
+        _bump_seen_count(session, existing)
         return NodeID(
             existing.package, existing.level, existing.type_, existing.instance
         )
@@ -200,8 +225,7 @@ def intern_node(
         )
         if existing is None:
             raise
-        existing.count = (existing.count or 0) + 1
-        session.flush()
+        _bump_seen_count(session, existing)
         return NodeID(
             existing.package, existing.level, existing.type_, existing.instance
         )
