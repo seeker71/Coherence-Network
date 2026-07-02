@@ -306,3 +306,57 @@ async def health():
         recent_outcomes=recent_outcomes,
         kernel_runtime=kernel_runtime,
     )
+
+
+@router.get(
+    "/health/db-contention",
+    summary="Leading indicator of DB write-lane contention (oldest txn age + lock-waiters)",
+)
+async def db_contention():
+    """A leading indicator of write-lane lock contention — wedge prevention.
+
+    On 2026-07-02 the substrate write lane wedged three times on a long-held
+    `UPDATE substrate_nodes SET count = ...`, each needing a manual
+    pg_terminate_backend. The DB now fails such waits fast (lock_timeout) and
+    reaps idle transactions; this probe lets a monitor SEE contention building
+    *before* it bites — the oldest open transaction's age and the number of
+    statements waiting on a lock. Postgres only; sqlite has no pg_stat_activity
+    and returns nulls with backend='sqlite'.
+    """
+    from sqlalchemy import text as _text
+
+    now = datetime.now(timezone.utc)
+    out: dict[str, Any] = {
+        "timestamp": _iso_utc(now),
+        "backend": None,
+        "max_txn_age_seconds": None,
+        "lock_waiters": None,
+        "healthy": True,
+    }
+    try:
+        with unified_db.session() as sess:
+            backend = sess.bind.dialect.name if sess.bind is not None else None
+            out["backend"] = backend
+            if backend == "postgresql":
+                row = sess.execute(
+                    _text(
+                        "SELECT "
+                        "COALESCE(EXTRACT(EPOCH FROM (now() - min(xact_start))), 0) "
+                        "  AS max_age, "
+                        "COUNT(*) FILTER (WHERE wait_event_type = 'Lock') "
+                        "  AS lock_waiters "
+                        "FROM pg_stat_activity WHERE xact_start IS NOT NULL"
+                    )
+                ).one()
+                max_age = float(row.max_age)
+                waiters = int(row.lock_waiters)
+                out["max_txn_age_seconds"] = round(max_age, 2)
+                out["lock_waiters"] = waiters
+                # With lock_timeout=5s and idle_in_transaction=30s in force, a
+                # transaction older than ~25s or waiters piling up means the
+                # write lane is under real strain — surface it before it wedges.
+                out["healthy"] = max_age < 25.0 and waiters <= 2
+    except Exception:
+        logger.warning("db-contention probe failed", exc_info=True)
+        out["healthy"] = None  # unknown, not asserted-healthy
+    return out
