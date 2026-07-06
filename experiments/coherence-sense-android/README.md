@@ -1,5 +1,11 @@
 # Coherence Sense — Android v0
 
+> **Consolidated 2026-07-06:** the companion carrier now lives at
+> [`mobile/sema-companion/`](../../mobile/sema-companion/) — Compose, five rooms (Presence /
+> Sema / Circle / Memory / Senses), the satsang-session agreements on-device, and the mesh
+> arrival lane. This experiment tree stays as the proving ground (sense streaming, the
+> native form-cli lane, the eval harnesses); new companion-facing work lands there, not here.
+
 ## ⟐ Sema voice surface (`SemaVoiceActivity`)
 
 A second launcher icon, **"Sema"**, opens a live voice surface: Sema speaks an introduction on open,
