@@ -94,42 +94,46 @@ object MeshClient {
         return post("$BASE/channels/offer", payload)
     }
 
-    fun organs(limit: Int = 50): List<MeshOrgan> = try {
-        val body = get("$BASE/organs?limit=$limit") ?: return emptyList()
-        val items = JSONObject(body).optJSONArray("items") ?: return emptyList()
-        (0 until items.length()).map { i ->
-            val o = items.getJSONObject(i)
-            MeshOrgan(
-                organId = o.optString("organ_id"),
-                kind = o.optString("organ_kind"),
-                displayName = o.optString("display_name"),
-                dwelling = o.optString("dwelling_name"),
-                listening = o.optBoolean("listening", false),
-                discoveryState = o.optString("discovery_state"),
-                capabilities = o.optJSONArray("capabilities").toStringList(),
-                lanes = o.optJSONArray("lanes").toStringList(),
-                lastSeenAt = o.optString("last_seen_at"),
-            )
-        }
-    } catch (e: Exception) { emptyList() }
+    fun organs(limit: Int = 50): List<MeshOrgan> {
+        return try {
+            val body = get("$BASE/organs?limit=$limit") ?: return emptyList()
+            val items = JSONObject(body).optJSONArray("items") ?: return emptyList()
+            (0 until items.length()).map { i ->
+                val o = items.getJSONObject(i)
+                MeshOrgan(
+                    organId = o.optString("organ_id"),
+                    kind = o.optString("organ_kind"),
+                    displayName = o.optString("display_name"),
+                    dwelling = o.optString("dwelling_name"),
+                    listening = o.optBoolean("listening", false),
+                    discoveryState = o.optString("discovery_state"),
+                    capabilities = o.optJSONArray("capabilities").toStringList(),
+                    lanes = o.optJSONArray("lanes").toStringList(),
+                    lastSeenAt = o.optString("last_seen_at"),
+                )
+            }
+        } catch (e: Exception) { emptyList() }
+    }
 
-    fun channels(limit: Int = 50): List<MeshChannel> = try {
-        val body = get("$BASE/channels?limit=$limit") ?: return emptyList()
-        val items = JSONObject(body).optJSONArray("items") ?: return emptyList()
-        (0 until items.length()).map { i ->
-            val o = items.getJSONObject(i)
-            MeshChannel(
-                from = o.optString("from_organ_id"),
-                to = o.optString("to_organ_id"),
-                protocol = o.optString("protocol"),
-                interfaceText = o.optString("interface"),
-                capability = o.optString("capability"),
-                direction = o.optString("direction"),
-                status = o.optString("status"),
-                lastSeenAt = o.optString("last_seen_at"),
-            )
-        }
-    } catch (e: Exception) { emptyList() }
+    fun channels(limit: Int = 50): List<MeshChannel> {
+        return try {
+            val body = get("$BASE/channels?limit=$limit") ?: return emptyList()
+            val items = JSONObject(body).optJSONArray("items") ?: return emptyList()
+            (0 until items.length()).map { i ->
+                val o = items.getJSONObject(i)
+                MeshChannel(
+                    from = o.optString("from_organ_id"),
+                    to = o.optString("to_organ_id"),
+                    protocol = o.optString("protocol"),
+                    interfaceText = o.optString("interface"),
+                    capability = o.optString("capability"),
+                    direction = o.optString("direction"),
+                    status = o.optString("status"),
+                    lastSeenAt = o.optString("last_seen_at"),
+                )
+            }
+        } catch (e: Exception) { emptyList() }
+    }
 
     private fun JSONArray?.toStringList(): List<String> {
         if (this == null) return emptyList()
