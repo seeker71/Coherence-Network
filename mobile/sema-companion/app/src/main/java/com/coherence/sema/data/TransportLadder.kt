@@ -14,10 +14,11 @@ package com.coherence.sema.data
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.pm.PackageManager
+import com.coherence.sema.mesh.MeshTransports
 import java.net.HttpURLConnection
 import java.net.URL
 
-enum class Reach { UP, DOWN, PENDING }   // PENDING = the radio may exist, the mesh code does not
+enum class Reach { UP, DOWN, PENDING }   // PENDING = the stack exists, the adapter is not wired yet
 
 data class Transport(
     val id: String,
@@ -41,8 +42,9 @@ object TransportLadder {
         val hasWifiDirect = pm.hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)
         val hasMic = pm.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)
         val hasCam = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
-        fun pend(present: Boolean) = if (present) "radio present, mesh code pending" else "no radio, pending"
+        fun pend(present: Boolean) = if (present) "stack present, adapter pending" else "no stack, pending"
 
+        val lanUp = MeshTransports.reachable("lan-mdns")
         return listOf(
             Transport("wifi-direct", 1, false, Reach.PENDING, pend(hasWifiDirect)),
             Transport("wifi-mesh", 2, false, Reach.PENDING, pend(hasWifiDirect)),
@@ -50,7 +52,11 @@ object TransportLadder {
             Transport("nfc", 4, false, Reach.PENDING, pend(hasNfc)),
             Transport("acoustic", 5, false, Reach.PENDING, pend(hasMic)),          // speaker <-> mic
             Transport("optical", 6, false, Reach.PENDING, pend(hasCam)),           // screen <-> camera (QR)
-            Transport("lan-mdns", 7, false, Reach.PENDING, "same-network direct, pending"),
+            Transport(
+                "lan-mdns", 7, true,
+                if (lanUp) Reach.UP else Reach.DOWN,
+                "NsdManager _sema-mesh._tcp — wired, advertising + serving a presence frame",
+            ),
             Transport(
                 "cloud-proxy", 8, true,
                 if (cloudReachable()) Reach.UP else Reach.DOWN,
