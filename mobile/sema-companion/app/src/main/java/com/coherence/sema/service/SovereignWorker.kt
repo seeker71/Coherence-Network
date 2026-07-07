@@ -7,7 +7,7 @@ package com.coherence.sema.service
 //   self-sense      — one-shot pressure/light sample + battery, no long-held sensors
 //   self-contribute — the journey-phase read offered to the mesh as a presence channel
 //                     toward home ("hati-suci"), level-and-fold only, never raw streams
-//   self-update     — SelfUpdate checks the rolling release and stages a one-tap install
+//   self-update     — SelfUpdate checks the rolling release and installs it silently
 // The journey fold here is a MIRROR of the kernel cell observe/journey-phase.fk
 // (band 31) — the cell is the authority; any divergence is a bug here, not there.
 
@@ -19,6 +19,8 @@ import android.hardware.SensorManager
 import android.os.BatteryManager
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -87,9 +89,15 @@ class SovereignWorker(context: Context, params: WorkerParameters) :
             } catch (e: Exception) { /* contribution is a gift, not a guarantee */ }
         }
 
-        // self-update: check the rolling release; stage a one-tap install if newer.
+        // self-update: check the rolling release; install silently if newer.
         try { SelfUpdate.checkAndStage(ctx) } catch (e: Exception) { /* next beat retries */ }
 
+        // one witness line per beat so the self-driven pulse is observable:
+        //   adb logcat -s sema-sovereign
+        android.util.Log.i(
+            "sema-sovereign",
+            "beat organ=$organ v=${BuildConfig.VERSION_CODE} jp=${jpRead ?: -1} hpa=${hpa ?: -1} battery=$batteryPct charging=$charging",
+        )
         return Result.success()
     }
 
@@ -137,10 +145,21 @@ class SovereignWorker(context: Context, params: WorkerParameters) :
         fun jpRead(prev: Int, cur: Int, tether: Int): Int =
             jpPhase(cur) * 100 + jpTrend(prev, cur) * 10 + tether
 
+        // The self-poking beat: a periodic ~15-min job the phone's own JobScheduler
+        // fires (no Mac, no adb, no external trigger), plus an immediate one-shot so a
+        // fresh schedule checks NOW instead of waiting a full period. Re-armed on boot
+        // AND on self-update (MY_PACKAGE_REPLACED) so no update can silence the beat.
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<SovereignWorker>(15, TimeUnit.MINUTES).build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request
+            val wm = WorkManager.getInstance(context)
+            wm.enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                PeriodicWorkRequestBuilder<SovereignWorker>(15, TimeUnit.MINUTES).build(),
+            )
+            wm.enqueueUniqueWork(
+                WORK_NAME + "-now",
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequestBuilder<SovereignWorker>().build(),
             )
         }
     }
