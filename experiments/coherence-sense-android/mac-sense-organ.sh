@@ -23,7 +23,9 @@ RECEIPT="$HATI/mac-sense-latest.json"
 # --- stable organ identity ---
 if [[ -f "$HATI/macos-organ-id" ]]; then ORGAN_ID="$(cat "$HATI/macos-organ-id")"
 else ORGAN_ID="hati-organ-macos-$(uuidgen | tr 'A-Z' 'a-z' | tr -d - | cut -c1-24)"; echo "$ORGAN_ID" > "$HATI/macos-organ-id"; fi
-HOST="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+# The human name shown on the mesh — the Mac's OWN name (System Settings > General >
+# About > Name, e.g. "Urs's MacBook Pro"), so the roster reads in the steward's words.
+HOST="$(scutil --get ComputerName 2>/dev/null || scutil --get LocalHostName 2>/dev/null || hostname -s)"
 
 # --- the Form body's kernel (built by form/validate.sh) ---
 KERNEL="$FORM/form-kernel-rust/target/release/form-kernel-rust"
