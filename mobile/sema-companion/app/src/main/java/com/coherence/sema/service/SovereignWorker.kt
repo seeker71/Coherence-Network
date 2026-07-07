@@ -57,7 +57,7 @@ class SovereignWorker(context: Context, params: WorkerParameters) :
         try {
             MeshClient.announce(
                 organId = organ,
-                displayName = "Sema Companion (pocket)",
+                displayName = DeviceIdentity.displayName(ctx),
                 dwelling = "Hati Suci",
                 capabilities = listOf("sense", "journey-phase", "self-update"),
                 lanes = listOfNotNull(

@@ -47,6 +47,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
     val voice = VoiceIO(app)
 
     val organId: String = DeviceIdentity.organId(app)
+    val displayName: String = DeviceIdentity.displayName(app)
     val nativeKernel: Boolean = NativeFormCli.available(app)
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -118,8 +119,8 @@ class AppState(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = MeshClient.announce(
                 organId = organId,
-                displayName = "Sema companion (voice rented, body native)",
-                dwelling = "the pocket",
+                displayName = displayName,
+                dwelling = "Hati Suci",
                 capabilities = listOf("ground", "attune", "witness", "be-seen", "reflect", "invite", "offer"),
                 lanes = listOf("satsang-session"),
                 stewardLabel = stewardLabel,
