@@ -20,8 +20,10 @@ android {
         applicationId = "com.coherence.sema"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        // CI passes -PsemaVersionCode=$(git rev-list --count HEAD) so every merge
+        // self-increments; the default stays ahead of the first hand-installed build.
+        versionCode = (project.findProperty("semaVersionCode") as String?)?.toIntOrNull() ?: 2
+        versionName = "0.1." + versionCode
     }
     signingConfigs {
         if (hasReleaseSigning) {
@@ -46,7 +48,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
     packaging {
         jniLibs { useLegacyPackaging = true }
@@ -64,4 +69,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }
