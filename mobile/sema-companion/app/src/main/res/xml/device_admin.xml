@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The narrowest possible admin: no lock, no wipe, no password policy. This
+     grant exists solely to carry device-owner so self-update can install
+     silently. The app declares no <uses-policies> it does not need. -->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies />
+</device-admin>

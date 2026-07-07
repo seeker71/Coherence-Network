@@ -40,6 +40,28 @@
             </intent-filter>
         </receiver>
 
+        <!-- Silent-install status callback (only speaks when the privilege isn't armed). -->
+        <receiver
+            android:name=".core.SelfUpdate$InstallReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.coherence.sema.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Device-owner carrier: makes self-update truly silent once armed via adb. -->
+        <receiver
+            android:name=".core.SemaDeviceAdminReceiver"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
