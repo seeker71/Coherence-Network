@@ -26,6 +26,9 @@ class MainActivity : ComponentActivity() {
             SemaTheme { SemaApp(state) }
         }
         state.heartbeatLoop()
+        // Arm the sovereignty beat: from this install on, the phone reconnects,
+        // senses, contributes, and checks for its own updates with no tending.
+        com.coherence.sema.service.SovereignWorker.schedule(this)
         requestSenses()
     }
 

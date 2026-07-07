@@ -1,0 +1,70 @@
+# sema-companion-apk — the self-update lane's source: every merge touching the
+# companion (or the form body it carries) builds a fresh APK and refreshes the
+# rolling release `sema-companion-latest`. The phone's SovereignWorker polls that
+# release, compares versionCode (git commit count — monotonic by construction),
+# downloads, and stages a one-tap install. No human builds, no human ferries.
+name: sema-companion-apk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/sema-companion/**"
+      - "form/**"
+      - ".github/workflows/sema-companion-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # versionCode = commit count needs full history
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Version from history
+        id: ver
+        run: echo "code=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Native form-cli (kernel in the pocket)
+        # Best-effort: the APK ships either way; the Senses room shows the truth.
+        run: |
+          set +e
+          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$NDK_DIR" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.1.10909125" >/dev/null 2>&1
+            NDK_DIR="$ANDROID_HOME/ndk/26.1.10909125"
+          fi
+          export ANDROID_NDK_HOME="$NDK_DIR"
+          FORM_CLI_FORCE_LINK=1 bash form/build-android-form-cli.sh \
+            mobile/sema-companion/app/src/main/jniLibs/arm64-v8a/libform_cli_exec.so \
+            && echo "native kernel aboard" || echo "native form-cli skipped (carrier-side decisions remain honest)"
+
+      - name: Build APK
+        working-directory: mobile/sema-companion
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug -PsemaVersionCode=${{ steps.ver.outputs.code }} --no-daemon
+
+      - name: Stamp artifact
+        run: |
+          cp mobile/sema-companion/app/build/outputs/apk/debug/app-debug.apk \
+             sema-companion-${{ steps.ver.outputs.code }}.apk
+
+      - name: Refresh rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sema-companion-latest
+          name: Sema Companion (rolling)
+          body: |
+            Rolling self-update release — built from ${{ github.sha }}.
+            versionCode: ${{ steps.ver.outputs.code }}
+          files: sema-companion-${{ steps.ver.outputs.code }}.apk
