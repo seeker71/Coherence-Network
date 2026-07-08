@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,11 +55,48 @@ fun CircleScreen(state: AppState) {
 
     val voices = members.map { m -> Voice(m, verdicts[m.name] ?: Verdict.SILENT) }
     val record = CircleAgreements.witness(voices)
+    val recording by state.recording.collectAsState()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item {
+            SectionLabel("record the satsang")
+            Panel(tint = if (recording) SemaColors.PanelHigh else SemaColors.Panel) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LiveDot(on = recording)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (recording) "recording — audio captured on this phone"
+                        else "ready to record this session",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (recording) SemaColors.Edge else SemaColors.Ink,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { if (recording) state.stopRecording() else state.startRecording() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (recording) SemaColors.Edge else SemaColors.Witness
+                    ),
+                ) {
+                    Text(
+                        if (recording) "Stop & save recording" else "Start recording",
+                        color = SemaColors.Night,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Audio stays on the phone; keeps recording with the screen off. Transcribe " +
+                        "afterward with the Mac's whisper — the recording is the source of truth.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SemaColors.InkFaint,
+                )
+            }
+        }
+
         item {
             SectionLabel("the session")
             Panel {
