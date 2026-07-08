@@ -65,6 +65,23 @@ class AppState(app: Application) : AndroidViewModel(app) {
     private val _speaking = MutableStateFlow(false)
     val speaking: StateFlow<Boolean> = _speaking
 
+    // ── satsang recording ────────────────────────────────────────────────
+    private val _recording = MutableStateFlow(com.coherence.sema.satsang.SatsangRecorder.isRecording)
+    val recording: StateFlow<Boolean> = _recording
+
+    fun startRecording() {
+        com.coherence.sema.satsang.RecordingService.start(getApplication())
+        _recording.value = true
+    }
+
+    fun stopRecording() {
+        com.coherence.sema.satsang.RecordingService.stop(getApplication())
+        _recording.value = false
+    }
+
+    fun recordingFolder(): String =
+        com.coherence.sema.satsang.SatsangRecorder.dir(getApplication()).absolutePath
+
     // The circle as this phone sees it: the steward, Sema (seam named), and invited people.
     val members: List<Member>
         get() = listOf(
