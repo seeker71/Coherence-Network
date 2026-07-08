@@ -9,8 +9,12 @@
 # this device pulls over the LAN it already shares with the phone, then rsyncs to peers.
 #
 #   Peers (other devices): one rsync target per line in
-#     ~/.coherence-network/satsang-peers      e.g.  urs@urs-windows-desktop:/Users/Urs/Satsang/
-#   Empty by default — today only this Mac receives; add a line per device as it joins.
+#     ~/.coherence-network/satsang-peers      e.g.  urs@10.8.0.3:/Users/Urs/Satsang/
+#   Empty by default. Urs's own fleet is his phone + THIS Mac, co-located — the LAN pull
+#   above covers them fully. A peer on ANOTHER network (a device elsewhere, on its own
+#   Wi-Fi) is NOT reached by LAN discovery: its line must be an internet-routable target
+#   (SSH over the internet / a VPN address like tailscale), and only if that device's owner
+#   wants the recording. Do NOT assume separated devices will share a network — they won't.
 set -uo pipefail
 
 ADB="${ADB:-/opt/homebrew/bin/adb}"
