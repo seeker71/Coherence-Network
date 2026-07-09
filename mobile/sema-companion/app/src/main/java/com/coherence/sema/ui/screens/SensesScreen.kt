@@ -26,7 +26,14 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.coherence.sema.AppState
+import com.coherence.sema.data.TrainingBoard
+import com.coherence.sema.data.TrainingDomain
 import com.coherence.sema.ui.KeyValueRow
 import com.coherence.sema.ui.LiveDot
 import com.coherence.sema.ui.Panel
@@ -37,11 +44,32 @@ import kotlin.math.min
 @Composable
 fun SensesScreen(state: AppState) {
     val reading by state.senseField.reading.collectAsState()
+    val mesh by state.mesh.collectAsState()
+    val board = TrainingBoard.from(mesh.channels)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item {
+            SectionLabel("learning to recognize")
+            if (board.isEmpty()) {
+                Panel {
+                    Text(
+                        "No training board on the mesh yet. When the mac posts learning/board/* " +
+                            "offers, the domains it is learning appear here — with native success " +
+                            "rate and the recognized stream.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SemaColors.InkFaint,
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    board.forEach { DomainCard(it) }
+                }
+            }
+        }
+
         item {
             SectionLabel("the room")
             Panel {
@@ -125,6 +153,81 @@ fun SensesScreen(state: AppState) {
             )
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DomainCard(d: TrainingDomain) {
+    Panel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(d.name, style = MaterialTheme.typography.titleSmall, color = SemaColors.Ink)
+            if (d.parity != null) {
+                Text(
+                    "%.0f%% native".format(d.parity * 100),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (d.parity >= 0.9) SemaColors.Witness else SemaColors.Body,
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        ProgressBar(d.progress)
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(d.state, style = MaterialTheme.typography.bodySmall, color = SemaColors.InkDim)
+            Text(
+                "${d.samples} / ${d.target}",
+                style = MaterialTheme.typography.bodySmall,
+                color = SemaColors.InkFaint,
+            )
+        }
+        if (d.stream.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                d.stream.forEach { Chip(it) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressBar(fraction: Float) {
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(SemaColors.Rule),
+    ) {
+        if (fraction > 0f) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction.coerceAtLeast(0.02f))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(SemaColors.Body),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Chip(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = SemaColors.Body,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(SemaColors.PanelHigh)
+            .padding(horizontal = 7.dp, vertical = 3.dp),
+    )
 }
 
 @Composable

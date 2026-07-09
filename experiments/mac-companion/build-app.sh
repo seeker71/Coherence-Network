@@ -26,8 +26,13 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key><string>SemaCompanion</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSCameraUsageDescription</key><string>Sema sees the room to learn faces and objects, on-device. The camera light shows when it looks.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Sema hears the room to learn voices and sounds, on-device.</string>
 </dict></plist>
 PLIST
+
+# ad-hoc code-sign so macOS persists the camera/mic TCC grant to a stable identity
+codesign --force --deep --sign - "$APP" 2>/dev/null && echo "signed (ad-hoc)" || echo "codesign skipped"
 
 echo "built $APP"
 echo "run: open \"$APP\""

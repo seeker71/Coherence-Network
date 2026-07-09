@@ -142,6 +142,14 @@ while true; do
         beat true; rm -f "$wav"; sleep "$WINDOW"; continue
     fi
     read -r rms freq < <(measure "$wav")
+    # audio/sound domain: sample EVERY 4th window (voiced or silent) into the audio inbox so
+    # the sound classifier can name non-speech too — animals, music, rain, applause. Reuses
+    # this same capture (no extra mic read); 1-in-4 keeps it energy-light. Bounded to ~150.
+    if [[ $(( hb_tick % 4 )) -eq 0 ]]; then
+        AINBOX="$HOME/.coherence-network/audio-training/inbox"; mkdir -p "$AINBOX"
+        cp "$wav" "$AINBOX/win-$(date -u +%Y%m%dT%H%M%S)-$$.wav" 2>/dev/null
+        ls -1t "$AINBOX"/*.wav 2>/dev/null | tail -n +150 | xargs rm -f 2>/dev/null || true
+    fi
     # pre-VAD in Form (rms only): skip whisper on silence
     pre="$(form_decide "(do (print (so-vad-gate $rms 0)))" | head -1)"
     if [[ "${pre:-0}" == "0" ]]; then
@@ -150,6 +158,14 @@ while true; do
     fi
     heard="$(transcribe "$wav")"
     read -r gate band sp f rmsx < <(process "$wav" "$heard")
+    # hand the SAME voiced window to the speaker pipeline (non-blocking): spool it for the
+    # long-lived speaker-watch organ to embed + match + fold into a known person's profile.
+    # One mic capture, two witnesses (words + who). Bounded: keep only the last ~200 clips.
+    if [[ "${gate:-0}" != "0" ]]; then
+        SPOOL="$HOME/.coherence-network/speakers/spool"; mkdir -p "$SPOOL"
+        cp "$wav" "$SPOOL/win-$(date -u +%Y%m%dT%H%M%S)-$$.wav" 2>/dev/null
+        ls -1t "$SPOOL"/*.wav 2>/dev/null | tail -n +200 | xargs rm -f 2>/dev/null || true
+    fi
     rm -f "$wav"
     native_row="$(native_host_row "${gate:-0}" "${f:-0}" 0 "$hb_tick")"
     jq -n --arg oid "$ORGAN_ID" --arg host "$HOST" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

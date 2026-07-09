@@ -1,4 +1,7 @@
 *.o
 vision_classify
+vision_embed
 sound_classify
+face_embed
+camera_frame
 shazam_song
