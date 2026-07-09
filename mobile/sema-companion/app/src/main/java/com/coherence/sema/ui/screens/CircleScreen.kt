@@ -34,9 +34,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.coherence.sema.AppState
 import com.coherence.sema.data.CircleAgreements
+import com.coherence.sema.data.InvitationClient
 import com.coherence.sema.data.MemberKind
 import com.coherence.sema.data.Verdict
 import com.coherence.sema.data.Voice
@@ -200,6 +203,11 @@ fun CircleScreen(state: AppState) {
         }
 
         item {
+            SectionLabel("invite a friend")
+            InviteCard(state)
+        }
+
+        item {
             Text(
                 "The circle witnesses how an answer is offered — who affirms, who dissents, who " +
                     "sits silent. It never claims to pierce the one who offered it.",
@@ -208,6 +216,94 @@ fun CircleScreen(state: AppState) {
                 modifier = Modifier.padding(vertical = 12.dp),
             )
         }
+    }
+}
+
+// One name in, the invitation link on the clipboard. The body's door writes the vouch so the
+// friend arrives RECOGNIZED — greeted by the introducer's name; remembering stays the friend's
+// own yes at the door, never this phone's to give. The seam is shown beside the link, always.
+@Composable
+private fun InviteCard(state: AppState) {
+    var member by remember { mutableStateOf("urs") }
+    var friend by remember { mutableStateOf("") }
+    val minted by state.invitation.collectAsState()
+    val inviting by state.inviting.collectAsState()
+    val clipboard = LocalClipboardManager.current
+    val handlesOk = InvitationClient.handleOk(member.trim()) && InvitationClient.handleOk(friend.trim())
+
+    Panel(tint = SemaColors.PanelHigh) {
+        OutlinedTextField(
+            value = member,
+            onValueChange = { member = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("your handle", color = SemaColors.InkFaint) },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = SemaColors.BodyDim,
+                unfocusedBorderColor = SemaColors.Rule,
+                cursorColor = SemaColors.Body,
+            ),
+            shape = RoundedCornerShape(10.dp),
+            singleLine = true,
+        )
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = friend,
+            onValueChange = { friend = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("friend's name", color = SemaColors.InkFaint) },
+            placeholder = { Text("mira", color = SemaColors.InkFaint) },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = SemaColors.BodyDim,
+                unfocusedBorderColor = SemaColors.Rule,
+                cursorColor = SemaColors.Body,
+            ),
+            shape = RoundedCornerShape(10.dp),
+            singleLine = true,
+        )
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = {
+                state.inviteFriend(member.trim(), friend.trim()) { invitation ->
+                    clipboard.setText(AnnotatedString(invitation.link))
+                }
+            },
+            enabled = handlesOk && !inviting,
+            colors = ButtonDefaults.buttonColors(containerColor = SemaColors.Body),
+        ) { Text(if (inviting) "minting…" else "Mint & copy link", color = SemaColors.Night) }
+        if (friend.isNotBlank() && !handlesOk) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "handles are 1–64 lowercase letters, digits, or dash",
+                style = MaterialTheme.typography.bodySmall,
+                color = SemaColors.Edge,
+            )
+        }
+        minted?.let { invitation ->
+            Spacer(Modifier.height(8.dp))
+            KeyValueRow(
+                "vouch",
+                if (invitation.vouched) "written — ${invitation.friend} arrives recognized" else "pending",
+                if (invitation.vouched) SemaColors.Witness else SemaColors.Edge,
+            )
+            KeyValueRow("copied", invitation.link, SemaColors.InkDim)
+            Spacer(Modifier.height(4.dp))
+            Text(invitation.message, style = MaterialTheme.typography.bodySmall, color = SemaColors.InkDim)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                invitation.seam,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (invitation.vouched) SemaColors.InkFaint else SemaColors.Edge,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Recognition is automatic — the vouch greets them by your name. Remembering is only " +
+                "ever their own yes at the door; nobody consents for another.",
+            style = MaterialTheme.typography.bodySmall,
+            color = SemaColors.InkFaint,
+        )
     }
 }
 
