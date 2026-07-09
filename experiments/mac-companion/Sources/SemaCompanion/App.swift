@@ -32,6 +32,7 @@ enum Room: String, CaseIterable, Identifiable {
     case learning = "Learning"
     case recognition = "Recognition"
     case speakers = "Speakers"
+    case faces = "Faces"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -42,6 +43,7 @@ enum Room: String, CaseIterable, Identifiable {
         case .learning: return "brain"
         case .recognition: return "waveform.and.person.filled"
         case .speakers: return "person.2.wave.2.fill"
+        case .faces: return "person.crop.square"
         }
     }
     var live: Bool { true }
@@ -66,6 +68,7 @@ struct RootView: View {
             case .learning: LearningRoom()
             case .recognition: RecognitionRoom()
             case .speakers: SpeakersRoom()
+            case .faces: FacesRoom()
             }
         }
     }

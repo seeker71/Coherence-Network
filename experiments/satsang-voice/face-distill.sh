@@ -53,5 +53,10 @@ print(n)
     rm -f "$frame"
 done
 
+# auto-match any new faces against the known people (fold ≥ threshold, else stay pooled) — the
+# seeing twin of the speaker watcher's continuous fold. Needs the venv python (numpy).
+VENV="$HOME/.coherence-network/satsang-venv/bin/python"
+[[ "$faces" -gt 0 && -x "$VENV" ]] && "$VENV" "$HERE/face_profiles.py" match 2>/dev/null | tail -1
+
 total="$(wc -l < "$SAMPLES" 2>/dev/null | tr -d ' ' || echo 0)"
 echo "[face-distill] $frames frames · +$faces faces this pass · $total/$TARGET"
