@@ -19,6 +19,7 @@ package com.coherence.sema.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -128,10 +129,22 @@ class PresenceService : Service() {
             NotificationChannel(CHANNEL_ID, "Sema presence", NotificationManager.IMPORTANCE_MIN)
                 .apply { description = "Keeps the phone present on the coherence mesh (level and presence only)." }
         )
+        // Tapping the standing notification FOCUSES the app — brings its existing task to the
+        // front like the launcher icon, rather than doing nothing. getLaunchIntentForPackage
+        // carries FLAG_ACTIVITY_NEW_TASK|RESET_TASK_IF_NEEDED (reuse the task, don't spawn a
+        // duplicate); SINGLE_TOP keeps a foregrounded MainActivity from being recreated.
+        val launch = (packageManager.getLaunchIntentForPackage(packageName)
+            ?: Intent(this, com.coherence.sema.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val contentPi = PendingIntent.getActivity(
+            this, 0, launch,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Sema is present")
             .setContentText("On the mesh whenever there's a network — level and presence only, never words.")
             .setSmallIcon(android.R.drawable.presence_online)
+            .setContentIntent(contentPi)
             .setOngoing(true)
             .build()
     }
