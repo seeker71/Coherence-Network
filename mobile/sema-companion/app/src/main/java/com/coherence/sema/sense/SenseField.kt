@@ -33,11 +33,13 @@ import kotlin.math.sqrt
 data class SenseReading(
     val accelMagnitude: Float = 0f,      // m/s² beyond gravity, smoothed
     val moving: Boolean = false,
+    val speedMps: Float? = null,         // ground speed from GPS
     val lux: Float? = null,
     val headingDeg: Float? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val soundRms: Int = 0,               // 0..~12000, room loudness (level only, never words)
+    val placeName: String? = null,       // reverse-geocoded — the name of where we are
+    val soundRms: Int = 0,               // 0..~12000, room loudness
     val micLive: Boolean = false,
 ) {
     fun lightWord(): String = when {
@@ -46,6 +48,26 @@ data class SenseReading(
         lux < 200f -> "dim"
         lux < 1000f -> "lit"
         else -> "bright"
+    }
+
+    fun speedKmh(): Float? = speedMps?.let { it * 3.6f }
+
+    // Mode of transport, inferred from ground speed (the model will learn finer distinctions —
+    // the walk vs the run, the car vs the train — from the whole field over time; for now the
+    // honest read is the speed band). Car and train overlap in speed; named by likelihood.
+    fun transportWord(): String {
+        val s = speedMps
+        if (s == null) return if (moving) "moving" else "still"
+        val kmh = s * 3.6f
+        return when {
+            kmh < 1.5f -> "still"
+            kmh < 7f -> "walking"
+            kmh < 13f -> "running"
+            kmh < 28f -> "cycling"
+            kmh < 110f -> "driving"
+            kmh < 350f -> "on a train"
+            else -> "flying"
+        }
     }
 
     fun soundWord(): String = when {
@@ -75,6 +97,7 @@ class SenseField(private val context: Context) : SensorEventListener {
     private var audioJob: Job? = null
 
     fun start(scope: CoroutineScope) {
+        geoScope = scope
         val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         sensorManager = sm
         listOf(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_MAGNETIC_FIELD, Sensor.TYPE_LIGHT).forEach { type ->
@@ -122,8 +145,37 @@ class SenseField(private val context: Context) : SensorEventListener {
         }
     }
 
+    private var geoScope: CoroutineScope? = null
+    private var lastGeocodeAt = 0L
     private val locationListener = LocationListener { loc: Location ->
-        _reading.value = _reading.value.copy(latitude = loc.latitude, longitude = loc.longitude)
+        _reading.value = _reading.value.copy(
+            latitude = loc.latitude,
+            longitude = loc.longitude,
+            speedMps = if (loc.hasSpeed()) loc.speed else _reading.value.speedMps,
+        )
+        maybeGeocode(loc)
+    }
+
+    // Turn the fix into the NAME of a place — a landmark, a street, a locality — the way we'd
+    // say where we are, not a coordinate pair. Throttled; runs off the main thread. (The room's
+    // own name is learned from listening + seeing; this is the outer place it sits in.)
+    private fun maybeGeocode(loc: Location) {
+        val now = System.currentTimeMillis()
+        if (now - lastGeocodeAt < 60_000L) return
+        lastGeocodeAt = now
+        val scope = geoScope ?: return
+        scope.launch(Dispatchers.IO) {
+            try {
+                @Suppress("DEPRECATION")
+                val hits = android.location.Geocoder(context).getFromLocation(loc.latitude, loc.longitude, 1)
+                val a = hits?.firstOrNull() ?: return@launch
+                val name = a.featureName?.takeIf { it.isNotBlank() && it != a.thoroughfare }
+                    ?: a.thoroughfare ?: a.subLocality ?: a.locality
+                val where = listOfNotNull(name, a.locality?.takeIf { it != name })
+                    .distinct().joinToString(", ").ifBlank { a.getAddressLine(0) }
+                if (!where.isNullOrBlank()) _reading.value = _reading.value.copy(placeName = where)
+            } catch (e: Exception) { /* geocoder needs network; place-name stays unread, honestly */ }
+        }
     }
 
     @SuppressLint("MissingPermission")

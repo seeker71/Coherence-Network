@@ -96,7 +96,9 @@ class AppState(app: Application) : AndroidViewModel(app) {
         voice.onHeard = { heard -> ask(heard) }
         voice.onListeningChanged = { _listening.value = it }
         voice.onSpeakingChanged = { _speaking.value = it }
-        refreshMesh()
+        // Presence needs no ceremony — the body is simply here. Arrive on the mesh automatically
+        // (the foreground service also keeps it present in the background); no button to press.
+        arriveOnMesh()
     }
 
     fun startSensing() = senseField.start(viewModelScope)
@@ -124,7 +126,13 @@ class AppState(app: Application) : AndroidViewModel(app) {
     fun refreshMesh() {
         viewModelScope.launch(Dispatchers.IO) {
             val organs = MeshClient.organs()
+            // The mesh keeps every re-offer of the same interface; a learning board reposted each
+            // tick shows as dozens of "duplicates". Collapse to the LATEST of each distinct
+            // (from → to · interface) so the field reads as what it is, not how often it was said.
             val channels = MeshClient.channels()
+                .asReversed()
+                .distinctBy { "${it.from}|${it.to}|${it.interfaceText}" }
+                .asReversed()
             _mesh.value = _mesh.value.copy(
                 organs = organs,
                 channels = channels,

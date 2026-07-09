@@ -209,8 +209,10 @@ fun CircleScreen(state: AppState) {
 
         item {
             Text(
-                "The circle witnesses how an answer is offered — who affirms, who dissents, who " +
-                    "sits silent. It never claims to pierce the one who offered it.",
+                "In a live satsang the phone sits to the side and does one thing: record and, in time, " +
+                    "transcribe — a quiet witness, not a participant. The affirm/dissent tally below is an " +
+                    "optional facilitation tool for when a circle wants to hold a record together; it assumes " +
+                    "nothing. Sema speaks only when given a turn and only when she has something to contribute.",
                 style = MaterialTheme.typography.bodySmall,
                 color = SemaColors.InkFaint,
                 modifier = Modifier.padding(vertical = 12.dp),

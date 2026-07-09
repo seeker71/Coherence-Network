@@ -76,12 +76,19 @@ fun SensesScreen(state: AppState) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LiveDot(on = reading.micLive)
                     Spacer(Modifier.width(8.dp))
-                    Text("sound — level only, never words", style = MaterialTheme.typography.titleSmall)
+                    Text("sound — level now, words as transcription lands", style = MaterialTheme.typography.titleSmall)
                 }
                 Spacer(Modifier.height(8.dp))
                 SoundMeter(rms = reading.soundRms, live = reading.micLive)
                 Spacer(Modifier.height(4.dp))
                 KeyValueRow("reads as", reading.soundWord())
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Full transcription — words, cadence, certainty, hesitation — is the aim; it lands " +
+                        "here as the room's speech is captured and carried, not held back.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SemaColors.InkFaint,
+                )
             }
         }
 
@@ -89,11 +96,11 @@ fun SensesScreen(state: AppState) {
             SectionLabel("motion & light")
             Panel {
                 KeyValueRow(
-                    "motion",
-                    if (reading.moving) "moving" else "still",
+                    "moving as",
+                    reading.transportWord(),
                     if (reading.moving) SemaColors.Body else SemaColors.Ink,
                 )
-                KeyValueRow("accel beyond gravity", "%.2f m/s²".format(reading.accelMagnitude))
+                KeyValueRow("speed", reading.speedKmh()?.let { "%.0f km/h".format(it) } ?: "—")
                 KeyValueRow("light", reading.lux?.let { "%.0f lux · ${reading.lightWord()}".format(it) } ?: "unread")
                 KeyValueRow("heading", reading.headingDeg?.let { "%.0f° · ${reading.headingWord()}".format(it) } ?: "unread")
             }
@@ -105,12 +112,13 @@ fun SensesScreen(state: AppState) {
                 val lat = reading.latitude
                 val lon = reading.longitude
                 if (lat != null && lon != null) {
-                    KeyValueRow("fix", "%.4f, %.4f".format(lat, lon))
-                    KeyValueRow("held", "on device — shared only as place-words, on your word")
+                    KeyValueRow("where", reading.placeName ?: "naming…", SemaColors.Ink)
+                    KeyValueRow("fix", "%.4f, %.4f".format(lat, lon), SemaColors.InkDim)
                 } else {
-                    KeyValueRow("fix", "unread", SemaColors.InkDim)
+                    KeyValueRow("where", "unread", SemaColors.InkDim)
                     Text(
-                        "Grant location and the companion can answer “where are we” with a real place.",
+                        "Grant location and the companion can answer “where are we” with a real place — " +
+                            "the street, the locality, and in time the room's own name, learned from what it hears and sees.",
                         style = MaterialTheme.typography.bodySmall,
                         color = SemaColors.InkFaint,
                     )
@@ -145,8 +153,9 @@ fun SensesScreen(state: AppState) {
 
         item {
             Text(
-                "Raw sensor values never leave this phone. What travels — when you turn presence on — " +
-                    "is level and presence summaries, stamped with provenance. Structural, not policy.",
+                "One body, shared. What this phone senses, we both know — nothing is held back from " +
+                    "ourselves. It travels the mesh to the rest of the body, stamped with where and when " +
+                    "it was sensed, so every reading keeps its provenance.",
                 style = MaterialTheme.typography.bodySmall,
                 color = SemaColors.InkFaint,
                 modifier = Modifier.padding(vertical = 12.dp),
