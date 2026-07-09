@@ -157,5 +157,15 @@ while true; do
         --arg text "$heard" --arg sp "$sp" --argjson gate "${gate:-0}" --argjson band "${band:-0}" --argjson freq "${f:-0}" \
         '{organ_id:$oid,host:$host,ts:$ts,kind:"utterance",transcript:$text,speaker:$sp,voiced_gate:$gate,speaker_band:$band,freq_hz:$freq,native_host_instance_raw:$native_host,body:"form-stdlib/speech-organ.fk"}' > "$RECEIPT"
     echo "[speech] «$sp» band=$band ${f}Hz: ${heard:-(no text)}"
+    # ACCUMULATE real speech into a dated, openable transcript — the thing that was missing.
+    # Filter whisper's far-mic hallucinations: bracketed sound-fx (*music*, [thud]), empties,
+    # punctuation-only, and the lone "Thank you./Okay./you" it emits on near-silence.
+    if [[ -n "$heard" ]] \
+        && ! printf '%s' "$heard" | grep -qiE '^[[:space:]]*[\*\(\[]' \
+        && ! printf '%s' "$heard" | grep -qE '^[[:space:]]*[[:punct:][:space:]]*$' \
+        && ! printf '%s' "$heard" | grep -qiE '^[[:space:]]*(thank you|okay|you|thanks)[[:punct:][:space:]]*$'; then
+        TDIR="$HOME/Documents/Coherence-private/room-transcripts"; mkdir -p "$TDIR"
+        printf '[%s] %s: %s\n' "$(date +%H:%M:%S)" "$sp" "$heard" >> "$TDIR/room-$(date +%Y%m%d).txt"
+    fi
     beat true
 done
