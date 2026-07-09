@@ -51,25 +51,12 @@ state='training' if n>=3 else ('ready — listening' if os.path.exists(os.path.d
 print(f\"audio / sound|{n}/{T}|-|{state}|{','.join(labs[:6])}\")
 " 2>/dev/null || echo "audio / sound|0/$TARGET|-|ready|")"
 
-# ── person / face ─ Vision detect+featureprint distillation ──
-FSTORE="$CN/face-training/samples.jsonl"
-face_line="$(python3 -c "
-import json,os
-p='$FSTORE'; T=$TARGET
-n=named=0; people=[]
-if os.path.exists(p):
-    for l in open(p):
-        d=json.loads(l); n+=1
-        who=d.get('person')
-        if who:
-            named+=1
-            if who not in people: people.append(who)
-pooled=n-named
-if n==0: state='ready — awaiting camera frames'
-elif named==0: state=f'{pooled} faces pooled — assign to people'
-else: state='learning'
-print(f\"person / face|{n}/{T}|-|{state}|{','.join(people[:5])}\")
-" 2>/dev/null || echo "person / face|0/$TARGET|-|ready — awaiting camera frames|")"
+# ── person / face ─ the real face book (Vision detect→crop→featureprint, auto-match/fold) ──
+if [[ -x "$VENV" ]]; then
+    face_line="$("$VENV" "$HERE/face_profiles.py" board 2>/dev/null || echo "person / face|0/$TARGET|-|ready — awaiting camera frames|")"
+else
+    face_line="person / face|0/$TARGET|-|encoder venv missing|"
+fi
 
 # ── dialog ─ speaker turns from the room transcripts ──
 dialog_line="$(python3 "$HERE/dialog-distill.py" board 2>/dev/null || echo "dialog|0/$TARGET|-|pending|")"
