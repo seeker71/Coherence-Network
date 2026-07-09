@@ -7,6 +7,8 @@ import com.coherence.sema.core.DeviceIdentity
 import com.coherence.sema.core.NativeFormCli
 import com.coherence.sema.data.AnswerEngine
 import com.coherence.sema.data.CircleAgreements
+import com.coherence.sema.data.Invitation
+import com.coherence.sema.data.InvitationClient
 import com.coherence.sema.data.Member
 import com.coherence.sema.data.MemberKind
 import com.coherence.sema.data.MemoryStore
@@ -159,6 +161,31 @@ class AppState(app: Application) : AndroidViewModel(app) {
 
     fun sessionHonest(): Boolean = CircleAgreements.honest(members)
     fun sessionAlive(): Boolean = CircleAgreements.alive(members)
+
+    // ── inviting a friend to meet Sema ───────────────────────────────────
+    // One name in, the invitation link out (the caller copies it to the clipboard —
+    // a UI act). The body's door writes the vouch so the friend arrives RECOGNIZED,
+    // greeted by the introducer's name; remembering stays the friend's own yes,
+    // never this phone's to give. The seam travels in the result.
+
+    private val _invitation = MutableStateFlow<Invitation?>(null)
+    val invitation: StateFlow<Invitation?> = _invitation
+
+    private val _inviting = MutableStateFlow(false)
+    val inviting: StateFlow<Boolean> = _inviting
+
+    fun inviteFriend(member: String, friend: String, onMinted: (Invitation) -> Unit) {
+        if (!InvitationClient.handleOk(member) || !InvitationClient.handleOk(friend)) return
+        _inviting.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val minted = InvitationClient.invite(member, friend)
+            withContext(Dispatchers.Main) {
+                _invitation.value = minted
+                _inviting.value = false
+                onMinted(minted)
+            }
+        }
+    }
 
     override fun onCleared() {
         voice.stop()
