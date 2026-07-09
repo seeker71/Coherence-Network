@@ -21,6 +21,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -159,7 +160,11 @@ class SovereignWorker(context: Context, params: WorkerParameters) :
             wm.enqueueUniqueWork(
                 WORK_NAME + "-now",
                 ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<SovereignWorker>().build(),
+                // Expedited so a fresh schedule/boot announces NOW rather than queuing; falls
+                // back to a normal job when the foreground quota is spent (never dropped).
+                OneTimeWorkRequestBuilder<SovereignWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build(),
             )
         }
     }

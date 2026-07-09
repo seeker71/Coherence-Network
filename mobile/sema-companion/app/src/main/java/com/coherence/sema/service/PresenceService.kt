@@ -1,27 +1,35 @@
 package com.coherence.sema.service
 
 // The standing presence: an always-on foreground service so the phone is NEVER off the mesh
-// while it has ANY network (wifi or cellular). Foreground = exempt from Doze's background-
-// network restriction, which is what silenced the WorkManager beat overnight. Three ways it
-// stays present:
+// while it has ANY network (wifi or cellular). The foreground state keeps the process alive and
+// out of App Standby; it re-announces the instant the network stirs. Ways it stays present:
 //   1. a heartbeat+announce loop every ~5 min (keeps the organ listed, with its name);
 //   2. a default-network callback that re-announces the INSTANT a network becomes available
 //      (wifi joins, cellular takes over, a hotspot appears) — the "reconnect when networks
 //      come available" Urs asked for;
-//   3. START_STICKY + start-on-boot, so it revives after kills and restarts.
-// Level-and-presence only ever travels — never words, never raw audio.
+//   3. a screen-on healer — re-announce the moment the steward wakes the phone;
+//   4. START_STICKY + start-on-boot, so it revives after kills and restarts.
+// The honest seam: a foreground service is exempt from App Standby, NOT from DEEP Doze
+// (stationary + unplugged overnight). There the CPU is suspended — this loop's postDelayed
+// never ticks — and background network is cut device-wide. So deep Doze is carried by a
+// separate allow-while-idle alarm + the battery-optimization whitelist (see PresencePulse),
+// armed here on start. Foreground handles awake/charging/network-change; the alarm handles the
+// dark, stationary night. Level-and-presence only ever travels — never words, never raw audio.
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import androidx.core.content.ContextCompat
 import com.coherence.sema.BuildConfig
 import com.coherence.sema.core.DeviceIdentity
 import com.coherence.sema.data.MeshClient
@@ -32,6 +40,7 @@ class PresenceService : Service() {
     private var handler: Handler? = null
     private var cm: ConnectivityManager? = null
     private var netCb: ConnectivityManager.NetworkCallback? = null
+    private var screenReceiver: BroadcastReceiver? = null
     private val intervalMs = 5 * 60_000L
     @Volatile private var lastBeatAt = 0L
 
@@ -81,16 +90,31 @@ class PresenceService : Service() {
             }
         }
         try { cm?.registerDefaultNetworkCallback(netCb!!) } catch (e: Exception) {}
+
+        // Screen-on healer: the instant the steward wakes the phone, re-announce — a beat
+        // missed in deep Doze heals the moment the phone is picked up.
+        screenReceiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (System.currentTimeMillis() - lastBeatAt > 4_000L) handler?.post { present("screen-on") }
+            }
+        }
+        ContextCompat.registerReceiver(
+            this, screenReceiver, IntentFilter(Intent.ACTION_SCREEN_ON),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         handler?.removeCallbacks(beat)
         handler?.post(beat)
+        // Arm the deep-Doze layer: the allow-while-idle alarm the Handler loop above cannot be.
+        PresencePulse.scheduleNextBeat(this)
         return START_STICKY
     }
 
     override fun onDestroy() {
         try { netCb?.let { cm?.unregisterNetworkCallback(it) } } catch (e: Exception) {}
+        screenReceiver?.let { try { unregisterReceiver(it) } catch (e: Exception) {} }
         handler?.removeCallbacks(beat)
         worker?.quitSafely()
         super.onDestroy()
@@ -121,6 +145,7 @@ class PresenceService : Service() {
         }
 
         fun stop(context: Context) {
+            PresencePulse.cancelBeat(context)   // the deep-Doze beat rests with the service
             context.stopService(Intent(context, PresenceService::class.java))
         }
     }
