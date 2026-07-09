@@ -1,5 +1,10 @@
 import SwiftUI
 import SatsangMacCore
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 public enum SatsangHostShell: Sendable {
     case macOS
@@ -47,6 +52,10 @@ final class AppModel: ObservableObject {
     @Published var healthSamples: [TrustedHealthSample] = []
     @Published var isImportingHealth: Bool = false
     @Published var status: String = "Ready"
+    @Published var inviteMember: String = "urs"
+    @Published var inviteFriend: String = ""
+    @Published var inviteResult: SemaInvitationResult?
+    @Published var isInviting: Bool = false
 
     private let defaultTranscriptPath: String
     private let defaultQueuePath: String
@@ -116,6 +125,27 @@ final class AppModel: ObservableObject {
     var selectedUtterance: TranscriptUtterance? {
         guard let selectedID else { return utterances.first }
         return utterances.first { $0.id == selectedID }
+    }
+
+    // Invite a friend to meet Sema: the body's door writes the vouch (the friend arrives
+    // recognized, greeted by the introducer's name) and mints the GPT link with the friend's
+    // name in the first message. Recognition is automatic; remembering never is — only the
+    // friend's own yes at the door writes memory. The seam travels in the result, never hidden.
+    func mintInvitation() async -> SemaInvitationResult? {
+        let member = inviteMember.trimmingCharacters(in: .whitespacesAndNewlines)
+        let friend = inviteFriend.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemaInvitation.handleIsValid(member), SemaInvitation.handleIsValid(friend) else {
+            status = "Handles are 1–64 lowercase letters, digits, or dash"
+            return nil
+        }
+        isInviting = true
+        let result = await SemaInvitationDoor().invite(member: member, friend: friend)
+        inviteResult = result
+        isInviting = false
+        status = result.vouched
+            ? "Invitation link copied — \(friend) arrives recognized"
+            : "Invitation link copied — vouch pending, seam named below"
+        return result
     }
 
     var transcriptText: String {
@@ -640,11 +670,75 @@ public struct SatsangGuidanceRootView: View {
                 metricRow("Sessions", model.memoryContextSummary)
                 metricRow("Speakers", "\(model.utterances.compactMap(\.speakerProfileID).filter { !$0.isEmpty }.count)")
                 metricRow("Health", model.healthContextSummary)
+                inviteSection
                 routeSummary
                 transcriptPreview
             }
             .padding(16)
         }
+    }
+
+    // Invite a friend to meet Sema: one name in, the invitation link on the clipboard.
+    // Recognition is automatic (the door's vouch); remembering is only ever the friend's
+    // own yes — the seam is shown beside the link, never hidden.
+    private var inviteSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Invite a friend")
+                .font(.headline)
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                GridRow {
+                    Text("Your handle")
+                    TextField("urs", text: $model.inviteMember)
+                }
+                GridRow {
+                    Text("Friend's name")
+                    TextField("mira", text: $model.inviteFriend)
+                        .onSubmit { mintAndCopyInvitation() }
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+            .font(.callout)
+            HStack {
+                Button { mintAndCopyInvitation() } label: {
+                    Label(model.isInviting ? "Minting" : "Mint & copy link", systemImage: "link.badge.plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.isInviting || model.inviteFriend.trimmingCharacters(in: .whitespaces).isEmpty)
+                Spacer()
+            }
+            if let invitation = model.inviteResult {
+                VStack(alignment: .leading, spacing: 6) {
+                    metricRow("Copied", invitation.link)
+                    metricRow("Message", invitation.message)
+                    metricRow("Body door", invitation.comeInLink)
+                    Text(invitation.seam)
+                        .font(.caption)
+                        .foregroundStyle(invitation.vouched ? .secondary : Color.orange)
+                        .textSelection(.enabled)
+                }
+            }
+            Text("Handles are 1–64 lowercase letters, digits, or dash. Recognition is automatic; remembering only ever happens on your friend's own yes at the door.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func mintAndCopyInvitation() {
+        Task {
+            if let invitation = await model.mintInvitation() {
+                copyToClipboard(invitation.link)
+            }
+        }
+    }
+
+    private func copyToClipboard(_ text: String) {
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #else
+        UIPasteboard.general.string = text
+        #endif
     }
 
     private var healthTab: some View {
