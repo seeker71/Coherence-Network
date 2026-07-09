@@ -29,6 +29,9 @@ class MainActivity : ComponentActivity() {
         // Arm the sovereignty beat: from this install on, the phone reconnects,
         // senses, contributes, and checks for its own updates with no tending.
         com.coherence.sema.service.SovereignWorker.schedule(this)
+        // Always-on presence: never off the mesh while there's any network (Doze-exempt,
+        // re-announces the instant wifi/cellular/hotspot becomes available).
+        com.coherence.sema.service.PresenceService.start(this)
         // Wire the local transport stacks up (LAN/mDNS live; more adapters plug in there).
         com.coherence.sema.mesh.MeshTransports.startAll(this, com.coherence.sema.BuildConfig.VERSION_CODE)
         requestSenses()
