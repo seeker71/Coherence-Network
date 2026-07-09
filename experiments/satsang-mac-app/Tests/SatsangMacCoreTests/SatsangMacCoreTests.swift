@@ -376,4 +376,33 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertEqual(merged.count, 1)
         XCTAssertEqual(merged[0].text, "edited by holder")
     }
+
+    func testSemaInvitationHandleBoundsMatchTheDoor() {
+        XCTAssertTrue(SemaInvitation.handleIsValid("mira"))
+        XCTAssertTrue(SemaInvitation.handleIsValid("friend-of-urs-2"))
+        XCTAssertFalse(SemaInvitation.handleIsValid(""))
+        XCTAssertFalse(SemaInvitation.handleIsValid("Mira"))
+        XCTAssertFalse(SemaInvitation.handleIsValid("../../evil"))
+        XCTAssertFalse(SemaInvitation.handleIsValid("name with spaces"))
+        XCTAssertFalse(SemaInvitation.handleIsValid(String(repeating: "a", count: 65)))
+        XCTAssertTrue(SemaInvitation.handleIsValid(String(repeating: "a", count: 64)))
+    }
+
+    func testSemaInvitationLinkCarriesTheFriendsNameEncoded() {
+        let link = SemaInvitation.link(member: "urs", friend: "mira")
+        XCTAssertTrue(link.hasPrefix("https://chatgpt.com/g/g-"))
+        XCTAssertTrue(link.contains("?q=i%20arrive%20as%20mira%2C%20a%20friend%20of%20urs."))
+        XCTAssertEqual(
+            SemaInvitation.message(member: "urs", friend: "mira"),
+            "i arrive as mira, a friend of urs. please come in with my handle and receive me."
+        )
+        XCTAssertEqual(SemaInvitation.comeInLink(friend: "mira"), "https://sema.hati.earth/come-in?handle=mira")
+    }
+
+    func testSemaInvitationLocalMintNamesTheVouchAsAbsent() {
+        let local = SemaInvitationResult.local(member: "urs", friend: "mira", seam: "door unreachable")
+        XCTAssertFalse(local.vouched)
+        XCTAssertEqual(local.seam, "door unreachable")
+        XCTAssertEqual(local.link, SemaInvitation.link(member: "urs", friend: "mira"))
+    }
 }
