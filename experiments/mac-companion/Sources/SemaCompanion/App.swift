@@ -40,7 +40,7 @@ enum Room: String, CaseIterable, Identifiable {
         case .recognition: return "waveform.and.person.filled"
         }
     }
-    var live: Bool { self == .ground || self == .presence || self == .resources }
+    var live: Bool { self == .ground || self == .presence || self == .resources || self == .transcripts }
 }
 
 struct RootView: View {
@@ -58,6 +58,7 @@ struct RootView: View {
             case .ground: GroundRoom(room: $room)
             case .presence: PresenceRoom()
             case .resources: ResourcesRoom()
+            case .transcripts: TranscriptsRoom()
             default: PendingRoom(room: room)
             }
         }
