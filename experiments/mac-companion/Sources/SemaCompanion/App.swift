@@ -23,7 +23,8 @@ struct SemaCompanionApp: App {
 }
 
 enum Room: String, CaseIterable, Identifiable {
-    case presence = "Presence"
+    case ground = "Ground"
+    case presence = "Field"
     case resources = "Resources"
     case transcripts = "Transcripts"
     case learning = "Learning"
@@ -31,6 +32,7 @@ enum Room: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var icon: String {
         switch self {
+        case .ground: return "circle.hexagongrid.fill"
         case .presence: return "dot.radiowaves.left.and.right"
         case .resources: return "gauge.with.dots.needle.67percent"
         case .transcripts: return "text.bubble"
@@ -38,11 +40,11 @@ enum Room: String, CaseIterable, Identifiable {
         case .recognition: return "waveform.and.person.filled"
         }
     }
-    var live: Bool { self == .presence || self == .resources }
+    var live: Bool { self == .ground || self == .presence || self == .resources }
 }
 
 struct RootView: View {
-    @State private var room: Room = .presence
+    @State private var room: Room = .ground
     var body: some View {
         NavigationSplitView {
             List(Room.allCases, selection: $room) { r in
@@ -53,6 +55,7 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(190)
         } detail: {
             switch room {
+            case .ground: GroundRoom(room: $room)
             case .presence: PresenceRoom()
             case .resources: ResourcesRoom()
             default: PendingRoom(room: room)
