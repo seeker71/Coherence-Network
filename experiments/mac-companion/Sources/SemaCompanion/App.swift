@@ -9,14 +9,16 @@ import SwiftUI
 struct SemaCompanionApp: App {
     @StateObject private var mesh = MeshModel()
     @StateObject private var res = ResourceModel()
+    @StateObject private var camera = CameraModel()
 
     var body: some Scene {
         WindowGroup("Sema — local companion") {
             RootView()
                 .environmentObject(mesh)
                 .environmentObject(res)
+                .environmentObject(camera)
                 .frame(minWidth: 760, minHeight: 520)
-                .onAppear { mesh.start(); res.start() }
+                .onAppear { mesh.start(); res.start(); camera.start() }
         }
         .windowStyle(.hiddenTitleBar)
     }
@@ -29,6 +31,7 @@ enum Room: String, CaseIterable, Identifiable {
     case transcripts = "Transcripts"
     case learning = "Learning"
     case recognition = "Recognition"
+    case speakers = "Speakers"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -38,9 +41,10 @@ enum Room: String, CaseIterable, Identifiable {
         case .transcripts: return "text.bubble"
         case .learning: return "brain"
         case .recognition: return "waveform.and.person.filled"
+        case .speakers: return "person.2.wave.2.fill"
         }
     }
-    var live: Bool { self == .ground || self == .presence || self == .resources || self == .transcripts }
+    var live: Bool { true }
 }
 
 struct RootView: View {
@@ -59,7 +63,9 @@ struct RootView: View {
             case .presence: PresenceRoom()
             case .resources: ResourcesRoom()
             case .transcripts: TranscriptsRoom()
-            default: PendingRoom(room: room)
+            case .learning: LearningRoom()
+            case .recognition: RecognitionRoom()
+            case .speakers: SpeakersRoom()
             }
         }
     }

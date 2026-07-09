@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private fun requestSenses() {
         val wanted = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
             Manifest.permission.ACCESS_FINE_LOCATION,
         )
         if (Build.VERSION.SDK_INT >= 33) {

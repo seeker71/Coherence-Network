@@ -76,6 +76,25 @@ class PresenceService : Service() {
         }
     }
 
+    // The eye: one still every ~45s, alternating front (the person) and back (the room), written
+    // to the files dir the Mac puller collects. Energy-light and gated on the CAMERA grant — if
+    // ungranted, this is a no-op that keeps trying cheaply. The foreground notification + the
+    // system camera indicator make the seeing visible.
+    private val cameraIntervalMs = 45_000L
+    @Volatile private var eyeFront = true
+    private val eye = object : Runnable {
+        override fun run() {
+            try {
+                if (com.coherence.sema.sense.CameraEye.granted(this@PresenceService)) {
+                    com.coherence.sema.sense.CameraEye.captureOnce(this@PresenceService, eyeFront)
+                    eyeFront = !eyeFront
+                    com.coherence.sema.sense.CameraEye.prune(this@PresenceService)
+                }
+            } catch (_: Exception) {}
+            handler?.postDelayed(this, cameraIntervalMs)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         startForeground(NOTIF_ID, notification())
@@ -108,6 +127,8 @@ class PresenceService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         handler?.removeCallbacks(beat)
         handler?.post(beat)
+        handler?.removeCallbacks(eye)
+        handler?.postDelayed(eye, cameraIntervalMs)
         // Arm the deep-Doze layer: the allow-while-idle alarm the Handler loop above cannot be.
         PresencePulse.scheduleNextBeat(this)
         return START_STICKY
@@ -117,6 +138,7 @@ class PresenceService : Service() {
         try { netCb?.let { cm?.unregisterNetworkCallback(it) } } catch (e: Exception) {}
         screenReceiver?.let { try { unregisterReceiver(it) } catch (e: Exception) {} }
         handler?.removeCallbacks(beat)
+        handler?.removeCallbacks(eye)
         worker?.quitSafely()
         super.onDestroy()
     }
