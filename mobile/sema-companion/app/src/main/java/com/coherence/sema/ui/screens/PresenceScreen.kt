@@ -47,30 +47,18 @@ fun PresenceScreen(state: AppState) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LiveDot(on = mesh.announced)
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (mesh.announced) "present on the mesh" else "not yet arrived",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
+                    Text(state.displayName, style = MaterialTheme.typography.titleSmall)
                 }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (mesh.announced) "present on the mesh" else "arriving…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (mesh.announced) SemaColors.Body else SemaColors.InkDim,
+                )
                 Spacer(Modifier.height(6.dp))
-                KeyValueRow("organ", state.organId)
-                KeyValueRow("lane", "satsang-session")
+                KeyValueRow("organ", state.organId, SemaColors.InkFaint)
                 KeyValueRow("seam", "voice rented · body native", SemaColors.Witness)
-                mesh.lastReceipt?.let { KeyValueRow("receipt", it, SemaColors.Witness) }
                 mesh.lastError?.let { KeyValueRow("edge", it, SemaColors.Edge) }
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    if (!presenceOn) {
-                        Button(
-                            onClick = { state.arriveOnMesh() },
-                            colors = ButtonDefaults.buttonColors(containerColor = SemaColors.Body),
-                        ) { Text("Arrive", color = SemaColors.Night) }
-                    } else {
-                        OutlinedButton(onClick = { state.leaveMesh() }) { Text("Rest") }
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = { state.refreshMesh() }) { Text("Sense the field") }
-                }
             }
         }
 

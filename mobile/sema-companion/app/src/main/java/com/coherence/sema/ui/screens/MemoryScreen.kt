@@ -159,8 +159,9 @@ fun MemoryScreen(state: AppState) {
 
         item {
             Text(
-                "Everything on this screen lives only on this phone. Held on your word, " +
-                    "never scraped — the explicit-Send boundary, kept.",
+                "Memory should hold itself — capturing what matters as it happens, showing what is " +
+                    "flowing (water) and what has set (ice), and letting either be moved by hand. That " +
+                    "living memory is being built; for now moments can also be held here by word.",
                 style = MaterialTheme.typography.bodySmall,
                 color = SemaColors.InkFaint,
                 modifier = Modifier.padding(vertical = 12.dp),
