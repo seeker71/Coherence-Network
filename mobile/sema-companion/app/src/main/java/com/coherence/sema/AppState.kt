@@ -47,6 +47,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
     val memory = MemoryStore(app)
     private val engine = AnswerEngine(memory)
     val voice = VoiceIO(app)
+    val roomEars = com.coherence.sema.voice.RoomEars(app)
 
     val organId: String = DeviceIdentity.organId(app)
     val displayName: String = DeviceIdentity.displayName(app)
@@ -72,6 +73,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
     val recording: StateFlow<Boolean> = _recording
 
     fun startRecording() {
+        roomEars.pause()   // the recorder takes the mic; the room ear waits
         com.coherence.sema.satsang.RecordingService.start(getApplication())
         _recording.value = true
     }
@@ -79,6 +81,7 @@ class AppState(app: Application) : AndroidViewModel(app) {
     fun stopRecording() {
         com.coherence.sema.satsang.RecordingService.stop(getApplication())
         _recording.value = false
+        roomEars.resume()
     }
 
     fun recordingFolder(): String =
@@ -94,15 +97,16 @@ class AppState(app: Application) : AndroidViewModel(app) {
     init {
         voice.start()
         voice.onHeard = { heard -> ask(heard) }
-        voice.onListeningChanged = { _listening.value = it }
+        // the room ear yields the mic while the chat mic listens, takes it back after
+        voice.onListeningChanged = { _listening.value = it; if (it) roomEars.pause() else roomEars.resume() }
         voice.onSpeakingChanged = { _speaking.value = it }
         // Presence needs no ceremony — the body is simply here. Arrive on the mesh automatically
         // (the foreground service also keeps it present in the background); no button to press.
         arriveOnMesh()
     }
 
-    fun startSensing() = senseField.start(viewModelScope)
-    fun stopSensing() = senseField.stop()
+    fun startSensing() { senseField.start(viewModelScope); roomEars.start() }
+    fun stopSensing() { senseField.stop(); roomEars.stop() }
 
     // ── conversation ─────────────────────────────────────────────────────
 
@@ -216,5 +220,6 @@ class AppState(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         voice.stop()
         senseField.stop()
+        roomEars.stop()
     }
 }
