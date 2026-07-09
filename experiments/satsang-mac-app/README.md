@@ -10,6 +10,14 @@ transcript lines, can also follow a local transcript file, shows every line that
 will be sent, and writes a `satsang-guidance-request` event for Sema or another
 invoked presence.
 
+The Memory tab also carries the invitation: enter a friend's name and the GPT
+invitation link lands on the clipboard (`Mint & copy link`). The body's door
+(`sema.hati.earth/introduce`) writes the vouch so the friend arrives *recognized* —
+greeted by your name — while remembering stays their own yes at the door, never
+presumed (`coherence-kernel` `plugin/chatgpt-plugin.fk`, the circle-recognition
+consent law). If the door is unreachable the link is minted locally
+(`SemaInvitation` in `SatsangMacCore`) and the missing vouch is named on screen.
+
 Default transcript:
 
 ```text
