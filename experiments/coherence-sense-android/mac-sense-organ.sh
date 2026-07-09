@@ -111,6 +111,16 @@ while true; do
     native_row="$(native_host_row "$mic_ok" "$cam_ok" "$screen_ok" 0 0 0 "$tick")"
     native_json="$(jq -Rn --arg raw "$native_row" '$raw')"
 
+    # Network-change / wake detection: re-announce PROMPTLY (not on the 60s cycle) when the
+    # Mac moves to a new network (Hati Suci wifi <-> hotspot <-> elsewhere) or wakes from
+    # sleep. On no network, the announce simply fails and retries when one returns — the Mac
+    # is only off the mesh when it truly has no wifi.
+    net_sig="$(ipconfig getifaddr en0 2>/dev/null || echo none)|$(ipconfig getsummary en0 2>/dev/null | awk -F' SSID : ' '/ SSID :/{print $2; exit}')"
+    if [[ "$net_sig" != "${prev_net_sig:-init}" ]]; then announced=0; fi
+    prev_net_sig="$net_sig"
+    if [[ -n "${prev_loop_t:-}" && $(( now - prev_loop_t )) -gt 30 ]]; then announced=0; fi
+    prev_loop_t="$now"
+
     # --- POST to mesh (carrier marshalling) ---
     base="{\"organ_id\":\"$ORGAN_ID\",\"trust_score_ppm\":820000,\"signal_strength_ppm\":$signal,\"battery_level_ppm\":$batt_ppm,\"power_cost_ppm\":$power,\"discovery_state\":\"streaming\""
     if [[ $announced -eq 0 || $(( tick % 12 )) -eq 0 ]]; then
