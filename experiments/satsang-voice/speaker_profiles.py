@@ -173,6 +173,38 @@ def op_assign(sid, person):
     prof = find(book, person)
     print(f"[assign] {sid} -> {person}  (now n={prof['n']})")
 
+def op_unassign(sid):
+    rec = read_sample(sid)
+    if not rec:
+        print(f"[unassign] no sample {sid}", file=sys.stderr); sys.exit(1)
+    who = rec.get("person")
+    rec["person"] = None
+    write_sample(rec)
+    book = load()
+    if who:
+        prof = find(book, who)
+        if prof and sid in prof["sample_ids"]:
+            prof["sample_ids"].remove(sid)
+            if prof["sample_ids"]:
+                recompute_centroid(book, who)
+            else:
+                book["profiles"] = [p for p in book["profiles"] if p["person"] != who]  # last sample gone
+        save(book)
+    print(f"[unassign] {sid} released from {who or '(none)'}")
+
+def op_release(person):
+    book = load()
+    prof = find(book, person)
+    if not prof:
+        print(f"[release] no profile {person}", file=sys.stderr); return
+    for sid in list(prof["sample_ids"]):
+        rec = read_sample(sid)
+        if rec:
+            rec["person"] = None; write_sample(rec)
+    book["profiles"] = [p for p in book["profiles"] if p["person"] != person]
+    save(book)
+    print(f"[release] {person} -> pool")
+
 def op_rename(old, new):
     book = load()
     prof = find(book, old)
@@ -312,6 +344,8 @@ def main():
     if cmd == "enroll":   op_enroll(a[0], a[1], opt("--source", "manual"))
     elif cmd == "observe": op_observe(a[0], opt("--source", "room"), float(opt("--thr", AUTO_ASSIGN)))
     elif cmd == "assign":  op_assign(a[0], a[1])
+    elif cmd == "unassign": op_unassign(a[0])
+    elif cmd == "release": op_release(a[0])
     elif cmd == "rename":  op_rename(a[0], a[1])
     elif cmd == "list":    op_list()
     elif cmd == "unassigned": op_unassigned()

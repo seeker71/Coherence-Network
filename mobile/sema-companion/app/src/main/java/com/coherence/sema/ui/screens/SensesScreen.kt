@@ -43,7 +43,7 @@ import com.coherence.sema.ui.theme.SemaColors
 import kotlin.math.min
 
 @Composable
-fun SensesScreen(state: AppState, onOpenTranscript: () -> Unit = {}) {
+fun SensesScreen(state: AppState, onOpenTranscript: () -> Unit = {}, onOpenRecognize: () -> Unit = {}) {
     val reading by state.senseField.reading.collectAsState()
     val heard by state.roomEars.heard.collectAsState()
     val mesh by state.mesh.collectAsState()
@@ -54,13 +54,25 @@ fun SensesScreen(state: AppState, onOpenTranscript: () -> Unit = {}) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            SectionLabel("learning to recognize")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionLabel("learning to recognize")
+                Text(
+                    "assign ⤢",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SemaColors.Body,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { onOpenRecognize() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
             if (board.isEmpty()) {
-                Panel {
+                Panel(modifier = Modifier.clickable { onOpenRecognize() }) {
                     Text(
-                        "No training board on the mesh yet. When the mac posts learning/board/* " +
-                            "offers, the domains it is learning appear here — with native success " +
-                            "rate and the recognized stream.",
+                        "Tap “assign” to name the voices and faces the body has heard and seen — " +
+                            "hear a clip, see a face, give it a person; the profile sharpens from there.",
                         style = MaterialTheme.typography.bodySmall,
                         color = SemaColors.InkFaint,
                     )

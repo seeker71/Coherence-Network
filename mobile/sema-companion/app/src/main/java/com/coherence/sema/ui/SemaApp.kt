@@ -40,6 +40,7 @@ import com.coherence.sema.ui.screens.PresenceScreen
 import com.coherence.sema.ui.screens.SemaScreen
 import com.coherence.sema.ui.screens.SensesScreen
 import com.coherence.sema.ui.screens.TranscriptScreen
+import com.coherence.sema.ui.screens.RecognizeScreen
 import com.coherence.sema.ui.theme.SemaColors
 
 private data class Room(val name: String, val icon: @Composable () -> Unit)
@@ -48,10 +49,15 @@ private data class Room(val name: String, val icon: @Composable () -> Unit)
 fun SemaApp(state: AppState) {
     var current by remember { mutableIntStateOf(1) } // open on Sema — the conversation is home
     var showTranscript by remember { mutableStateOf(false) }
+    var showRecognize by remember { mutableStateOf(false) }
 
-    // Full-screen transcript (with live translation) takes the whole surface when opened.
+    // Full-screen surfaces take the whole screen when opened.
     if (showTranscript) {
         TranscriptScreen(state) { showTranscript = false }
+        return
+    }
+    if (showRecognize) {
+        RecognizeScreen(state) { showRecognize = false }
         return
     }
 
@@ -92,7 +98,7 @@ fun SemaApp(state: AppState) {
                 1 -> SemaScreen(state)
                 2 -> CircleScreen(state)
                 3 -> MemoryScreen(state)
-                4 -> SensesScreen(state) { showTranscript = true }
+                4 -> SensesScreen(state, onOpenTranscript = { showTranscript = true }, onOpenRecognize = { showRecognize = true })
             }
         }
     }

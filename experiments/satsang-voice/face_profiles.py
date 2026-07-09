@@ -122,6 +122,34 @@ def op_assign(fid, person):
     book = load_book(); attach(book, person, rows); save_book(book)
     print(f"[assign] {fid} -> {person}  (n={find(book, person)['n']})")
 
+def op_unassign(fid):
+    rows = load_samples()
+    who = None
+    for r in rows:
+        if r["id"] == fid:
+            who = r.get("person"); r["person"] = None
+    save_samples(rows)
+    book = load_book()
+    if who:
+        if any(r.get("person") == who for r in rows):
+            recompute(book, who, rows)
+        else:
+            book["profiles"] = [p for p in book["profiles"] if p["person"] != who]
+        save_book(book)
+    print(f"[unassign] {fid} released from {who or '(none)'}")
+
+def op_release(person):
+    rows = load_samples()
+    hit = False
+    for r in rows:
+        if r.get("person") == person:
+            r["person"] = None; hit = True
+    save_samples(rows)
+    book = load_book()
+    book["profiles"] = [p for p in book["profiles"] if p["person"] != person]
+    save_book(book)
+    print(f"[release] {person} -> pool" if hit else f"[release] no profile {person}")
+
 def op_rename(old, new):
     rows = load_samples()
     for r in rows:
@@ -187,6 +215,8 @@ def main():
     cmd, a = sys.argv[1], sys.argv[2:]
     if cmd == "match": op_match(float(a[a.index("--thr")+1]) if "--thr" in a else AUTO_ASSIGN)
     elif cmd == "assign": op_assign(a[0], a[1])
+    elif cmd == "unassign": op_unassign(a[0])
+    elif cmd == "release": op_release(a[0])
     elif cmd == "rename": op_rename(a[0], a[1])
     elif cmd == "list": op_list()
     elif cmd == "unassigned": op_unassigned()
