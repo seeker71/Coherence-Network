@@ -27,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ import com.coherence.sema.ui.theme.SemaColors
 import kotlin.math.min
 
 @Composable
-fun SensesScreen(state: AppState) {
+fun SensesScreen(state: AppState, onOpenTranscript: () -> Unit = {}) {
     val reading by state.senseField.reading.collectAsState()
     val heard by state.roomEars.heard.collectAsState()
     val mesh by state.mesh.collectAsState()
@@ -72,41 +73,36 @@ fun SensesScreen(state: AppState) {
         }
 
         item {
-            SectionLabel("the room")
-            Panel {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     LiveDot(on = heard.live)
                     Spacer(Modifier.width(8.dp))
-                    Text("hearing the room — on device", style = MaterialTheme.typography.titleSmall)
+                    SectionLabel("the room")
                 }
-                Spacer(Modifier.height(8.dp))
-                SoundMeter(level = heard.level(), live = heard.live)
-                Spacer(Modifier.height(6.dp))
+                Text(
+                    "full screen ⤢",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SemaColors.Body,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { onOpenTranscript() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+            Panel(modifier = Modifier.clickable { onOpenTranscript() }) {
                 if (!heard.available) {
-                    Text(
-                        heard.note.ifBlank { "no on-device speech engine here" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SemaColors.InkDim,
-                    )
+                    Text(heard.note.ifBlank { "no on-device speech engine here" },
+                        style = MaterialTheme.typography.bodySmall, color = SemaColors.InkDim)
                 } else {
-                    // the words forming right now
+                    val recent = heard.lines.takeLast(4).asReversed()
                     if (heard.partial.isNotBlank()) {
-                        Text(
-                            "“${heard.partial}…”",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SemaColors.Body,
-                        )
-                        Spacer(Modifier.height(6.dp))
+                        Text("“${heard.partial}…”", style = MaterialTheme.typography.bodyMedium, color = SemaColors.Body)
+                        if (recent.isNotEmpty()) Spacer(Modifier.height(4.dp))
                     }
-                    // recent finished lines, newest first
-                    val recent = heard.lines.takeLast(8).asReversed()
                     if (recent.isEmpty() && heard.partial.isBlank()) {
-                        Text(
-                            "listening — words appear as they are spoken. On-device, private; " +
-                                "the audio never leaves the phone.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SemaColors.InkFaint,
-                        )
+                        Text("listening…", style = MaterialTheme.typography.bodySmall, color = SemaColors.InkFaint)
                     } else {
                         recent.forEach { line ->
                             Text(line, style = MaterialTheme.typography.bodySmall, color = SemaColors.Ink)

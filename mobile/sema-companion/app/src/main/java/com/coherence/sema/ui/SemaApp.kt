@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import com.coherence.sema.ui.screens.MemoryScreen
 import com.coherence.sema.ui.screens.PresenceScreen
 import com.coherence.sema.ui.screens.SemaScreen
 import com.coherence.sema.ui.screens.SensesScreen
+import com.coherence.sema.ui.screens.TranscriptScreen
 import com.coherence.sema.ui.theme.SemaColors
 
 private data class Room(val name: String, val icon: @Composable () -> Unit)
@@ -45,6 +47,13 @@ private data class Room(val name: String, val icon: @Composable () -> Unit)
 @Composable
 fun SemaApp(state: AppState) {
     var current by remember { mutableIntStateOf(1) } // open on Sema — the conversation is home
+    var showTranscript by remember { mutableStateOf(false) }
+
+    // Full-screen transcript (with live translation) takes the whole surface when opened.
+    if (showTranscript) {
+        TranscriptScreen(state) { showTranscript = false }
+        return
+    }
 
     val rooms = listOf(
         Room("Presence") { Icon(Icons.Filled.Hub, contentDescription = null) },
@@ -83,7 +92,7 @@ fun SemaApp(state: AppState) {
                 1 -> SemaScreen(state)
                 2 -> CircleScreen(state)
                 3 -> MemoryScreen(state)
-                4 -> SensesScreen(state)
+                4 -> SensesScreen(state) { showTranscript = true }
             }
         }
     }

@@ -70,4 +70,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // on-device translation + language id for the live-translation transcript (offline once the
+    // language model is downloaded once) — the Brazilian member reads the room in Portuguese
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
 }
