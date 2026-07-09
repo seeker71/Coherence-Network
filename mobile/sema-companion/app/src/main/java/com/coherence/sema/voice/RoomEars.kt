@@ -10,6 +10,7 @@ package com.coherence.sema.voice
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -49,27 +50,48 @@ class RoomEars(private val context: Context) {
     private var sr: SpeechRecognizer? = null
     private var running = false
     private var paused = false
+    private val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+    // The recognizer plays a start/end TONE on every startListening; restarting across silences
+    // makes it beep every few seconds. We silence the tone streams — SYSTEM and NOTIFICATION
+    // continuously while listening (harmless UI beeps), and MUSIC only for a heartbeat around
+    // each start (that's where Google's recognizer tone plays) so Sema's voice and any music are
+    // untouched the rest of the time. No machine sound in the room; the mesh's own signals can
+    // still ride ultrasonic bands elsewhere.
+    private fun muteStream(stream: Int, mute: Boolean) {
+        try {
+            audio?.adjustStreamVolume(stream, if (mute) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE, 0)
+        } catch (_: Exception) {}
+    }
+    private fun silenceUiBeeps(on: Boolean) {
+        muteStream(AudioManager.STREAM_SYSTEM, on)
+        muteStream(AudioManager.STREAM_NOTIFICATION, on)
+    }
+    private fun silenceStartTone() {
+        muteStream(AudioManager.STREAM_MUSIC, true)
+        main.postDelayed({ muteStream(AudioManager.STREAM_MUSIC, false) }, 450)
+    }
 
     fun start() {
         running = true
-        main.post { ensure(); listen() }
+        main.post { silenceUiBeeps(true); ensure(); listen() }
     }
 
     fun stop() {
         running = false
-        main.post { destroy(); _heard.value = _heard.value.copy(live = false, partial = "") }
+        main.post { silenceUiBeeps(false); destroy(); _heard.value = _heard.value.copy(live = false, partial = "") }
     }
 
     // Yield the mic to the chat recognizer / satsang recorder, then take it back.
     fun pause() {
         paused = true
-        main.post { try { sr?.cancel() } catch (_: Exception) {} ; _heard.value = _heard.value.copy(live = false) }
+        main.post { silenceUiBeeps(false); try { sr?.cancel() } catch (_: Exception) {} ; _heard.value = _heard.value.copy(live = false) }
     }
 
     fun resume() {
         if (!paused) return
         paused = false
-        main.post { listen() }
+        main.post { silenceUiBeeps(true); listen() }
     }
 
     private fun ensure() {
@@ -104,6 +126,7 @@ class RoomEars(private val context: Context) {
         if (!running || paused) return
         ensure()
         val r = sr ?: return
+        silenceStartTone()
         try { r.startListening(intent()) } catch (e: Exception) { restartSoon(600) }
     }
 
