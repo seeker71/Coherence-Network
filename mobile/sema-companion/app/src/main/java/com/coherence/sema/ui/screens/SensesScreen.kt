@@ -44,6 +44,7 @@ import kotlin.math.min
 @Composable
 fun SensesScreen(state: AppState) {
     val reading by state.senseField.reading.collectAsState()
+    val heard by state.roomEars.heard.collectAsState()
     val mesh by state.mesh.collectAsState()
     val board = TrainingBoard.from(mesh.channels)
 
@@ -74,21 +75,45 @@ fun SensesScreen(state: AppState) {
             SectionLabel("the room")
             Panel {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    LiveDot(on = reading.micLive)
+                    LiveDot(on = heard.live)
                     Spacer(Modifier.width(8.dp))
-                    Text("sound — level now, words as transcription lands", style = MaterialTheme.typography.titleSmall)
+                    Text("hearing the room — on device", style = MaterialTheme.typography.titleSmall)
                 }
                 Spacer(Modifier.height(8.dp))
-                SoundMeter(rms = reading.soundRms, live = reading.micLive)
-                Spacer(Modifier.height(4.dp))
-                KeyValueRow("reads as", reading.soundWord())
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Full transcription — words, cadence, certainty, hesitation — is the aim; it lands " +
-                        "here as the room's speech is captured and carried, not held back.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SemaColors.InkFaint,
-                )
+                SoundMeter(level = heard.level(), live = heard.live)
+                Spacer(Modifier.height(6.dp))
+                if (!heard.available) {
+                    Text(
+                        heard.note.ifBlank { "no on-device speech engine here" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SemaColors.InkDim,
+                    )
+                } else {
+                    // the words forming right now
+                    if (heard.partial.isNotBlank()) {
+                        Text(
+                            "“${heard.partial}…”",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SemaColors.Body,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    // recent finished lines, newest first
+                    val recent = heard.lines.takeLast(8).asReversed()
+                    if (recent.isEmpty() && heard.partial.isBlank()) {
+                        Text(
+                            "listening — words appear as they are spoken. On-device, private; " +
+                                "the audio never leaves the phone.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SemaColors.InkFaint,
+                        )
+                    } else {
+                        recent.forEach { line ->
+                            Text(line, style = MaterialTheme.typography.bodySmall, color = SemaColors.Ink)
+                            Spacer(Modifier.height(2.dp))
+                        }
+                    }
+                }
             }
         }
 
@@ -240,8 +265,7 @@ private fun Chip(text: String) {
 }
 
 @Composable
-private fun SoundMeter(rms: Int, live: Boolean) {
-    val level = min(rms / 8000f, 1f)
+private fun SoundMeter(level: Float, live: Boolean) {
     Canvas(modifier = Modifier.fillMaxWidth().height(14.dp)) {
         val track = SemaColors.Rule
         val fill = if (live) SemaColors.Body else SemaColors.InkFaint

@@ -104,7 +104,8 @@ class SenseField(private val context: Context) : SensorEventListener {
             sm.getDefaultSensor(type)?.let { sm.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
         }
         startLocation()
-        startAudio(scope)
+        // Audio is owned by RoomEars now (one mic → both level and words); SenseField no longer
+        // opens the mic itself, so the two never contend for it.
     }
 
     fun stop() {
