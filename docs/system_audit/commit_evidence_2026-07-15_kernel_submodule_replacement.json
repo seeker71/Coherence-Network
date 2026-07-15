@@ -1,7 +1,7 @@
 {
   "date": "2026-07-15",
   "thread_branch": "codex/kernel-submodule-replacement-20260715",
-  "commit_scope": "Replace the duplicated Form kernel tree with an exact, path-preserving coherence-kernel submodule and harden every consumer carrier around that pin.",
+  "commit_scope": "Replace the duplicated Form kernel tree with an exact, path-preserving coherence-kernel submodule, move kernel regeneration ownership upstream, and harden every consumer carrier around the reviewed pin.",
   "files_owned": [
     ".gitmodules",
     "form",
@@ -9,15 +9,33 @@
     "api/app/services/form_kernel_bridge.py",
     "api/scripts/agent_runner.py",
     "api/scripts/local_runner.py",
+    "scripts/ensure_form_cli_kernel.sh",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/fkwu_run.sh",
+    "scripts/regen_fkwu_bootstrap.sh",
+    "scripts/regen_t_flat.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
     "scripts/prepare_form_submodule.py",
     "scripts/test_hostinger_deploy_form_paths.sh",
-    "specs/coherence-kernel-submodule-consumer.md"
+    "specs/coherence-kernel-submodule-consumer.md",
+    "specs/form-native-resource-interfaces.md",
+    "specs/fkwu-native-host-platform.md",
+    "specs/fkwu-only-kernel-collapse.md"
   ],
   "local_validation": {
     "status": "pass",
     "commands": [
       "make prompt-guide",
       "make wellness",
+      "python3 scripts/prepare_form_submodule.py --verify-clean",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/tests/json-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/source-compiler-text-lens-band.fk",
+      "bash form/scripts/fourth-arm-gate.sh adler32 form-asm",
+      "bash form/scripts/fourth-arm-gate.sh field-identity field-relay field-queue",
+      "bash form/scripts/regen_form_cli_bootstrap.sh",
+      "bash form/scripts/regen_standard_lane_binaries.sh",
+      "cd form && FORM_STANDARD_LANE=1 CC=/definitely/missing ./build-form-cli.sh .cache/form-cli-relocation-smoke && printf 'ping\\n' | .cache/form-cli-relocation-smoke",
       "cd form && ./validate.sh form-stdlib/tests/form-asm-fam-tanh-band.fk",
       "cd form && ./validate.sh form-kernel-ts/seedbank/python-adapter/examples/endpoint_astro_aspect_demo.fk",
       "api/.venv/bin/pytest -q api/tests/test_kernel_submodule_contract.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_edge_cases_regression.py api/tests/test_form_kernel_bridge_structure_access.py api/tests/test_api_dockerfile_contract.py api/tests/test_form_validate_shards.py api/tests/test_commit_evidence_validator.py",
@@ -25,6 +43,7 @@
       "bash scripts/test_hostinger_deploy_form_paths.sh",
       "./scripts/verify_worktree_local_web.sh --start",
       "python3 scripts/validate_spec_quality.py --file specs/coherence-kernel-submodule-consumer.md",
+      "python3 scripts/generate_repo_indexes.py --check",
       "python3 scripts/build_readmes.py --check",
       "python3 scripts/validate_workflow_references.py",
       "ruff check <changed Python paths>",
@@ -33,8 +52,14 @@
       "git diff --check"
     ],
     "results": [
-      "gitlink and checkout equal 26751ba72874e4933719bfa389dcd74a4ef4a642",
-      "pinned tree fa514272606ba68574c6f19df12f5786d86dbeed equals coherence-kernel origin/main:form",
+      "gitlink and checkout equal 9124fc74bc9ab50180feb43db38805c63dddce8e",
+      "pinned tree f1e9daeaef9943914e13951b2be00bb632f58222 equals coherence-kernel main commit c0372e998a4d31a8ccaa9d23b5f7352b26b13005:form",
+      "typed JSON band returned 1023 with all four sibling kernels agreeing",
+      "source-compiler text-lens band returned 1 across Go, Rust, and TypeScript",
+      "adler32, form-asm, field-identity, field-relay, and field-queue passed the fourth-arm gate",
+      "canonical regeneration scripts rebuild their proof sibling, stamp exact sources, and execute regenerated Adler output with expected verdict 5",
+      "all four kernel artifact regeneration carriers now live in canonical form/scripts; the form-cli generator produced nonempty table/C artifacts and the compiler-free standard lane returned pong",
+      "final submodule, evidence, and regeneration-ownership contract suite: 18 passed",
       "fam-tanh focused band returned 7 and astro focused band returned 3; both are 3-kernel only (Go/Rust/TS), with the fourth-arm gap stated explicitly",
       "upstream fkwu checkout witness for PR #227 returned ground=42, recursive=55, freshness=15",
       "focused migration, runner, and deploy contracts: 110 passed",
@@ -48,7 +73,7 @@
   },
   "ci_validation": {
     "status": "pending",
-    "reason": "Awaiting the Coherence-Network pull request checks."
+    "reason": "Awaiting the Coherence-Network pull request rerun against the repaired upstream pin."
   },
   "deploy_validation": {
     "status": "pending",
@@ -56,7 +81,7 @@
   },
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "A recursive Coherence-Network checkout materializes form/ at one reviewed coherence-kernel snapshot, retains existing consumer paths, resolves Network-owned endpoint recipes from the API, preserves one-time legacy artifacts, and rejects material nested kernel edits before build, ingest, commit, or deploy.",
+    "expected_behavior_delta": "A recursive Coherence-Network checkout materializes form/ at one reviewed coherence-kernel snapshot, retains existing consumer paths, resolves Network-owned endpoint recipes from the API, owns kernel regeneration inside coherence-kernel, preserves one-time legacy artifacts, and rejects material nested kernel edits before build, ingest, commit, or deploy.",
     "public_endpoints": [
       "local recursive git clone/worktree checkout",
       "local API compatibility service",
@@ -106,7 +131,9 @@
     "api/tests/test_kernel_submodule_contract.py",
     "scripts/test_hostinger_deploy_form_paths.sh",
     "https://github.com/seeker71/coherence-kernel/pull/223",
-    "https://github.com/seeker71/coherence-kernel/pull/227"
+    "https://github.com/seeker71/coherence-kernel/pull/227",
+    "https://github.com/seeker71/coherence-kernel/pull/228",
+    "https://github.com/seeker71/coherence-kernel/pull/229"
   ],
   "change_files": [
     ".github/workflows/asset-modularity-drift.yml",
@@ -172,14 +199,23 @@
     "docs/WORKTREE-QUICKSTART.md",
     "docs/coherence-substrate/kernel-on-android.form",
     "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-07-15_kernel_submodule_replacement.json",
     "docs/system_audit/model_executor_runs.jsonl",
     "form",
     "install/form-cli-install.sh",
     "mcp-server/README.md",
     "scripts/form_validate_shards.py",
+    "scripts/fkwu_run.sh",
     "scripts/gen_bp_table.py",
+    "scripts/ensure_form_cli_kernel.sh",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/INDEX.md",
     "scripts/prepare_form_submodule.py",
     "scripts/prompt_entry_gate.sh",
+    "scripts/regen_fkwu_bootstrap.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/regen_t_flat.sh",
     "scripts/scan_form_blueprints.py",
     "scripts/substrate_post_merge_hook.sh",
     "scripts/test_hostinger_deploy_form_paths.sh",
@@ -188,6 +224,9 @@
     "skills/coherence-network/SKILL.md",
     "specs/INDEX.md",
     "specs/coherence-kernel-submodule-consumer.md",
+    "specs/form-native-resource-interfaces.md",
+    "specs/fkwu-native-host-platform.md",
+    "specs/fkwu-only-kernel-collapse.md",
     "web/app/blog/page.tsx",
     "web/app/come-in/page.tsx"
   ],

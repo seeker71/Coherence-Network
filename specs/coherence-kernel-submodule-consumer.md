@@ -13,12 +13,13 @@ source:
   - file: scripts/prepare_form_submodule.py
     symbols: [preserve_legacy_form(), verify_reviewed_form()]
   - file: api/tests/test_kernel_submodule_contract.py
-    symbols: [test_form_is_pinned_path_preserving_kernel_submodule(), test_network_endpoint_recipes_are_owned_by_the_api()]
+    symbols: [test_form_is_pinned_path_preserving_kernel_submodule(), test_kernel_regeneration_is_owned_by_submodule(), test_network_endpoint_recipes_are_owned_by_the_api()]
 requirements:
   - "Coherence Network consumes coherence-kernel as an exact gitlink at the existing form/ path."
   - "Kernel deltas are reconciled upstream while Network-owned endpoint recipes remain with the API."
   - "CI, deploy, clone, and autonomous-worktree paths initialize the recursive submodule before use."
   - "Existing form/form-stdlib and form/form-kernel-* consumer paths remain valid."
+  - "Kernel bootstrap regeneration is authored inside coherence-kernel; the consumer has no script that writes committed form/ artifacts."
 done_when:
   - "A recursive clone populates form/ at the superproject's pinned gitlink SHA."
   - "Shared and application recipe ownership tests pass."
@@ -59,12 +60,17 @@ task worktrees operate on an empty gitlink.
   autonomous task-repository creation.
 - [x] **R5**: Resolve bare app-owned recipes from `api/app/form_recipes/` before
   falling through to shared recipes in the coherence-kernel seedbank.
+- [x] **R6**: Keep every maintainer carrier that writes committed kernel
+  bootstrap artifacts inside `form/scripts/`; the consumer root retains only
+  read/build/run carriers for the reviewed gitlink.
 
 ## Research Inputs
 
 - `2026-07-15` - [coherence-kernel PR #223](https://github.com/seeker71/coherence-kernel/pull/223) — reconciles the last reusable Network kernel delta before the consumer cut.
 - `2026-07-15` - [coherence-kernel PR #227](https://github.com/seeker71/coherence-kernel/pull/227) — removes the last validator reach-back into the consumer superproject.
-- `2026-07-15` - generated `form-submodule` commit `26751ba7` — tree `fa514272` exactly equals canonical `main:form`.
+- `2026-07-15` - [coherence-kernel PR #228](https://github.com/seeker71/coherence-kernel/pull/228) — restores typed JSON and executable fourth-arm bootstrap proof.
+- `2026-07-15` - [coherence-kernel PR #229](https://github.com/seeker71/coherence-kernel/pull/229) — moves the remaining bootstrap regeneration carriers into the canonical kernel.
+- `2026-07-15` - generated `form-submodule` commit `9124fc7` — tree `f1e9daea` exactly equals canonical `c0372e9:form`.
 - `2026-07-15` - `coherence-kernel` commits `1c6f456c` and `2ab224ec` — identify the canonical-home migration and the self-contained `form/` boundary.
 - `2026-07-15` - current Git object comparison — observed 13 Network-only paths and 107 differing shared paths before reconciliation.
 
@@ -76,6 +82,7 @@ task worktrees operate on an empty gitlink.
 - `api/scripts/local_runner.py` — task-worktree submodule initialization.
 - `api/scripts/agent_runner.py` and `api/scripts/commit_progress.py` — recursive checkout hydration and material-edit commit guards.
 - `scripts/prepare_form_submodule.py` — lossless one-time tree-to-gitlink transition and exact-pin cleanliness verification.
+- `scripts/regen_{fkwu_bootstrap,t_flat,form_cli_bootstrap,standard_lane_binaries}.sh` — retired consumer copies; their executable replacements live in canonical `form/scripts/`.
 - `scripts/gen_bp_table.py` and `scripts/scan_form_blueprints.py` — read-only consumer boundary for kernel-owned Blueprint tables.
 - `api/tests/test_kernel_submodule_contract.py` — gitlink, pin, topology, and ownership proof.
 - `.github/workflows/*.yml` — recursive submodule checkout and exact gitlink path triggers.

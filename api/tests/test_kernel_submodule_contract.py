@@ -92,6 +92,22 @@ def test_form_is_pinned_path_preserving_kernel_submodule() -> None:
     assert not (REPO_ROOT / "form" / "form" / "form-stdlib").exists()
 
 
+def test_kernel_regeneration_is_owned_by_submodule() -> None:
+    """Every carrier that authors committed kernel artifacts lives upstream."""
+    regen_scripts = {
+        "regen_fkwu_bootstrap.sh",
+        "regen_t_flat.sh",
+        "regen_form_cli_bootstrap.sh",
+        "regen_standard_lane_binaries.sh",
+    }
+
+    for name in regen_scripts:
+        canonical = REPO_ROOT / "form" / "scripts" / name
+        assert canonical.is_file()
+        assert canonical.stat().st_mode & 0o111
+        assert not (REPO_ROOT / "scripts" / name).exists()
+
+
 def test_legacy_form_tree_is_preserved_before_gitlink_initialization(
     tmp_path: Path,
 ) -> None:
