@@ -901,11 +901,11 @@ section [form.bml] {
         if query_failed then api-service-unavailable("persistence", query_error) else if str_eq(resolved_id, "") then api-error-status-json(404, "Idea not found") else if le(question_found, 0) then api-error-status-json(404, "Question not found for idea") else if nil?(detail_rows) then api-service-unavailable("persistence", "idea question answer write returned no row") else api-native-ok-json("api_idea_question_answer", idea-json-row(head(detail_rows)));
     }
 
-    def api-json-null-node?(value) = node_eq(node_category(value), JSON-NULL);
+    def api-json-null-node?(value) = node_eq(node_category(value), JSON-NULL());
     def api-json-value-or(value, default_value) = if api-json-null-node?(value) then default_value else value_str(node_value(value));
     def api-json-int-or(value, default_value) = if api-json-null-node?(value) then default_value else str_to_int(value_str(node_value(value)));
     def api-json-float-or(value, default_value) = if api-json-null-node?(value) then default_value else str_to_float(value_str(node_value(value)));
-    def api-json-object-node?(value) = node_eq(node_category(value), JSON-OBJECT);
+    def api-json-object-node?(value) = node_eq(node_category(value), JSON-OBJECT());
     def api-json-field-value-or(root, key, default_value) = if json-object-has?(root, key) then api-json-value-or(json-object-get(root, key), default_value) else default_value;
     def api-json-field-int-or(root, key, default_value) = if json-object-has?(root, key) then api-json-int-or(json-object-get(root, key), default_value) else default_value;
     def api-json-field-float-or(root, key, default_value) = if json-object-has?(root, key) then api-json-float-or(json-object-get(root, key), default_value) else default_value;
