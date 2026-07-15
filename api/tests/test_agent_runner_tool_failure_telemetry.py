@@ -2,15 +2,11 @@
 from __future__ import annotations
 
 import io
-import json
-import os
-import subprocess
-import sys
 import importlib.util
-from dataclasses import dataclass, field
+import json
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
-
-import pytest
 
 _AGENT_RUNNER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "agent_runner.py"
 _spec = importlib.util.spec_from_file_location("agent_runner", _AGENT_RUNNER_PATH)
@@ -110,6 +106,11 @@ def _setup(monkeypatch, tmp_path, base_time=1000.0):
 
     monkeypatch.setattr(agent_runner.time, "monotonic", _mono)
     monkeypatch.setattr(agent_runner, "LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        agent_runner,
+        "_initialize_repo_submodules",
+        lambda *_args, **_kwargs: True,
+    )
     monkeypatch.setenv("PIPELINE_TOOL_TELEMETRY_ENABLED", "1")
     monkeypatch.setenv("PIPELINE_TOOL_FAILURE_FRICTION_ENABLED", "1")
     monkeypatch.setenv("PIPELINE_TIME_COST_PER_SECOND", "0.01")
@@ -379,7 +380,6 @@ def test_monitor_detects_expensive_failed_task(tmp_path):
 def test_monitor_expensive_failed_task_issue_includes_wasted_seconds(tmp_path):
     """The _add_issue for expensive_failed_task includes wasted_seconds and top_failing_task_ids."""
     from datetime import datetime, timezone
-    import uuid as _uuid
 
     now = datetime.now(timezone.utc)
     metrics_file = tmp_path / "metrics.jsonl"
@@ -428,3 +428,150 @@ def test_monitor_expensive_failed_task_issue_includes_wasted_seconds(tmp_path):
         assert len(issue["top_failing_task_ids"]) == 3
     finally:
         monitor_pipeline.LOG_DIR = original_log_dir
+
+
+def test_agent_runner_fresh_checkout_clones_recursive_submodules(monkeypatch, tmp_path):
+    checkout = tmp_path / "checkout"
+    calls: list[tuple[list[str], str]] = []
+
+    def fake_run(command, *, cwd, **_kwargs):
+        calls.append((list(command), cwd))
+        (checkout / ".git").mkdir(parents=True)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(agent_runner, "REPO_GIT_URL", "https://github.com/example/repo.git")
+    monkeypatch.setattr(agent_runner, "_run_cmd", fake_run)
+
+    assert agent_runner._ensure_repo_checkout(
+        str(checkout), log=agent_runner.logging.getLogger("test-agent-runner-clone")
+    )
+    assert calls == [
+        (
+            [
+                "git",
+                "clone",
+                "--recurse-submodules",
+                "https://github.com/example/repo.git",
+                str(checkout),
+            ],
+            str(tmp_path),
+        )
+    ]
+
+
+def test_agent_runner_fallback_checkout_clones_recursive_submodules(monkeypatch, tmp_path):
+    requested = tmp_path / "mounted"
+    requested.mkdir()
+    (requested / "stale.txt").write_text("not a checkout")
+    fallback = tmp_path / "fallback"
+    calls: list[list[str]] = []
+
+    def fake_run(command, **_kwargs):
+        calls.append(list(command))
+        (fallback / ".git").mkdir(parents=True)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(agent_runner, "REPO_FALLBACK_PATH", str(fallback))
+    monkeypatch.setattr(agent_runner, "REPO_GIT_URL", "https://github.com/example/repo.git")
+    monkeypatch.setattr(agent_runner, "_run_cmd", fake_run)
+    hydrated: list[str] = []
+    monkeypatch.setattr(
+        agent_runner,
+        "_initialize_repo_submodules",
+        lambda path, **_kwargs: hydrated.append(path) or True,
+    )
+
+    resolved = agent_runner._resolve_repo_path_for_execution(
+        str(requested), log=agent_runner.logging.getLogger("test-agent-runner-fallback")
+    )
+
+    assert resolved == str(fallback)
+    assert calls == [[
+        "git",
+        "clone",
+        "--recurse-submodules",
+        "https://github.com/example/repo.git",
+        str(fallback),
+    ]]
+    assert hydrated == [str(fallback)]
+
+
+def test_agent_runner_existing_non_pr_checkout_refreshes_submodule_pin(monkeypatch, tmp_path):
+    checkout = tmp_path / "checkout"
+    (checkout / ".git").mkdir(parents=True)
+    hydrated: list[str] = []
+    monkeypatch.setattr(
+        agent_runner,
+        "_initialize_repo_submodules",
+        lambda path, **_kwargs: hydrated.append(path) or True,
+    )
+
+    assert agent_runner._resolve_repo_path_for_execution(
+        str(checkout),
+        log=agent_runner.logging.getLogger("test-agent-runner-existing-checkout"),
+    ) == str(checkout)
+    assert hydrated == [str(checkout)]
+
+
+def test_agent_runner_branch_checkout_refreshes_recursive_submodule_pin(monkeypatch, tmp_path):
+    calls: list[tuple[str, ...]] = []
+
+    def fake_git(*args, **_kwargs):
+        calls.append(tuple(args))
+        returncode = 1 if args[:2] == ("rev-parse", "--verify") else 0
+        return subprocess.CompletedProcess(args, returncode, stdout="", stderr="")
+
+    monkeypatch.setattr(agent_runner, "_ensure_repo_checkout", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(agent_runner, "_run_git", fake_git)
+
+    assert agent_runner._prepare_pr_branch(
+        "task-1",
+        str(tmp_path),
+        "codex/task-1",
+        log=agent_runner.logging.getLogger("test-agent-runner-branch"),
+    )
+    checkout_idx = calls.index(("checkout", "-B", "codex/task-1", "origin/main"))
+    sync_idx = calls.index(("submodule", "sync", "--recursive"))
+    update_idx = calls.index(("submodule", "update", "--init", "--recursive"))
+    assert checkout_idx < sync_idx < update_idx
+
+
+def test_agent_runner_rejects_material_dirt_inside_reviewed_submodule(monkeypatch, tmp_path):
+    calls: list[tuple[tuple[str, ...], str]] = []
+
+    def fake_git(*args, **kwargs):
+        cwd = str(kwargs.get("cwd", ""))
+        calls.append((tuple(args), cwd))
+        if args == ("submodule", "status", "--recursive"):
+            return subprocess.CompletedProcess(args, 0, stdout=f" {'a' * 40} form\n", stderr="")
+        if args == ("status", "--porcelain=v1", "-z", "--untracked-files=all"):
+            return subprocess.CompletedProcess(
+                args,
+                0,
+                stdout=" M form-stdlib/core.fk\0?? form-stdlib/new-band.fk\0",
+                stderr="",
+            )
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(agent_runner, "_run_git", fake_git)
+
+    assert not agent_runner._repo_submodules_match_reviewed_pins(
+        str(tmp_path),
+        log=agent_runner.logging.getLogger("test-agent-runner-dirty-submodule"),
+    )
+    assert (
+        ("status", "--porcelain=v1", "-z", "--untracked-files=all"),
+        str(tmp_path / "form"),
+    ) in calls
+
+
+def test_agent_runner_allows_only_disposable_submodule_output() -> None:
+    status = (
+        "?? .cache/form-crash.json\0"
+        "?? form-kernel-rust/target/debug/kernel\0"
+        "?? form-stdlib/new-band.fk\0"
+    )
+
+    assert agent_runner._material_submodule_status_entries(status) == [
+        "?? form-stdlib/new-band.fk"
+    ]

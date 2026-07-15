@@ -2916,6 +2916,11 @@ def _checkpoint_partial_progress(
     reason: str,
     log: logging.Logger,
 ) -> dict[str, Any]:
+    if not _repo_submodules_match_reviewed_pins(repo_path, log=log):
+        return {
+            "ok": False,
+            "reason": "submodule changed outside the reviewed pin; land kernel work in coherence-kernel first",
+        }
     status = _run_git("status", "--porcelain", cwd=repo_path, timeout=120)
     if status.returncode != 0:
         return {"ok": False, "reason": f"git status failed: {status.stderr.strip()[:500]}"}
@@ -5380,6 +5385,120 @@ def _directory_has_entries(path: str) -> bool:
     return False
 
 
+def _initialize_repo_submodules(repo_path: str, *, log: logging.Logger) -> bool:
+    """Hydrate the checkout's exact recursive submodule pins."""
+    transition = Path(repo_path) / "scripts" / "prepare_form_submodule.py"
+    if (
+        transition.is_file()
+        and (Path(repo_path) / "form").exists()
+        and not (Path(repo_path) / "form" / ".git").exists()
+    ):
+        proc = _run_cmd(
+            [sys.executable, str(transition), "--repo-root", repo_path],
+            cwd=repo_path,
+            timeout=120,
+        )
+        if proc.returncode != 0:
+            log.warning(
+                "repo submodule transition failed repo_path=%s err=%s",
+                repo_path,
+                (proc.stderr or proc.stdout or "unknown failure").strip(),
+            )
+            return False
+    for step, args in (
+        ("sync", ("submodule", "sync", "--recursive")),
+        ("update", ("submodule", "update", "--init", "--recursive")),
+    ):
+        proc = _run_git(*args, cwd=repo_path, timeout=1200)
+        if proc.returncode != 0:
+            log.warning(
+                "repo submodule %s failed repo_path=%s err=%s",
+                step,
+                repo_path,
+                (proc.stderr or proc.stdout or "unknown failure").strip(),
+            )
+            return False
+    return _repo_submodules_match_reviewed_pins(repo_path, log=log)
+
+
+def _repo_submodules_match_reviewed_pins(
+    repo_path: str,
+    *,
+    log: logging.Logger,
+) -> bool:
+    """Reject missing, advanced, or materially dirty submodule checkouts."""
+    listing = _run_git("submodule", "status", "--recursive", cwd=repo_path, timeout=120)
+    if listing.returncode != 0:
+        log.warning(
+            "repo submodule status failed repo_path=%s err=%s",
+            repo_path,
+            (listing.stderr or listing.stdout or "unknown failure").strip(),
+        )
+        return False
+    for raw in (listing.stdout or "").splitlines():
+        if not raw:
+            continue
+        if raw[0] != " ":
+            log.warning(
+                "repo submodule is not at reviewed pin repo_path=%s status=%s",
+                repo_path,
+                raw,
+            )
+            return False
+        fields = raw[1:].split()
+        if len(fields) < 2:
+            log.warning("repo submodule status is malformed repo_path=%s status=%s", repo_path, raw)
+            return False
+        submodule_path = os.path.join(repo_path, fields[1])
+        dirty = _run_git(
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            cwd=submodule_path,
+            timeout=120,
+        )
+        material = _material_submodule_status_entries(dirty.stdout or "")
+        if dirty.returncode != 0 or material:
+            log.warning(
+                "repo submodule has material changes; land kernel work upstream first "
+                "repo_path=%s submodule=%s status=%s",
+                repo_path,
+                fields[1],
+                (dirty.stderr or " | ".join(material) or "status unavailable").strip(),
+            )
+            return False
+    return True
+
+
+_DISPOSABLE_SUBMODULE_PATH_PREFIXES = (
+    ".cache/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    "form-kernel-rust/target/",
+    "form-kernel-ts/dist/",
+    "form-kernel-ts/node_modules/",
+)
+
+
+def _material_submodule_status_entries(output: str) -> list[str]:
+    """Return changes that cannot be safely discarded during pin hydration."""
+    entries = output.split("\0") if "\0" in output else output.splitlines()
+    material: list[str] = []
+    for entry in entries:
+        if not entry:
+            continue
+        status = entry[:2]
+        path = entry[3:] if len(entry) > 3 else ""
+        disposable = status == "??" and any(
+            path == prefix.rstrip("/") or path.startswith(prefix)
+            for prefix in _DISPOSABLE_SUBMODULE_PATH_PREFIXES
+        )
+        if not disposable:
+            material.append(entry)
+    return material
+
+
 def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
     if _path_has_git_marker(repo_path):
         return True
@@ -5395,7 +5514,11 @@ def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
         return False
     parent = os.path.dirname(repo_path.rstrip("/")) or "."
     os.makedirs(parent, exist_ok=True)
-    clone = _run_cmd(["git", "clone", clone_url, repo_path], cwd=parent, timeout=1200)
+    clone = _run_cmd(
+        ["git", "clone", "--recurse-submodules", clone_url, repo_path],
+        cwd=parent,
+        timeout=1200,
+    )
     if clone.returncode != 0:
         log.warning("git clone failed repo_path=%s err=%s", repo_path, clone.stderr.strip())
         return False
@@ -5405,6 +5528,8 @@ def _ensure_repo_checkout(repo_path: str, *, log: logging.Logger) -> bool:
 def _resolve_repo_path_for_execution(repo_path: str, *, log: logging.Logger) -> str:
     candidate = os.path.abspath(repo_path)
     if _path_has_git_marker(candidate):
+        if not _initialize_repo_submodules(candidate, log=log):
+            raise RuntimeError(f"submodule hydration failed for {candidate}")
         return candidate
 
     if os.path.isdir(candidate) and _directory_has_entries(candidate):
@@ -5423,7 +5548,10 @@ def _resolve_repo_path_for_execution(repo_path: str, *, log: logging.Logger) -> 
             shutil.rmtree(candidate, ignore_errors=True)
 
     if not _path_has_git_marker(candidate):
-        _ensure_repo_checkout(candidate, log=log)
+        if not _ensure_repo_checkout(candidate, log=log):
+            raise RuntimeError(f"repo checkout initialization failed for {candidate}")
+    if not _initialize_repo_submodules(candidate, log=log):
+        raise RuntimeError(f"submodule hydration failed for {candidate}")
     return candidate
 
 
@@ -5443,7 +5571,7 @@ def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: loggin
             if checkout.returncode != 0:
                 log.warning("task=%s branch resume failed: %s", task_id, checkout.stderr.strip())
                 return False
-            return True
+            return _initialize_repo_submodules(repo_path, log=log)
 
         checkout = _run_git("checkout", "-B", branch, f"origin/{base_branch}", cwd=repo_path, timeout=120)
         if checkout.returncode != 0:
@@ -5453,7 +5581,7 @@ def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: loggin
         if checkout.returncode != 0:
             log.warning("task=%s branch setup failed: %s", task_id, checkout.stderr.strip())
             return False
-        return True
+        return _initialize_repo_submodules(repo_path, log=log)
     except Exception as e:
         log.warning("task=%s branch prep failed: %s", task_id, e)
         return False
@@ -5659,6 +5787,11 @@ def _run_pr_delivery_flow(
                     f"[pr-flow] Local validation command failed: {validation.stderr.strip()[:1200]}",
                 )
 
+    if not _repo_submodules_match_reviewed_pins(repo_path, log=log):
+        return (
+            "failed",
+            "[pr-flow] Submodule changed outside the reviewed pin; land kernel work in coherence-kernel first.",
+        )
     status_lines = _run_git("status", "--porcelain", cwd=repo_path, timeout=120)
     if status_lines.returncode != 0:
         return "failed", f"[pr-flow] Unable to inspect working tree: {status_lines.stderr.strip()[:1200]}"

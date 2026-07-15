@@ -1,7 +1,0 @@
-; tests/voice-prosody-band.fk — the voice as an honest rendering of inner state, four-way.
-; preludes: form-stdlib/core.fk form-stdlib/voice-prosody.fk
-;
-; Verdict 11111: a harder thought is paced slower (audible thinking); earned confidence sounds steady; unearned
-; confidence sounds uncertain (the voice never performs certainty it hasn't earned); warmth tracks the love-
-; frequency; surprise lifts the voice. The prosody is the soul of a voice -- the sound (TTS) is the pending carrier.
-(do (voice-prosody-check))

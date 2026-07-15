@@ -15,9 +15,11 @@ Two paths, ordered by speed:
                             Used when the PyO3 module is unavailable but
                             the binary did.
 
-Companion to form/form-kernel-ts/seedbank/python-adapter/examples/
-endpoint_*_demo.py — every endpoint that transmutes its body lands a
-.fk recipe next to a .py demo, both verified by parity_suite.sh.
+Shared kernel recipes remain beside their Python twins under
+form/form-kernel-ts/seedbank/python-adapter/examples/ and are verified by
+parity_suite.sh. Coherence Network-owned endpoint recipes live with the API
+under api/app/form_recipes/. A bare recipe name resolves to the app home first,
+then to the shared coherence-kernel seedbank.
 
 The habit form. Three layers, each shorter to reach for than the last:
 
@@ -30,10 +32,10 @@ The habit form. Three layers, each shorter to reach for than the last:
     )
 
 A new transmuted endpoint should need ~5 lines: load recipe path, build
-bindings dict, call serve_via_kernel, return the response model. The
-recipe body itself lives next to its Python twin under
-form-kernel-ts/seedbank/python-adapter/examples/ — single source of
-truth, parity-tested across CPython / TS evalPython / form-kernel-rust.
+bindings dict, call serve_via_kernel, return the response model. Network-owned
+endpoint recipes live under api/app/form_recipes/. Reusable recipes with a
+cross-runtime Python twin belong upstream in coherence-kernel's seedbank, where
+they remain parity-tested across CPython / TS evalPython / form-kernel-rust.
 """
 from __future__ import annotations
 
@@ -247,12 +249,12 @@ def run_kernel(
 # ---------------------------------------------------------------------------
 # Higher-level helpers — make transmutation easy enough to be a habit.
 #
-# Recipe templates live as .fk files alongside their Python twins under
-# form/form-kernel-ts/seedbank/python-adapter/examples/. The shape is
-# always a top-level (do ...) form whose trailing (let NAME ...) bindings
-# carry the inputs, followed by the final expression that produces the
-# result. We inject inputs by rewriting those trailing bindings — the
-# recipe body itself never changes.
+# Shared recipe templates live as .fk files alongside their Python twins under
+# form/form-kernel-ts/seedbank/python-adapter/examples/. Network-owned endpoint
+# recipes live under api/app/form_recipes/. The shape is always a top-level
+# (do ...) form whose trailing (let NAME ...) bindings carry the inputs,
+# followed by the final expression that produces the result. We inject inputs
+# by rewriting those trailing bindings — the recipe body itself never changes.
 # ---------------------------------------------------------------------------
 
 
@@ -274,6 +276,7 @@ _SEEDBANK_EXAMPLES_DEFAULT = (
     / "python-adapter"
     / "examples"
 )
+_APP_RECIPES_DIR = Path(__file__).resolve().parent.parent / "form_recipes"
 
 
 def seedbank_examples_dir() -> Path:
@@ -288,16 +291,34 @@ def seedbank_examples_dir() -> Path:
     return _SEEDBANK_EXAMPLES_DEFAULT
 
 
+def app_recipes_dir() -> Path:
+    """Return the API-owned Form recipe directory."""
+    return _APP_RECIPES_DIR
+
+
+def resolve_recipe_path(recipe_path: str | Path) -> Path:
+    """Resolve an absolute path or a bare recipe name through its two homes.
+
+    Coherence Network-owned recipes take precedence under ``api/app``. A name
+    not present there falls through to the shared coherence-kernel seedbank,
+    preserving the existing ``FORM_RECIPE_DIR`` deploy-image contract.
+    """
+    p = Path(recipe_path)
+    if p.is_absolute():
+        return p
+    app_path = app_recipes_dir() / p
+    if app_path.is_file():
+        return app_path
+    return seedbank_examples_dir() / p
+
+
 def load_recipe(recipe_path: str | Path) -> str:
     """Load a .fk recipe source.
 
-    A bare filename (e.g. "endpoint_coherence_weight_demo.fk") resolves
-    against the python-adapter seedbank examples directory — the canonical
-    home for transmuted-endpoint recipes. Absolute paths are honored as-is.
+    A bare filename resolves against the API-owned recipe directory first,
+    then the shared python-adapter seedbank. Absolute paths are honored as-is.
     """
-    p = Path(recipe_path)
-    if not p.is_absolute():
-        p = seedbank_examples_dir() / p
+    p = resolve_recipe_path(recipe_path)
     return p.read_text(encoding="utf-8")
 
 
@@ -547,9 +568,7 @@ def split_recipe(recipe_source: str, binding_names: set[str]) -> tuple[str, str]
 
 def _recipe_key(recipe_path: str | Path, binding_names: set[str]) -> str:
     """Stable key for the preload handle map: absolute path + sorted names."""
-    p = Path(recipe_path)
-    if not p.is_absolute():
-        p = seedbank_examples_dir() / p
+    p = resolve_recipe_path(recipe_path)
     return f"{p}::{','.join(sorted(binding_names))}"
 
 

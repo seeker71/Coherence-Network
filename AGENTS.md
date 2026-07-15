@@ -183,6 +183,8 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Commands
 
+`form/` is the pinned `coherence-kernel` snapshot. Initialize it recursively in every clone or linked worktree before running repository commands.
+
 Windows 11 PowerShell bootstrap:
 
 ```powershell
@@ -190,6 +192,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1
 git fetch origin main
 git worktree add "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>" -b "codex/<thread-name>" origin/main
 Set-Location "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
+git submodule update --init --recursive
 make prompt-guide
 ```
 
@@ -203,6 +206,7 @@ make prompt-guide
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
+git submodule update --init --recursive
 make prompt-guide
 
 # API

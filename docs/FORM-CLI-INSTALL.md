@@ -44,7 +44,7 @@ re-runnable. It will:
 ### Manual (if you prefer)
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git ~/coherence-network
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git ~/coherence-network
 # Use the prebuilt fkwu/form-cli from the release, or form/build-form-cli.sh
 # (c-bootstrap emit — no Go bin-go required for the receipt path)
 brew install ollama && ollama pull llama3.2:3b && ollama pull nomic-embed-text

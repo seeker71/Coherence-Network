@@ -42,6 +42,7 @@ git fetch origin main
 git worktree add "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>" -b "codex/<thread-name>" origin/main
 Set-Location "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
 git pull --ff-only origin main
+git submodule update --init --recursive
 make prompt-guide
 ```
 
@@ -52,6 +53,7 @@ git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
+git submodule update --init --recursive
 make prompt-guide
 ```
 

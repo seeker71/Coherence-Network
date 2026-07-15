@@ -1,7 +1,0 @@
-bin-go
-bin-go.exe
-bin-go-android
-form-kernel-go
-
-# compiled form-cli native binary (build via scripts/build_form_cli.sh)
-form-cli

@@ -29,6 +29,7 @@ git worktree add .claude/worktrees/worker origin/main
 # 2. Set it to track main
 cd .claude\worktrees\worker
 git checkout -B worker-main origin/main
+git submodule update --init --recursive
 
 # 3. Install to Startup folder (auto-start on login)
 #    The VBS script at deploy/worker/start-worker.vbs is copied to:
@@ -49,6 +50,7 @@ git worktree add .claude/worktrees/worker origin/main
 # 2. Set it to track main
 cd .claude/worktrees/worker
 git checkout -B worker-main origin/main
+git submodule update --init --recursive
 
 # 3. Install launchd service
 chmod +x deploy/worker/install-macos.sh
@@ -91,10 +93,12 @@ coh msg windows "Update to latest main"
 # Option 2: Manual
 cd C:\source\Coherence-Network\.claude\worktrees\worker
 git pull origin main
+git submodule sync --recursive
+git submodule update --force --init --recursive
 # Then restart the worker
 ```
 
-The runner has self-update built in (`--self-update` flag, on by default unless `--no-self-update`). When enabled, it runs `git pull origin main` before each poll cycle and restarts itself if new commits are found.
+The runner has self-update built in (`--self-update` flag, on by default unless `--no-self-update`). When enabled, it pulls `origin/main`, syncs and hydrates the recursive submodules to their reviewed pins, and restarts itself if new commits are found.
 
 ### Send commands to the worker
 ```bash

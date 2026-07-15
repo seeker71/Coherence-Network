@@ -25,7 +25,7 @@ When unsure, preserve the local signal and ask before publishing it. You can des
 ```bash
 # 1. Fork and clone
 gh repo fork seeker71/Coherence-Network
-git clone https://github.com/YOUR_USERNAME/Coherence-Network
+git clone --recurse-submodules https://github.com/YOUR_USERNAME/Coherence-Network
 cd Coherence-Network
 
 # 2. Set up API
