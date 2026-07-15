@@ -42,6 +42,9 @@ jobs:
               form|form/*)
                 api=true
                 ;;
+              deploy/front-door/*)
+                api=true
+                ;;
               api/app/*)
                 api=true
                 api_app=true
@@ -186,6 +189,18 @@ jobs:
           cat /tmp/form-kernel-health.json
           grep -q "X-Form-Router: native-kernel" /tmp/form-kernel-health.headers
           grep -q '"kernel_runtime":"form-kernel-rust"' /tmp/form-kernel-health.json
+
+          curl -fsS \
+            -D /tmp/form-kernel-proposal.headers \
+            -H "Content-Type: application/json" \
+            -X POST http://127.0.0.1:19108/api/substrate/kernel-image/proposals \
+            --data-binary '{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"thread-gate-bml-front-door-canary"}' \
+            -o /tmp/form-kernel-proposal.json
+          cat /tmp/form-kernel-proposal.headers
+          cat /tmp/form-kernel-proposal.json
+          grep -q "X-Form-Router: native-kernel" /tmp/form-kernel-proposal.headers
+          grep -q '"state":"kernel-image-proposal-preview"' /tmp/form-kernel-proposal.json
+          grep -q '"proof_passed":true' /tmp/form-kernel-proposal.json
 
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
