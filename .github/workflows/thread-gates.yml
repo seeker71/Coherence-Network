@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          submodules: recursive
           fetch-depth: 0
 
       - name: Detect changed surfaces
@@ -38,6 +39,9 @@ jobs:
           web=false
           while IFS= read -r path; do
             case "$path" in
+              form|form/*)
+                api=true
+                ;;
               api/app/*)
                 api=true
                 api_app=true

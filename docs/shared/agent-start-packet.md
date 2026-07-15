@@ -84,6 +84,13 @@ is also whole.
 
 ## Current North Star
 
+Kernel ownership: this repository's `form/` path is a pinned, path-preserving
+submodule snapshot of `seeker71/coherence-kernel`. Author reusable runtime,
+stdlib, walker, and proof-band changes on coherence-kernel `main`, regenerate its
+`form-submodule` distribution branch, then bump this repository's gitlink.
+Coherence Network application recipes stay under `api/app/form_recipes/`; do not
+grow a second kernel source tree beside the submodule.
+
 Current north star: use introspection to make repeated low-level recipes visible,
 then lift them into simpler generic Form/BML teachings. Hot paths are the first
 teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
@@ -160,8 +167,13 @@ Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
 `form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
 before seedbank grammars, parsers, emitters, converters, and encoders, then
-reference the binding. `python3 scripts/scan_form_blueprints.py --check` and
-`make wellness` report total, inline, and sectioned `bp` string refs. Passing
+reference the binding. Blueprint registration, unregistration, registry
+emission, and generated `bp_table.*` writes belong in a
+`seeker71/coherence-kernel` authoring checkout; publish its `form-submodule`
+distribution branch, then review a Coherence Network gitlink bump. Coherence
+Network retains the read-only
+`python3 scripts/scan_form_blueprints.py --check` action; `make wellness` uses
+the same read to report total, inline, and sectioned `bp` string refs. Passing
 means every name resolves; the inline count is the remaining symbol-swap cleanup
 ratchet.
 

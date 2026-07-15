@@ -159,14 +159,14 @@ cd form && python3 scripts/validate_fkwu_native_surface.py \
 
 ## Risks and Assumptions
 
-- **Assumption:** bin-go remains available for maintainer regen (`regen_fkwu_bootstrap.sh`) until Phase 2.
-- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by `scripts/regen_t_flat.sh` (fks bootstrap + marker smoke) and Go fallback when T_flat absent.
+- **Assumption:** bin-go remains available for maintainer regen (`form/scripts/regen_fkwu_bootstrap.sh`) until Phase 2.
+- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by `form/scripts/regen_t_flat.sh` (fks bootstrap + executable Adler verdict smoke) and Go fallback when T_flat is absent.
 
 ## Known Gaps
 
-- **Follow-up:** T_flat maintainer regen still uses bin-go once (`regen_t_flat.sh`); fkwu-only regen bus-errors on full driver flatten (arena lift — Phase 2).
+- **Follow-up:** T_flat maintainer regen still uses bin-go once (`form/scripts/regen_t_flat.sh`); fkwu-only regen bus-errors on full driver flatten (arena lift — Phase 2).
 - **Follow-up:** Arity-class dispatch replacing per-op tags (end of Phase 1).
-- **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `scripts/regen_fkwu_bootstrap.sh`.
+- **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `form/scripts/regen_fkwu_bootstrap.sh`.
 
 ## Research inputs
 

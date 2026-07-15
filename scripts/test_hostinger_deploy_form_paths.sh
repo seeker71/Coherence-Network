@@ -4,13 +4,286 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKFLOW="$ROOT_DIR/.github/workflows/hostinger-auto-deploy.yml"
 DEPLOY_SCRIPT="$ROOT_DIR/deploy/hostinger/auto-deploy.sh"
+SUBSTRATE_HOOK="$ROOT_DIR/scripts/substrate_post_merge_hook.sh"
 DOCKERFILE="$ROOT_DIR/Dockerfile.api"
 KERNEL_ROUTER_DOCKERFILE="$ROOT_DIR/Dockerfile.kernel-router"
+WORKER_START="$ROOT_DIR/deploy/worker/start-worker.vbs"
+WORKTREE_QUICKSTART="$ROOT_DIR/docs/WORKTREE-QUICKSTART.md"
+PROMPT_GATE="$ROOT_DIR/scripts/prompt_entry_gate.sh"
 
 fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
+
+extract_shell_function() {
+  local name="$1" source_file="$2"
+  awk -v signature="${name}() {" '
+    $0 == signature { capture = 1 }
+    capture { print }
+    capture && $0 == "}" { exit }
+  ' "$source_file"
+}
+
+python3 - "$DEPLOY_SCRIPT" <<'PY' || fail "host deploy does not initialize recursive submodules after target selection"
+import sys
+from pathlib import Path
+
+lines = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+reset = next(i for i, line in enumerate(lines) if 'git reset --hard "$TARGET_SHA"' in line)
+branch_end = next(i for i in range(reset + 1, len(lines)) if lines[i].strip() == "fi")
+sync = next(i for i, line in enumerate(lines) if line.strip() == 'git submodule sync --recursive')
+update = next(i for i, line in enumerate(lines) if line.strip() == 'git submodule update --force --init --recursive')
+prepare = next(i for i, line in enumerate(lines) if line.strip() == 'python3 scripts/prepare_form_submodule.py --repo-root .')
+verify = next(i for i, line in enumerate(lines) if line.strip() == 'python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean')
+if not prepare < sync < update < verify:
+    raise SystemExit("legacy preservation, sync, update, and pin verification are out of order")
+calls = [i for i, line in enumerate(lines) if line.strip() == "sync_pinned_submodules"]
+aligned_exit = next(i for i, line in enumerate(lines) if line.strip() == "exit 0" and i > reset - 40)
+if not any(i < aligned_exit for i in calls):
+    raise SystemExit("already-aligned deploy path exits before initializing submodules")
+if not any(i > branch_end for i in calls):
+    raise SystemExit("rebuild path does not initialize submodules after target selection")
+PY
+
+grep -Fq 'git pull origin main && python scripts\prepare_form_submodule.py --repo-root . && git submodule sync --recursive && git submodule update --force --init --recursive && python scripts\prepare_form_submodule.py --repo-root . --verify-clean && set PYTHONUTF8=1&& python' "$WORKER_START" \
+  || fail "Windows worker does not initialize recursive submodules after pull and before Python"
+
+if [[ "$(grep -Fc 'git submodule update --init --recursive' "$WORKTREE_QUICKSTART")" -ne 2 ]]; then
+  fail "worktree quickstart does not initialize recursive submodules in both startup flows"
+fi
+
+grep -Fq 'prompt-entry-guide: form submodule is not initialized.' "$PROMPT_GATE" \
+  || fail "prompt gate does not diagnose an uninitialized form gitlink"
+
+grep -Fq 'git submodule sync --recursive' "$PROMPT_GATE" \
+  || fail "prompt gate does not provide the submodule sync remediation"
+
+grep -Fq 'git submodule update --init --recursive' "$PROMPT_GATE" \
+  || fail "prompt gate does not provide the submodule update remediation"
+
+PROMPT_GATE_FIXTURE="$(mktemp -d)"
+cleanup_prompt_gate_fixture() {
+  rm -rf "$PROMPT_GATE_FIXTURE"
+}
+trap cleanup_prompt_gate_fixture EXIT
+mkdir -p "$PROMPT_GATE_FIXTURE/kernel" "$PROMPT_GATE_FIXTURE/repo/scripts"
+git -C "$PROMPT_GATE_FIXTURE/kernel" init -q
+printf '%s\n' 'reviewed kernel source' >"$PROMPT_GATE_FIXTURE/kernel/core.fk"
+git -C "$PROMPT_GATE_FIXTURE/kernel" add core.fk
+git -C "$PROMPT_GATE_FIXTURE/kernel" \
+  -c user.name='Coherence Test' -c user.email='test@coherencycoin.com' \
+  commit -qm seed
+git -C "$PROMPT_GATE_FIXTURE/repo" init -q
+git -C "$PROMPT_GATE_FIXTURE/repo" -c protocol.file.allow=always \
+  submodule add -q "$PROMPT_GATE_FIXTURE/kernel" form
+cp "$PROMPT_GATE" "$PROMPT_GATE_FIXTURE/repo/scripts/prompt_entry_gate.sh"
+rm -rf "$PROMPT_GATE_FIXTURE/repo/form"
+if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
+  fail "prompt gate accepts an uninitialized form gitlink"
+fi
+grep -Fq 'prompt-entry-guide: form submodule is not initialized.' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not report the uninitialized form gitlink"
+grep -Fq 'git submodule update --init --recursive' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not return the exact update remediation"
+
+git -C "$PROMPT_GATE_FIXTURE/repo" -c protocol.file.allow=always \
+  submodule update --init --recursive -q
+git -C "$PROMPT_GATE_FIXTURE/kernel" \
+  -c user.name='Coherence Test' -c user.email='test@coherencycoin.com' \
+  commit --allow-empty -qm newer-kernel
+newer_kernel_sha="$(git -C "$PROMPT_GATE_FIXTURE/kernel" rev-parse HEAD)"
+git -C "$PROMPT_GATE_FIXTURE/repo/form" fetch -q origin
+git -C "$PROMPT_GATE_FIXTURE/repo/form" checkout -q "$newer_kernel_sha"
+if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
+  fail "prompt gate accepts a form checkout that differs from the pinned gitlink"
+fi
+grep -Fq 'prompt-entry-guide: form submodule is not at the pinned gitlink.' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not report the mismatched form gitlink"
+grep -Fq 'git submodule update --force --init --recursive form' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not return the exact pin-restoration command"
+git -C "$PROMPT_GATE_FIXTURE/repo" -c protocol.file.allow=always \
+  submodule update --force --init --recursive -q
+printf '%s\n' 'tracked local change' >>"$PROMPT_GATE_FIXTURE/repo/form/core.fk"
+if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
+  fail "prompt gate accepts tracked changes inside the pinned form checkout"
+fi
+grep -Fq 'prompt-entry-guide: form submodule has material changes outside the reviewed pin.' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not report tracked form changes"
+grep -Fq 'git submodule update --force --init --recursive form' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not return the tracked-dirt restoration command"
+git -C "$PROMPT_GATE_FIXTURE/repo/form" checkout -q -- core.fk
+printf '%s\n' 'new kernel source' >"$PROMPT_GATE_FIXTURE/repo/form/new-band.fk"
+if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
+  fail "prompt gate accepts untracked source inside the pinned form checkout"
+fi
+grep -Fq 'prompt-entry-guide: form submodule has material changes outside the reviewed pin.' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not report untracked form source"
+grep -Fq '?? new-band.fk' <<<"$prompt_gate_output" \
+  || fail "prompt gate fixture did not identify the untracked form source"
+cleanup_prompt_gate_fixture
+trap - EXIT
+
+# Exercise gitlink-aware routing in isolated local repositories. These fixtures
+# never invoke Docker, deploy, or the network; Docker/log are shell stubs.
+ROUTING_FIXTURE="$(mktemp -d)"
+cleanup_routing_fixture() {
+  rm -rf "$ROUTING_FIXTURE"
+}
+trap cleanup_routing_fixture EXIT
+KERNEL_REPO="$ROUTING_FIXTURE/kernel"
+SUPER_REPO="$ROUTING_FIXTURE/super"
+mkdir -p "$KERNEL_REPO/form-stdlib" "$SUPER_REPO"
+git -C "$KERNEL_REPO" init -q
+git -C "$KERNEL_REPO" config user.name 'Coherence Test'
+git -C "$KERNEL_REPO" config user.email 'test@coherencycoin.com'
+printf '%s\n' '(= kernel-band-v1 1)' >"$KERNEL_REPO/form-stdlib/kernel-band.fk"
+printf '%s\n' '{}' >"$KERNEL_REPO/form-stdlib/form-ontology.json"
+git -C "$KERNEL_REPO" add form-stdlib
+git -C "$KERNEL_REPO" commit -qm 'kernel v1'
+KERNEL_V1="$(git -C "$KERNEL_REPO" rev-parse HEAD)"
+
+git -C "$SUPER_REPO" init -q
+git -C "$SUPER_REPO" config user.name 'Coherence Test'
+git -C "$SUPER_REPO" config user.email 'test@coherencycoin.com'
+git -C "$SUPER_REPO" -c protocol.file.allow=always submodule add -q "$KERNEL_REPO" form
+git -C "$SUPER_REPO" commit -qam 'pin kernel v1'
+SUPER_V1="$(git -C "$SUPER_REPO" rev-parse HEAD)"
+
+printf '%s\n' '(= kernel-band-v2 2)' >"$KERNEL_REPO/form-stdlib/kernel-band.fk"
+printf '%s\n' '{"version": 2}' >"$KERNEL_REPO/form-stdlib/form-ontology.json"
+git -C "$KERNEL_REPO" commit -qam 'kernel v2'
+KERNEL_V2="$(git -C "$KERNEL_REPO" rev-parse HEAD)"
+git -C "$SUPER_REPO/form" fetch -q origin
+git -C "$SUPER_REPO/form" checkout -q "$KERNEL_V2"
+git -C "$SUPER_REPO" add form
+git -C "$SUPER_REPO" commit -qm 'pin kernel v2'
+SUPER_V2="$(git -C "$SUPER_REPO" rev-parse HEAD)"
+
+eval "$(extract_shell_function changed_paths_between "$DEPLOY_SCRIPT")"
+eval "$(extract_shell_function services_to_rebuild "$DEPLOY_SCRIPT")"
+eval "$(extract_shell_function sync_form_stdlib "$DEPLOY_SCRIPT")"
+REPO_DIR="$SUPER_REPO"
+expanded_paths="$(changed_paths_between "$SUPER_V1" "$SUPER_V2")"
+grep -Fxq 'form' <<<"$expanded_paths" \
+  || fail "gitlink path expansion drops the superproject form path"
+grep -Fxq 'form/form-stdlib/kernel-band.fk' <<<"$expanded_paths" \
+  || fail "gitlink path expansion does not expose changed stdlib recipes"
+grep -Fxq 'form/form-stdlib/form-ontology.json' <<<"$expanded_paths" \
+  || fail "gitlink path expansion does not expose changed Blueprint tissue"
+[[ "$(services_to_rebuild "$SUPER_V1" "$SUPER_V2")" == "api" ]] \
+  || fail "an exact form gitlink bump does not route to an API rebuild"
+
+DOCKER_CALLS="$ROUTING_FIXTURE/docker.calls"
+LOG_FILE="$ROUTING_FIXTURE/deploy.log"
+DIFF_BASE="$SUPER_V1"
+TARGET_SHA="$SUPER_V2"
+docker() {
+  printf '%s\n' "$*" >>"$DOCKER_CALLS"
+}
+log() {
+  printf '%s\n' "$*" >>"$LOG_FILE"
+}
+sync_form_stdlib
+grep -Fq "compose cp $SUPER_REPO/form/form-stdlib api:/app/form/form-stdlib" "$DOCKER_CALLS" \
+  || fail "stdlib sync does not run for an exact form gitlink bump"
+
+unset -f changed_paths_between
+eval "$(extract_shell_function sync_pinned_submodules "$SUBSTRATE_HOOK")"
+eval "$(extract_shell_function changed_paths_between "$SUBSTRATE_HOOK")"
+eval "$(extract_shell_function changed_path_routes "$SUBSTRATE_HOOK")"
+
+# The first migration can leave ignored build outputs in the formerly tracked
+# form/ directory. Preserve those local artifacts, then initialize the gitlink.
+TRANSITION_REPO="$ROUTING_FIXTURE/transition-super"
+mkdir -p "$TRANSITION_REPO/form" "$TRANSITION_REPO/scripts"
+cp "$ROOT_DIR/scripts/prepare_form_submodule.py" "$TRANSITION_REPO/scripts/"
+git -C "$TRANSITION_REPO" init -q
+git -C "$TRANSITION_REPO" config user.name 'Coherence Test'
+git -C "$TRANSITION_REPO" config user.email 'test@coherencycoin.com'
+printf '%s\n' 'form/generated.cache' >"$TRANSITION_REPO/.gitignore"
+printf '%s\n' 'old tracked kernel source' >"$TRANSITION_REPO/form/old.fk"
+git -C "$TRANSITION_REPO" add .gitignore form/old.fk
+git -C "$TRANSITION_REPO" commit -qm 'tracked form tree'
+TRANSITION_OLD="$(git -C "$TRANSITION_REPO" rev-parse HEAD)"
+git -C "$TRANSITION_REPO" rm -qr form/old.fk
+printf '%s\n' \
+  '[submodule "form"]' \
+  '  path = form' \
+  "  url = $KERNEL_REPO" \
+  >"$TRANSITION_REPO/.gitmodules"
+git -C "$TRANSITION_REPO" add .gitmodules
+git -C "$TRANSITION_REPO" update-index --add --cacheinfo 160000 "$KERNEL_V2" form
+git -C "$TRANSITION_REPO" commit -qm 'replace tracked tree with gitlink'
+TRANSITION_NEW="$(git -C "$TRANSITION_REPO" rev-parse HEAD)"
+git -C "$TRANSITION_REPO" checkout -q "$TRANSITION_OLD"
+printf '%s\n' 'valuable local build output' >"$TRANSITION_REPO/form/generated.cache"
+git -C "$TRANSITION_REPO" checkout -q "$TRANSITION_NEW" 2>/dev/null
+[[ ! -e "$TRANSITION_REPO/form/.git" ]] \
+  || fail "transition fixture unexpectedly initialized the submodule"
+(cd "$TRANSITION_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules)
+[[ "$(git -C "$TRANSITION_REPO/form" rev-parse HEAD)" == "$KERNEL_V2" ]] \
+  || fail "tracked-tree transition did not initialize the pinned kernel"
+preserved_cache="$(find "$TRANSITION_REPO/.cache" -path '*/form-pre-submodule-*/generated.cache' -print -quit)"
+[[ -n "$preserved_cache" && -f "$preserved_cache" ]] \
+  || fail "tracked-tree transition did not preserve ignored form artifacts"
+
+# A post-merge hook sees the new superproject pin while the submodule checkout
+# still points at the old commit. The hook itself must close that gap before it
+# reads or ingests Form tissue.
+git -C "$SUPER_REPO/form" checkout -q "$KERNEL_V1"
+mkdir -p "$SUPER_REPO/scripts"
+cp "$ROOT_DIR/scripts/prepare_form_submodule.py" "$SUPER_REPO/scripts/"
+[[ "$(git -C "$SUPER_REPO/form" rev-parse HEAD)" == "$KERNEL_V1" ]] \
+  || fail "stale post-merge fixture did not start at the old kernel pin"
+(cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules)
+[[ "$(git -C "$SUPER_REPO/form" rev-parse HEAD)" == "$KERNEL_V2" ]] \
+  || fail "post-merge hook did not hydrate the new pinned kernel before ingest"
+printf '%s\n' 'tracked dirt' >>"$SUPER_REPO/form/form-stdlib/kernel-band.fk"
+if (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules); then
+  fail "post-merge hook accepts tracked changes inside the form checkout"
+fi
+git -C "$SUPER_REPO/form" restore form-stdlib/kernel-band.fk
+printf '%s\n' 'new unreviewed kernel source' >"$SUPER_REPO/form/form-stdlib/unreviewed-band.fk"
+if (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules); then
+  fail "post-merge hook accepts untracked source inside the form checkout"
+fi
+rm "$SUPER_REPO/form/form-stdlib/unreviewed-band.fk"
+mkdir -p "$SUPER_REPO/form/.cache"
+printf '%s\n' 'disposable crash report' >"$SUPER_REPO/form/.cache/crash.json"
+(cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules) \
+  || fail "post-merge hook rejects allowlisted form cache output"
+hook_paths="$(cd "$SUPER_REPO" && changed_paths_between "$SUPER_V1" "$SUPER_V2")"
+hook_routes="$(changed_path_routes "$hook_paths")"
+grep -Fxq blueprint <<<"$hook_routes" \
+  || fail "Blueprint projection does not recognize an internal registry change"
+if grep -Fxq training <<<"$hook_routes"; then
+  fail "consumer hook tries to capture coherence-kernel commits from a superproject range"
+fi
+grep -Fxq rag <<<"$hook_routes" \
+  || fail "RAG healing does not recognize an internal Form recipe change"
+
+# Simulate a shallow submodule that has the new pin but not the old one. The
+# helper must conservatively enumerate the full new snapshot, not lose routing.
+rm -rf "$SUPER_REPO/form" "$SUPER_REPO/.git/modules/form"
+git clone -q --depth 1 "file://$KERNEL_REPO" "$SUPER_REPO/form"
+if git -C "$SUPER_REPO/form" cat-file -e "${KERNEL_V1}^{commit}" 2>/dev/null; then
+  fail "shallow fixture unexpectedly retained the old kernel commit"
+fi
+fallback_paths="$(cd "$SUPER_REPO" && changed_paths_between "$SUPER_V1" "$SUPER_V2")"
+grep -Fxq 'form/form-stdlib/kernel-band.fk' <<<"$fallback_paths" \
+  || fail "missing old gitlink commit does not fall back to the full new snapshot"
+fallback_routes="$(changed_path_routes "$fallback_paths")"
+grep -Fxq blueprint <<<"$fallback_routes" \
+  || fail "full-snapshot fallback does not preserve Blueprint routing"
+if grep -Fxq training <<<"$fallback_routes"; then
+  fail "full-snapshot fallback routes coherence-kernel sources through superproject training"
+fi
+grep -Fxq rag <<<"$fallback_routes" \
+  || fail "full-snapshot fallback does not preserve RAG routing"
+
+cleanup_routing_fixture
+trap - EXIT
 
 grep -Fq "'form/form-stdlib/**'" "$WORKFLOW" \
   || fail "Hostinger workflow does not trigger for form/form-stdlib changes"

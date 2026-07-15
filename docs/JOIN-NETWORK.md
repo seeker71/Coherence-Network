@@ -117,7 +117,7 @@ No CLI install needed — the runner calls the API directly.
 ## Setup
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network/api
 pip install -e .
 ```

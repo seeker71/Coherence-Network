@@ -18,6 +18,14 @@ _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(_api_dir)
 LOG_DIR = os.path.join(_api_dir, "logs")
 LOG_FILE = os.path.join(LOG_DIR, "commit_progress.log")
+_DISPOSABLE_SUBMODULE_PATH_PREFIXES = (
+    ".cache/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    "form-kernel-rust/target/",
+    "form-kernel-ts/dist/",
+    "form-kernel-ts/node_modules/",
+)
 
 
 def _setup_logging() -> logging.Logger:
@@ -51,12 +59,58 @@ def run(cmd: list[str], cwd: str, log: logging.Logger) -> tuple[bool, str]:
         return False, str(e)
 
 
+def _submodules_match_reviewed_pins(log: logging.Logger) -> bool:
+    ok, listing = run(["git", "submodule", "status", "--recursive"], PROJECT_ROOT, log)
+    if not ok:
+        log.warning("submodule status failed: %s", listing)
+        return False
+    for raw in listing.splitlines():
+        if not raw:
+            continue
+        if raw[0] != " ":
+            log.warning("submodule is not at reviewed pin: %s", raw)
+            return False
+        fields = raw[1:].split()
+        if len(fields) < 2:
+            log.warning("malformed submodule status: %s", raw)
+            return False
+        submodule_path = os.path.join(PROJECT_ROOT, fields[1])
+        ok, status = run(
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            submodule_path,
+            log,
+        )
+        entries = status.split("\0") if "\0" in status else status.splitlines()
+        material = []
+        for entry in entries:
+            if not entry:
+                continue
+            code = entry[:2]
+            path = entry[3:] if len(entry) > 3 else ""
+            disposable = code == "??" and any(
+                path == prefix.rstrip("/") or path.startswith(prefix)
+                for prefix in _DISPOSABLE_SUBMODULE_PATH_PREFIXES
+            )
+            if not disposable:
+                material.append(entry)
+        if not ok or material:
+            log.warning(
+                "submodule has material work; land it in coherence-kernel first: %s",
+                " | ".join(material) or status,
+            )
+            return False
+    return True
+
+
 def commit_progress(task_id: str, task_type: str, message: str, push: bool = False) -> bool:
     """Commit uncommitted changes. Returns True if committed (or no changes), False on error."""
     log = _setup_logging()
     if not os.path.isdir(os.path.join(PROJECT_ROOT, ".git")):
         log.debug("Not a git repo, skipping commit")
         return True
+
+    if not _submodules_match_reviewed_pins(log):
+        return False
 
     ok, out = run(["git", "status", "--porcelain"], PROJECT_ROOT, log)
     if not ok:

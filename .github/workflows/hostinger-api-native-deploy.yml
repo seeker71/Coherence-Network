@@ -26,6 +26,8 @@ jobs:
       PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherencycoin.com' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Deploy through Hostinger Docker API
         run: |

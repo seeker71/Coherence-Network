@@ -1,5 +1,0 @@
-; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk
-;
-; form-native-resource-interfaces-band — witness verdict shared with fkwu_run.sh and form-cli fnri.
-
-(do (fnri-witness-verdict))

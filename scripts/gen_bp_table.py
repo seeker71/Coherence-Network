@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Generate the kernel-resident bp lookup table for all three Form kernels.
+"""Generate coherence-kernel's resident bp lookup tables for all three kernels.
+
+The registry and emitted tables are owned by `seeker71/coherence-kernel`. Run
+this generator in an upstream coherence-kernel authoring checkout, publish its
+`form-submodule` distribution branch, and then review consuming gitlink bumps.
+Coherence Network pins `form/` as a submodule and refuses consumer-side writes.
 
 `bp "name"` resolves a Blueprint name to its NodeID. To make it universally
 available — no `form-ontology-loader.fk` prelude required — each kernel embeds
@@ -8,8 +13,8 @@ authored sources (form-ontology.json categories/primitives/dialect categories +
 blueprint-registry.json), so all three kernels carry byte-identical data and
 stay in parity by construction.
 
-Emits one source file per kernel (committed; regenerate when either JSON changes,
-wired into validate.sh's build step and the post-merge hook):
+Emits one source file per kernel (committed upstream; regenerate there when
+either JSON changes):
   form/form-kernel-go/bp_table.go      — var bpTable map[string][4]uint32
   form/form-kernel-rust/src/bp_table.rs — pub static BP_ENTRIES: &[(&str,[u32;4])]
   form/form-kernel-ts/src/bp_table.ts   — export const BP_TABLE: Record<string,[…]>
@@ -24,6 +29,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STDLIB = ROOT / "form" / "form-stdlib"
@@ -32,6 +39,35 @@ REGISTRY = STDLIB / "blueprint-registry.json"
 GO = ROOT / "form" / "form-kernel-go" / "bp_table.go"
 RS = ROOT / "form" / "form-kernel-rust" / "src" / "bp_table.rs"
 TS = ROOT / "form" / "form-kernel-ts" / "src" / "bp_table.ts"
+
+
+def _form_is_superproject_gitlink() -> bool:
+    """True when this checkout consumes ``form`` as a pinned submodule."""
+    proc = subprocess.run(
+        ["git", "ls-files", "--stage", "--", "form"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    return any(
+        line.startswith("160000 ") and line.partition("\t")[2] == "form"
+        for line in (proc.stdout or "").splitlines()
+    )
+
+
+def _refuse_consumer_mutation() -> bool:
+    if not _form_is_superproject_gitlink():
+        return False
+    print(
+        "refusing to regenerate Blueprint tables: form is the pinned "
+        "coherence-kernel submodule; regenerate in a coherence-kernel checkout "
+        "and then review a gitlink bump here",
+        file=sys.stderr,
+    )
+    return True
 
 
 def build_table() -> dict[str, tuple]:
@@ -104,6 +140,8 @@ def _write_if_changed(path: pathlib.Path, content: str) -> bool:
 
 
 def main() -> int:
+    if _refuse_consumer_mutation():
+        return 2
     t = build_table()
     changed = [p.name for p, c in ((GO, emit_go(t)), (RS, emit_rust(t)), (TS, emit_ts(t)))
                if _write_if_changed(p, c)]

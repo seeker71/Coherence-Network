@@ -4,7 +4,7 @@
 # Warms the sovereign destination: standalone native form-cli (form/form-cli).
 # Standard lane (2026-06-24): copies committed bootstrap/form-cli-<platform>
 # when stamped — no bin-go, no clang. Maintainer regen:
-# scripts/regen_standard_lane_binaries.sh
+# form/scripts/regen_standard_lane_binaries.sh
 #
 # Idempotent: refreshes from the stamped committed bootstrap binary when it is
 # newer/different. Missing bootstrap falls back to the cached target or one-time

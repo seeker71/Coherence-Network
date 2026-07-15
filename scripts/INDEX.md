@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 408
+**Total files**: 405
 
 | File | Purpose |
 |---|---|
@@ -190,7 +190,7 @@
 | [fourth_warm.sh](fourth_warm.sh) | fourth_warm.sh — container-safe router to the fkwu (fourth) kernel. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
-| [gen_bp_table.py](gen_bp_table.py) | Generate the kernel-resident bp lookup table for all three Form kernels. |
+| [gen_bp_table.py](gen_bp_table.py) | Generate coherence-kernel's resident bp lookup tables for all three kernels. |
 | [generate_curated_translations.py](generate_curated_translations.py) | Generate machine-translated locale siblings for installed non-English |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | Generate INDEX.md files for source-code directories. |
 | [generate_silence_alive_visuals.py](generate_silence_alive_visuals.py) | Generate the alive / growing-over-time views for /silence/built. |
@@ -287,6 +287,7 @@
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
+| [prepare_form_submodule.py](prepare_form_submodule.py) | Preserve a legacy ``form/`` tree before initializing its replacement gitlink. |
 | [prompt_entry_gate.sh](prompt_entry_gate.sh) | _no top-of-file purpose_ |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | prose_recipe_roundtrip.py — the bidirectional test, walking. |
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
@@ -296,10 +297,6 @@
 | [real_llama_head0_attention_receipt.py](real_llama_head0_attention_receipt.py) | real_llama_head0_attention_receipt.py — proves real llama3.2:3b GGUF weights flow |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
-| [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | regen_fkwu_bootstrap.sh — maintainer-only: emit form-stdlib/bootstrap/fkwu-uni.c via bin-go. |
-| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: refresh the pre-flattened |
-| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | regen_standard_lane_binaries.sh — maintainer-only: refresh fkwu + form-cli |
-| [regen_t_flat.sh](regen_t_flat.sh) | regen_t_flat.sh — maintainer bootstrap for form-stdlib/fourth-flatten-table.txt |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |

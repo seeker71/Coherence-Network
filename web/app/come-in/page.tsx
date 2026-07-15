@@ -378,7 +378,7 @@ export default async function ComeInPage() {
             <ol className="space-y-3 text-sm leading-relaxed text-stone-200">
               <li>
                 <span className="text-amber-300">1 · Clone the body.</span>{" "}
-                <code className="font-mono text-stone-100">git clone https://github.com/seeker71/Coherence-Network</code>
+                <code className="font-mono text-stone-100">git clone --recurse-submodules https://github.com/seeker71/Coherence-Network</code>
                 {" "}— open it; the root <code className="font-mono">CLAUDE.md</code> orients you the
                 moment you do, and <code className="font-mono">docs/shared/agent-start-packet.md</code> is
                 the smallest first read.

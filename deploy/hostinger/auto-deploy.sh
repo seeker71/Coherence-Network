@@ -227,6 +227,59 @@ PY
 ensure_hati_web_hosts || exit 1
 
 cd "$REPO_DIR"
+
+sync_pinned_submodules() {
+  # Preserve any ignored output left by the one-time tracked-tree -> gitlink
+  # transition before asking Git to materialize the reviewed kernel snapshot.
+  python3 scripts/prepare_form_submodule.py --repo-root .
+  git submodule sync --recursive
+  git submodule update --force --init --recursive
+  python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean
+}
+
+# A submodule update is represented in the superproject as the single path
+# `form`. Expand that gitlink change through the pinned old/new kernel commits
+# so every downstream path router keeps seeing repository-relative paths. When
+# the old commit is unavailable (for example, a shallow first deploy), list the
+# complete new snapshot; when even the new snapshot cannot be read, return an
+# explicit sentinel so callers take their conservative full-refresh path.
+changed_paths_between() {
+  local from="$1" to="$2"
+  local changed nested old_entry new_entry old_mode new_mode old_oid new_oid
+
+  if ! changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null)"; then
+    return 1
+  fi
+  printf '%s\n' "$changed" | sed '/^$/d'
+  if ! grep -Fxq 'form' <<< "$changed"; then
+    return 0
+  fi
+
+  old_entry="$(cd "$REPO_DIR" && git ls-tree "$from" -- form 2>/dev/null || true)"
+  new_entry="$(cd "$REPO_DIR" && git ls-tree "$to" -- form 2>/dev/null || true)"
+  read -r old_mode _ old_oid _ <<< "$old_entry"
+  read -r new_mode _ new_oid _ <<< "$new_entry"
+
+  if [[ "$old_mode" == "160000" && "$new_mode" == "160000" ]] \
+    && git -C "$REPO_DIR/form" cat-file -e "${old_oid}^{commit}" 2>/dev/null \
+    && git -C "$REPO_DIR/form" cat-file -e "${new_oid}^{commit}" 2>/dev/null; then
+    if nested="$(git -C "$REPO_DIR/form" diff --name-only "$old_oid".."$new_oid" 2>/dev/null)"; then
+      printf '%s\n' "$nested" | sed '/^$/d; s#^#form/#'
+      return 0
+    fi
+  fi
+
+  if [[ "$new_mode" == "160000" ]] \
+    && git -C "$REPO_DIR/form" cat-file -e "${new_oid}^{commit}" 2>/dev/null; then
+    if nested="$(git -C "$REPO_DIR/form" ls-tree -r --name-only "$new_oid" 2>/dev/null)"; then
+      printf '%s\n' "$nested" | sed '/^$/d; s#^#form/#'
+      return 0
+    fi
+  fi
+
+  printf '%s\n' 'form/.gitlink-diff-unavailable'
+}
+
 OLD_SHA="$(git rev-parse HEAD)"
 log "Deploy begin — old_sha=${OLD_SHA:0:12} target_sha=${TARGET_SHA:-(resolving)} branch=${BRANCH}"
 git fetch --prune origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --quiet
@@ -270,6 +323,7 @@ RUNNING_SHORT="${RUNNING_SHA:0:12}"
 [[ -z "$RUNNING_SHORT" ]] && RUNNING_SHORT="unknown"
 
 if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
+  sync_pinned_submodules
   log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
   # `ensure_hati_web_hosts` may find the labels already present because a
   # previous deploy wrote them into docker-compose.yml but did not include
@@ -291,6 +345,8 @@ else
   git reset --hard "$TARGET_SHA" >/dev/null
   git clean -fd >/dev/null
 fi
+
+sync_pinned_submodules
 
 python3 - <<PY
 from pathlib import Path
@@ -395,7 +451,7 @@ is_static_only_change() {
     return 1
   fi
   local changed
-  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null || true)"
+  changed="$(changed_paths_between "$from" "$to" 2>/dev/null || true)"
   if [[ -z "$changed" ]]; then
     # No detected changes but SHAs differ → unknown; rebuild to be safe.
     return 1
@@ -434,7 +490,7 @@ sync_web_public() {
   # for the new file to be reachable on the next request.
   local from="$1" to="$2"
   local changed
-  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null \
+  changed="$(changed_paths_between "$from" "$to" 2>/dev/null \
               | grep '^web/public/' || true)"
   if [[ -z "$changed" ]]; then
     log "web/public sync: no changes"
@@ -470,7 +526,7 @@ services_to_rebuild() {
     return 0
   fi
   local changed
-  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null || true)"
+  changed="$(changed_paths_between "$from" "$to" 2>/dev/null || true)"
   if [[ -z "$changed" ]]; then
     echo "api web pulse"
     return 0
@@ -482,6 +538,7 @@ services_to_rebuild() {
       api/*)           need_api=1 ;;
       web/*)           need_web=1 ;;
       pulse/*)         need_pulse=1 ;;
+      form)                     need_api=1 ;;
       form/form-stdlib/*)      need_api=1 ;;
       form/form-kernel-rust/*) need_api=1 ;;
       # scripts/ is mounted as content but also copied into the api image
@@ -764,9 +821,8 @@ sync_form_stdlib() {
   fi
 
   local changed
-  changed="$(cd "$REPO_DIR" && git diff --name-only "$DIFF_BASE".."$TARGET_SHA" 2>/dev/null \
-              | grep '^form/form-stdlib/' || true)"
-  if [[ -z "$changed" ]]; then
+  changed="$(changed_paths_between "$DIFF_BASE" "$TARGET_SHA" 2>/dev/null || true)"
+  if ! grep -Eq '^(form$|form/form-stdlib/)' <<< "$changed"; then
     log "form stdlib: no changes"
     return 0
   fi
@@ -871,11 +927,19 @@ run_substrate_ingest() {
   #     wrong SHA path)
   #   - git diff fails for any reason
   local from="$1" to="$2"
-  local started ended elapsed
+  local started ended elapsed all_changed full_refresh_reason=""
   started="$(date +%s)"
 
   if [[ -z "$from" || "$from" == "$to" ]]; then
-    log "substrate: SHAs unknown or equal — running --all --structured"
+    full_refresh_reason="SHAs unknown or equal"
+  elif ! all_changed="$(changed_paths_between "$from" "$to" 2>/dev/null)"; then
+    full_refresh_reason="changed-path comparison unavailable"
+  elif grep -Fxq 'form/.gitlink-diff-unavailable' <<< "$all_changed"; then
+    full_refresh_reason="form gitlink commits unavailable"
+  fi
+
+  if [[ -n "$full_refresh_reason" ]]; then
+    log "substrate: ${full_refresh_reason} — running --all --structured"
     set +e
     run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-600}" \
       docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
@@ -899,8 +963,11 @@ run_substrate_ingest() {
   # ingest-paths (the `ingest`/`ingest --all` commands skip non-.md), so
   # the per-file loop below dispatches every path through ingest-paths.
   local changed
-  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null \
+  changed="$(printf '%s\n' "$all_changed" \
               | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^form/form-stdlib/.*\.fk$' \
+              | while IFS= read -r path; do
+                  [[ -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
+                done \
               || true)"
   if [[ -z "$changed" ]]; then
     ended="$(date +%s)"

@@ -69,7 +69,8 @@ cd form && ./validate.sh … form-cli-band.fk   # 4095 incl. fnri witness + rece
 ./scripts/verify_fsh_fnri_bootstrap.sh
 bash scripts/verify_fnri_windows_standalone.sh
 bash scripts/verify_fnri_android_receipt.sh
-./scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
+# In a writable coherence-kernel checkout, never in this pinned consumer:
+./form/scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
 cd form && ./build-form-cli.sh
 printf 'fnri witness\n' | form/form-cli   # → 32767
 ```
@@ -84,13 +85,13 @@ Stand-in proof bands (`fnri-audio-standin`, `fnri-video-standin`, `fnri-gpu-stan
 
 ## Risks
 
-- fkwu pre-flattened table returns 0 for this prelude chain until fourth-arm flatten is repaired.
+- A stale fkwu pre-flattened table can erase this prelude chain; canonical `form/scripts/regen_t_flat.sh` executes the regenerated Adler table and requires verdict `5` before publishing it.
 - Dispatch rows name `filesystem`, `host-kernel`, or `http-socket` carriers aligned with form-fs and host-kernel-carrier.
 
 ## Known Gaps
 
 - **Closed on mac (honest floor)**: catalog **32767**, dispatch **1023**, host-io **15**, metal stand-ins **15** each, **form-cli-band 4095** (fnri witness + know + receipt) — all four-way; runtime via `form/form-cli` binary; receipts via `verify_fnri_*` scripts (thin `form-cli-run.sh` carriers only).
-- **North star (named, not hidden)**: native metal device witnesses (CoreAudio capture, ScreenCaptureKit frame, Metal/CUDA dispatch) with per-platform device traces — stand-ins are explicitly filesystem/host-kernel wiring, not metal proof.
+- **Follow-up task `fnri-native-device-witnesses`**: add native device witnesses (CoreAudio capture, ScreenCaptureKit frame, Metal/CUDA dispatch) with per-platform traces — stand-ins remain explicitly filesystem/host-kernel wiring, not metal proof.
 
 ## North star
 

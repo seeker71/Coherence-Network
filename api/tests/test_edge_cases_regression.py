@@ -337,7 +337,7 @@ def test_pipeline_exception_swallowed(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_worktree_creation_fetches_origin_first(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    """git fetch origin must run before git worktree add."""
+    """Fetch, create, then recursively initialize submodules in that order."""
     from scripts import local_runner
 
     class _Proc:
@@ -347,10 +347,12 @@ def test_worktree_creation_fetches_origin_first(
             self.stderr = stderr
 
     calls: list[list[str]] = []
+    call_cwds: list[str] = []
     wt_path = tmp_path / "task-abc1def234567890"
 
-    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+    def _run(args: list[str], **kwargs: Any) -> _Proc:
         calls.append(list(args))
+        call_cwds.append(str(kwargs.get("cwd", "")))
         if args[:2] == ["git", "worktree"]:
             wt_path.mkdir(parents=True, exist_ok=True)
         return _Proc()
@@ -372,6 +374,117 @@ def test_worktree_creation_fetches_origin_first(
     assert fetch_idx is not None, "git fetch origin must be called"
     assert wt_add_idx is not None, "git worktree add must be called"
     assert fetch_idx < wt_add_idx, "fetch must happen before worktree add"
+    sync_idx = calls.index(["git", "submodule", "sync", "--recursive"])
+    update_idx = calls.index(
+        ["git", "submodule", "update", "--init", "--recursive"]
+    )
+    assert wt_add_idx < sync_idx < update_idx
+    assert call_cwds[sync_idx] == str(wt_path)
+    assert call_cwds[update_idx] == str(wt_path)
+
+
+@pytest.mark.parametrize(
+    ("failed_command", "expected_log"),
+    [
+        (["git", "submodule", "sync", "--recursive"], "WORKTREE_SUBMODULE_SYNC_FAILED"),
+        (
+            ["git", "submodule", "update", "--init", "--recursive"],
+            "WORKTREE_SUBMODULE_UPDATE_FAILED",
+        ),
+    ],
+)
+def test_worktree_creation_fails_when_submodule_initialization_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    failed_command: list[str],
+    expected_log: str,
+) -> None:
+    """A task repo never reaches a provider with unavailable submodules."""
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    calls: list[list[str]] = []
+    wt_path = tmp_path / "task-submodule-fail"
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(list(args))
+        if args[:3] == ["git", "worktree", "add"]:
+            wt_path.mkdir(parents=True, exist_ok=True)
+        if args == failed_command:
+            return _Proc(returncode=1, stderr="submodule unavailable")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    with caplog.at_level("WARNING"):
+        result = local_runner._create_worktree("submodule-fail")
+
+    assert result is None
+    assert expected_log in caplog.text
+    if failed_command[2] == "sync":
+        assert ["git", "submodule", "update", "--init", "--recursive"] not in calls
+
+
+def test_standalone_worktree_repo_preserves_gitlink_and_initializes_locally(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """Archive fallback restores gitlinks before local submodule initialization."""
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    source_repo = tmp_path / "linked-source"
+    wt_path = tmp_path / "task-standalone"
+    calls: list[tuple[list[str], str]] = []
+    gitlink_sha = "a" * 40
+
+    def _run(args: list[str], **kwargs: Any) -> _Proc:
+        calls.append((list(args), str(kwargs.get("cwd", ""))))
+        if args[:3] == ["git", "ls-tree", "-r"]:
+            return _Proc(stdout=f"160000 commit {gitlink_sha}\tform\0")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_ORIGINAL_REPO_DIR", source_repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner, "_resolve_available_ref", lambda *_args: "base-ref")
+    monkeypatch.setattr(
+        local_runner,
+        "_get_origin_remote_url",
+        lambda *_args: "https://github.com/example/repo.git",
+    )
+    monkeypatch.setattr(local_runner, "_extract_git_archive", lambda *_args: None)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    result = local_runner._create_standalone_task_repo(
+        "standalone", wt_path, "task/standalone"
+    )
+
+    assert result == wt_path
+    commands = [command for command, _cwd in calls]
+    restore = [
+        "git", "update-index", "--add", "--cacheinfo",
+        "160000", gitlink_sha, "form",
+    ]
+    restore_idx = commands.index(restore)
+    commit_idx = next(i for i, command in enumerate(commands) if command[:2] == ["git", "commit"])
+    sync = ["git", "submodule", "sync", "--recursive"]
+    update = ["git", "submodule", "update", "--init", "--recursive"]
+    assert restore_idx < commit_idx < commands.index(sync) < commands.index(update)
+    for command, cwd in calls:
+        if command[:2] in (["git", "update-index"], ["git", "submodule"]):
+            assert cwd == str(wt_path), "standalone writes must stay out of the parent gitdir"
 
 
 def test_orphaned_worktree_cleanup(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -544,6 +657,54 @@ def test_pr_guard_skippable_artifacts() -> None:
     assert mod._is_skippable_local_artifact("data/coherence.db") is True
     assert mod._is_skippable_local_artifact("api/data/coherence.db-wal") is True
     assert mod._is_skippable_local_artifact("api/app/main.py") is False
+
+
+def test_pr_guard_reads_gitlinks_from_current_index(monkeypatch) -> None:
+    """Only index entries with gitlink mode 160000 define atomic paths."""
+    mod = _load_script_module("worktree_pr_guard")
+    output = "\n".join(
+        [
+            f"160000 {'a' * 40} 0\tform",
+            f"100644 {'b' * 40} 0\tregular/file.txt",
+            f"160000 {'c' * 40} 0\tvendor/kernel",
+        ]
+    )
+
+    def fake_run(cmd, **_kwargs):
+        assert cmd == ["git", "ls-files", "--stage"]
+        return subprocess.CompletedProcess(cmd, 0, output, "")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    assert mod._index_gitlink_paths() == {"form", "vendor/kernel"}
+
+
+def test_pr_guard_collapses_status_descendants_to_gitlink(monkeypatch) -> None:
+    """A tree-to-gitlink migration needs one evidence path, not every deletion."""
+    mod = _load_script_module("worktree_pr_guard")
+    monkeypatch.setattr(
+        mod,
+        "_index_gitlink_paths",
+        lambda: {"form", "vendor/kernel"},
+    )
+
+    changed = [
+        "form",
+        "form/README.md",
+        "form/form-stdlib/core.fk",
+        "form-notes/README.md",
+        "vendor/kernel/src/main.rs",
+        "vendor/kernel-extra/README.md",
+        "api/app/main.py",
+    ]
+
+    assert mod._collapse_paths_under_index_gitlinks(changed) == [
+        "api/app/main.py",
+        "form",
+        "form-notes/README.md",
+        "vendor/kernel",
+        "vendor/kernel-extra/README.md",
+    ]
 
 
 def test_pr_guard_expensive_steps_are_scope_aware(monkeypatch) -> None:
@@ -1128,3 +1289,157 @@ async def test_idea_grounded_metrics() -> None:
         # GET the metrics
         r = await client.get(f"/api/ideas/{idea_id}/grounded-metrics")
         assert r.status_code == 200, r.text
+
+
+def test_node_update_hydrates_recursive_submodules(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    events: list[tuple[str, object]] = []
+
+    def fake_run(args: list[str], **_kwargs: Any) -> _Proc:
+        events.append(("run", tuple(args)))
+        if args == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+            return _Proc(stdout="main\n")
+        if args == ["git", "rev-parse", "--short", "HEAD"]:
+            return _Proc(stdout="abc1234\n")
+        return _Proc()
+
+    def hydrate(path: Path, slug: str) -> bool:
+        events.append(("hydrate", (path, slug)))
+        return True
+
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(local_runner, "_initialize_worktree_submodules", hydrate)
+
+    response = local_runner._execute_node_command("node-1", {"command": "update"}, "")
+
+    pull_event = ("run", ("git", "pull", "origin", "main", "--ff-only"))
+    hydrate_event = ("hydrate", (tmp_path, "node-command"))
+    assert events.index(pull_event) < events.index(hydrate_event)
+    assert "hydrated pinned submodules" in response
+
+
+def test_merge_via_pr_refreshes_recursive_submodules(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    calls: list[tuple[str, ...]] = []
+    hydrated: list[tuple[Path, str]] = []
+
+    def fake_run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(tuple(args))
+        if args[:4] == ["gh", "pr", "list", "--head"]:
+            return _Proc(stdout='[{"number": 41, "state": "OPEN"}]')
+        return _Proc()
+
+    def fake_git(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(tuple(args))
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(local_runner, "_run_git_command", fake_git)
+    monkeypatch.setattr(
+        local_runner,
+        "_initialize_worktree_submodules",
+        lambda path, slug: hydrated.append((path, slug)) or True,
+    )
+
+    assert local_runner._merge_branch_to_main("task-pr-merge")
+    assert ("git", "pull", "--ff-only", "origin", "main") in calls
+    assert hydrated == [(tmp_path, "task-pr-merge")]
+
+
+def test_local_fallback_merge_refreshes_recursive_submodules(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    calls: list[tuple[str, ...]] = []
+    hydrated: list[tuple[Path, str]] = []
+
+    def fake_run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(tuple(args))
+        if args[:4] == ["gh", "pr", "list", "--head"]:
+            return _Proc(stdout="[]")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        local_runner,
+        "_initialize_worktree_submodules",
+        lambda path, slug: hydrated.append((path, slug)) or True,
+    )
+
+    assert local_runner._merge_branch_to_main("task-local-merge")
+    assert ("git", "push", "origin", "main") in calls
+    assert hydrated == [(tmp_path, "task-local-merge")]
+
+
+def test_self_update_hydrates_submodules_before_restart(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from scripts import local_runner
+
+    class _Proc:
+        def __init__(self, returncode=0, stdout="", stderr=""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    events: list[tuple[str, object]] = []
+    local_sha = ["local-sha"]
+
+    def fake_run(args: list[str], **_kwargs: Any) -> _Proc:
+        events.append(("run", tuple(args)))
+        if args == ["git", "rev-parse", "HEAD"]:
+            return _Proc(stdout=f"{local_sha[0]}\n")
+        if args == ["git", "rev-parse", "origin/main"]:
+            return _Proc(stdout="remote-sha\n")
+        if args == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+            return _Proc(stdout="main\n")
+        if args == ["git", "pull", "origin", "main", "--ff-only"]:
+            local_sha[0] = "remote-sha"
+        return _Proc()
+
+    def fail_hydration(path: Path, slug: str) -> bool:
+        events.append(("hydrate", (path, slug)))
+        return False
+
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(local_runner, "_initialize_worktree_submodules", fail_hydration)
+    local_runner._update_pending.clear()
+
+    assert local_runner._check_for_updates_and_restart() is False
+    pull_event = ("run", ("git", "pull", "origin", "main", "--ff-only"))
+    hydrate_event = ("hydrate", (tmp_path, "self-update"))
+    assert events.index(pull_event) < events.index(hydrate_event)
+    assert local_runner._update_pending.is_set()
+
+    assert local_runner._check_for_updates_and_restart() is False
+    assert events.count(hydrate_event) == 2
+    local_runner._update_pending.clear()

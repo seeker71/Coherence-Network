@@ -42,6 +42,65 @@ done
 
 cd "$REPO_ROOT"
 
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "prompt-entry-guide: not inside a git worktree."
+  exit 1
+fi
+
+form_index_mode="$(git ls-files --stage -- form | awk 'NR == 1 { print $1 }')"
+form_index_sha="$(git ls-files --stage -- form | awk 'NR == 1 { print $2 }')"
+if [[ "$form_index_mode" == "160000" && ! -e "form/.git" && -f scripts/prepare_form_submodule.py ]] \
+  && command -v python3 >/dev/null 2>&1; then
+  python3 scripts/prepare_form_submodule.py --repo-root . || exit 1
+fi
+if [[ "$form_index_mode" == "160000" && ! -e "form/.git" ]]; then
+  echo "prompt-entry-guide: form submodule is not initialized."
+  echo "Initialize the pinned kernel checkout first:"
+  echo "  git submodule sync --recursive"
+  echo "  git submodule update --init --recursive"
+  echo "Then rerun:"
+  echo "  make prompt-guide"
+  exit 1
+fi
+if [[ "$form_index_mode" == "160000" ]]; then
+  form_checkout_sha="$(git -C form rev-parse HEAD 2>/dev/null || true)"
+  if [[ "$form_checkout_sha" != "$form_index_sha" ]]; then
+    echo "prompt-entry-guide: form submodule is not at the pinned gitlink."
+    echo "  expected: $form_index_sha"
+    echo "  observed: ${form_checkout_sha:-missing}"
+    echo "Restore the reviewed kernel snapshot first:"
+    echo "  git submodule update --force --init --recursive form"
+    echo "Then rerun:"
+    echo "  make prompt-guide"
+    exit 1
+  fi
+  form_material_dirt=""
+  while IFS= read -r -d '' form_status_entry; do
+    form_status_code="${form_status_entry:0:2}"
+    form_status_path="${form_status_entry:3}"
+    if [[ "$form_status_code" == "??" ]] && {
+      [[ "$form_status_path" == ".cache" || "$form_status_path" == .cache/* ]] ||
+      [[ "$form_status_path" == ".pytest_cache" || "$form_status_path" == .pytest_cache/* ]] ||
+      [[ "$form_status_path" == ".ruff_cache" || "$form_status_path" == .ruff_cache/* ]] ||
+      [[ "$form_status_path" == "form-kernel-rust/target" || "$form_status_path" == form-kernel-rust/target/* ]] ||
+      [[ "$form_status_path" == "form-kernel-ts/dist" || "$form_status_path" == form-kernel-ts/dist/* ]] ||
+      [[ "$form_status_path" == "form-kernel-ts/node_modules" || "$form_status_path" == form-kernel-ts/node_modules/* ]];
+    }; then
+      continue
+    fi
+    form_material_dirt+="${form_status_entry}"$'\n'
+  done < <(git -C form status --porcelain=v1 -z --untracked-files=all 2>/dev/null || true)
+  if [[ -n "$form_material_dirt" ]]; then
+    echo "prompt-entry-guide: form submodule has material changes outside the reviewed pin."
+    printf '%s' "$form_material_dirt"
+    echo "Land intentional kernel work in coherence-kernel first, or restore the reviewed snapshot:"
+    echo "  git submodule update --force --init --recursive form"
+    echo "Then rerun:"
+    echo "  make prompt-guide"
+    exit 1
+  fi
+fi
+
 if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
   export PATH="${HOME}/.local/bin:${PATH}"
 fi
@@ -84,11 +143,6 @@ print_claude_orientation() {
   echo "  - compost superseded forms; keep counts where they are naturally tended."
   echo "  - ship reversible own-branch work through proof; pause for irreversible effects."
 }
-
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "prompt-entry-guide: not inside a git worktree."
-  exit 1
-fi
 
 if ! ./scripts/check_ghx_auth.sh; then
   echo "prompt-entry-guide: ghx auth smoke check failed."

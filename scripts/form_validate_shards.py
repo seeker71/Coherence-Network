@@ -108,6 +108,7 @@ def _changed_paths(ref: str) -> set[str]:
     for cmd in (
         ["git", "diff", "--name-only", f"{ref}...HEAD"],
         ["git", "diff", "--name-only"],
+        ["git", "diff", "--cached", "--name-only"],
         ["git", "ls-files", "--others", "--exclude-standard", "form/"],
     ):
         out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT)
@@ -122,7 +123,10 @@ def _select_changed(workloads: list[Workload], ref: str) -> list[Workload] | Non
     then the FULL suite, because every band's meaning may have moved.
     """
     changed = _changed_paths(ref)
-    if any(p.startswith(KERNEL_SEMANTIC_PREFIXES) or p in KERNEL_SEMANTIC_PREFIXES for p in changed):
+    if "form" in changed or any(
+        p.startswith(KERNEL_SEMANTIC_PREFIXES) or p in KERNEL_SEMANTIC_PREFIXES
+        for p in changed
+    ):
         return None
     form_changed = {p.removeprefix("form/") for p in changed if p.startswith("form/")}
     if not form_changed:

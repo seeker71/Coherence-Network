@@ -18,6 +18,8 @@ jobs:
       HOSTINGER_VIRTUAL_MACHINE_ID: ${{ github.event.inputs.virtual_machine_id || vars.HOSTINGER_VIRTUAL_MACHINE_ID }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Restart VPS through Hostinger API
         run: |

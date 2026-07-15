@@ -2,7 +2,7 @@
 # fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle.
 #
 # Native-entry lane: flatten via fkwu+T_flat when warm (no bin-go on this surface).
-# Maintainer regen when T_flat is absent: scripts/regen_form_cli_bootstrap.sh (off-receipt).
+# Maintainer regen when T_flat is absent: form/scripts/regen_t_flat.sh (off-receipt).
 #
 # Usage:  fkwu_run.sh <bundle-file> <module.fk>... <band.fk>
 set -u

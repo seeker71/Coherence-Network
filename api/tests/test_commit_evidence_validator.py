@@ -147,6 +147,28 @@ def test_form_validate_requires_fourth_arm_or_gap_evidence() -> None:
     assert any("Form validate.sh evidence must include fourth-arm proof" in error for error in errors)
 
 
+def test_form_gitlink_is_runtime_and_form_evidence_without_matching_similar_names() -> None:
+    mod = _load_validator()
+
+    runtime_errors = mod.validate(_record(["form"], "test_only"), changed_files=["form"])
+    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in runtime_errors
+
+    form_record = _record(["form"], "runtime_fix")
+    form_record["local_validation"]["commands"] = ["cd form && ./validate.sh form-stdlib/core.fk"]
+    form_errors = mod.validate(form_record, changed_files=["form"])
+    assert any("Form validate.sh evidence must include fourth-arm proof" in error for error in form_errors)
+
+    similar_path = "form-notes/README.md"
+    similar_record = _record([similar_path], "docs_only")
+    similar_record["local_validation"]["commands"] = ["cd form && ./validate.sh form-stdlib/core.fk"]
+    assert mod.validate(similar_record, changed_files=[similar_path]) == []
+
+    aggregate_records = [
+        (Path("docs/system_audit/commit_evidence_2026-04-24_runtime.json"), _record(["form"], "runtime_fix"))
+    ]
+    assert mod._validate_aggregate_change_coverage(aggregate_records, ["form"]) == []
+
+
 def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
     mod = _load_validator()
     changed_files = ["form/form-stdlib/example.fk"]

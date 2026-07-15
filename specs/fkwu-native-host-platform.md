@@ -90,12 +90,12 @@ python3 scripts/validate_commit_evidence.py \
 ## Risks and Assumptions
 
 - **Assumption:** Clang remains bootstrap compiler for fkwu until form-asm Phase 2 lands.
-- **Risk:** Platform-specific C arms diverge on Windows CRLF selfhost flatten — gated off on Windows today.
+- **Risk:** Platform-specific C arms can diverge on Windows text-mode IO — the canonical fourth-arm carrier patches emitted C to binary mode and runs the self-host flatten gate on Windows.
 
 ## Known Gaps
 
 - **Follow-up:** Standard receipt platform rows (`mac`, `windows`, `android`) remain `pending` for host-metal bands (Phase 3).
-- **Follow-up:** T_flat maintainer regen uses bin-go (`scripts/regen_t_flat.sh`, fks table); fkwu-only full driver regen still bus-errors (Phase 2 arena lift).
+- **Follow-up:** T_flat maintainer regen uses bin-go (`form/scripts/regen_t_flat.sh`, fks table); fkwu-only full driver regen still bus-errors (Phase 2 arena lift).
 - **Follow-up:** SSE and thread pool natives lack dedicated flatten tags — task to add manifest rows when carriers land.
 
 ## Resource map (implement new features here)

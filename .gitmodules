@@ -1,0 +1,4 @@
+[submodule "form"]
+	path = form
+	url = https://github.com/seeker71/coherence-kernel.git
+	branch = form-submodule

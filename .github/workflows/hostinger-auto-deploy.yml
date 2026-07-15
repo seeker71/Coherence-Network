@@ -16,6 +16,7 @@ on:
       - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
       - 'Dockerfile*'
+      - 'form'
       - 'form/form-stdlib/**'
       - 'form/form-kernel-rust/**'
       - 'kernels/python_bmf/**'
@@ -44,6 +45,8 @@ jobs:
       TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v6

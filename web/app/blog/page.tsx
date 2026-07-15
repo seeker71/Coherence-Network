@@ -190,7 +190,7 @@ export default function BlogPage() {
           joins the network. Thompson Sampling starts learning from your providers immediately.
         </p>
         <div className="not-prose my-6 rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <pre className="text-sm overflow-x-auto"><code>{`git clone https://github.com/seeker71/Coherence-Network.git
+          <pre className="text-sm overflow-x-auto"><code>{`git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network/api
 pip install -e .
 python scripts/local_runner.py --timeout 300`}</code></pre>
