@@ -6,7 +6,7 @@ import os
 import ast
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.middleware.request_outcomes import recent_outcomes_snapshot
@@ -40,15 +40,6 @@ def _get_api_version() -> str:
 
 HEALTH_VERSION = _get_api_version()
 SERVICE_STARTED_AT = datetime.now(timezone.utc)
-_DEPLOY_SHA_ENV_KEYS = (
-    "RAILWAY_GIT_COMMIT_SHA",
-    "RAILWAY_GIT_SHA",
-    "GIT_COMMIT_SHA",
-    "COMMIT_SHA",
-    "SOURCE_VERSION",
-)
-
-
 def _iso_utc(ts: datetime) -> str:
     return ts.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -71,11 +62,7 @@ def _uptime_human(seconds: int) -> str:
 
 
 def _deployed_sha() -> tuple[str | None, str | None]:
-    """Get deployed SHA from runtime environment or config."""
-    for key in _DEPLOY_SHA_ENV_KEYS:
-        value = str(os.getenv(key, "")).strip()
-        if value:
-            return value, key
+    """Get deployed SHA from the live file-backed configuration."""
     config = get_config()
     sha = config.get("deployed_sha")
     if sha:
@@ -99,11 +86,19 @@ class _BaseHealthResponse(BaseModel):
     ] = None
     deployed_sha_source: Annotated[
         str | None,
-        Field(description="Environment variable source for deployed_sha"),
+        Field(description="File-backed configuration source for deployed_sha"),
     ] = None
     integrity_compromised: Annotated[
         bool,
         Field(description="True if audit ledger hash chain verification fails"),
+    ] = False
+    integrity_verified: Annotated[
+        bool,
+        Field(
+            description=(
+                "True only when audit-ledger verification completed without error"
+            )
+        ),
     ] = False
 
 
@@ -148,6 +143,39 @@ class HealthResponse(_BaseHealthResponse):
             )
         ),
     ] = "unavailable"
+    native_runtime_observation: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description=(
+                "Behavioral kernel known-answer and form-cli nonce/digest "
+                "challenge, including current executable/table identities"
+            )
+        ),
+    ] = None
+    observation_schema: Annotated[str | None, Field()] = None
+    observation_nonce_sha256: Annotated[str | None, Field()] = None
+    kernel_challenge: Annotated[dict[str, Any] | None, Field()] = None
+    form_cli_challenge: Annotated[dict[str, Any] | None, Field()] = None
+    deployment_witness_node_id: Annotated[
+        str | None,
+        Field(description="Latest persisted deployment WITNESS NamedCell REF"),
+    ] = None
+    deployment_witness_content_node_id: Annotated[
+        str | None,
+        Field(description="Content CTOR bound to the latest deployment WITNESS"),
+    ] = None
+    deployment_observed_at: Annotated[
+        str | None,
+        Field(description="UTC time of the independent post-deploy health read"),
+    ] = None
+    deployment_observation_expires_at: Annotated[
+        str | None,
+        Field(description="UTC expiry of the latest deployment WITNESS"),
+    ] = None
+    deployment_observation_fresh: Annotated[
+        bool,
+        Field(description="True only while the latest WITNESS verifies and is unexpired"),
+    ] = False
 
 
 class ReadyResponse(_BaseHealthResponse):
@@ -206,13 +234,24 @@ async def ready(request: Request):
 
     # Check audit ledger integrity (spec 123)
     integrity_compromised = False
+    integrity_verified = False
     try:
         # We only check the last 100 entries for the health check to keep it fast
         # Full verification is available at /api/audit/verify
         res = audit_ledger_service.verify_chain()
+        integrity_verified = True
         integrity_compromised = not res.verified
     except Exception:
         logger.warning("Integrity check failed", exc_info=True)
+    if not integrity_verified or integrity_compromised:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "integrity_verification_failed",
+                "integrity_verified": integrity_verified,
+                "integrity_compromised": integrity_compromised,
+            },
+        )
 
     return ReadyResponse(
         status="ready",
@@ -225,6 +264,7 @@ async def ready(request: Request):
         deployed_sha_source=deployed_sha_source,
         db_connected=db_connected,
         integrity_compromised=integrity_compromised,
+        integrity_verified=integrity_verified,
     )
 
 
@@ -248,7 +288,12 @@ def _check_schema() -> bool:
 
 
 @router.get("/health", response_model=HealthResponse, summary="Return API health status")
-async def health():
+async def health(
+    observation_nonce: Annotated[
+        str | None,
+        Query(pattern=r"^[A-Za-z0-9_-]{43}$"),
+    ] = None,
+):
     """Return API health status."""
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
@@ -256,8 +301,10 @@ async def health():
 
     # Check audit ledger integrity (spec 123)
     integrity_compromised = False
+    integrity_verified = False
     try:
         res = audit_ledger_service.verify_chain()
+        integrity_verified = True
         integrity_compromised = not res.verified
     except Exception:
         logger.warning("Integrity check failed", exc_info=True)
@@ -282,13 +329,93 @@ async def health():
     except Exception:
         recent_outcomes = None
 
-    # Which form-kernel surface is hot in this container. Import lazily so
-    # an import error inside the bridge doesn't kill the whole health probe.
+    # Execute both native carriers. Availability flags alone are not evidence
+    # that the deployed executable can answer or that its source stamp matches.
+    observation_schema = None
+    observation_nonce_sha256 = None
+    kernel_challenge = None
+    form_cli_challenge = None
     try:
-        from app.services.form_kernel_bridge import active_runtime
-        kernel_runtime = active_runtime()
-    except Exception:
+        if observation_nonce is None:
+            from app.services.native_runtime_observation import observe_native_runtime
+
+            native_runtime_observation = observe_native_runtime()
+            kernel_runtime = str(
+                native_runtime_observation.get("kernel", {}).get(
+                    "runtime", "unavailable"
+                )
+            )
+        else:
+            from app.services.deployment_observer_service import (
+                active_challenge_for_nonce,
+                carrier_challenge_input_sha256,
+                nonce_sha256,
+            )
+            from app.services.native_runtime_observation import (
+                observe_native_runtime_challenge,
+            )
+
+            with unified_db.session() as sess:
+                challenge = active_challenge_for_nonce(
+                    sess, nonce=observation_nonce
+                )
+            if deployed_sha != challenge.target_sha:
+                raise RuntimeError("observer challenge deployment SHA drift")
+            challenge_input = carrier_challenge_input_sha256(observation_nonce)
+            native_runtime_observation = observe_native_runtime_challenge(
+                challenge_input
+            )
+            kernel = native_runtime_observation["kernel"]
+            form_cli = native_runtime_observation["form_cli"]
+            observation_schema = "native-carrier-observation-v1"
+            observation_nonce_sha256 = nonce_sha256(observation_nonce)
+            kernel_runtime = str(kernel["runtime"])
+            kernel_challenge = {
+                "input_sha256": challenge_input,
+                "result": str(kernel["result"]),
+                "verified": True,
+                "runtime": kernel_runtime,
+                "binary_sha256": kernel["binary_sha256"],
+            }
+            form_cli_challenge = {
+                "input_sha256": challenge_input,
+                "result": form_cli["challenge_response_sha256"],
+                "verified": True,
+                "protocol": "form-cli-v2",
+                "binary_sha256": form_cli["binary_sha256"],
+                "wrapper_sha256": form_cli["wrapper_sha256"],
+                "source_sha256": form_cli["source_stamp"],
+                "table_sha256": form_cli["table_sha256"],
+                "stamp_sha256": form_cli["stamp_sha256"],
+            }
+    except Exception as exc:
+        if observation_nonce is not None:
+            raise HTTPException(
+                status_code=503,
+                detail="native observer challenge failed",
+            ) from exc
+        native_runtime_observation = None
         kernel_runtime = "unavailable"
+
+    witness = None
+    witness_fresh = False
+    try:
+        from app.services.deployment_observation import (
+            latest_deployment_observation,
+            verify_deployment_observation,
+        )
+        with unified_db.session() as sess:
+            witness = latest_deployment_observation(sess, now=now, allow_expired=True)
+            if witness is not None:
+                verify_deployment_observation(
+                    sess,
+                    witness["node_id"],
+                    expected_answer_key=witness["answer_key"],
+                    now=now,
+                )
+                witness_fresh = True
+    except Exception:
+        witness_fresh = False
 
     return HealthResponse(
         status="ok",
@@ -300,11 +427,22 @@ async def health():
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
         integrity_compromised=integrity_compromised,
+        integrity_verified=integrity_verified,
         schema_ok=schema_ok,
         smart_reap_available=smart_reap_available,
         smart_reap_import_error=smart_reap_import_error,
         recent_outcomes=recent_outcomes,
         kernel_runtime=kernel_runtime,
+        native_runtime_observation=native_runtime_observation,
+        observation_schema=observation_schema,
+        observation_nonce_sha256=observation_nonce_sha256,
+        kernel_challenge=kernel_challenge,
+        form_cli_challenge=form_cli_challenge,
+        deployment_witness_node_id=(witness or {}).get("node_id"),
+        deployment_witness_content_node_id=(witness or {}).get("content_node_id"),
+        deployment_observed_at=(witness or {}).get("observed_at"),
+        deployment_observation_expires_at=(witness or {}).get("expires_at"),
+        deployment_observation_fresh=witness_fresh,
     )
 
 

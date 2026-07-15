@@ -15,6 +15,7 @@ from app.services import idea_service, runtime_service
 
 
 ROOT = Path(__file__).resolve().parents[2]
+BML_ROUTES = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
 NATIVE_ROUTE_GOAL_LOOP_SPEC = importlib.util.spec_from_file_location(
     "native_route_goal_loop",
     ROOT / "scripts" / "native_route_goal_loop.py",
@@ -304,7 +305,7 @@ def test_native_route_goal_loop_task_card_preserves_all_source():
 
 
 def test_inventory_flow_native_route_expresses_lineage_grammar():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -339,7 +340,7 @@ def test_inventory_flow_native_route_expresses_lineage_grammar():
 
 
 def test_household_events_native_route_releases_empty_calendar_fanout():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -361,7 +362,7 @@ def test_household_events_native_route_releases_empty_calendar_fanout():
 
 
 def test_graph_node_detail_native_route_preserves_slug_lookup_without_swallowing_count():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -388,7 +389,7 @@ def test_graph_node_detail_native_route_preserves_slug_lookup_without_swallowing
 
 
 def test_idea_detail_native_route_preserves_static_idea_reads():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -420,7 +421,7 @@ def test_idea_detail_native_route_preserves_static_idea_reads():
 
 
 def test_idea_question_native_routes_preserve_question_flow_contract():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -444,7 +445,7 @@ def test_idea_question_native_routes_preserve_question_flow_contract():
 
 
 def test_idea_update_native_route_preserves_patch_flow_contract():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
         encoding="utf-8"
     )
@@ -464,7 +465,7 @@ def test_idea_update_native_route_preserves_patch_flow_contract():
 
 
 def test_bml_front_door_captures_query_errors_before_pg_close():
-    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    route_text = BML_ROUTES.read_text(encoding="utf-8")
 
     assert "let closed = pg_close(conn);\n        if api-query-failed?()" not in route_text
     assert "let query_error = pg_last_error();" in route_text

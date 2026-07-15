@@ -365,6 +365,20 @@
     "require_web_health_proxy_sha": false
   },
 
+  "grounding": {
+    "_doc": "Form-native grounding, deployment WITNESS freshness, and bounded public ask settings.",
+    "deployment_witness_ttl_seconds": 86400,
+    "deployment_witness_max_clock_skew_seconds": 120,
+    "native_ask_timeout_seconds": 20,
+    "native_ask_max_query_chars": 2000
+  },
+
+  "deployment_observer": {
+    "_doc": "Operational switch and short-lived timing only. Repository/workflow identity pins are immutable reviewed code.",
+    "enabled": false,
+    "challenge_ttl_seconds": 300
+  },
+
   "deploy_logs_url": null,
 
   "deployed_sha": null,

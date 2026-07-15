@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 247
+**Total files**: 252
 
 | File | Purpose |
 |---|---|
@@ -89,6 +89,9 @@
 | [creator_resonance_service.py](creator_resonance_service.py) | Creator resonance report scoring. |
 | [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
+| [deployment_observation.py](deployment_observation.py) | Persistent, content-bound deployment observations in the Form substrate. |
+| [deployment_observer_oidc.py](deployment_observer_oidc.py) | Verify GitHub Actions OIDC identity for the public deployment observer. |
+| [deployment_observer_service.py](deployment_observer_service.py) | One-time external deployment challenges and byte-bound observations. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
 | [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
 | [discovery_reward_service.py](discovery_reward_service.py) | Discovery reward service — CC flows to contributors who bring attention. |
@@ -128,6 +131,7 @@
 | [graph_service.py](graph_service.py) | Universal graph service — CRUD for nodes and edges. |
 | [grounded_idea_metrics_service.py](grounded_idea_metrics_service.py) | Grounded idea portfolio metrics — replace hand-typed numbers with real data. |
 | [grounded_measurement_service.py](grounded_measurement_service.py) | Grounded cost & value measurement for prompt A/B ROI (spec 115). |
+| [grounding_source.py](grounding_source.py) | Exact source-byte bindings for grounded retrieval. |
 | [idea_dashboards.py](idea_dashboards.py) | Idea dashboards — portfolio summary, progress dashboard, per-idea activity. |
 | [idea_derivation.py](idea_derivation.py) | Derive an Idea from an idea_id when no canonical record exists. |
 | [idea_governance_views.py](idea_governance_views.py) | Governance health + showcase views for the idea portfolio. |
@@ -170,6 +174,7 @@
 | [meta_service.py](meta_service.py) | Metadata self-discovery service. |
 | [metrics_service.py](metrics_service.py) | Task metrics: persistence and aggregation. Spec 026 Phase 1. |
 | [mvp_baseline_service.py](mvp_baseline_service.py) | Helpers for local MVP baseline artifact discovery. |
+| [native_runtime_observation.py](native_runtime_observation.py) | Behavioral observation of the deployed kernel and form-cli carriers. |
 | [native_training_receipts.py](native_training_receipts.py) | Load committed native training receipt artifacts for model dashboards. |
 | [news_ingestion_service.py](news_ingestion_service.py) | News ingestion service: fetches RSS feeds and caches results. |
 | [news_resonance_service.py](news_resonance_service.py) | News resonance service: matches news items to ideas using keyword-based resonance scoring. |

@@ -1,0 +1,566 @@
+name: Public Deployment Observer
+
+on:
+  workflow_call:
+    secrets:
+      hostinger_ssh_key:
+        required: true
+
+permissions:
+  contents: none
+  id-token: write
+
+jobs:
+  observe-public-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    env:
+      API_BASE: https://api.coherencycoin.com
+      TARGET_SHA: ${{ github.sha }}
+    steps:
+      - name: Issue server nonce with pinned GitHub identity
+        id: challenge
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          audience="urn:coherence:deployment-challenge:v1:${TARGET_SHA}"
+          encoded_audience="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$audience")"
+          token_response="$(mktemp)"
+          challenge_response="$(mktemp)"
+          trap 'rm -f "$token_response" "$challenge_response"' EXIT
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 20 \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${encoded_audience}" \
+            -o "$token_response"
+          oidc_token="$(python3 - "$token_response" <<'PY'
+          import json,sys
+          value=json.load(open(sys.argv[1], encoding="utf-8")).get("value")
+          if not isinstance(value,str) or value.count(".") != 2:
+              raise SystemExit("GitHub OIDC response has no JWT")
+          print(value)
+          PY
+          )"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 30 \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${oidc_token}" \
+            --data "$(python3 -c 'import json,sys; print(json.dumps({"target_sha":sys.argv[1]},separators=(",",":")))' "$TARGET_SHA")" \
+            "${API_BASE}/api/deployment-observer/challenge" \
+            -o "$challenge_response"
+          python3 - "$challenge_response" "$GITHUB_OUTPUT" "$TARGET_SHA" <<'PY'
+          import json,re,sys
+          body=json.load(open(sys.argv[1], encoding="utf-8"))
+          out=sys.argv[2]
+          target=sys.argv[3]
+          required={
+              "schema":"deployment-observer-challenge-v1",
+              "target_sha":target,
+              "workflow_sha":target,
+          }
+          for key,value in required.items():
+              if body.get(key) != value:
+                  raise SystemExit(f"challenge {key} mismatch")
+          patterns={
+              "challenge_id":r"^[0-9a-f-]{36}$",
+              "nonce":r"^[A-Za-z0-9_-]{43}$",
+              "nonce_sha256":r"^[0-9a-f]{64}$",
+              "issued_claims_sha256":r"^[0-9a-f]{64}$",
+              "run_id":r"^[0-9]+$",
+              "run_attempt":r"^[0-9]+$",
+              "actor_id":r"^[0-9]+$",
+              "job_workflow_sha":r"^[0-9a-f]{40}$",
+              "observer_policy_sha256":r"^[0-9a-f]{64}$",
+          }
+          for key,pattern in patterns.items():
+              value=str(body.get(key) or "")
+              if re.fullmatch(pattern,value) is None:
+                  raise SystemExit(f"challenge {key} malformed")
+              with open(out,"a",encoding="utf-8") as stream:
+                  stream.write(f"{key}={value}\n")
+          health_url=str(body.get("health_url") or "")
+          expected=f"https://api.coherencycoin.com/api/health?observation_nonce={body['nonce']}"
+          if health_url != expected:
+              raise SystemExit("challenge health URL mismatch")
+          with open(out,"a",encoding="utf-8") as stream:
+              stream.write(f"health_url={health_url}\n")
+          print(f"::add-mask::{body['nonce']}")
+          PY
+
+      - name: Execute carriers directly in the deployed container
+        id: direct
+        shell: bash
+        env:
+          HOSTINGER_SSH_KEY: ${{ secrets.hostinger_ssh_key }}
+          NONCE: ${{ steps.challenge.outputs.nonce }}
+        run: |
+          set -euo pipefail
+          ssh_dir="$(mktemp -d)"
+          tree_response="$(mktemp)"
+          direct_body="$(mktemp)"
+          source_archive="$(mktemp)"
+          source_dir="$(mktemp -d)"
+          reproduced_dir="$(mktemp -d)"
+          wrapper_source="$(mktemp)"
+          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$reproduced_dir" "$wrapper_source"' EXIT
+          install -m 700 -d "$ssh_dir"
+          printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
+          chmod 600 "$ssh_dir/key"
+          cat > "$ssh_dir/known_hosts" <<'HOSTKEY'
+          187.77.152.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFXwjAlbFkFWkQ+X16UCTDLTS6sM6wKtlfsIBhxOjcAR
+          HOSTKEY
+          chmod 600 "$ssh_dir/known_hosts"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 20 \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/seeker71/Coherence-Network/git/trees/${TARGET_SHA}" \
+            -o "$tree_response"
+          form_source_commit="$(python3 - "$tree_response" <<'PY'
+          import json,re,sys
+          tree=json.load(open(sys.argv[1],encoding="utf-8")).get("tree")
+          matches=[item for item in tree or [] if item.get("path")=="form"]
+          if len(matches)!=1 or matches[0].get("mode")!="160000":
+              raise SystemExit("target tree has no single form gitlink")
+          sha=str(matches[0].get("sha") or "")
+          if re.fullmatch(r"[0-9a-f]{40}",sha) is None:
+              raise SystemExit("form gitlink SHA malformed")
+          print(sha)
+          PY
+          )"
+          mapfile -t challenge < <(python3 - "$NONCE" <<'PY'
+          import hashlib,sys
+          nonce=sys.argv[1]
+          value=hashlib.sha256(b"coherence-deployment-observer-v1\0"+nonce.encode("ascii")).hexdigest()
+          first,second,third,fourth=(int(value[i:i+4],16) for i in range(0,16,4))
+          expected=(((first*17+second)*19+third)*23)+fourth
+          expression=f"(add (mul (add (mul (add (mul {first} 17) {second}) 19) {third}) 23) {fourth})"
+          form=hashlib.sha256(b"form-cli-carrier-challenge-v1\n"+value.encode("ascii")).hexdigest()
+          print(value); print(expected); print(expression); print(form)
+          PY
+          )
+          [[ "${#challenge[@]}" == 4 ]]
+          ssh \
+            -i "$ssh_dir/key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=2 \
+            root@187.77.152.42 bash -s -- \
+            "$TARGET_SHA" "$form_source_commit" \
+            "${challenge[0]}" "${challenge[1]}" "${challenge[2]}" "${challenge[3]}" \
+            > "$direct_body" <<'REMOTE'
+          set -euo pipefail
+          target_sha="$1"
+          form_source_commit="$2"
+          challenge_input="$3"
+          rust_expected="$4"
+          rust_expression="$5"
+          form_expected="$6"
+          compose=/docker/coherence-network/docker-compose.yml
+          container="$(docker compose -f "$compose" ps -q api)"
+          [[ -n "$container" ]]
+          running="$(docker inspect --format '{{.State.Running}}' "$container")"
+          [[ "$running" == true ]]
+          container_id="$(docker inspect --format '{{.Id}}' "$container")"
+          image_id="$(docker inspect --format '{{.Image}}' "$container")"
+          image_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image_id")"
+          image_form_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.coherence-form-revision"}}' "$image_id")"
+          [[ "$image_revision" == "$target_sha" ]]
+          [[ "$image_form_revision" == "$form_source_commit" ]]
+          build_context="$(docker compose -f "$compose" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["build"]["context"])')"
+          [[ "$build_context" =~ Coherence-Network\.git#([0-9a-f]{40})$ ]]
+          api_build_context_sha="${BASH_REMATCH[1]}"
+          [[ "$api_build_context_sha" == "$target_sha" ]]
+          kernel_binary_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-kernel-rust | cut -d' ' -f1)"
+          form_cli_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli | cut -d' ' -f1)"
+          form_cli_wrapper_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-cli | cut -d' ' -f1)"
+          form_cli_table_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli-table.txt | cut -d' ' -f1)"
+          form_cli_stamp_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli.stamp | cut -d' ' -f1)"
+          form_cli_source_sha256="$(docker exec "$container_id" sh -c 'tr -d "\r\n" < /app/form/form-stdlib/bootstrap/form-cli.source.sha256')"
+          kernel_result="$(docker exec "$container_id" /app/bin/form-kernel-rust --expr "$rust_expression")"
+          [[ "$kernel_result" == "$rust_expected" ]]
+          form_line="$(printf 'carrier-challenge %s\n' "$challenge_input" | docker exec -i "$container_id" /app/form/form-cli)"
+          IFS='|' read -r form_label form_source_echo form_input_echo form_result form_extra <<< "$form_line"
+          [[ "$form_label" == carrier-challenge-v1 ]]
+          [[ "$form_source_echo" == "$form_cli_source_sha256" ]]
+          [[ "$form_input_echo" == "$challenge_input" ]]
+          [[ "$form_result" == "$form_expected" && -z "${form_extra:-}" ]]
+          python3 - \
+            "$target_sha" "$form_source_commit" "$challenge_input" \
+            "$container_id" "$image_id" "$image_revision" "$image_form_revision" \
+            "$api_build_context_sha" "$kernel_result" "$kernel_binary_sha256" \
+            "$form_result" "$form_cli_binary_sha256" "$form_cli_wrapper_sha256" \
+            "$form_cli_source_sha256" "$form_cli_table_sha256" "$form_cli_stamp_sha256" <<'PY'
+          import json,sys
+          (
+              target,form_commit,challenge,container,image,image_revision,image_form_revision,
+              context_sha,kernel_result,kernel_sha,form_result,form_sha,wrapper_sha,
+              source_sha,table_sha,stamp_sha,
+          )=sys.argv[1:]
+          print(json.dumps({
+              "schema":"direct-native-carrier-probe-v1",
+              "target_sha":target,
+              "form_source_commit":form_commit,
+              "challenge_input_sha256":challenge,
+              "container_id":container,
+              "image_id":image,
+              "image_revision":image_revision,
+              "image_form_revision":image_form_revision,
+              "api_build_context_sha":context_sha,
+              "kernel_result":kernel_result,
+              "kernel_binary_sha256":kernel_sha,
+              "form_cli_result":form_result,
+              "form_cli_protocol":"form-cli-v2",
+              "form_cli_binary_sha256":form_sha,
+              "form_cli_wrapper_sha256":wrapper_sha,
+              "form_cli_source_sha256":source_sha,
+              "form_cli_table_sha256":table_sha,
+              "form_cli_stamp_sha256":stamp_sha,
+          },sort_keys=True,separators=(",",":")))
+          PY
+          REMOTE
+          builder='docker.io/library/rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944'
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 60 \
+            "https://codeload.github.com/seeker71/coherence-kernel/tar.gz/${form_source_commit}" \
+            -o "$source_archive"
+          tar -xzf "$source_archive" --strip-components=1 -C "$source_dir"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 30 \
+            "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/bin/form-cli" \
+            -o "$wrapper_source"
+          docker run --rm --platform linux/amd64 \
+            -v "$source_dir:/source:ro" \
+            -v "$reproduced_dir:/out" \
+            "$builder" bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends openssl
+              mkdir -p /build /build/form-cli-src
+              cp /source/form-kernel-rust/Cargo.toml /source/form-kernel-rust/Cargo.lock /source/form-kernel-rust/pyproject.toml /build/
+              cp -a /source/form-kernel-rust/src /source/form-kernel-rust/libraries /source/form-kernel-rust/recipes /build/
+              cp -a /source/form-stdlib /build/form-cli-src/form-stdlib
+              cp -a /source/scripts /build/form-cli-src/scripts
+              cp /source/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
+              cd /build/form-cli-src
+              CC=cc FORM_CLI_FORCE_LINK=1 /build/form-cli-src/build-form-cli.sh /out/form-cli
+              bash /build/form-cli-src/scripts/form_cli_bootstrap_proof.sh /out/form-cli
+              cd /build
+              cargo build --release --bin form-kernel-rust
+              strip target/release/form-kernel-rust
+              cp target/release/form-kernel-rust /out/form-kernel-rust
+            '
+          reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
+          reproduced_kernel_sha="$(sha256sum "$reproduced_dir/form-kernel-rust" | cut -d' ' -f1)"
+          source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
+          source_digest="$(tr -d '\r\n' < "$source_dir/form-stdlib/bootstrap/form-cli.source.sha256")"
+          source_table_sha="$(sha256sum "$source_dir/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
+          source_stamp_sha="$(sha256sum "$source_dir/form-stdlib/bootstrap/form-cli.stamp" | cut -d' ' -f1)"
+          python3 - \
+            "$direct_body" "$TARGET_SHA" "$form_source_commit" "$builder" \
+            "$reproduced_kernel_sha" "$reproduced_form_sha" "$source_wrapper_sha" \
+            "$source_digest" "$source_table_sha" "$source_stamp_sha" <<'PY'
+          import json,re,sys
+          (
+              path,target,form_commit,builder,reproduced_kernel,reproduced_form,
+              source_wrapper,source_digest,source_table,source_stamp,
+          )=sys.argv[1:]
+          body=json.load(open(path,encoding="utf-8"))
+          if body.get("target_sha")!=target or body.get("form_source_commit")!=form_commit:
+              raise SystemExit("direct probe source identity mismatch")
+          for field in ("container_id","kernel_binary_sha256","form_cli_binary_sha256","form_cli_wrapper_sha256","form_cli_source_sha256","form_cli_table_sha256","form_cli_stamp_sha256"):
+              if re.fullmatch(r"[0-9a-f]{64}",str(body.get(field) or "")) is None:
+                  raise SystemExit(f"direct probe {field} malformed")
+          if re.fullmatch(r"sha256:[0-9a-f]{64}",str(body.get("image_id") or "")) is None:
+              raise SystemExit("direct probe image ID malformed")
+          expected={
+              "kernel_binary_sha256":reproduced_kernel,
+              "form_cli_binary_sha256":reproduced_form,
+              "form_cli_wrapper_sha256":source_wrapper,
+              "form_cli_source_sha256":source_digest,
+              "form_cli_table_sha256":source_table,
+              "form_cli_stamp_sha256":source_stamp,
+          }
+          for field,value in expected.items():
+              if body.get(field)!=value:
+                  raise SystemExit(f"deployed {field} differs from immutable-source reproduction")
+          body.update({
+              "reproducible_builder_image":builder,
+              "reproduced_kernel_binary_sha256":reproduced_kernel,
+              "reproduced_form_cli_binary_sha256":reproduced_form,
+              "source_wrapper_sha256":source_wrapper,
+              "source_form_cli_source_sha256":source_digest,
+              "source_form_cli_table_sha256":source_table,
+              "source_form_cli_stamp_sha256":source_stamp,
+          })
+          open(path,"w",encoding="utf-8").write(json.dumps(body,sort_keys=True,separators=(",",":")))
+          PY
+          install -m 600 "$direct_body" "${RUNNER_TEMP}/coherence-observer-direct-${GITHUB_RUN_ID}.json"
+
+      - name: Observe and independently verify both native carriers
+        id: probe
+        shell: bash
+        env:
+          CHALLENGE_ID: ${{ steps.challenge.outputs.challenge_id }}
+          NONCE: ${{ steps.challenge.outputs.nonce }}
+          NONCE_SHA256: ${{ steps.challenge.outputs.nonce_sha256 }}
+          HEALTH_URL: ${{ steps.challenge.outputs.health_url }}
+          ISSUED_CLAIMS_SHA256: ${{ steps.challenge.outputs.issued_claims_sha256 }}
+          RUN_ID_CLAIM: ${{ steps.challenge.outputs.run_id }}
+          RUN_ATTEMPT_CLAIM: ${{ steps.challenge.outputs.run_attempt }}
+          ACTOR_ID_CLAIM: ${{ steps.challenge.outputs.actor_id }}
+          JOB_WORKFLOW_SHA: ${{ steps.challenge.outputs.job_workflow_sha }}
+          OBSERVER_POLICY_SHA256: ${{ steps.challenge.outputs.observer_policy_sha256 }}
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          headers="$(mktemp)"
+          meta="$(mktemp)"
+          commitment="$(mktemp)"
+          trap 'rm -f "$body" "$headers" "$meta" "$commitment"' EXIT
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 30 \
+            -H 'Accept: application/json' \
+            -H 'Cache-Control: no-cache' \
+            -D "$headers" -o "$body" \
+            -w '%{http_code}\n%{url_effective}\n%{scheme}\n%{ssl_verify_result}\n' \
+            "$HEALTH_URL" > "$meta"
+          direct_body="${RUNNER_TEMP}/coherence-observer-direct-${GITHUB_RUN_ID}.json"
+          python3 - "$body" "$direct_body" "$headers" "$meta" "$commitment" "$GITHUB_OUTPUT" <<'PY'
+          import hashlib,json,os,re,sys
+
+          body_path,direct_path,headers_path,meta_path,commitment_path,out=sys.argv[1:]
+          raw=open(body_path,"rb").read()
+          if not 2 <= len(raw) <= 131072:
+              raise SystemExit("health body size invalid")
+          def unique(pairs):
+              out={}
+              for key,value in pairs:
+                  if key in out: raise SystemExit("duplicate JSON key")
+                  out[key]=value
+              return out
+          body=json.loads(raw.decode("utf-8"),object_pairs_hook=unique)
+          meta=open(meta_path,encoding="utf-8").read().splitlines()
+          if meta != ["200",os.environ["HEALTH_URL"],"HTTPS","0"]:
+              raise SystemExit(f"health transport mismatch: {meta!r}")
+          content_types=[]
+          for line in open(headers_path,encoding="iso-8859-1"):
+              if line.lower().startswith("content-type:"):
+                  content_types.append(line.split(":",1)[1].strip().split(";",1)[0].lower())
+          if content_types != ["application/json"]:
+              raise SystemExit(f"health content type mismatch: {content_types!r}")
+          nonce=os.environ["NONCE"]
+          target=os.environ["TARGET_SHA"]
+          nonce_sha=hashlib.sha256(nonce.encode("ascii")).hexdigest()
+          if nonce_sha != os.environ["NONCE_SHA256"]:
+              raise SystemExit("nonce digest mismatch")
+          challenge_input=hashlib.sha256(
+              b"coherence-deployment-observer-v1\0"+nonce.encode("ascii")
+          ).hexdigest()
+          first,second,third,fourth=(
+              int(challenge_input[i:i+4],16) for i in range(0,16,4)
+          )
+          rust_expected=(((first*17+second)*19+third)*23)+fourth
+          form_expected=hashlib.sha256(
+              b"form-cli-carrier-challenge-v1\n"+challenge_input.encode("ascii")
+          ).hexdigest()
+          required={
+              "observation_schema":"native-carrier-observation-v1",
+              "observation_nonce_sha256":nonce_sha,
+              "deployed_sha":target,
+              "status":"ok",
+              "integrity_verified":True,
+              "integrity_compromised":False,
+              "schema_ok":True,
+          }
+          for key,value in required.items():
+              if body.get(key) != value:
+                  raise SystemExit(f"health {key} mismatch")
+          kernel=body.get("kernel_challenge")
+          form=body.get("form_cli_challenge")
+          if not isinstance(kernel,dict) or not isinstance(form,dict):
+              raise SystemExit("health carrier challenge missing")
+          if kernel.get("input_sha256") != challenge_input or str(kernel.get("result")) != str(rust_expected):
+              raise SystemExit("Rust carrier result mismatch")
+          if kernel.get("verified") is not True or kernel.get("runtime") not in {"inline","subprocess"}:
+              raise SystemExit("Rust carrier not verified")
+          if body.get("kernel_runtime") != kernel.get("runtime"):
+              raise SystemExit("Rust runtime projection mismatch")
+          if form.get("input_sha256") != challenge_input or form.get("result") != form_expected:
+              raise SystemExit("form-cli carrier result mismatch")
+          if form.get("verified") is not True or form.get("protocol") != "form-cli-v2":
+              raise SystemExit("form-cli carrier not verified")
+          hex64=re.compile(r"^[0-9a-f]{64}$")
+          digest_fields={
+              "kernel_binary_sha256":kernel.get("binary_sha256"),
+              "form_cli_binary_sha256":form.get("binary_sha256"),
+              "form_cli_wrapper_sha256":form.get("wrapper_sha256"),
+              "form_cli_source_sha256":form.get("source_sha256"),
+              "form_cli_table_sha256":form.get("table_sha256"),
+              "form_cli_stamp_sha256":form.get("stamp_sha256"),
+          }
+          if any(not isinstance(v,str) or hex64.fullmatch(v) is None for v in digest_fields.values()):
+              raise SystemExit("carrier digest malformed")
+          stable={
+              "schema":"native-carrier-observation-v1",
+              "deployed_sha":target,
+              "observation_nonce_sha256":nonce_sha,
+              "carrier_challenge_input_sha256":challenge_input,
+              "status":"ok",
+              "integrity_verified":True,
+              "integrity_compromised":False,
+              "schema_ok":True,
+              "kernel_runtime":kernel["runtime"],
+              "kernel_result":str(rust_expected),
+              **digest_fields,
+              "form_cli_result":form_expected,
+              "form_cli_protocol":"form-cli-v2",
+          }
+          canonical=lambda value:json.dumps(value,sort_keys=True,separators=(",",":")).encode()
+          public_hash=hashlib.sha256(raw).hexdigest()
+          stable_hash=hashlib.sha256(canonical(stable)).hexdigest()
+          direct_raw=open(direct_path,"rb").read()
+          direct=json.loads(direct_raw.decode("utf-8"),object_pairs_hook=unique)
+          if direct.get("target_sha") != target or direct.get("challenge_input_sha256") != challenge_input:
+              raise SystemExit("direct probe challenge mismatch")
+          if direct.get("kernel_result") != str(rust_expected) or direct.get("form_cli_result") != form_expected:
+              raise SystemExit("direct probe result mismatch")
+          if any(direct.get(field) != value for field,value in digest_fields.items()):
+              raise SystemExit("direct/public carrier digest mismatch")
+          direct_hash=hashlib.sha256(direct_raw).hexdigest()
+          commitment={
+              "schema":"deployment-observation-commitment-v1",
+              "challenge_id":os.environ["CHALLENGE_ID"],
+              "nonce_sha256":nonce_sha,
+              "target_sha":target,
+              "method":"GET",
+              "effective_url":os.environ["HEALTH_URL"],
+              "status_code":200,
+              "content_type":"application/json",
+              "public_body_sha256":public_hash,
+              "stable_projection_sha256":stable_hash,
+              "direct_probe_body_sha256":direct_hash,
+              "container_id":direct["container_id"],
+              "image_id":direct["image_id"],
+              "form_source_commit":direct["form_source_commit"],
+              "issued_claims_sha256":os.environ["ISSUED_CLAIMS_SHA256"],
+              "run_id":os.environ["RUN_ID_CLAIM"],
+              "run_attempt":os.environ["RUN_ATTEMPT_CLAIM"],
+              "actor_id":os.environ["ACTOR_ID_CLAIM"],
+              "workflow_sha":target,
+              "job_workflow_sha":os.environ["JOB_WORKFLOW_SHA"],
+              "observer_policy_sha256":os.environ["OBSERVER_POLICY_SHA256"],
+          }
+          commitment_hash=hashlib.sha256(canonical(commitment)).hexdigest()
+          open(commitment_path,"wb").write(canonical(commitment))
+          with open(out,"a",encoding="utf-8") as stream:
+              stream.write(f"body_path={body_path}\n")
+              stream.write(f"content_type=application/json\n")
+              stream.write(f"commitment_sha256={commitment_hash}\n")
+          PY
+          # Preserve the exact observed bytes for the next step after this shell exits.
+          install -m 600 "$body" "${RUNNER_TEMP}/coherence-observer-health-${GITHUB_RUN_ID}.json"
+
+      - name: Submit byte-bound observation with a second OIDC token
+        shell: bash
+        env:
+          CHALLENGE_ID: ${{ steps.challenge.outputs.challenge_id }}
+          NONCE: ${{ steps.challenge.outputs.nonce }}
+          HEALTH_URL: ${{ steps.challenge.outputs.health_url }}
+          COMMITMENT_SHA256: ${{ steps.probe.outputs.commitment_sha256 }}
+        run: |
+          set -euo pipefail
+          body="${RUNNER_TEMP}/coherence-observer-health-${GITHUB_RUN_ID}.json"
+          response="$(mktemp)"
+          token_response="$(mktemp)"
+          trap 'rm -f "$body" "$response" "$token_response"' EXIT
+          encoded_digest="$(python3 -c 'import base64,sys; print(base64.urlsafe_b64encode(bytes.fromhex(sys.argv[1])).rstrip(b"=").decode())' "$COMMITMENT_SHA256")"
+          audience="urn:coherence:deployment-observation:v1:${encoded_digest}"
+          encoded_audience="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$audience")"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 20 \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${encoded_audience}" \
+            -o "$token_response"
+          oidc_token="$(python3 - "$token_response" <<'PY'
+          import json,sys
+          value=json.load(open(sys.argv[1], encoding="utf-8")).get("value")
+          if not isinstance(value,str) or value.count(".") != 2:
+              raise SystemExit("GitHub OIDC response has no JWT")
+          print(value)
+          PY
+          )"
+          payload="$(python3 - "$body" <<'PY'
+          import base64,json,os,sys
+          raw=open(sys.argv[1],"rb").read()
+          direct=open(os.path.join(os.environ["RUNNER_TEMP"],f"coherence-observer-direct-{os.environ['GITHUB_RUN_ID']}.json"),"rb").read()
+          print(json.dumps({
+              "challenge_id":os.environ["CHALLENGE_ID"],
+              "nonce":os.environ["NONCE"],
+              "public_url":os.environ["HEALTH_URL"],
+              "status_code":200,
+              "content_type":"application/json",
+              "public_body_base64":base64.b64encode(raw).decode("ascii"),
+              "direct_probe_body_base64":base64.b64encode(direct).decode("ascii"),
+          },separators=(",",":")))
+          PY
+          )"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 90 \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${oidc_token}" \
+            --data "$payload" \
+            "${API_BASE}/api/deployment-observer/observation" \
+            -o "$response"
+          python3 - "$response" "$TARGET_SHA" "$COMMITMENT_SHA256" <<'PY'
+          import json,re,sys
+          body=json.load(open(sys.argv[1],encoding="utf-8"))
+          if body.get("observed") is not True or body.get("target_sha") != sys.argv[2]:
+              raise SystemExit("observer did not persist current deployment")
+          if body.get("commitment_sha256") != sys.argv[3]:
+              raise SystemExit("observer commitment changed at recorder")
+          if re.fullmatch(r"@[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+",str(body.get("witness_node_id") or "")) is None:
+              raise SystemExit("observer returned no WITNESS NodeID")
+          PY
+
+      - name: Verify public answer is fully observed
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(mktemp)"
+          trap 'rm -f "$response"' EXIT
+          query="observed deployment witness ${TARGET_SHA} native carrier commitment"
+          payload="$(python3 -c 'import json,sys; print(json.dumps({"query":sys.argv[1]},separators=(",",":")))' "$query")"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 45 \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "${API_BASE}/api/substrate/grounded-ask" \
+            -o "$response"
+          python3 - "$response" "$TARGET_SHA" <<'PY'
+          import json,sys
+          body=json.load(open(sys.argv[1],encoding="utf-8"))
+          expected=(
+              "trust  path:native  grounded:yes  freq:yes  "
+              "freq-source:certified-form  suffic:yes  observed:yes  -> OBSERVED  "
+              "decision:accept  reason:ok"
+          )
+          if body.get("trust") != expected:
+              raise SystemExit(f"public ask is not OBSERVED: {body.get('trust')!r}")
+          answer=json.loads(body.get("answer") or "null")
+          if answer.get("expected_sha") != sys.argv[2] or answer.get("actual_sha") != sys.argv[2]:
+              raise SystemExit("public WITNESS is not current-SHA bound")
+          if answer.get("observer_authentication") != "github-actions-oidc-v1":
+              raise SystemExit("public WITNESS lacks independent OIDC authentication")
+          for field in ("commitment_sha256","stable_health_sha256","job_workflow_sha"):
+              if not answer.get(field):
+                  raise SystemExit(f"public WITNESS lacks {field}")
+          PY

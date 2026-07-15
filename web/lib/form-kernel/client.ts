@@ -1,13 +1,9 @@
-// Browser-facing bridge into the TypeScript Form kernel.
-import {
-  Frame,
-  Kernel,
-  Trace,
-  nodeKey,
-  walk,
-  type NodeID,
-} from "./vendor/kernel.ts";
-import { readAll } from "./vendor/reader.ts";
+// Browser-facing bridge into the canonical TypeScript Form kernel.
+export {
+  runLocalFormBinary,
+  type LocalFormRun,
+  type LocalFormTrace,
+} from "../../../form/form-kernel-ts/src/browser.ts";
 import {
   FIELD_AUTO_RESEARCH_BML_MARKER,
   FIELD_AUTO_RESEARCH_PERTURBATION_MARKER,
@@ -16,33 +12,6 @@ import {
   FIELD_MODEL_FORM_PUBLIC_MARKER,
 } from "./field-model-form";
 import { runFieldRuntimeProof } from "./field-runtime";
-
-export type LocalFormRun = {
-  source: string;
-  result: string;
-  root: string;
-  rootCategory: string;
-  stdout: string;
-  stderr: string;
-  elapsedMs: number;
-  trace: LocalFormTrace;
-};
-
-export type LocalFormTrace = {
-  total_walks: number;
-  arms: Array<{ arm_ty: number; arm_name: string; count: number }>;
-  variants: Array<{
-    arm_ty: number;
-    arm_inst: number;
-    arm_name: string;
-    arm_variant_name: string;
-    count: number;
-  }>;
-  choice_attempts: number;
-  choice_successes: number;
-  choice_failures: number;
-  choice_success_rate: number;
-};
 
 export type LocalFormExample = {
   label: string;
@@ -97,31 +66,3 @@ export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
     proofMarker: FIELD_MODEL_FORM_PUBLIC_MARKER,
   },
 ];
-
-function formatNodeId(n: NodeID): string {
-  return `@${nodeKey(n)}`;
-}
-
-export function runLocalFormBinary(source: string): LocalFormRun {
-  const stdout: string[] = [];
-  const stderr: string[] = [];
-  const kernel = new Kernel({
-    writeStdout: (text) => stdout.push(text),
-    writeStderr: (text) => stderr.push(text),
-  });
-  kernel.trace = new Trace();
-  const start = performance.now();
-  const root = readAll(kernel, source);
-  const value = walk(kernel, root, new Frame(null));
-  const elapsedMs = performance.now() - start;
-  return {
-    source,
-    result: kernel.render(value),
-    root: formatNodeId(root),
-    rootCategory: formatNodeId(kernel.category(root)),
-    stdout: stdout.join(""),
-    stderr: stderr.join(""),
-    elapsedMs,
-    trace: kernel.trace.toJSON() as LocalFormTrace,
-  };
-}

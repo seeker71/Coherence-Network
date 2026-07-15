@@ -13,23 +13,28 @@ on:
       - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
       - 'scripts/verify_kernel_canary_public_gate.sh'
+      - 'scripts/form_cli_rag.py'
+      - 'scripts/ensure_form_cli_native.sh'
+      - 'scripts/form_first_offline_setup.sh'
+      - 'scripts/prompt_entry_gate.sh'
+      - 'scripts/substrate_post_merge_hook.sh'
+      - 'scripts/verify_observed_deployment_ask.sh'
       - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
       - 'Dockerfile*'
+      - 'bin/form-cli'
+      - 'bin/form-cli.sha256'
       - 'form'
       - 'form/form-stdlib/**'
       - 'form/form-kernel-rust/**'
       - 'kernels/python_bmf/**'
-  workflow_dispatch:
-    inputs:
-      sha:
-        description: "Commit SHA to deploy (defaults to the triggering SHA)"
-        required: false
-        type: string
-
+  schedule:
+    # Refresh the full independent observation well inside its 24-hour TTL.
+    # This runs the same deploy/prove body against the current protected main.
+    - cron: '17 */4 * * *'
 concurrency:
   group: hostinger-auto-deploy-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy-hostinger:
@@ -42,7 +47,7 @@ jobs:
       HOSTINGER_DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH || '/docker/coherence-network' }}
       PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://api.coherencycoin.com' }}
       PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherencycoin.com' }}
-      TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+      TARGET_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
         with:

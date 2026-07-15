@@ -37,12 +37,9 @@ for _candidate in (REPO_ROOT / "api", REPO_ROOT):
         break
 
 from app.services.substrate import (  # noqa: E402
+    NodeID,
     annotate_path,
     find_equivalent_cells,
-    form_evaluate_text,
-    form_execute_text,
-    form_serialize_cell,
-    form_serialize_node_id,
     ingest_concept_file,
     ingest_guide_file,
     ingest_idea_file,
@@ -56,8 +53,17 @@ from app.services.substrate import (  # noqa: E402
     ingest_transmission_file,
     lattice_stats,
     lookup_cell,
+    lookup_node,
 )
 from app.services.unified_db import session as session_scope  # noqa: E402
+
+
+def form_serialize_node_id(node_id: NodeID | None) -> str:
+    return "null" if node_id is None else str(node_id)
+
+
+def form_serialize_cell(cell) -> str:
+    return f"@{cell.domain}({cell.name})"
 
 
 MEMORY_DIR = Path.home() / ".claude/projects/-Users-ursmuff-source-Coherence-Network/memory"
@@ -81,6 +87,154 @@ KB_PAGE_DIRS = [
     VKB_DIR / "stories",
     VKB_DIR / "wanderings",
 ]
+
+
+def form_first_source_paths() -> list[Path]:
+    """Return every source that the native Form-first RAG can answer from.
+
+    This is the consumer projection of the corpus owned by ``rag-heal.fk``.
+    Bootstrap ingests these paths after the domain frontends so every RAG row
+    can carry a resolvable content CTOR NodeID. A source that is not one of the
+    markdown domains lands as an ARTIFACT cell through ``ingest-paths``.
+    """
+    patterns = (
+        REPO_ROOT / "form/form-stdlib/*.fk",
+        REPO_ROOT / "specs/*.md",
+        REPO_ROOT / "docs/vision-kb/concepts/*.md",
+        REPO_ROOT / "docs/coherence-substrate/*.form",
+        REPO_ROOT / "docs/shared/*.md",
+    )
+    paths: set[Path] = set()
+    for pattern in patterns:
+        paths.update(Path(p) for p in pattern.parent.glob(pattern.name))
+    return sorted(path for path in paths if path.is_file())
+
+
+def substrate_bootstrap_source_paths() -> list[Path]:
+    """Portable authored sources required by the Form-first answer body."""
+    return [path.resolve() for path in form_first_source_paths()]
+
+
+def _unresolved_source_paths(paths: list[Path]) -> list[Path]:
+    """Return sources without an exact, current ARTIFACT content binding.
+
+    Domain frontends describe what a document means, but several of their
+    access recipes intentionally summarize the body.  Grounding therefore
+    uses a companion ARTIFACT cell whose structured CTOR carries the complete
+    source SHA-256 and the exact answer SHA-256.  Merely resolving a path is
+    never enough to call the source current.
+    """
+    from app.services.grounding_source import read_grounding_source
+    from app.services.substrate import NodeID
+    from app.services.substrate.projection import ctor_field_lookup
+    from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+
+    candidates: dict[Path, list[str]] = {}
+    flattened: list[str] = []
+    for path in paths:
+        values: list[str] = []
+        try:
+            relative = path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+            values.extend([relative, "/app/" + relative])
+        except ValueError:
+            pass
+        values.append(str(path.resolve()))
+        values = list(dict.fromkeys(values))
+        candidates[path] = values
+        flattened.extend(values)
+
+    rows_by_source: dict[str, list[tuple[int, int | None]]] = {}
+    with session_scope() as session:
+        for start in range(0, len(flattened), 500):
+            rows = (
+                session.query(
+                    SubstrateNamedCellORM.cell_id,
+                    SubstrateNamedCellORM.source_path,
+                    SubstrateNamedCellORM.ctor_recipe_node_id,
+                )
+                .filter(SubstrateNamedCellORM.domain == "artifact")
+                .filter(SubstrateNamedCellORM.ctor_recipe_node_id.is_not(None))
+                .filter(
+                    SubstrateNamedCellORM.source_path.in_(
+                        flattened[start:start + 500]
+                    )
+                )
+                .all()
+            )
+            for cell_id, source_path, ctor_db_id in rows:
+                rows_by_source.setdefault(source_path, []).append(
+                    (cell_id, ctor_db_id)
+                )
+
+        selected: dict[Path, tuple[int, int | None]] = {}
+        for path, values in candidates.items():
+            for value in values:
+                matches = {
+                    cell_id: ctor_db_id
+                    for cell_id, ctor_db_id in rows_by_source.get(value, [])
+                }
+                if len(matches) == 1:
+                    selected[path] = next(iter(matches.items()))
+                    break
+                if len(matches) > 1:
+                    break
+
+        ctor_ids = {
+            ctor_id
+            for _cell_id, ctor_id in selected.values()
+            if ctor_id is not None
+        }
+        nodes = (
+            session.query(SubstrateNodeORM)
+            .filter(SubstrateNodeORM.node_id.in_(ctor_ids))
+            .all()
+            if ctor_ids
+            else []
+        )
+        node_by_id = {
+            row.node_id: NodeID(row.package, row.level, row.type_, row.instance)
+            for row in nodes
+        }
+
+        unresolved: list[Path] = []
+        for path in paths:
+            selected_row = selected.get(path)
+            if selected_row is None:
+                unresolved.append(path)
+                continue
+            _cell_id, ctor_id = selected_row
+            ctor = node_by_id.get(ctor_id)
+            if ctor is None:
+                unresolved.append(path)
+                continue
+            try:
+                current = read_grounding_source(path)
+                persisted_source = ctor_field_lookup(
+                    session, ctor, "content_hash"
+                )
+                persisted_answer = ctor_field_lookup(
+                    session, ctor, "answer_hash"
+                )
+                persisted_size = int(
+                    ctor_field_lookup(session, ctor, "size_bytes") or -1
+                )
+            except (OSError, TypeError, ValueError):
+                unresolved.append(path)
+                continue
+            if (
+                persisted_source != current.source_sha256
+                or persisted_answer != current.answer_sha256
+                or persisted_size != current.source_size
+            ):
+                unresolved.append(path)
+        return unresolved
+
+
+def _canonical_source_domain(path: Path) -> str:
+    """Domain identity used by source grounding; ARTIFACT is the fallback."""
+    if path.suffix == ".md":
+        return _domain_for_path(path) or "artifact"
+    return "artifact"
 
 # Composting artifacts — historical sense-records that no longer carry live
 # lineage edges. They stay in the tree as memory but don't enter the substrate.
@@ -282,7 +436,130 @@ def _ingest_domain(domain: str, *, structured: bool = False) -> int:
                 print(f"  ! failed {path.name}: {exc}", file=sys.stderr)
         session.commit()
     print(f"{domain}: {success} ingested, {fail} failed")
-    return 0
+    return 1 if fail else 0
+
+
+def cmd_bootstrap(args: argparse.Namespace) -> int:
+    """Populate a complete, NodeID-addressable local Form-first body.
+
+    Unlike the old "any cell means ready" shortcut, this checks the entire
+    answer corpus. Domain cells are ingested structurally first; remaining
+    source files are projected as ARTIFACT cells. Success means every RAG
+    source resolves to a content-bearing CTOR NodeID.
+    """
+    all_sources = substrate_bootstrap_source_paths()
+    unresolved_before = _unresolved_source_paths(all_sources)
+    with session_scope() as session:
+        before_stats = lattice_stats(session)
+    if not unresolved_before and before_stats["cells_total"] > 0:
+        result = {
+            **before_stats,
+            "sources_total": len(all_sources),
+            "sources_grounded": len(all_sources),
+            "rag_sources_total": len(form_first_source_paths()),
+            "rag_sources_grounded": len(form_first_source_paths()),
+            "unresolved_sources": [],
+        }
+        if args.json:
+            print(json.dumps(result, indent=2))
+        else:
+            print(
+                "Form-first substrate ready: "
+                f"{result['sources_grounded']}/{result['sources_total']} sources "
+                f"grounded across {result['cells_total']} cells"
+            )
+        return 0
+
+    sources = form_first_source_paths()
+    missing = _unresolved_source_paths(sources)
+
+    ingest_rc = 0
+    if missing:
+        print(
+            f"Reconciling {len(missing)} exact source-byte ARTIFACT bindings"
+        )
+        failures: list[tuple[Path, Exception]] = []
+        with session_scope() as session:
+            for position, path in enumerate(missing, start=1):
+                try:
+                    _ingest_artifact_source(session, path)
+                    if position % 250 == 0:
+                        print(f"  ...{position}/{len(missing)} source bindings")
+                except Exception as exc:
+                    failures.append((path, exc))
+            if failures:
+                session.rollback()
+            else:
+                session.commit()
+        if failures:
+            ingest_rc = 1
+            for path, exc in failures[:20]:
+                print(f"  ! failed {path}: {exc}", file=sys.stderr)
+
+    unresolved_paths = _unresolved_source_paths(all_sources)
+    unresolved = [
+        path.relative_to(REPO_ROOT).as_posix()
+        if path.is_relative_to(REPO_ROOT)
+        else str(path)
+        for path in unresolved_paths
+    ]
+    with session_scope() as session:
+        stats = lattice_stats(session)
+
+    result = {
+        **stats,
+        "sources_total": len(all_sources),
+        "sources_grounded": len(all_sources) - len(unresolved),
+        "rag_sources_total": len(sources),
+        "rag_sources_grounded": len(sources) - len(_unresolved_source_paths(sources)),
+        "unresolved_sources": unresolved,
+    }
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print("Form-first substrate bootstrap:")
+        for key in ("cells_total", "blueprints_total", "recipes_total"):
+            print(f"  {key}: {result[key]}")
+        print(
+            "  sources_grounded: "
+            f"{result['sources_grounded']}/{result['sources_total']} "
+            f"(RAG {result['rag_sources_grounded']}/{result['rag_sources_total']})"
+        )
+        if unresolved:
+            print("  unresolved:", file=sys.stderr)
+            for source in unresolved[:20]:
+                print(f"    - {source}", file=sys.stderr)
+    return 1 if ingest_rc or unresolved or stats["cells_total"] == 0 else 0
+
+
+def cmd_verify_deployment_observation(args: argparse.Namespace) -> int:
+    from app.services.deployment_observation import (
+        DeploymentObservationError,
+        verify_deployment_observation,
+    )
+
+    try:
+        with session_scope() as session:
+            result = verify_deployment_observation(
+                session,
+                args.node_id,
+                expected_answer_key=args.answer_key,
+            )
+        print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+        return 0
+    except DeploymentObservationError as exc:
+        print(
+            json.dumps(
+                {
+                    "node_id": args.node_id,
+                    "verified": False,
+                    "reason": str(exc),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+        return 1
 
 
 def cmd_stats(args: argparse.Namespace) -> int:
@@ -387,6 +664,64 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_resolve_node(args: argparse.Namespace) -> int:
+    """Resolve a NodeID against the live lattice, including NamedCell REFs."""
+    raw = args.node_id.strip()
+    try:
+        parts = raw.removeprefix("@").split(".")
+        if len(parts) != 4:
+            raise ValueError
+        node_id = NodeID(*(int(part) for part in parts))
+    except ValueError:
+        result = {"node_id": raw, "resolved": False, "reason": "invalid-node-id"}
+        print(json.dumps(result, indent=2) if args.json else f"unresolved: {raw} (invalid NodeID)")
+        return 1
+
+    with session_scope() as session:
+        if (
+            node_id.package == 1
+            and node_id.level == 1
+            and node_id.type_ == 9
+        ):
+            from app.services.substrate.orm import SubstrateNamedCellORM
+
+            row = (
+                session.query(SubstrateNamedCellORM)
+                .filter_by(cell_id=node_id.instance)
+                .one_or_none()
+            )
+            result = {
+                "node_id": f"@{node_id}",
+                "resolved": row is not None,
+                "kind": "named_cell_ref",
+                "cell": (
+                    {
+                        "cell_id": row.cell_id,
+                        "domain": row.domain,
+                        "name": row.name,
+                        "source_path": row.source_path,
+                    }
+                    if row is not None
+                    else None
+                ),
+            }
+        else:
+            row = lookup_node(session, node_id)
+            result = {
+                "node_id": f"@{node_id}",
+                "resolved": row is not None,
+                "kind": row.domain if row is not None else None,
+            }
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+    elif result["resolved"]:
+        print(f"resolved: {result['node_id']} ({result['kind']})")
+    else:
+        print(f"unresolved: {result['node_id']}")
+    return 0 if result["resolved"] else 1
+
+
 HZ_BANDS = {
     174: "ground",      396: "tending",       417: "transmutation",
     528: "vitality",    639: "transmission",  741: "consciousness",
@@ -400,7 +735,7 @@ def _ctor_walk_field(session, ctor_nid, field):
     accessor (`.source`, etc.) would shadow a frontmatter key of the same name.
     """
     from app.services.substrate.category import RBasic
-    from app.services.substrate.form_runtime import (
+    from app.services.substrate.projection import (
         _node_children, _node_category, _trivial_value,
     )
     if ctor_nid is None:
@@ -426,7 +761,7 @@ def _decode_source_entries(session, source_nid):
     (file_path, [symbols]) tuples. Each entry is a R_Block.DO carrying
     LET(file, ...) + LET(symbols, SEQUENCE) bindings.
     """
-    from app.services.substrate.form_runtime import _node_children, _trivial_value
+    from app.services.substrate.projection import _node_children, _trivial_value
     from app.services.substrate.category import RType
     if source_nid is None:
         return []
@@ -507,7 +842,7 @@ def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
     import subprocess
     from pathlib import Path
 
-    from app.services.substrate.form_runtime import (
+    from app.services.substrate.projection import (
         _resolve_access, _node_children, _trivial_value,
     )
     from app.services.substrate.category import RType
@@ -568,18 +903,12 @@ def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
             print("— source: not in structured form (legacy markdown text) —")
             print()
 
-        # done_when: items — try to evaluate each as a Form predicate.
-        # Items that parse as Form expressions evaluate to true/false
-        # against the live substrate. Items that don't parse are honest
-        # prose claims and display as-is.
+        # done_when is projected from persisted structure. Evaluation belongs
+        # to the pinned native kernel, never to this Python storage adapter.
         done_when_nid = _ctor_walk_field(session, s_cell.ctor, "done_when")
         if done_when_nid is not None:
-            from app.services.substrate.form_runtime import form_execute_text
             items = _node_children(session, done_when_nid) if hasattr(done_when_nid, "type_") else []
-            evaluated = 0
-            passing = 0
-            prose_lines = []
-            form_lines = []
+            projected_lines = []
             for item in items:
                 if not hasattr(item, "type_"):
                     continue
@@ -591,33 +920,13 @@ def cmd_execute_spec(args: argparse.Namespace, spec) -> int:
                     continue
                 if not isinstance(text, str):
                     continue
-                # Attempt evaluation. If parse fails or evaluates to a
-                # non-boolean value, treat as prose.
-                try:
-                    result = form_execute_text(session, text)
-                except Exception:
-                    prose_lines.append(text)
-                    continue
-                evaluated += 1
-                if result is True:
-                    passing += 1
-                    form_lines.append(("✓", text, "True"))
-                elif result is False:
-                    form_lines.append(("✗", text, "False"))
-                else:
-                    form_lines.append(("→", text, repr(result)))
+                projected_lines.append(text)
             if items:
                 total = len(items)
-                print(
-                    f"— done_when: ({total} item(s); {evaluated} Form-evaluable, "
-                    f"{passing}/{evaluated} passing) —"
-                )
-                for mark, text, val in form_lines:
+                print(f"— done_when: ({total} persisted item(s)) —")
+                for text in projected_lines:
                     short = text if len(text) <= 78 else text[:75] + "..."
-                    print(f"  {mark} {short}   = {val}")
-                for text in prose_lines:
-                    short = text if len(text) <= 78 else text[:75] + "..."
-                    print(f"  · {short}  (prose claim — not Form-evaluable)")
+                    print(f"  · {short}")
                 print()
 
         # Test command
@@ -691,7 +1000,7 @@ def cmd_execute_idea(args: argparse.Namespace) -> int:
     import subprocess
 
     from app.services.substrate.kernel import lookup_cell
-    from app.services.substrate.form_runtime import (
+    from app.services.substrate.projection import (
         _resolve_access, _node_children, _trivial_value,
     )
     from app.services.substrate.category import RType
@@ -814,179 +1123,29 @@ def cmd_execute_idea(args: argparse.Namespace) -> int:
         return 1 if any_failed else 0
 
 
+def _native_form_eval(expression: str) -> int:
+    """Execute through the immutable submodule-backed native carrier."""
+    import subprocess
+
+    wrapper = REPO_ROOT / "bin" / "form-cli"
+    process = subprocess.run([str(wrapper), "eval", expression])
+    return process.returncode
+
+
 def cmd_run(args: argparse.Namespace) -> int:
-    """Execute a Form expression — actually run the recipe, return a value.
-
-    Distinct from `form`: that interns the expression as a Recipe NodeID
-    and returns the substrate's structural answer (NodeID / cells / view).
-    This runs the expression and returns its computed value, the same way
-    Python runs `1 + 2` to `3`.
-    """
-    from app.services.substrate.form_speculation import FailSignal
-
-    try:
-        with session_scope() as session:
-            value = form_execute_text(session, args.expression)
-    except FailSignal as exc:
-        print(f"Form runtime: {exc}", file=sys.stderr)
-        return 2
-    except (SyntaxError, NameError, LookupError, TypeError, ZeroDivisionError) as exc:
-        print(f"Form runtime: {exc}", file=sys.stderr)
-        return 1
-
-    from app.services.substrate.kernel import CellView, NamedCell, NodeID
-
-    if args.json:
-        if isinstance(value, NodeID):
-            print(json.dumps({"value": form_serialize_node_id(value)}))
-        elif isinstance(value, NamedCell):
-            print(json.dumps({
-                "value": form_serialize_cell(value),
-                "domain": value.domain,
-                "name": value.name,
-            }))
-        elif isinstance(value, CellView):
-            print(json.dumps({
-                "cell": form_serialize_cell(value.cell),
-                "view_blueprint": form_serialize_node_id(value.view_blueprint),
-                "compatible": value.compatible,
-            }))
-        else:
-            print(json.dumps({"value": value}))
-    else:
-        if isinstance(value, NodeID):
-            print(form_serialize_node_id(value))
-        elif isinstance(value, NamedCell):
-            print(form_serialize_cell(value))
-        elif isinstance(value, CellView):
-            mark = "✓" if value.compatible else "✗"
-            print(f"{form_serialize_cell(value.cell)} |> {form_serialize_node_id(value.view_blueprint)}  {mark}")
-        elif value is None:
-            print("null")
-        else:
-            print(value)
-    return 0
+    return _native_form_eval(args.expression)
 
 
 def cmd_form(args: argparse.Namespace) -> int:
-    try:
-        with session_scope() as session:
-            result = form_evaluate_text(session, args.expression)
-    except (SyntaxError, NameError, LookupError, TypeError) as exc:
-        print(f"Form: {exc}", file=sys.stderr)
-        return 1
-
-    from app.services.substrate.kernel import CellView, NamedCell
-
-    def to_dict(v):
-        from app.services.substrate.kernel import NodeID
-        if isinstance(v, NodeID):
-            return {"form": form_serialize_node_id(v)}
-        if isinstance(v, NamedCell):
-            return {
-                "domain": v.domain, "name": v.name,
-                "blueprint": form_serialize_node_id(v.blueprint) if v.blueprint else None,
-                "form": form_serialize_cell(v),
-            }
-        if isinstance(v, CellView):
-            return {
-                "cell": to_dict(v.cell),
-                "view_blueprint": form_serialize_node_id(v.view_blueprint),
-                "compatible": v.compatible,
-                "reason": v.reason,
-            }
-        if isinstance(v, list):
-            return [to_dict(x) for x in v]
-        return repr(v)
-
-    if args.json:
-        print(json.dumps(to_dict(result.value), indent=2))
-    else:
-        from app.services.substrate.kernel import NodeID
-        v = result.value
-        if isinstance(v, NodeID):
-            print(form_serialize_node_id(v))
-        elif isinstance(v, NamedCell):
-            bp = form_serialize_node_id(v.blueprint) if v.blueprint else "?"
-            print(f"{form_serialize_cell(v)}  blueprint={bp}")
-        elif isinstance(v, CellView):
-            bp = form_serialize_node_id(v.view_blueprint)
-            cell = form_serialize_cell(v.cell)
-            mark = "✓ compatible" if v.compatible else f"✗ incompatible: {v.reason}"
-            print(f"{cell} |> {bp}  {mark}")
-        elif isinstance(v, list):
-            if not v:
-                print("(empty)")
-            else:
-                print(f"({len(v)} results)")
-                for x in v[:50]:
-                    if isinstance(x, NamedCell):
-                        bp = form_serialize_node_id(x.blueprint) if x.blueprint else "?"
-                        print(f"  {form_serialize_cell(x)}  blueprint={bp}")
-                    elif isinstance(x, CellView):
-                        bp = form_serialize_node_id(x.view_blueprint)
-                        mark = "✓" if x.compatible else "✗"
-                        print(f"  {form_serialize_cell(x.cell)} |> {bp}  {mark}")
-                    else:
-                        print(f"  {x!r}")
-                if len(v) > 50:
-                    print(f"  ... and {len(v) - 50} more")
-    return 0
+    return _native_form_eval(args.expression)
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    """Statically resolve names + blueprints across a Form expression or
-    `.form` file — the refactor-with-confidence surface.
-
-    Unlike `form`/`run`, this never executes: it walks the parsed AST,
-    resolves every name against the live substrate (global cells), the
-    blueprint table (`~Trivial`, `@domain`), and the runtime's built-in and
-    operator registries, then reports EVERY unresolved name / arity mismatch /
-    blueprint problem in one pass. Exit 1 when any error-severity diagnostic is
-    found, so it composes into CI and pre-commit gates.
-    """
-    from app.services.substrate.form_check import (
-        ERROR,
-        check_text,
-        format_report,
-        has_errors,
-    )
-
     if args.file:
-        path = Path(args.file)
-        if not path.exists() or path.is_dir():
-            print(f"check: not a file: {path}", file=sys.stderr)
-            return 2
-        code = path.read_text()
-        label = str(path)
-    elif args.expression:
-        code = args.expression
-        label = "<expression>"
+        print("check is owned by the native kernel; pass the file to form-kernel-rust check", file=sys.stderr)
     else:
-        print("check: pass an expression or --file <path>", file=sys.stderr)
-        return 2
-
-    with session_scope() as session:
-        diags = check_text(session, code)
-
-    if args.json:
-        print(json.dumps({
-            "target": label,
-            "diagnostics": [
-                {
-                    "severity": d.severity,
-                    "code": d.code,
-                    "message": d.message,
-                    "snippet": d.snippet,
-                }
-                for d in diags
-            ],
-            "errors": sum(1 for d in diags if d.severity == ERROR),
-        }, indent=2))
-    else:
-        print(f"check: {label}")
-        print(format_report(diags))
-    return 1 if has_errors(diags) else 0
+        print("check is owned by the native kernel; use coh substrate form for native evaluation", file=sys.stderr)
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1027,6 +1186,21 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
 
+    sub.add_parser(
+        "bootstrap",
+        help=(
+            "Populate all domain cells plus every Form-first RAG source and "
+            "verify that each source has a content CTOR NodeID"
+        ),
+    )
+
+    p_verify_observation = sub.add_parser(
+        "verify-deployment-observation",
+        help="Recompute a deployment WITNESS certificate from persisted CTOR state",
+    )
+    p_verify_observation.add_argument("node_id")
+    p_verify_observation.add_argument("--answer-key", default=None)
+
     sub.add_parser("stats", help="Print lattice statistics")
 
     p_reset = sub.add_parser(
@@ -1045,6 +1219,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_ann = sub.add_parser("annotate", help="Substrate context for a file path")
     p_ann.add_argument("path")
+
+    p_resolve = sub.add_parser(
+        "resolve-node",
+        help="Resolve a NodeID, including a NamedCell REF, against the live lattice",
+    )
+    p_resolve.add_argument("node_id")
 
     p_form = sub.add_parser("form", help="Evaluate a Form expression")
     p_form.add_argument("expression")
@@ -1212,6 +1392,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "ingest":
         return cmd_ingest(args)
+    if args.cmd == "bootstrap":
+        return cmd_bootstrap(args)
+    if args.cmd == "verify-deployment-observation":
+        return cmd_verify_deployment_observation(args)
     if args.cmd == "stats":
         return cmd_stats(args)
     if args.cmd == "reset":
@@ -1220,6 +1404,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_equivalent(args)
     if args.cmd == "annotate":
         return cmd_annotate(args)
+    if args.cmd == "resolve-node":
+        return cmd_resolve_node(args)
     if args.cmd == "form":
         return cmd_form(args)
     if args.cmd == "run":
@@ -2229,6 +2415,30 @@ def cmd_shape_check(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _ingest_artifact_source(session, path: Path):
+    """Project one source file as a deterministic ARTIFACT NamedCell."""
+    from app.services.grounding_source import read_grounding_source
+    from app.services.substrate import ingest_git_artifact
+
+    resolved = path.resolve()
+    current = read_grounding_source(resolved)
+    try:
+        source_path = resolved.relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        source_path = str(resolved)
+    cell, bp_id, ctor_id = ingest_git_artifact(
+        session,
+        path=source_path,
+        content_hash=current.source_sha256,
+        size_bytes=current.source_size,
+        # Git content identity is stable across clones; filesystem mtimes are
+        # not. Keep the compatibility field neutral so the CTOR is reproducible.
+        mtime=0.0,
+        answer_hash=current.answer_sha256,
+    )
+    return cell, bp_id, ctor_id
+
+
 def cmd_ingest_paths(args: argparse.Namespace) -> int:
     """Re-ingest a list of changed paths into the substrate.
 
@@ -2251,7 +2461,6 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
 
     from app.services.substrate import (
         ingest_concept_file,
-        ingest_git_artifact,
         ingest_guide_file,
         ingest_idea_file,
         ingest_kb_page_file,
@@ -2284,22 +2493,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
         # could not reach the substrate via this CLI even though
         # ingest_git_artifact has handled them since BDomain.ARTIFACT
         # shipped 2026-05-20.
-        import hashlib
-
-        data = path.read_bytes()
-        content_hash = hashlib.sha256(data).hexdigest()[:16]
-        size_bytes = len(data)
-        try:
-            mtime = path.stat().st_mtime
-        except OSError:
-            mtime = 0.0
-        _cell, bp_id, _ctor = ingest_git_artifact(
-            session,
-            path=str(path),
-            content_hash=content_hash,
-            size_bytes=size_bytes,
-            mtime=mtime,
-        )
+        _cell, bp_id, _ctor = _ingest_artifact_source(session, path)
         kind = path.suffix.lstrip(".") or "other"
         return kind, bp_id
 

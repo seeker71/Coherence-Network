@@ -42,12 +42,7 @@ from app.services.substrate import (
     lookup_node,
     make_cell,
 )
-from app.services.substrate.category import Level, RType
-from app.services.substrate.form_builders import (
-    _block_let_id,
-    _block_seq_id,
-    _string_id,
-)
+from app.services.substrate.category import Level, RBasic, RBlock, RType
 from app.services.substrate.kernel import DOMAIN_RECIPE
 from app.services.substrate.substrate_strings import lookup_string_value
 
@@ -59,6 +54,25 @@ RELATIONSHIP_DOMAIN = "relationship"
 # created here IS the cell the Form layer names (same content-addressed shape).
 AGENT_IDENTITY_BLUEPRINT = NodeID(1, 2, 99, 1880)  # CELL-IDENTITY
 RELATIONSHIP_BLUEPRINT = NodeID(1, 2, 99, 1881)  # CONTACT-THREAD
+
+
+def _block_let_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.LET)
+
+
+def _block_seq_id() -> NodeID:
+    return NodeID(1, Level.BASIC, RBasic.BLOCK, RBlock.SEQUENCE)
+
+
+def _string_id(value: str, session: Session) -> NodeID:
+    from app.services.substrate.substrate_strings import intern_string_instance
+
+    return NodeID(
+        1,
+        Level.TRIVIAL,
+        RType.STRING,
+        intern_string_instance(session, value),
+    )
 
 
 # ---------------------------------------------------------------------------

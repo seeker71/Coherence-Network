@@ -58,7 +58,8 @@ def test_api_kernel_builder_rust_toolchain_supports_locked_edition2024_crates() 
     assert 'version = "1.2.2"' in lockfile
 
     match = re.search(
-        r"^FROM rust:(?P<major>\d+)\.(?P<minor>\d+)-slim-bookworm AS kernel-builder$",
+        r"^FROM rust:(?P<major>\d+)\.(?P<minor>\d+)-slim-bookworm"
+        r"@sha256:(?P<digest>[0-9a-f]{64}) AS kernel-builder$",
         dockerfile,
         re.MULTILINE,
     )
@@ -66,6 +67,7 @@ def test_api_kernel_builder_rust_toolchain_supports_locked_edition2024_crates() 
 
     toolchain = (int(match.group("major")), int(match.group("minor")))
     assert toolchain >= (1, 86)
+    assert len(match.group("digest")) == 64
 
 
 def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:

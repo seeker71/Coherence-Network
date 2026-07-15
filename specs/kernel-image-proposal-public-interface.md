@@ -2,7 +2,7 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: deploy/front-door/api.bml
+  - file: form/apps/coherence-network/api.bml
     symbols: [api_substrate_kernel_image_proposals, SubstrateKernelImageProposalRoute]
   - file: deploy/kernel-router/docker-compose.kernel-router.yml
     symbols: [kernel-router-bml-front-door]
@@ -28,7 +28,7 @@ requirements:
   - "The front-door route catalog carries the same public endpoint as BML-native handler authority with Python marked as non-authoritative."
   - "Public production ingress routes this preview-only POST path to the BML front-door kernel service and deploy verification proves the native router header."
 done_when:
-  - 'file_declares("deploy/front-door/api.bml", "SubstrateKernelImageProposalRoute")'
+  - 'file_declares("form/apps/coherence-network/api.bml", "SubstrateKernelImageProposalRoute")'
   - 'file_exists("form/form-stdlib/kernel-image-proposal.fk")'
   - 'pytest_passes("api/tests/test_substrate_kernel_image_proposals.py")'
   - 'pytest_passes("api/tests/test_runtime_web_api_provenance.py")'
@@ -67,7 +67,7 @@ image would be, what proof passed or failed, and why no live mutation occurred.
   failed proof steps and no candidate image.
 - [ ] **R6**: `form/form-stdlib/kernel-image-proposal.fk` names the same
   preview-only trust membrane and sibling kernels agree on its proof band.
-- [ ] **R7**: `deploy/front-door/api.bml` declares
+- [ ] **R7**: `form/apps/coherence-network/api.bml` declares
   `SubstrateKernelImageProposalRoute` and returns `native_observation` with
   `handler="api_substrate_kernel_image_proposals"` and
   `python_authority=false`.
@@ -120,7 +120,7 @@ authority.
 
 ## Files to Create/Modify
 
-- `deploy/front-door/api.bml` - public BML route authority and native handler.
+- `form/apps/coherence-network/api.bml` - public BML route authority and native handler.
 - `deploy/kernel-router/docker-compose.kernel-router.yml` - public path-specific BML ingress.
 - `Dockerfile.kernel-router` - packages the BML front-door catalog in the router image.
 - `deploy/hostinger/auto-deploy.sh` - starts and locally proves the BML front-door service.

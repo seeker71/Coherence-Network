@@ -10,7 +10,7 @@ import {
   RBasic,
   nodeKey,
   type NodeID,
-} from "./vendor/kernel.ts";
+} from "../../../form/form-kernel-ts/src/kernel.ts";
 
 export const FIELD_RUNTIME_PUBLIC_MARKER = "field-model-form-browser-runtime-proof:4";
 

@@ -1,0 +1,218 @@
+{
+  "date": "2026-07-15",
+  "thread_branch": "codex/full-grounding-observation-20260715",
+  "commit_scope": "Replace consumer-owned Form execution surfaces with the exact coherence-kernel submodule, remove duplicate Python and browser kernels, make NodeID grounding request-bound and native, and add an independently authenticated deployment observer that can produce observed:yes only after public deployment proof.",
+  "files_owned": [
+    "form",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "scripts/form_cli_rag.py",
+    "scripts/verify_kernel_single_authority.py",
+    "scripts/verify_observed_deployment_ask.sh",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/services/grounding_source.py",
+    "api/app/services/native_runtime_observation.py",
+    "api/app/services/substrate/projection.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_kernel_single_authority.py",
+    ".github/workflows/public-deployment-observer.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "specs/form-cli-grounded-observation-plane.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/verify_kernel_single_authority.py",
+      "python3 scripts/check_web_docker_context.py",
+      "bash -n scripts/ensure_form_cli_native.sh",
+      "api/.venv/bin/pytest -q api/tests/test_kernel_single_authority.py api/tests/test_form_cli_grounding_runtime.py api/tests/test_deployment_observer_oidc.py",
+      "cd api && .venv/bin/pytest -q --ignore=tests/holdout",
+      "cd api && COHERENCE_TEST_SUITE=full .venv/bin/pytest -q",
+      "python3 scripts/verify_kernel_conformance.py",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "cd web && npm run build",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "./bin/form-cli ask 'observed auto learning reversible experiment champion challenger'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "notes": "Single authority passed; 56 focused tests, 403 non-holdout API tests, and the CI-equivalent full suite (1,996 passed, 3 skipped) passed; canonical Go/Rust/TypeScript expression and FORMBIN2 conformance passed; Hostinger form deploy path passed with 62 BML GET/read routes; Next.js production build and the full local API/web matrix passed. The real 1,549-cell native ask returned path:native, grounded:yes, suffic:yes, NodeID @1.1.9.985, CTOR @1.4.9.2529, and a source/answer digest-bound excerpt. Frequency and observed remain honestly unmeasured before the independent public deployment witness exists."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Consumer PR checks run after the bootstrap commit is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production plus GitHub Actions OIDC external observer",
+    "notes": "The reusable observer workflow must first land, then a follow-up commit pins its immutable merged SHA. The follow-up deployment must create a WITNESS and pass verify_observed_deployment_ask.sh before observed:yes is claimed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Implementation and local proof are complete; CI, the required immutable workflow pin, deploy, and public observation remain pending."
+  },
+  "idea_ids": [
+    "coherence-kernel-single-authority",
+    "form-cli-grounded-observation"
+  ],
+  "spec_ids": [
+    "form-cli-grounded-observation-plane"
+  ],
+  "task_ids": [
+    "task-2026-07-15-kernel-replacement-grounding-observation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "deployment-design",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "coherence-kernel PR #231 removed duplicate root RAG/form-cli and Python interpreter generators; PR #232 published its exact form subtree.",
+    "coherence-kernel PRs #233-#238 repaired real corpus embedding, UTF-8 byte bounds, and selected-answer ranking, then published exact subtree tree objects after each merge.",
+    "coherence-kernel PR #239 made the category verifier explicitly UTF-8 on Windows; PR #240 published the exact repaired Form subtree.",
+    "coherence-kernel PR #241 marked the generated bootstrap table as an exact-byte artifact immune to Windows CRLF checkout conversion; PR #242 published that exact Form subtree.",
+    "coherence-kernel PR #243 made all Form and bootstrap shell source canonical LF and preserved stamp/digest artifacts as exact bytes; PR #244 published the exact repaired Form subtree.",
+    "The final consumer gitlink is 94065ea63aaa0bf9d90f5bd442359aedf18ee71c with tree 18b0c0dddb009d076eb0df902446f6798beecabb; coherence-kernel PR #245 made TraceJSON canonical, PR #246 published it, PR #247 established the observed Windows carrier stack floor, PR #249 made that floor linker-target aware, and PRs #248/#250 published the exact successive form subtrees.",
+    "The consumer no longer contains a Python Form evaluator, kernels/python_bmf, browser-vendored kernel/reader, deploy/front-door/api.bml, or a copied numeric-format contract.",
+    "The native trust trace is request-id, query-digest, NodeID, CTOR, persisted-source, answer, time-window, and HMAC bound. It reports grounded:yes locally and reserves observed:yes for an authenticated deployment WITNESS.",
+    "The consumer native-carrier selector now reuses only a behaviorally source-bound host carrier, writes host build products to a platform cache outside the pinned submodule, and performs the documented one-time submodule bootstrap link when a committed platform binary is absent.",
+    "The selector publishes a source-and-binary-digest-bound native-path receipt; the Python cold-start bridge re-hashes that carrier on every embedding batch and never launches a nested platform shell.",
+    "Windows composition observed STATUS_STACK_OVERFLOW (0xC00000FD) at the unchanged 600-byte Form tokenizer; the pinned coherence-kernel builder now reserves 16 MiB with linker-target-specific syntax, and the Windows gate reads the produced PE header before behavioral proof.",
+    "The staged ask wrapper removes only the terminal CR from Windows CRLF control lines before NodeID/trust parsing; grounded answer payload bytes remain digest-bound and unmodified."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/windows-host.yml",
+    "form",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "Dockerfile.api",
+    "Dockerfile.kernel-router",
+    "Dockerfile.web",
+    "MANIFEST.md",
+    "README.md",
+    "cli/README.md",
+    "scripts/form_cli_rag.py",
+    "scripts/verify_kernel_single_authority.py",
+    "scripts/verify_observed_deployment_ask.sh",
+    "scripts/INDEX.md",
+    "scripts/check_web_docker_context.py",
+    "scripts/coh_substrate.py",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/form_first_offline_setup.sh",
+    "scripts/ideas_route_timing_breakdown.py",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "scripts/native_route_goal_loop.py",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/substrate_post_merge_hook.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/upgrade_specs_to_form_predicates.py",
+    "scripts/validate_local_api_matrix.py",
+    "scripts/validate_workflow_references.py",
+    "scripts/verify_kernel_conformance.py",
+    "scripts/verify_windows_form_cli_native.ps1",
+    "api/app/main.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/deployment_observer.py",
+    "api/app/routers/health.py",
+    "api/app/routers/substrate.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_start_packet.py",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/deployment_observer_oidc.py",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/services/grounding_source.py",
+    "api/app/services/mcp_tool_registry.py",
+    "api/app/services/native_runtime_observation.py",
+    "api/app/services/substrate/__init__.py",
+    "api/app/services/substrate/agent_relationship.py",
+    "api/app/services/substrate/markdown_frontend.py",
+    "api/app/services/substrate/numeric_formats.py",
+    "api/app/services/substrate/projection.py",
+    "api/app/services/unified_models.py",
+    "api/config/api.json",
+    "api/tests/INDEX.md",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_bml_idea_family_harness.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_kernel_single_authority.py",
+    "api/tests/test_mcp_substrate_tools.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_substrate_grammar.py",
+    ".github/workflows/public-deployment-observer.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/bml_idea_family_harness.py",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/form-as-reasoning-medium.md",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/numeric-formats-cross-kernel.md",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "specs/INDEX.md",
+    "specs/form-cli-grounded-observation-plane.md",
+    "specs/kernel-image-proposal-public-interface.md",
+    "web/app/substrate/form/space/_components/KernelSpace.tsx",
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/field-runtime.ts",
+    "web/lib/form-kernel/membrane.ts",
+    "web/lib/form-kernel/recognition-recipe.ts",
+    "web/lib/form-kernel/self-space.ts",
+    "web/lib/form-kernel/space.ts",
+    "web/lib/form-kernel/vision-space.ts",
+    "web/lib/form-kernel/world-perception-recipe.ts",
+    "web/next.config.ts",
+    "web/tests/form-kernel-client.test.ts",
+    "web/tests/form-kernel-field-runtime.test.ts"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production uses the pinned coherence-kernel submodule as the sole Form execution/stdlib/contract/browser authority. A public deployment query returns OBSERVED only after GitHub OIDC, one-time challenge, loopback/public/direct-container native probes, reproducible carrier hashes, and persisted WITNESS validation all bind to the deployed SHA.",
+    "public_endpoints": [
+      "GET /api/health?observation_nonce=<nonce>",
+      "POST /api/deployment-observer/challenge",
+      "POST /api/deployment-observer/observe"
+    ],
+    "test_flows": [
+      "single-authority scan refuses duplicate consumer kernel paths",
+      "full corpus heal and native ask return a request-bound grounded hit",
+      "public observer records a fresh deployment WITNESS only from authenticated dual-vantage evidence",
+      "verify_observed_deployment_ask.sh requires the exact all-four-axis OBSERVED trust row and deployed SHA-bound answer"
+    ]
+  }
+}

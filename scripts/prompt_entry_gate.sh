@@ -169,6 +169,14 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
   exit 1
 fi
 
+# Form-first is an entry invariant, not an optional setup hint. The bootstrap
+# has a complete-source fast path, so warm turns only verify coverage/freshness;
+# a fresh or partially populated clone is repaired before any reasoning begins.
+if ! ./scripts/form_first_offline_setup.sh; then
+  echo "prompt-entry-guide: Form-first substrate/RAG bootstrap failed."
+  exit 1
+fi
+
 print_claude_orientation
 
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
