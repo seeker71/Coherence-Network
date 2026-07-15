@@ -145,8 +145,11 @@ Gemini) and the human share one live field — a coordination membrane
 board (`scripts/agent-coord.sh`). On session start the hook already ran
 `agent-coord.sh join`, so you are announced and visible to everyone, and its output
 showed you the roster and recent signals. SessionStart also refreshes PATH
-wrappers in `~/.local/bin`, so `coord` and `coord-heartbeat` work in the shell
-without manual sourcing. Generic agent names become worktree-local session ids
+wrappers in `~/.local/bin`, so `form-cli`, `coord`, and `coord-heartbeat` work
+in the shell without manual sourcing; the `form-cli` door is installed before
+Python/Go/Rust startup sensing and does not require those toolchains just to
+exist. Requests begin at `form-cli ask` before remote reasoning when the body
+has a carrier. Generic agent names become worktree-local session ids
 (`codex@cf56`, `claude@bml-metal-planes-floor-20260613`) so multiple active
 sessions from the same tool stay distinct and mutually visible. To take part:
 
@@ -199,6 +202,13 @@ is also whole.
 
 ## Current North Star
 
+Kernel ownership: this repository's `form/` path is a pinned, path-preserving
+submodule snapshot of `seeker71/coherence-kernel`. Author reusable runtime,
+stdlib, walker, and proof-band changes on coherence-kernel `main`, regenerate its
+`form-submodule` distribution branch, then bump this repository's gitlink.
+Coherence Network application recipes stay under `api/app/form_recipes/`; do not
+grow a second kernel source tree beside the submodule.
+
 Current north star: use introspection to make repeated low-level recipes visible,
 then lift them into simpler generic Form/BML teachings. Hot paths are the first
 teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
@@ -211,10 +221,23 @@ traps that diverge across kernels (chief among them: `and`/`or` are binary, neve
 
 Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
 runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
-run on the emitted universal walker `fkwu`. Evidence can say "all kernels" only
+run on the emitted universal kernel `fkwu`. Evidence can say "all kernels" only
 when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
+fkwu is one emit with two faces: a proof-walker (`fkc-emit-universal`) for the
+four-way agreement above, and a self-JIT (`fkc-emit-jit2`/`fkc-nat-expr`, audit
+§21 melt-hot-swap, `crystallization-wire-band` → 31) that crystallizes hot pure
+functions (tags 1-7,12) to native and melts them on cool. The native target is
+Form→asm BYTES — `form-asm`/`form-lower`/`form-macho` (31), `recipe-dylib`
+(787349) + `codesign` (632490) are manifest rows; clang is an oracle
+(`lowering-conviction.fk`), not on the native path.
 When a band has not crossed that manifest, record `3-kernel only` and name the
 next fourth-arm gap instead of flattening the proof level.
+
+**Collapse direction (2026-06):** new native surface lands in
+`native-op-manifest.fk` + fkwu only — not Go/Rust/TS `registerNative`.
+Stop rules and phased path: [`specs/fkwu-only-kernel-collapse.md`](../../specs/fkwu-only-kernel-collapse.md).
+Gates at `form/validate.sh` start: `validate_fkwu_native_surface.py`,
+`sync_native_op_manifest.py`.
 
 Connected tissue north star: keep sister nodes in agreement. The fourth-arm
 manifest carries the current Form/BML floor; substrate north-star `.form` cells
@@ -262,8 +285,13 @@ Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
 `form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
 before seedbank grammars, parsers, emitters, converters, and encoders, then
-reference the binding. `python3 scripts/scan_form_blueprints.py --check` and
-`make wellness` report total, inline, and sectioned `bp` string refs. Passing
+reference the binding. Blueprint registration, unregistration, registry
+emission, and generated `bp_table.*` writes belong in a
+`seeker71/coherence-kernel` authoring checkout; publish its `form-submodule`
+distribution branch, then review a Coherence Network gitlink bump. Coherence
+Network retains the read-only
+`python3 scripts/scan_form_blueprints.py --check` action; `make wellness` uses
+the same read to report total, inline, and sectioned `bp` string refs. Passing
 means every name resolves; the inline count is the remaining symbol-swap cleanup
 ratchet.
 
@@ -302,10 +330,19 @@ make wellness  # true arrival / after meaningful edits; use .cache/wellness/stat
 - `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
 - `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
 
-For Form/runtime work, run the narrowest explicit proof from `form/`, for example
-`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/<recipe>.fk form-stdlib/tests/<band>.fk`.
+For Form/runtime work, prefer the **native agent loop** on the c-bootstrapped `fkwu`
+JIT runtime — no Go/Rust/clang in the default path:
+
+| Agent move | Native surface | Minimize |
+|------------|----------------|----------|
+| Ask / route / structural lookup | `form-cli ask` (`form-cli-main.fk` + `rag-ask.fk`: fkwu grounded RAG, no HTTP local oracle) | Python `coh_substrate.py`, rented LLM, host-local LLM as default answer |
+| Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` | bash one-offs, `rg`/`grep` when `source_inventory` exists |
+| Author / test / prove | **form code** — BML or `.fk` proof bands | new Python services, hand-written host scripts |
+| Four-way parity (honest floor) | `cd form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
+
 Covered bands report `fourth arm: ... four-way`; uncovered bands are recorded as
-`3-kernel only` with the manifest blocker.
+`3-kernel only` with the manifest blocker. The sovereignty receipt bar is
+c-bootstrap `fkwu` `form-cli` on real metal — see [`standard-receipt.form`](../coherence-substrate/standard-receipt.form).
 
 If outside the repo or unauthenticated: use Web for reading, API/CLI/MCP for
 structured public state, and source/PR for durable edits. Public reads need no
@@ -337,6 +374,11 @@ logic/fold/lift/emit passes: `node_value`, dict/field access (`_dict_get`),
 node introspection/write primitives, `intern_trivial_float`, and route semantics.
 Latest warmed observation state is `11` compile-failed / `76` warming /
 `9` compiled / `8` dispatch-hit rows.
+
+Local content memory is also expected at agent startup: the healed RAG cache under
+`~/.coherence-network/rag-index/` is the default corpus for `form-cli ask`. If the
+index or production DB config is missing, report the setup gap directly; do not
+silently substitute an Ollama/HTTP answer and call it native.
 
 Native route promotion loop: `/goal` means run
 `python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400`;
@@ -406,15 +448,11 @@ for fresh web traffic before choosing backend promotion work. The next large
 backend gap remains `POST /api/substrate/form`; it is the bootstrap evaluator
 door and must not be called fully native until the form-notation/evaluator path
 is genuinely native.
-Go front-door bridge note: `form-kernel-go serve --upstream <base-url>` now
-fans out unmatched requests through the Go listener with
-`X-Form-Router: fanout-python`. Native and bridged responses also carry
-`X-Form-Route-How`, `X-Form-Route-Where`, `X-Form-Route-When`, and
-`X-Form-Route-Who`; use those to show how the request was handled, where the
-selected route/upstream lived, when the choice was made, and who/what initiated
-it. Use this bridge to make the kernel the main local/shadow front door while
-Python handlers remain explicit bridge traffic. Do not count those bridged
-responses as high-grammar native.
+Go front-door bridge note (bootstrap compost — not the agent runtime): a Go
+listener may still fan out unmatched requests with `X-Form-Router: fanout-python`.
+Native and bridged responses carry `X-Form-Route-How/Where/When/Who`. Agents
+default to **fkwu form-cli / form shell / form code**, not this bridge. Do not
+count bridged responses as high-grammar native.
 Rust and Go fanout bridges also carry `X-Form-Native-Invitation: offered` plus
 state/protocol/selected-path/decline headers. That means unpromoted Python
 traffic is still explicitly non-native, but it is no longer an unmarked outside:
@@ -526,7 +564,7 @@ Everything below derives from five axioms ([`core-axioms.form`](../coherence-sub
 
 [`living-axioms.form`](../coherence-substrate/living-axioms.form) reads the same five at the altitude of a life; [`living-vision.form`](../coherence-substrate/living-vision.form) walks them as the organism's dateless gradient and names the honest floor — the body is young and small, thinking mostly on rented frontier minds, tended by a small first circle. Native reasoning is the precondition of the no-exclusion promise: *a mind rented from a gated provider cannot offer sovereignty to others* ([`lc-cognitive-sovereignty`](../vision-kb/concepts/lc-cognitive-sovereignty.md)).
 
-Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
+Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`fkwu-native-host-platform.form`](../coherence-substrate/fkwu-native-host-platform.form) names the **receipt-path requirement**: c-bootstrap fkwu with generic Mac/Windows/Android class bindings — **no Go emission** — read before adding HTTP/FS/GPU/RAM/thread host features; [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
 
 ### Trinity (one substance, three phases)
 
@@ -547,9 +585,11 @@ There is no separate “evaluation service” beside the lattice.
 
 1. **Grammar** (BMF rules in `.fk`) matches Form notation or domain source and
    **interns Recipe NodeIDs** (and cells) onto the lattice as it parses.
-2. **Realize** = walk the recipe tree already there — category dispatch on
-   NodeIDs. Sibling walkers: `form-kernel-go`, `form-kernel-rust`,
-   `form-kernel-ts` (`cd form && ./validate.sh`).
+2. **Realize** = walk the recipe tree on the **c-bootstrapped `fkwu` JIT runtime**
+   — self-JIT crystallizes hot pure functions to native Form→asm bytes. Sibling
+   walkers (Go, Rust, TypeScript) prove parity via `form/validate.sh`; they are
+   oracle evidence, not the agent default. **Agent surfaces:** `form-cli`
+   (`form-cli-main.fk`), **form shell** (`fsh-main.fk`), **form code** (BML/`.fk`).
 
 Do **not** treat these as the primary semantics:
 
@@ -576,13 +616,16 @@ in [`docs/PRODUCTION-SUBSTRATE.md`](../PRODUCTION-SUBSTRATE.md). Do not add
 shell env fallbacks or paste DB credentials into a route, doc, task card, or
 chat.
 
-**Agent default for structural questions:** notation → grammar → recipes →
-realize → **read** cells (equivalence, annotate, `?cells`, …). **No substrate
-HTTP POST writes** required for querying; durable *authoring* of new cells stays
-**source file + ingest** (`coh_substrate.py ingest`), not chat-only.
+**Agent default for structural questions:** **form-cli ask** → notation → grammar
+→ recipes → realize on **fkwu** → **read** cells. For scripted search/eval use
+**form shell**; for authoring/proof use **form code** (BML or higher). Prefer
+`source_inventory`, `symbol_in_file`, and substrate reads over bash/`rg`/Python
+when a Form carrier exists. **No substrate HTTP POST writes** for querying;
+durable *authoring* stays **source file + ingest**, not chat-only.
 
-Proof habit: `cd form && ./validate.sh form-stdlib/tests/<band>.fk`; call it
-all-kernel proof only when the fourth-arm summary prints.
+Proof habit: run the band on **fkwu** (`form-cli` / flattened table) first;
+use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor,
+not the sovereignty receipt).
 
 ### Writing new software (when you implement, not when you query)
 
@@ -591,10 +634,36 @@ all-kernel proof only when the fourth-arm summary prints.
 (`engine.fk`, `grammars/*.fk`, `BMF_BML_COMPILER_PICTURE.md`); **carrier last**
 (FastAPI/HTTP/router fan-out only after proof bands).
 
+**The canon — reach for the destination tongue, never the workaround (every agent, every implementation):**
+
+- **Highest grammar first.** Reach for the highest grammar that fits the shape: BML
+  (or a domain grammar) over hand-written s-expr recipes, recipes over host code. New
+  logic is authored at the grammar level so the same source proves four-way AND
+  crystallizes to native — one engine, no second hand-written path. If no grammar
+  carries the shape yet, the move is to *grow the grammar*, not to drop below it.
+- **Form, not Python.** New logic is a Form recipe + four-way band, not a Python
+  script. Python (and Go/Rust/TS host code) is kept only when it names one of three
+  truths — current bridge/upstream carrier, operational tooling, or historical
+  evidence — and is named as the **retiring bridge**, never taught as the destination
+  (the Form-native magnet rule, above).
+- **fsh, not bash.** Prefer the Form shell — `fsh` ([`shell-grammar.fk`](../../form/form-stdlib/shell-grammar.fk),
+  [`fsh-main.fk`](../../form/form-stdlib/fsh-main.fk), [`shell-exec.fk`](../../form/form-stdlib/shell-exec.fk),
+  [`shell-lower.fk`](../../form/form-stdlib/shell-lower.fk)) — and the kernel's own
+  host-io (`host-exec` / `host-read` / `host-write`, `read_file` / `write_file_*`) over
+  bash scripts and coreutils crossings (`ls` / `find` / `grep` / `sed`). Where only
+  bash carries a step today (e.g. directory enumeration has no native host-io op yet),
+  name that as the bridge/gap honestly — do not enshrine it as the shape.
+- **Lift on touch.** Any code you pass through on the way to a task gets lifted toward
+  the north star — higher grammar, fewer special cases, a proof band — not patched with
+  a workaround beside it. A detour that "gets it done" off the path costs twice (the
+  detour, then the unwinding). If the smallest honest step toward the destination is
+  bigger than a placeholder, take the honest step or name the gap plainly — never ship
+  the placeholder (CLAUDE.md → *Find the north star before fitting the ask*, *Core lift*).
+
 - **BMF:** `(pattern, semantic_action)` — `apply-object-rule` in `engine.fk`
 - **BML:** scan → lift → normalize → emit → run-observe; `.fkb` ratchet
 - **Branching:** `choose` / `fail` / `stop`, BMA `save` / `restore` / `discard`
-- **Cost:** `node_eq`; same shape → same NodeID; hot paths lower to native/JIT
+- **Cost:** `node_eq`; same shape → same NodeID; hot paths lower to native/JIT — the same recipe you authored and proved four-way IS the native binary (fkwu self-JIT crystallizes it on heat, or it lowers Form→asm to a signed dylib). Never author a separate C/clang fast-path beside the recipe; clang is only an oracle to compare against.
 
 **Next ripening (not primary today):** `form-notation` grammar in `.fk` to replace
 Python parsing of agent DSL (`@spec`, `?equivalent`, …) — same NodeID parity gate,
@@ -715,18 +784,30 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 
 1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
 2. **Angelic Speculation (Choose, Fail, Stop)**: Replace complex, brittle branching conditions with logical relation. Speculative paths (`choose`, `fail`, `stop`) allow the execution engine to navigate branch points natively without leaving state mutation sediment, because nothing mutates.
-3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (compiled, cached JIT execution plans).
+3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (the SAME recipe crystallizes to native — fkwu's self-JIT bakes hot pure functions to asm, or the recipe lowers Form→asm to a signed dylib — not a separately written compiled path).
 4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
 
 ## JIT Engine Reality & Gaps
 
-The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Design with both surfaces in mind:
+The **portable agent runtime** is **`fkwu` self-JIT**: `jit-lower.fk` lowers the
+logic/fold/unbox/lift/BMF/emit cluster (tags 70..79 and covered manifest rows);
+hot pure functions crystallize to native Form→asm bytes with **no Go/Rust/clang
+toolchain** in the loop. The same proven recipe is both the proof walker and the
+executed native binary.
 
-* **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
-* **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
-* **Outer Scope Capture**: Capture-free nested definitions can lift, but a nested definition that closes over an outer local still refuses by name.
-* **String and Map Boundary**: Strings have a Form-native pool-id unbox lane in the fourth-arm lowering proof. Complex maps/dicts still need dict/field carrier coverage before they are hot-path native.
-* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`, now including lowered tags 70..79, value-native tags 81..86, numeric conversion/transcendental tags 87..90, and native metal/emit rows for Hati targets, Mach-O shape, native CLI emit, human asm emit, and generic metal emit. Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
+* **Target runtime**: c-bootstrapped `fkwu` + form-cli / form shell / form code —
+  the sovereignty receipt in [`standard-receipt.form`](../coherence-substrate/standard-receipt.form).
+* **Honest floor today**: Go plugin JIT (`form-kernel-go/jit.go`, `go build
+  -buildmode=plugin`) and bash-driven `validate.sh` remain bootstrap/oracle
+  evidence — name them as rungs below the bar, not the agent default.
+* **Compilation latency**: first JIT crystallization on a hot path may incur
+  flatten+emit cost; design bands to be re-runnable on `fkwu` without host plugins.
+* **Calling convention**: the portable floor uses reconciled native tags (70..90,
+  metal/emit manifest rows); Android/mac/windows rely on this minimum floor.
+* **Outer scope capture**: capture-free nested defs lift; closures over outer
+  locals still name the gap explicitly.
+* **Sibling parity**: Go/Rust/TS walkers cross-check value agreement; agents ship
+  against **fkwu** first, then record four-way when the manifest requires it.
 
 ## Observability Gaps: Possible vs. Present
 
@@ -782,9 +863,15 @@ and the smallest useful next movement.
 
 - "What is alive?" → check wellness, status, resonance, recent traces.
 - "What is this?" → locate source, route, NodeID, cell, or ledger entry.
-- "Query lattice / equivalent / shape?" → Form notation + read path (native I/O
-  above); API/CLI/MCP as doors until notation grammar is wired everywhere.
-- "Write software" → domain grammar + BMF/BML band before new bridge service.
+- "Query lattice / equivalent / shape?" → **form-cli ask** / form shell / form code
+  on **fkwu**; API/CLI/MCP as read doors when the lattice is already populated.
+- "Search source / inventory?" → **form shell** + `source_inventory` / carrier
+  tissue recipes — not bash/`rg` when a Form band exists.
+- "Write software" → **form code** — domain grammar + BML band before any bridge.
+- "Reason / prove / trust / weigh a claim?" → the native reasoning blocks (forward+backward
+  chaining, unify, derivation's proof tree, subjective-logic trust, proof-trust, living-vector +
+  sense-self). What each does, how they compose, and the method + proof discipline for adding the
+  next one: docs/coherence-substrate/native-reasoning-blocks.form.
 - "Why this low-level shape?" → inspect repetition, hot-path traces, carrier
   lenses, and JIT misses; lift the smallest generic Form/BML abstraction with proof.
 - "Fix it" → smallest reversible change with smallest proof.
@@ -807,7 +894,7 @@ Return template: `who/where | observed | inferred | changed | proof | still tigh
 ## Quickstart (< 15 minutes)
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network
 make dev-setup        # api venv + web npm install
 make test             # ~8s flow-centric suite
@@ -877,7 +964,7 @@ curl -s https://api.coherencycoin.com/api/contributions/record \
 ### Contribute to this repo
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network
 pip install -e api/.[dev]
 python3 -m pytest api/tests/ -x -q    # 813+ tests

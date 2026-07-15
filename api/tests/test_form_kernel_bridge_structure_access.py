@@ -28,9 +28,32 @@ import pytest
 from app.services.form_kernel_bridge import (
     _as_field_dict,
     _fk_literal,
+    app_recipes_dir,
     kernel_available,
+    load_recipe,
+    resolve_recipe_path,
+    seedbank_examples_dir,
     serve_via_kernel,
 )
+
+
+class TestRecipeResolution:
+    """Bare recipe names recognize the app home before the shared kernel."""
+
+    def test_app_recipe_resolves_from_api_owned_home(self):
+        name = "endpoint_reaction_resonance.fk"
+        resolved = resolve_recipe_path(name)
+
+        assert resolved == app_recipes_dir() / name
+        assert load_recipe(name) == resolved.read_text(encoding="utf-8")
+
+    def test_shared_recipe_falls_through_to_kernel_seedbank(self, monkeypatch):
+        monkeypatch.delenv("FORM_RECIPE_DIR", raising=False)
+        name = "endpoint_idea_grounding_summary_demo.fk"
+        resolved = resolve_recipe_path(name)
+
+        assert resolved == seedbank_examples_dir() / name
+        assert load_recipe(name) == resolved.read_text(encoding="utf-8")
 
 
 def _marginal_from_idea_py(idea: dict) -> float:

@@ -46,8 +46,19 @@ if [ -d "$DEST/.git" ]; then
   ok "already cloned — pulling latest"; git -C "$DEST" pull --ff-only origin main 2>/dev/null || true
 else
   command -v git >/dev/null 2>&1 || { echo "  git is required — install Xcode CLT: xcode-select --install"; exit 1; }
-  git clone --depth 1 "$REPO_URL" "$DEST" && ok "cloned to $DEST"
+  git clone --depth 1 --recurse-submodules "$REPO_URL" "$DEST" && ok "cloned to $DEST"
 fi
+if [ -d "$DEST/form" ] && [ ! -e "$DEST/form/.git" ] \
+  && [ -n "$(find "$DEST/form" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+  backup="$DEST/.cache/form-pre-submodule-$(date +%Y%m%d%H%M%S)-$$"
+  mkdir -p "$(dirname "$backup")" && mv "$DEST/form" "$backup" \
+    && ok "preserved legacy form tree at $backup"
+fi
+git -C "$DEST" submodule sync --recursive \
+  && git -C "$DEST" submodule update --init --recursive \
+  || { echo "  unable to initialize the pinned coherence-kernel snapshot"; exit 1; }
+python3 "$DEST/scripts/prepare_form_submodule.py" --repo-root "$DEST" --verify-clean \
+  || { echo "  form has material changes; land them in coherence-kernel or restore the reviewed pin"; exit 1; }
 
 # 2. the Form kernel binary -------------------------------------------------------
 say "[2/7] Form kernel"

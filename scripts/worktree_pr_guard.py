@@ -337,6 +337,44 @@ def _changed_paths_worktree() -> list[str]:
     return paths
 
 
+def _index_gitlink_paths() -> set[str]:
+    """Return paths represented by gitlinks in the current index."""
+    proc = subprocess.run(
+        ["git", "ls-files", "--stage"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return set()
+
+    gitlinks: set[str] = set()
+    for line in (proc.stdout or "").splitlines():
+        metadata, separator, path = line.partition("\t")
+        fields = metadata.split()
+        if separator and fields and fields[0] == "160000" and path:
+            gitlinks.add(path)
+    return gitlinks
+
+
+def _collapse_paths_under_index_gitlinks(paths: list[str]) -> list[str]:
+    """Represent a gitlink replacement as one atomic changed path."""
+    gitlinks = sorted(_index_gitlink_paths(), key=len, reverse=True)
+    collapsed: set[str] = set()
+    for path in paths:
+        owner = next(
+            (
+                gitlink
+                for gitlink in gitlinks
+                if path == gitlink or path.startswith(f"{gitlink}/")
+            ),
+            None,
+        )
+        collapsed.add(owner or path)
+    return sorted(collapsed)
+
+
 def _is_skippable_local_artifact(path: str) -> bool:
     normalized = path.strip()
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in SKIPPABLE_LOCAL_ARTIFACT_PATTERNS)
@@ -543,7 +581,9 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
         "--require-changed-evidence",
     )
     changed, diff_error = _changed_paths_range(base_ref)
-    raw_worktree_changed = _changed_paths_worktree()
+    raw_worktree_changed = _collapse_paths_under_index_gitlinks(
+        _changed_paths_worktree()
+    )
     ignored_artifacts = sorted(path for path in raw_worktree_changed if _is_skippable_local_artifact(path))
     worktree_changed = [path for path in raw_worktree_changed if not _is_skippable_local_artifact(path)]
     if diff_error:

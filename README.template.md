@@ -75,7 +75,7 @@ The last integrated movement brought the network closer to running as the thing 
 ## Quickstart (< 15 minutes)
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network
 make dev-setup        # api venv + web npm install
 make test             # ~8s flow-centric suite
@@ -145,7 +145,7 @@ curl -s https://api.coherencycoin.com/api/contributions/record \
 ### Contribute to this repo
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network
 pip install -e api/.[dev]
 python3 -m pytest api/tests/ -x -q    # 813+ tests

@@ -1,0 +1,207 @@
+{
+  "date": "2026-07-15",
+  "thread_branch": "codex/kernel-submodule-replacement-20260715",
+  "commit_scope": "Replace the duplicated Form kernel tree with an exact, path-preserving coherence-kernel submodule and harden every consumer carrier around that pin.",
+  "files_owned": [
+    ".gitmodules",
+    "form",
+    "api/app/form_recipes/",
+    "api/app/services/form_kernel_bridge.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/local_runner.py",
+    "scripts/prepare_form_submodule.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "specs/coherence-kernel-submodule-consumer.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/tests/form-asm-fam-tanh-band.fk",
+      "cd form && ./validate.sh form-kernel-ts/seedbank/python-adapter/examples/endpoint_astro_aspect_demo.fk",
+      "api/.venv/bin/pytest -q api/tests/test_kernel_submodule_contract.py api/tests/test_agent_runner_tool_failure_telemetry.py api/tests/test_edge_cases_regression.py api/tests/test_form_kernel_bridge_structure_access.py api/tests/test_api_dockerfile_contract.py api/tests/test_form_validate_shards.py api/tests/test_commit_evidence_validator.py",
+      "cd api && .venv/bin/pytest -v --ignore=tests/holdout",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/validate_spec_quality.py --file specs/coherence-kernel-submodule-consumer.md",
+      "python3 scripts/build_readmes.py --check",
+      "python3 scripts/validate_workflow_references.py",
+      "ruff check <changed Python paths>",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "results": [
+      "gitlink and checkout equal 26751ba72874e4933719bfa389dcd74a4ef4a642",
+      "pinned tree fa514272606ba68574c6f19df12f5786d86dbeed equals coherence-kernel origin/main:form",
+      "fam-tanh focused band returned 7 and astro focused band returned 3; both are 3-kernel only (Go/Rust/TS), with the fourth-arm gap stated explicitly",
+      "upstream fkwu checkout witness for PR #227 returned ground=42, recursive=55, freshness=15",
+      "focused migration, runner, and deploy contracts: 110 passed",
+      "complete non-holdout API suite: 403 passed",
+      "Hostinger tree-to-gitlink preservation, material-dirt rejection, and route expansion fixture passed",
+      "local API and Next.js production-build validation passed",
+      "all 22 workflow checkout paths hydrate recursive submodules",
+      "spec quality, generated README parity, workflow references, Ruff critical checks, shell syntax, and diff check passed",
+      "local PR guard reported ready_for_push=True and strict follow-through found no stale Codex pull requests"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Awaiting the Coherence-Network pull request checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deployment was requested; local Hostinger migration fixtures and the full local web/API deployment contract passed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A recursive Coherence-Network checkout materializes form/ at one reviewed coherence-kernel snapshot, retains existing consumer paths, resolves Network-owned endpoint recipes from the API, preserves one-time legacy artifacts, and rejects material nested kernel edits before build, ingest, commit, or deploy.",
+    "public_endpoints": [
+      "local recursive git clone/worktree checkout",
+      "local API compatibility service",
+      "local Next.js production build",
+      "Hostinger deployment carrier fixture"
+    ],
+    "test_flows": [
+      "exact gitlink/checkout/main:form tree equality",
+      "tree-to-gitlink transition with preserved legacy cache",
+      "tracked and untracked kernel-source rejection with disposable cache allowance",
+      "full API suite",
+      "local API/web production-build and route smoke validation"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR CI and production deployment remain external gates."
+  },
+  "idea_ids": [
+    "coherence-kernel-one-home"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "kernel-submodule-replacement-20260715"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "architecture",
+        "implementation",
+        "upstream-reconciliation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "specs/coherence-kernel-submodule-consumer.md",
+    "api/tests/test_kernel_submodule_contract.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "https://github.com/seeker71/coherence-kernel/pull/223",
+    "https://github.com/seeker71/coherence-kernel/pull/227"
+  ],
+  "change_files": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/asset_value_update.yml",
+    ".github/workflows/auto-heal-deploy-gates.yml",
+    ".github/workflows/auto_track_contributions.yml",
+    ".github/workflows/change-contract.yml",
+    ".github/workflows/claude-code-host-runner-task.yml",
+    ".github/workflows/export-graph-to-repo.yml",
+    ".github/workflows/external-proof.yml",
+    ".github/workflows/external-tools-audit.yml",
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/hostinger-vps-restart.yml",
+    ".github/workflows/maintainability-architecture-audit.yml",
+    ".github/workflows/pr-check-failure-triage.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    ".github/workflows/self-improve-cycle.yml",
+    ".github/workflows/sema-companion-apk.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/wellness-heartbeat.yml",
+    ".github/workflows/windows-host.yml",
+    ".gitmodules",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "MANIFEST.md",
+    "README.md",
+    "README.template.md",
+    "api/app/form_recipes/endpoint_gathering_head_value.fk",
+    "api/app/form_recipes/endpoint_gathering_visible.fk",
+    "api/app/form_recipes/endpoint_household_advance.fk",
+    "api/app/form_recipes/endpoint_ical_allday.fk",
+    "api/app/form_recipes/endpoint_ical_field.fk",
+    "api/app/form_recipes/endpoint_member_active.fk",
+    "api/app/form_recipes/endpoint_place_distance.fk",
+    "api/app/form_recipes/endpoint_placeholder_name.fk",
+    "api/app/form_recipes/endpoint_reaction_resonance.fk",
+    "api/app/form_recipes/endpoint_request_progress.fk",
+    "api/app/services/form_kernel_bridge.py",
+    "api/scripts/agent_runner.py",
+    "api/scripts/commit_progress.py",
+    "api/scripts/local_runner.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_commit_evidence_validator.py",
+    "api/tests/test_edge_cases_regression.py",
+    "api/tests/test_form_kernel_bridge_structure_access.py",
+    "api/tests/test_form_validate_shards.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "cli/README.md",
+    "cli/lib/commands/deploy.mjs",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/worker/start-worker.vbs",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/FORM-CLI-INSTALL.md",
+    "docs/JOIN-NETWORK.md",
+    "docs/SOCIAL-LAUNCH.md",
+    "docs/WORKER-SERVICE.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "install/form-cli-install.sh",
+    "mcp-server/README.md",
+    "scripts/form_validate_shards.py",
+    "scripts/gen_bp_table.py",
+    "scripts/prepare_form_submodule.py",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/scan_form_blueprints.py",
+    "scripts/substrate_post_merge_hook.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/validate_commit_evidence.py",
+    "scripts/worktree_pr_guard.py",
+    "skills/coherence-network/SKILL.md",
+    "specs/INDEX.md",
+    "specs/coherence-kernel-submodule-consumer.md",
+    "web/app/blog/page.tsx",
+    "web/app/come-in/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 in Codex",
+    "native_body_share": "Repository-native Form, Git, test, build, and deployment fixtures verified the change; native Form lookup returned no sufficient grounded answer.",
+    "rented_oracle_share": "Architecture, edits, orchestration, and prose synthesis were generated by the rented frontier model; exact token counts were unavailable.",
+    "trust_matrix": {
+      "path": "native proof plus rented synthesis",
+      "grounded": false,
+      "freq": true,
+      "suffic": false,
+      "observed": false
+    }
+  }
+}

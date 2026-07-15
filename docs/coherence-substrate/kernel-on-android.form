@@ -147,17 +147,14 @@
 ;         conductor regardless.)
 ;       · STATIC (no NDK): GOOS=linux GOARCH=arm64 CGO_ENABLED=0 -> a statically linked ARM aarch64
 ;         ELF, Termux/adb/qemu-runnable; the cgo dylib-JIT degrades to jit_inram_other.
-;     Either way the script file-checks the ELF AND symbol-checks that the GEN CONDUCTOR's primitives
-;     ride along (form_compile / form_walk / recipe_to_bytes / bytes_to_recipe / write/read_file_bytes).
-;     This is the arm the conductor needs: form-gen.fk's compile leg is form_compile, a Go-kernel
-;     native, so "form-cli that can generate -> RAM / disk / content-addressed store -> execute" runs
-;     on a phone only through the Go kernel on ARM. The script then EXECUTES the conductor on the best
-;     available target: a real device over adb when one is attached (adb get-state = device) — push
-;     binary + form-stdlib, run `fg-dispatch "gen (add (mul 6 7) 1)"`, expect 43; else a static binary
-;     under qemu-aarch64 (Linux CI); else build + ELF + carries-conductor is the proof (the bar PATH A
-;     sits at). UNRUN, named honestly: the on-device adb leg is wired but unexercised — no device was
-;     attached to the build host (a macOS host also ships no qemu-user). The engine cross-compiles to a
-;     genuine Android binary; lighting it on a phone is one `adb` attach away.
+;     Either way the script file-checks the ELF AND symbol-checks a small common execution surface
+;     (add / mul / str_len / read_file / write_file_text). The retired Go-only gen conductor and
+;     form-gen.fk are not part of this portability claim: source compilation now travels through the
+;     Form-native source-compiler grammar -> emission -> artifact lane, while this build is a sibling
+;     walker proof only. The script executes `(add (mul 6 7) 1)` on the best available target: a real
+;     device over adb when attached, else a static binary under qemu-aarch64, else ELF + common-symbol
+;     evidence. UNRUN, named honestly: the on-device adb leg remains host/device-dependent. The proof
+;     sibling cross-compiles to a genuine Android binary; lighting it on a phone is one `adb` attach away.
 ;
 ;
 ; ── PATH C: TYPESCRIPT -> ON-DEVICE JS ENGINE ──  [the kernel that needs no compile, but a host]

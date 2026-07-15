@@ -124,6 +124,14 @@ def _record_text(data: dict[str, Any]) -> str:
     return json.dumps(data, sort_keys=True, ensure_ascii=False)
 
 
+def _is_form_path(path: str) -> bool:
+    return path == "form" or path.startswith("form/")
+
+
+def _is_runtime_path(path: str) -> bool:
+    return path == "form" or path.startswith(RUNTIME_PATH_PREFIXES)
+
+
 def _declared_or_changed_files(data: dict[str, Any], changed_files: list[str] | None) -> set[str]:
     files = _declared_change_files(data)
     if changed_files is not None:
@@ -148,7 +156,7 @@ def _validate_four_kernel_evidence(
         )
 
     files = _declared_or_changed_files(data, changed_files)
-    touches_form = any(path.startswith("form/") for path in files)
+    touches_form = any(_is_form_path(path) for path in files)
     if touches_form and FORM_VALIDATE_RE.search(text) and not (has_fourth_proof or has_three_kernel_gap):
         errors.append(
             "Form validate.sh evidence must include fourth-arm proof or explicitly record "
@@ -187,7 +195,7 @@ def _validate_aggregate_change_coverage(
 
     for path, data in records:
         declared = _declared_change_files(data)
-        declared_runtime = any(item.startswith(RUNTIME_PATH_PREFIXES) for item in declared)
+        declared_runtime = any(_is_runtime_path(item) for item in declared)
         change_intent = str(data.get("change_intent") or "").strip().lower()
         runtime_intent = change_intent in {"runtime_feature", "runtime_fix"}
         if runtime_intent and not declared_runtime:
@@ -278,7 +286,7 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
         if missing_coverage:
             errors.append(f"change_files missing changed paths: {missing_coverage}")
 
-        runtime_changed = any(path.startswith(RUNTIME_PATH_PREFIXES) for path in expected)
+        runtime_changed = any(_is_runtime_path(path) for path in expected)
         runtime_intent = change_intent in {"runtime_feature", "runtime_fix"}
         if runtime_intent and not runtime_changed:
             errors.append("change_intent requires runtime changes under api/app or web/app or web/components")

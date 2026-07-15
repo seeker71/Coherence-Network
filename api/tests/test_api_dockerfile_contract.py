@@ -25,7 +25,21 @@ _ENDPOINT_RECIPES = (
     "endpoint_breath_balance_demo.fk",
     "endpoint_softmax_weights_demo.fk",
 )
-_RECIPE_DIR_REL = "form/form-kernel-ts/seedbank/python-adapter/examples"
+_RECIPE_DIR_IN_KERNEL = "form-kernel-ts/seedbank/python-adapter/examples"
+_RECIPE_DIR_REL = f"form/{_RECIPE_DIR_IN_KERNEL}"
+_APP_RECIPE_DIR_REL = "api/app/form_recipes"
+_APP_ENDPOINT_RECIPES = (
+    "endpoint_gathering_head_value.fk",
+    "endpoint_gathering_visible.fk",
+    "endpoint_household_advance.fk",
+    "endpoint_ical_allday.fk",
+    "endpoint_ical_field.fk",
+    "endpoint_member_active.fk",
+    "endpoint_place_distance.fk",
+    "endpoint_placeholder_name.fk",
+    "endpoint_reaction_resonance.fk",
+    "endpoint_request_progress.fk",
+)
 
 
 def _dependency_name(value: str) -> str:
@@ -70,19 +84,17 @@ def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
 
 
 def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
-    """The four endpoint .fk live on disk AND are tracked by git.
+    """Shared endpoint .fk files live in the populated kernel gitlink.
 
-    They are gitignored as a class (`*.fk`) but un-ignored individually via
-    `!` negations in examples/.gitignore. If a future change drops a negation,
-    the recipe falls out of version control, never reaches the image, and the
-    endpoint fails at request time. Asserting tracked-ness catches that even in
-    a CI env with no kernel to actually run them.
+    Submodule contents are not entries in the superproject index, so trackedness
+    must be read from coherence-kernel's own index. If a recipe drops out there,
+    it never reaches the image and the endpoint fails at request time.
     """
     recipe_dir = REPO_ROOT / _RECIPE_DIR_REL
     tracked = set(
         subprocess.run(
-            ["git", "ls-files", _RECIPE_DIR_REL],
-            cwd=REPO_ROOT,
+            ["git", "ls-files", _RECIPE_DIR_IN_KERNEL],
+            cwd=REPO_ROOT / "form",
             capture_output=True,
             text=True,
             check=True,
@@ -91,11 +103,39 @@ def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
     for name in _ENDPOINT_RECIPES:
         on_disk = recipe_dir / name
         assert on_disk.is_file(), f"recipe missing on disk: {name}"
-        rel = f"{_RECIPE_DIR_REL}/{name}"
-        assert rel in tracked, (
-            f"recipe not git-tracked: {rel} — it must be committed so the "
+        kernel_rel = f"{_RECIPE_DIR_IN_KERNEL}/{name}"
+        assert kernel_rel in tracked, (
+            f"recipe not git-tracked in coherence-kernel: {kernel_rel} — it must be committed so the "
             "deploy image carries it and the endpoint serves kernel-side"
         )
+
+
+def test_app_endpoint_recipes_are_git_tracked() -> None:
+    """Network-owned live recipes remain versioned with their API callers."""
+    recipe_dir = REPO_ROOT / _APP_RECIPE_DIR_REL
+    tracked = set(
+        subprocess.run(
+            ["git", "ls-files", _APP_RECIPE_DIR_REL],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+    )
+
+    for name in _APP_ENDPOINT_RECIPES:
+        rel = f"{_APP_RECIPE_DIR_REL}/{name}"
+        assert (recipe_dir / name).is_file(), f"app recipe missing on disk: {name}"
+        assert rel in tracked, f"app recipe not git-tracked: {rel}"
+
+
+def test_dockerfile_copies_app_endpoint_recipes_with_api_tree() -> None:
+    """The API-owned recipes enter the image through the package-tree copy."""
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+
+    assert re.search(r"^COPY api/ \./$", dockerfile, re.MULTILINE) is not None
+    for name in _APP_ENDPOINT_RECIPES:
+        assert (REPO_ROOT / _APP_RECIPE_DIR_REL / name).is_file()
 
 
 def test_dockerfile_copies_endpoint_recipes_to_recipe_dir() -> None:

@@ -49,7 +49,10 @@ async function deployDirect() {
     console.log(`  Current VPS: ${prevSha}`);
 
     // 2. Git pull
-    const pullOutput = ssh(`cd ${REPO_DIR} && git pull origin main --ff-only`, 30000);
+    const pullOutput = ssh(
+      `cd ${REPO_DIR} && git pull origin main --ff-only && python3 scripts/prepare_form_submodule.py --repo-root . && git submodule sync --recursive && git submodule update --force --init --recursive && python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean`,
+      30000,
+    );
     const newSha = ssh(`cd ${REPO_DIR} && git rev-parse --short HEAD`, 15000);
 
     if (newSha === prevSha) {
@@ -77,7 +80,10 @@ async function deployDirect() {
     } else {
       // Rollback
       console.log(`  \x1b[31m✗\x1b[0m Health check failed — rolling back to ${prevSha}`);
-      ssh(`cd ${REPO_DIR} && git checkout ${prevSha} && cd ${COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web`, 300000);
+      ssh(
+        `cd ${REPO_DIR} && git checkout ${prevSha} && python3 scripts/prepare_form_submodule.py --repo-root . && git submodule sync --recursive && git submodule update --force --init --recursive && python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean && cd ${COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web`,
+        300000,
+      );
       console.log(`  Rolled back to ${prevSha}`);
       await broadcast(`Deploy FAILED health check. Rolled back ${newSha} → ${prevSha}.`);
     }

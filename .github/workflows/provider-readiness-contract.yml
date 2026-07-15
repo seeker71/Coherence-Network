@@ -31,6 +31,8 @@ jobs:
       AUTOMATION_PROVIDER_VALIDATION_REQUIRED: ${{ vars.AUTOMATION_PROVIDER_VALIDATION_REQUIRED }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v6

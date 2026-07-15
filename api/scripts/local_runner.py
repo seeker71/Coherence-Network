@@ -3063,6 +3063,9 @@ def _push_and_pr(
 
     try:
         cwd = str(_get_repo_dir())
+        if not _worktree_submodules_match_reviewed_pins(Path(cwd), task_id[:16]):
+            log.warning("PR_BLOCKED_SUBMODULE_DIRTY task=%s", task_id[:16])
+            return None
 
         # Ensure all changes are committed (exclude control files from staging)
         _CONTROL_FILES = {".task-control", ".task-checkpoint.md", ".idea-progress.md", "data/coherence.db"}
@@ -3186,10 +3189,14 @@ def _push_to_existing_branch(
 ) -> str | None:
     """Push test/review changes to an existing impl branch (same PR)."""
     cwd = str(_get_repo_dir())
+    context = task.get("context", {}) or {}
     try:
         # Checkout the impl branch
         subprocess.run(["git", "fetch", "origin", branch], capture_output=True, timeout=15, cwd=cwd)
         subprocess.run(["git", "checkout", branch], capture_output=True, timeout=5, cwd=cwd)
+        if not _initialize_worktree_submodules(Path(cwd), task_id[:16]):
+            log.warning("PUSH_EXISTING_BLOCKED_SUBMODULE task=%s", task_id[:16])
+            return None
 
         # Stage and commit
         for f in new_changes:
@@ -3801,7 +3808,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             if os.path.exists(ssh_key):
                 deploy_result = subprocess.run(
                     ["ssh", "-o", "StrictHostKeyChecking=no", "-i", ssh_key, "root@187.77.152.42",
-                     "cd /docker/coherence-network/repo && git pull origin main && cd /docker/coherence-network && docker compose build --no-cache api web && docker compose up -d api web"],
+                     "cd /docker/coherence-network/repo && git pull origin main && python3 scripts/prepare_form_submodule.py --repo-root . && git submodule sync --recursive && git submodule update --force --init --recursive && python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean && cd /docker/coherence-network && docker compose build --no-cache api web && docker compose up -d api web"],
                     capture_output=True, text=True, timeout=300, cwd=cwd,
                 )
                 output = (f"DEPLOY_PASSED: VPS updated." if deploy_result.returncode == 0
@@ -4130,37 +4137,46 @@ def run_one(task: dict, dry_run: bool = False, provider_override: str | None = N
 
                     # Runner stages and commits — don't rely on provider to do it
                     cwd = str(_get_repo_dir())
-                    subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
-                    idea_id = context.get("idea_id", "unknown")
-                    subprocess.run(
-                        ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}"],
-                        capture_output=True, timeout=10, cwd=cwd,
-                    )
-                    log.info("RUNNER_COMMITTED task=%s type=%s files=%d", task_id, task_type, len(code_changes))
+                    if not _worktree_submodules_match_reviewed_pins(Path(cwd), task_id[:16]):
+                        success = False
+                        output = (
+                            "Kernel submodule contains material work outside the reviewed pin. "
+                            "Land it in coherence-kernel first; no superproject commit was created."
+                            f"\n---\n{output}"
+                        )
+                        log.warning("RUNNER_COMMIT_BLOCKED_SUBMODULE task=%s", task_id[:16])
+                    else:
+                        subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
+                        idea_id = context.get("idea_id", "unknown")
+                        subprocess.run(
+                            ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}"],
+                            capture_output=True, timeout=10, cwd=cwd,
+                        )
+                        log.info("RUNNER_COMMITTED task=%s type=%s files=%d", task_id, task_type, len(code_changes))
 
-                    # Push changes and create PR for impl/test tasks
-                    if task_type == "impl":
-                        pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
-                        if pr_url:
-                            # Extract PR number and branch for downstream phases
-                            pr_number = pr_url.rstrip("/").split("/")[-1] if pr_url else ""
-                            impl_branch = f"worker/{task_type}/{context.get('idea_id', 'unknown')}/{task_id[:8]}"
-                            output += f"\n\nPR: {pr_url}\nPR_NUMBER: {pr_number}\nIMPL_BRANCH: {impl_branch}"
-                            log.info("PR_CREATED task=%s url=%s pr=%s branch=%s files=%d",
-                                     task_id, pr_url, pr_number, impl_branch, len(code_changes))
-                    elif task_type == "test":
-                        # Test pushes to the IMPL branch, not a new PR
-                        impl_branch = context.get("impl_branch", "")
-                        if impl_branch:
-                            pr_url = _push_to_existing_branch(task, task_id, provider, impl_branch, code_changes, output)
-                            if pr_url:
-                                output += f"\n\nPushed to existing PR branch: {impl_branch}"
-                                log.info("TEST_PUSHED task=%s branch=%s files=%d", task_id, impl_branch, len(code_changes))
-                        else:
-                            log.warning("TEST_NO_BRANCH task=%s — no impl_branch in context, creating standalone PR", task_id)
+                        # Push changes and create PR for impl/test tasks
+                        if task_type == "impl":
                             pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
                             if pr_url:
-                                output += f"\n\nPR: {pr_url}"
+                                # Extract PR number and branch for downstream phases
+                                pr_number = pr_url.rstrip("/").split("/")[-1] if pr_url else ""
+                                impl_branch = f"worker/{task_type}/{context.get('idea_id', 'unknown')}/{task_id[:8]}"
+                                output += f"\n\nPR: {pr_url}\nPR_NUMBER: {pr_number}\nIMPL_BRANCH: {impl_branch}"
+                                log.info("PR_CREATED task=%s url=%s pr=%s branch=%s files=%d",
+                                         task_id, pr_url, pr_number, impl_branch, len(code_changes))
+                        elif task_type == "test":
+                            # Test pushes to the IMPL branch, not a new PR
+                            impl_branch = context.get("impl_branch", "")
+                            if impl_branch:
+                                pr_url = _push_to_existing_branch(task, task_id, provider, impl_branch, code_changes, output)
+                                if pr_url:
+                                    output += f"\n\nPushed to existing PR branch: {impl_branch}"
+                                    log.info("TEST_PUSHED task=%s branch=%s files=%d", task_id, impl_branch, len(code_changes))
+                            else:
+                                log.warning("TEST_NO_BRANCH task=%s — no impl_branch in context, creating standalone PR", task_id)
+                                pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
+                                if pr_url:
+                                    output += f"\n\nPR: {pr_url}"
                 else:
                     # Only control files changed — hollow impl
                     log.warning(
@@ -5391,7 +5407,7 @@ def push_measurements(node_id: str) -> int:
 
 # Safe commands that can be executed remotely without confirmation.
 _SAFE_COMMANDS = {
-    "update": "git pull origin main",
+    "update": "git pull origin main && git submodule sync --recursive && git submodule update --force --init --recursive",
     "status": None,  # handled inline
     "diagnose": None,  # handled inline
     "restart": None,  # handled inline
@@ -5507,6 +5523,10 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
                 steps.append("reset to origin/main (ff-only failed)")
             else:
                 steps.append("pulled latest main")
+            repo_dir = Path(_get_repo_dir())
+            if not _initialize_worktree_submodules(repo_dir, "node-command"):
+                return "Update failed: submodule hydration failed"
+            steps.append("hydrated pinned submodules")
             new_sha = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=str(_get_repo_dir()),
@@ -5642,7 +5662,14 @@ def _deploy_to_vps() -> str:
     log.info("DEPLOY: current VPS SHA: %s", prev_sha)
 
     # 2. Git pull
-    rc, pull_output = _ssh(f"cd {VPS_REPO_DIR} && git pull origin main --ff-only", timeout=30)
+    rc, pull_output = _ssh(
+        f"cd {VPS_REPO_DIR} && git pull origin main --ff-only "
+        "&& python3 scripts/prepare_form_submodule.py --repo-root . "
+        "&& git submodule sync --recursive "
+        "&& git submodule update --force --init --recursive "
+        "&& python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean",
+        timeout=120,
+    )
     if rc != 0:
         return f"Deploy failed: git pull failed: {pull_output[:200]}"
 
@@ -5663,7 +5690,15 @@ def _deploy_to_vps() -> str:
     if rc != 0:
         # Rollback
         log.warning("DEPLOY: build/up failed, rolling back to %s", prev_sha)
-        _ssh(f"cd {VPS_REPO_DIR} && git checkout {prev_sha} && cd {COMPOSE_DIR} && docker compose up -d api web", timeout=120)
+        _ssh(
+            f"cd {VPS_REPO_DIR} && git checkout {prev_sha} "
+            "&& python3 scripts/prepare_form_submodule.py --repo-root . "
+            "&& git submodule sync --recursive "
+            "&& git submodule update --force --init --recursive "
+            "&& python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean "
+            f"&& cd {COMPOSE_DIR} && docker compose up -d api web",
+            timeout=120,
+        )
         return f"Deploy failed: build error (rolled back to {prev_sha}): {build_output[-200:]}"
 
     log.info("DEPLOY: containers started, waiting 30s for health check")
@@ -5690,7 +5725,16 @@ def _deploy_to_vps() -> str:
 
     # 6. Rollback
     log.warning("DEPLOY: rolling back to %s", prev_sha)
-    _ssh(f"cd {VPS_REPO_DIR} && git checkout {prev_sha} && cd {COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web", timeout=300)
+    _ssh(
+        f"cd {VPS_REPO_DIR} && git checkout {prev_sha} "
+        "&& python3 scripts/prepare_form_submodule.py --repo-root . "
+        "&& git submodule sync --recursive "
+        "&& git submodule update --force --init --recursive "
+        "&& python3 scripts/prepare_form_submodule.py --repo-root . --verify-clean "
+        f"&& cd {COMPOSE_DIR} && docker compose build --no-cache api web "
+        "&& docker compose up -d api web",
+        timeout=300,
+    )
     return f"Deploy failed health check -- rolled back to {prev_sha}"
 
 
@@ -5853,6 +5897,185 @@ def _extract_git_archive(archive_path: Path, destination: Path) -> None:
         archive.extractall(destination)
 
 
+def _restore_standalone_gitlinks(
+    source_repo: str,
+    source_ref: str,
+    standalone_repo: Path,
+    task_slug: str,
+) -> bool:
+    """Restore submodule index entries omitted by ``git archive``.
+
+    The source repository is read only. Every index write targets the standalone
+    repository, so linked-worktree fallbacks never write through the parent
+    gitdir while preserving the base commit's exact gitlink object IDs.
+    """
+    listing = _run_git_command(
+        ["git", "ls-tree", "-r", "-z", source_ref],
+        capture_output=True, text=True, timeout=30, cwd=source_repo,
+    )
+    if listing.returncode != 0:
+        detail = (listing.stderr or listing.stdout or "unknown failure").strip()
+        log.warning(
+            "WORKTREE_STANDALONE_GITLINK_LIST_FAILED task=%s ref=%s error=%s",
+            task_slug,
+            source_ref,
+            detail,
+        )
+        return False
+
+    for entry in (listing.stdout or "").split("\0"):
+        if not entry:
+            continue
+        metadata, separator, path = entry.partition("\t")
+        fields = metadata.split()
+        if not separator or len(fields) < 3 or fields[0] != "160000":
+            continue
+        object_id = fields[2]
+        restore = _run_git_command(
+            [
+                "git", "update-index", "--add", "--cacheinfo",
+                "160000", object_id, path,
+            ],
+            capture_output=True, text=True, timeout=10, cwd=str(standalone_repo),
+        )
+        if restore.returncode != 0:
+            detail = (restore.stderr or restore.stdout or "unknown failure").strip()
+            log.warning(
+                "WORKTREE_STANDALONE_GITLINK_RESTORE_FAILED task=%s path=%s error=%s",
+                task_slug,
+                path,
+                detail,
+            )
+            return False
+    return True
+
+
+def _worktree_submodules_match_reviewed_pins(repo_path: Path, task_slug: str) -> bool:
+    """Reject missing, advanced, or materially dirty submodule checkouts."""
+    listing = _run_git_command(
+        ["git", "submodule", "status", "--recursive"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=str(repo_path),
+    )
+    if listing.returncode != 0:
+        detail = (listing.stderr or listing.stdout or "unknown failure").strip()
+        log.warning("WORKTREE_SUBMODULE_STATUS_FAILED task=%s error=%s", task_slug, detail)
+        return False
+    for raw in (listing.stdout or "").splitlines():
+        if not raw:
+            continue
+        if raw[0] != " ":
+            log.warning(
+                "WORKTREE_SUBMODULE_PIN_MISMATCH task=%s status=%s",
+                task_slug,
+                raw,
+            )
+            return False
+        fields = raw[1:].split()
+        if len(fields) < 2:
+            log.warning("WORKTREE_SUBMODULE_STATUS_MALFORMED task=%s status=%s", task_slug, raw)
+            return False
+        submodule_path = repo_path / fields[1]
+        dirty = _run_git_command(
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(submodule_path),
+        )
+        material = _material_submodule_status_entries(dirty.stdout or "")
+        if dirty.returncode != 0 or material:
+            detail = (dirty.stderr or " | ".join(material) or "status unavailable").strip()
+            log.warning(
+                "WORKTREE_SUBMODULE_MATERIAL_DIRTY task=%s submodule=%s error=%s; "
+                "land kernel work in coherence-kernel first",
+                task_slug,
+                fields[1],
+                detail,
+            )
+            return False
+    return True
+
+
+_DISPOSABLE_SUBMODULE_PATH_PREFIXES = (
+    ".cache/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    "form-kernel-rust/target/",
+    "form-kernel-ts/dist/",
+    "form-kernel-ts/node_modules/",
+)
+
+
+def _material_submodule_status_entries(output: str) -> list[str]:
+    """Return submodule changes that are not disposable build/cache output."""
+    entries = output.split("\0") if "\0" in output else output.splitlines()
+    material: list[str] = []
+    for entry in entries:
+        if not entry:
+            continue
+        status = entry[:2]
+        path = entry[3:] if len(entry) > 3 else ""
+        disposable = status == "??" and any(
+            path == prefix.rstrip("/") or path.startswith(prefix)
+            for prefix in _DISPOSABLE_SUBMODULE_PATH_PREFIXES
+        )
+        if not disposable:
+            material.append(entry)
+    return material
+
+
+def _initialize_worktree_submodules(repo_path: Path, task_slug: str) -> bool:
+    """Populate tracked submodules before a provider enters the task repo."""
+    transition = repo_path / "scripts" / "prepare_form_submodule.py"
+    if (
+        transition.is_file()
+        and (repo_path / "form").exists()
+        and not (repo_path / "form" / ".git").exists()
+    ):
+        proc = _run_git_command(
+            [sys.executable, str(transition), "--repo-root", str(repo_path)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(repo_path),
+        )
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "unknown failure").strip()
+            log.warning(
+                "WORKTREE_SUBMODULE_TRANSITION_FAILED task=%s path=%s error=%s",
+                task_slug,
+                repo_path,
+                detail,
+            )
+            return False
+    commands = (
+        ("SYNC", ["git", "submodule", "sync", "--recursive"]),
+        ("UPDATE", ["git", "submodule", "update", "--init", "--recursive"]),
+    )
+    for step, command in commands:
+        proc = _run_git_command(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(repo_path),
+        )
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "unknown failure").strip()
+            log.warning(
+                "WORKTREE_SUBMODULE_%s_FAILED task=%s path=%s error=%s",
+                step,
+                task_slug,
+                repo_path,
+                detail,
+            )
+            return False
+    return _worktree_submodules_match_reviewed_pins(repo_path, task_slug)
+
+
 def _create_standalone_task_repo(
     task_id: str,
     wt_path: Path,
@@ -5942,6 +6165,9 @@ def _create_standalone_task_repo(
                 log.warning("WORKTREE_STANDALONE_STAGE_FAILED task=%s error=%s", slug, detail)
                 return None
 
+            if not _restore_standalone_gitlinks(repo_root, archive_ref, wt_path, slug):
+                return None
+
             commit = _run_git_command(
                 ["git", "commit", "--quiet", "-m", f"Task {slug}: base snapshot ({archive_ref})"],
                 capture_output=True, text=True, timeout=30, cwd=str(wt_path),
@@ -5978,6 +6204,8 @@ def _create_standalone_task_repo(
 
             log.info("WORKTREE_STANDALONE_FETCH_CREATED task=%s base=%s path=%s", slug, remote_ref, wt_path)
 
+        if not _initialize_worktree_submodules(wt_path, slug):
+            return None
         if idea_id:
             _inject_idea_progress(idea_id, wt_path)
         return wt_path
@@ -6165,6 +6393,8 @@ def _create_worktree(
             )
             return None
         if wt_path.exists():
+            if not _initialize_worktree_submodules(wt_path, slug):
+                return None
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             # Inject persisted idea progress sheet if available
             if idea_id:
@@ -6192,6 +6422,8 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
     """
     slug = task_id[:16]
     try:
+        if not _worktree_submodules_match_reviewed_pins(wt_path, slug):
+            return "SUBMODULE_TRACKED_DIRTY: land kernel work in coherence-kernel first"
         # Stage everything so diff captures new files too
         _run_git_command(
             ["git", "add", "-A"], capture_output=True, timeout=10, cwd=str(wt_path),
@@ -6328,6 +6560,8 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
     slug = task_id[:16]
     branch = f"task/{slug}"
     try:
+        if not _worktree_submodules_match_reviewed_pins(wt_path, slug):
+            return False
         # Commit any uncommitted changes in the worktree
         _run_git_command(
             ["git", "add", "-A"],
@@ -6459,7 +6693,21 @@ def _merge_branch_to_main(task_id: str) -> bool:
             pr_state = str(prs[0].get("state", ""))
             if pr_state == "MERGED":
                 log.info("MERGE_ALREADY_DONE task=%s PR #%s already merged", slug, pr_num)
-                return True
+                pull_result = _run_git_command(
+                    ["git", "pull", "--ff-only", "origin", "main"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=repo_root,
+                )
+                if pull_result.returncode != 0:
+                    log.warning(
+                        "MERGE_MAIN_REFRESH_FAILED task=%s error=%s",
+                        slug,
+                        (pull_result.stderr or pull_result.stdout or "unknown failure").strip()[:200],
+                    )
+                    return False
+                return _initialize_worktree_submodules(Path(repo_root), slug)
 
             merge_result = subprocess.run(
                 ["gh", "pr", "merge", str(pr_num), "--squash", "--admin",
@@ -6471,14 +6719,21 @@ def _merge_branch_to_main(task_id: str) -> bool:
             )
             if merge_result.returncode == 0:
                 log.info("MERGED_VIA_PR task=%s PR #%s", slug, pr_num)
-                _run_git_command(
+                pull_result = _run_git_command(
                     ["git", "pull", "--ff-only", "origin", "main"],
                     capture_output=True,
                     text=True,
                     timeout=30,
                     cwd=repo_root,
                 )
-                return True
+                if pull_result.returncode != 0:
+                    log.warning(
+                        "MERGE_MAIN_REFRESH_FAILED task=%s error=%s",
+                        slug,
+                        (pull_result.stderr or pull_result.stdout or "unknown failure").strip()[:200],
+                    )
+                    return False
+                return _initialize_worktree_submodules(Path(repo_root), slug)
             err = merge_result.stderr.strip()[:200]
             log.warning("MERGE_PR_FAILED task=%s PR #%s error=%s", slug, pr_num, err)
 
@@ -6516,6 +6771,9 @@ def _merge_branch_to_main(task_id: str) -> bool:
         if push_result.returncode != 0:
             err = push_result.stderr.strip()[:200]
             log.warning("MAIN_PUSH_FAILED task=%s error=%s", slug, err)
+            return False
+
+        if not _initialize_worktree_submodules(Path(repo_root), slug):
             return False
 
         log.info("MERGED_TO_MAIN task=%s branch=%s via local fallback", slug, branch)
@@ -6980,10 +7238,13 @@ def _check_for_updates_and_restart() -> bool:
             cwd=str(_get_repo_dir()),
         ).stdout.strip()
 
-        if local_sha == remote_sha:
+        if local_sha == remote_sha and not _update_pending.is_set():
             return False
 
-        log.info("SELF-UPDATE: new commits detected (local=%s remote=%s)", local_sha[:8], remote_sha[:8])
+        if local_sha == remote_sha:
+            log.info("SELF-UPDATE: retrying deferred submodule hydration at %s", remote_sha[:8])
+        else:
+            log.info("SELF-UPDATE: new commits detected (local=%s remote=%s)", local_sha[:8], remote_sha[:8])
         _update_pending.set()  # Signal workers to stop claiming new tasks
 
         # Check for uncommitted changes that would block pull
@@ -7035,6 +7296,11 @@ def _check_for_updates_and_restart() -> bool:
                 capture_output=True, text=True, timeout=15,
                 cwd=str(_get_repo_dir()),
             )
+
+        repo_dir = Path(_get_repo_dir())
+        if not _initialize_worktree_submodules(repo_dir, "self-update"):
+            log.warning("SELF-UPDATE: submodule hydration failed; restart deferred")
+            return False
 
         log.info("SELF-UPDATE: pulled latest → %s. Restarting (workers are idle).", remote_sha[:8])
 

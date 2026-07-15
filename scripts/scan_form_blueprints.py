@@ -27,6 +27,7 @@ import collections
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -37,6 +38,35 @@ ONTOLOGY = FORM_ROOT / "form-ontology.json"
 # replaces the hand-maintained markdown table in form/user-blueprint-registry.md
 # (which drifted: that doc said 1870=ARRIVAL while code says 1870=UUID).
 REGISTRY = FORM_ROOT / "blueprint-registry.json"
+
+
+def _form_is_superproject_gitlink() -> bool:
+    """True when this checkout consumes ``form`` as a pinned submodule."""
+    proc = subprocess.run(
+        ["git", "ls-files", "--stage", "--", "form"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    return any(
+        line.startswith("160000 ") and line.partition("\t")[2] == "form"
+        for line in (proc.stdout or "").splitlines()
+    )
+
+
+def _refuse_consumer_mutation(action: str) -> bool:
+    if not _form_is_superproject_gitlink():
+        return False
+    print(
+        f"refusing to {action}: form is the pinned coherence-kernel submodule; "
+        "make the change in a coherence-kernel checkout and then review a "
+        "gitlink bump here",
+        file=sys.stderr,
+    )
+    return True
 
 # Dialect-vocabulary prefixes — a local name carrying one of these is a
 # per-dialect synonym for a shared shape, not the canonical name for it.
@@ -412,6 +442,8 @@ def register_name(name: str, *, level: int = 2, type_: int = 99, pkg: int = 1,
     Allocates the next free inst, OR honors an explicit `inst` (used to migrate
     an existing make_nodeid literal to a name at its current coordinate, so the
     NodeID is preserved). Idempotent: an already-registered name is untouched."""
+    if _refuse_consumer_mutation(f"register Blueprint {name}"):
+        return 2
     data = json.loads(REGISTRY.read_text())
     bps = data["blueprints"]
     for b in bps:
@@ -444,6 +476,8 @@ def register_name(name: str, *, level: int = 2, type_: int = 99, pkg: int = 1,
 def unregister_name(name: str) -> int:
     """Remove the blueprint row whose canonical name is NAME and regenerate the
     kernel bp tables. (Aliases are not removable on their own — edit the row.)"""
+    if _refuse_consumer_mutation(f"unregister Blueprint {name}"):
+        return 2
     data = json.loads(REGISTRY.read_text())
     bps = data["blueprints"]
     kept = [b for b in bps if b["name"] != name]
@@ -499,6 +533,8 @@ def main() -> int:
         return unregister_name(args.name)
 
     if args.emit_registry:
+        if _refuse_consumer_mutation("emit the Blueprint registry"):
+            return 2
         generated = emit_registry()
         def coord(r):
             return (r.get("pkg", 1), r.get("level", 2), r.get("type", 99), r["inst"])

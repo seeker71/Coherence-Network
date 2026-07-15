@@ -42,7 +42,7 @@ Trust the filesystem, not the output.
 ```
 The whole system is open source. Clone, run, your machine joins the network:
 
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 cd Coherence-Network/api && pip install -e .
 python scripts/local_runner.py
 
@@ -157,7 +157,7 @@ Quick results:
 • Gemini: 0% → 83% with one flag fix (-y)
 
 The system auto-detects providers and learns which works best. Clone & run:
-git clone https://github.com/seeker71/Coherence-Network.git
+git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git
 
 Full data: coherencycoin.com/automation
 Writeup: coherencycoin.com/blog
