@@ -4,9 +4,9 @@
 // This constant is the recipe TEXT verbatim — run as-is on the same TypeScript Form
 // kernel that proves the band. It is NOT a reimplementation of the logic in TS; the
 // surface computes every value by walking this recipe. Keep byte-identical to the .fk
-// (the web container does not ship form/, so the text lives here; refresh on change).
-import { Frame, Kernel, Trace, walk } from "./vendor/kernel.ts";
-import { readAll } from "./vendor/reader.ts";
+// The web container ships form/ as its canonical browser-kernel authority.
+import { Frame, Kernel, Trace, walk } from "../../../form/form-kernel-ts/src/kernel.ts";
+import { readAll } from "../../../form/form-kernel-ts/src/reader.ts";
 export const WORLD_PERCEPTION_RECIPE = String.raw`
 ; world-perception.fk — the node's surface as a projection over sensed channels.
 ;

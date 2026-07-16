@@ -502,7 +502,7 @@ construction, Form JSON emission, and `kh-response` framing.
 The source artifact is a BML front-door catalog, not a Go/Rust/Python route
 file:
 
-- [`deploy/front-door/api.bml`](../deploy/front-door/api.bml) defines the
+- [`form/apps/coherence-network/api.bml`](../form/apps/coherence-network/api.bml) defines the
   `api_ideas` BML handler and `IdeasIndexRoute` route class.
 - [`form/form-stdlib/kernel-http.fk`](../form/form-stdlib/kernel-http.fk)
   supplies typed query helpers (`kh-query-value-or`, `kh-query-int-or`,
@@ -530,7 +530,7 @@ Go route-load command:
 cd form/form-kernel-go
 go run . serve --port 19086 \
   --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json \
-  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml
+  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../form/apps/coherence-network/api.bml
 ```
 
 Observed load result:
@@ -1215,7 +1215,7 @@ Current configuration lives in three places:
 | Route surface | `.fk` manifest with optional `section [form.route]` blocks | Raw Form manifests go through `read_root_from_source`; source sections call `fsc-compile-section-recipe` and become `CompiledRouteProgram` object graphs | Route config is source-language/Form cells: classes, templates, request/response contracts, handlers, and source maps. |
 | Channel traffic policy | `kh-default-channel-policy()` in `kernel-http.fk`; Rust compatibility mirror exports `__router_channel_policy__` | Form recipes read allowed methods, method bridges, no-body methods, and `Allow`; Rust uses the same defaults for route validation, unmatched `OPTIONS`, and `HEAD` body suppression | Load channel policy from `KernelRouterConfig`, then make CORS/access-control, cache, compression, streaming, identity/authorization, and shape policy executed Form recipes. |
 | Host defaults | Rust constants for keep-alive, fanout deadlines, and request/response shape limits | Functions such as `fanout_connect_timeout`, `fanout_read_timeout`, `request_shape_limit`, and `response_shape_limit` return constants | Lift tunable policy into `KernelRouterConfig` as a Form value; keep only emergency host ceilings in Rust. |
-| Canonical numeric formats | Repository JSON file at `docs/coherence-substrate/numeric-formats.canonical.json` | `form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
+| Canonical numeric formats | Repository JSON file at `form/contracts/numeric-formats.canonical.json` | `form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
 
 No environment variable is part of the live kernel-router configuration surface.
 If a value should vary by deployment or route, it should become a config file or

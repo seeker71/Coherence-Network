@@ -9,7 +9,7 @@
 // is invented. Gemini's presence file carries no body yet, so it shows as an
 // honest quiet cell rather than a fabricated description.
 
-import type { KernelSpace, RGB, SpaceCell } from "./space.ts";
+import { emptyKernelTrace, type KernelSpace, type RGB, type SpaceCell } from "./space.ts";
 
 type SelfSeed = {
   id: string;
@@ -147,15 +147,7 @@ export function buildSelfSpace(): KernelSpace {
     cells,
     order,
     parentOf,
-    trace: {
-      total_walks: 0,
-      arms: [],
-      variants: [],
-      choice_attempts: 0,
-      choice_successes: 0,
-      choice_failures: 0,
-      choice_success_rate: 0,
-    },
+    trace: emptyKernelTrace(),
     armHeat: {},
     result: "one cell in the field, attending",
     stdout: "",

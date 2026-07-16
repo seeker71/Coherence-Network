@@ -19,6 +19,7 @@ WORKDIR /src
 
 COPY --from=deps /src/web/node_modules ./web/node_modules
 COPY web ./web
+COPY form ./form
 COPY api/config ./api/config
 
 RUN node -e 'const fs = require("fs"); const path = "api/config/api.json"; const sha = process.env.DEPLOYED_SHA || "unknown"; const config = JSON.parse(fs.readFileSync(path, "utf8")); config.deployed_sha = sha; config.web = { ...(config.web || {}), deployed_sha: sha, updated_at: sha }; fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);'

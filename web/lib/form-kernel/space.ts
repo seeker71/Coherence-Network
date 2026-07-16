@@ -37,11 +37,15 @@ import {
   nodeKey,
   walk,
   type NodeID,
-} from "./vendor/kernel.ts";
-import { readAll } from "./vendor/reader.ts";
+} from "../../../form/form-kernel-ts/src/kernel.ts";
+import { readAll } from "../../../form/form-kernel-ts/src/reader.ts";
 import type { LocalFormTrace } from "./client.ts";
 
 export type RGB = readonly [number, number, number];
+
+export function emptyKernelTrace(): LocalFormTrace {
+  return new Trace().toJSON();
+}
 
 // --- vocabulary reverse maps -------------------------------------------------
 
@@ -358,7 +362,7 @@ export function buildKernelSpace(source: string): KernelSpace {
   } catch (err) {
     stderr.push(String(err instanceof Error ? err.message : err));
   }
-  const trace = kernel.trace.toJSON() as LocalFormTrace;
+  const trace = kernel.trace.toJSON();
 
   // arm name → normalized share of total walks (runtime heat per arm).
   const armHeat: Record<string, number> = {};

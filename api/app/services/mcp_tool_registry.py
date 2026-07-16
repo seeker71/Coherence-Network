@@ -374,44 +374,25 @@ def _serialize_substrate_value(value: Any) -> Any:
 
 
 def substrate_run_handler(arguments: dict[str, Any]) -> Any:
-    """Execute a Form expression — the full meta-circular runtime.
-
-    Sibling agents reach into the substrate the same way Claude does:
-    `defn`, `match`, `.children[i]`, `.value`, recursion all work.
-    """
-    from app.services.unified_db import session as session_scope
-    from app.services.substrate.form_runtime import form_execute_text
-
-    expression = arguments.get("expression")
-    if not expression:
-        return {"error": "expression is required"}
-    try:
-        with session_scope() as session:
-            value = form_execute_text(session, expression)
-        return {"value": _serialize_substrate_value(value)}
-    except Exception as exc:
-        return {"error": f"{type(exc).__name__}: {exc}"}
+    """Retired compatibility door; native execution is the sole authority."""
+    del arguments
+    return {
+        "error": (
+            "consumer-side Python Form execution was removed; use the native "
+            "form-cli carrier or POST /api/substrate/grounded-ask"
+        )
+    }
 
 
 def substrate_query_handler(arguments: dict[str, Any]) -> Any:
-    """Evaluate a Form expression in lookup mode — intern + structural answer.
-
-    Distinct from `substrate_run`: this returns the *structural* answer
-    (NodeID, cells, view) without running the recipe.  Use for
-    `?equivalent @spec(...)`, `@memory(...) |> @presence`, navigation.
-    """
-    from app.services.unified_db import session as session_scope
-    from app.services.substrate import form_evaluate_text
-
-    expression = arguments.get("expression")
-    if not expression:
-        return {"error": "expression is required"}
-    try:
-        with session_scope() as session:
-            result = form_evaluate_text(session, expression)
-        return {"kind": result.kind, "value": _serialize_substrate_value(result.value)}
-    except Exception as exc:
-        return {"error": f"{type(exc).__name__}: {exc}"}
+    """Retired compatibility door; native grounded retrieval replaces it."""
+    del arguments
+    return {
+        "error": (
+            "consumer-side Python Form lookup was removed; use the native "
+            "form-cli carrier or POST /api/substrate/grounded-ask"
+        )
+    }
 
 
 def substrate_stats_handler(arguments: dict[str, Any]) -> Any:

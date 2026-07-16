@@ -108,7 +108,7 @@ Run the Go kernel against the BML front-door catalog:
 cd form/form-kernel-go
 go run . serve --port 19086 \
   --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json \
-  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml
+  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../form/apps/coherence-network/api.bml
 ```
 
 Then curl the native route:

@@ -1,46 +1,37 @@
 #!/usr/bin/env bash
-# form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE.
+# form_first_offline_setup.sh — bring the complete grounded body home.
 #
-# Point a cloud environment's SETUP SCRIPT at this (Claude Code: Environment → setup
-# script; Codex: the setup phase, which has network while the agent phase does not).
-# It populates the per-clone local lattice from the repo's OWN content, so the
-# Form-first router (`form-cli ask`) and the substrate doors ground in the body
-# WITHOUT crossing the sandbox egress boundary — no allowlist, no reach to
-# api.coherencycoin.com. A body that travels whole needs no trust list.
-#
-# Idempotent: a populated lattice is an instant no-op. Carrier only — the routing is
-# Form (form-cli-router / form-cli-sufficiency, four-way proven); this brings the
-# content home so that routing has a body to read.
-#
-# Scope (env FORM_FIRST_INGEST):
-#   concepts  (default) — the vision-kb body; covers most "what is X / shape of X" asks, fast
-#   all                 — the whole body (concepts, specs, ideas, presences, lineages); thorough, slower
-set -u
+# This is the cold-start carrier for the Form-first lane. Readiness is no longer
+# inferred from the presence of one arbitrary cell. The substrate bootstrap
+# reconciles every answer source to an exact source/answer-hash ARTIFACT CTOR,
+# then asks the native carrier to materialize semantic-v2 vectors. Any
+# incomplete stage fails loudly.
+set -euo pipefail
+
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT" || exit 0
+cd "$ROOT"
 
-# already home? (cells_total > 0) → instant no-op
-if python3 scripts/coh_substrate.py stats 2>/dev/null | grep -qE "cells_total: [1-9]"; then
-  echo "⟐ local body already home (lattice populated) — offline Form-first ready, no allowlist needed."
-  exit 0
-fi
-
-# the substrate CLI needs the api package importable; ensure it best-effort, stay quiet on success
-if ! python3 -c "import app.services.substrate" >/dev/null 2>&1; then
-  python3 -m pip install -e api -q >/dev/null 2>&1 || true
-fi
-
-SCOPE="${FORM_FIRST_INGEST:-concepts}"
-case "$SCOPE" in
-  all) FLAG="--all" ;;
-  *)   FLAG="--concepts" ;;
-esac
-
-echo "⟐ bringing the body home: ingesting the repo's own content (${SCOPE}) into the local lattice — offline, one-time…"
-if python3 scripts/coh_substrate.py ingest "$FLAG" >/dev/null 2>&1; then
-  N="$(python3 scripts/coh_substrate.py stats 2>/dev/null | grep -oE 'cells_total: [0-9]+' | grep -oE '[0-9]+')"
-  echo "⟐ done — ${N:-some} cells home. Form-first now answers from the local body; no egress allowlist required."
+if [[ -x "$ROOT/api/.venv/bin/python" ]]; then
+  PYTHON=("$ROOT/api/.venv/bin/python")
+elif [[ -x "$ROOT/api/.venv/Scripts/python.exe" ]]; then
+  PYTHON=("$ROOT/api/.venv/Scripts/python.exe")
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON=(python3)
+elif command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
+  PYTHON=(py -3)
+elif command -v python >/dev/null 2>&1 && python --version 2>&1 | grep -q '^Python 3'; then
+  PYTHON=(python)
 else
-  echo "⟐ ingest unavailable here (missing python deps or toolchain) — Form-first will fall back to the public read door if egress is allowed, else to remote reasoning."
+  echo "Form-first setup failed: Python 3 carrier unavailable" >&2
+  exit 2
 fi
-exit 0
+
+echo "⟐ bringing the complete Form-first body home…"
+"${PYTHON[@]}" scripts/coh_substrate.py bootstrap
+
+echo "⟐ materializing the NodeID-backed sovereign RAG index…"
+bash scripts/ensure_form_cli_native.sh >/dev/null
+"${PYTHON[@]}" scripts/form_cli_rag.py heal
+
+"${PYTHON[@]}" scripts/form_cli_rag.py validate-index
+echo "⟐ ready — exact ARTIFACT bindings and native semantic-v2 index are current."

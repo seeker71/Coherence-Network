@@ -29,6 +29,7 @@ import {
 import * as THREE from "three";
 import {
   buildKernelSpace,
+  emptyKernelTrace,
   layoutSpace,
   type CellLayout,
   type KernelSpace as KernelSpaceData,
@@ -1130,15 +1131,7 @@ export default function KernelSpace() {
         cells: {},
         order: [],
         parentOf: {},
-        trace: {
-          total_walks: 0,
-          arms: [],
-          variants: [],
-          choice_attempts: 0,
-          choice_successes: 0,
-          choice_failures: 0,
-          choice_success_rate: 0,
-        },
+        trace: emptyKernelTrace(),
         armHeat: {},
         result: "",
         stdout: "",

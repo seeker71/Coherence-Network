@@ -60,7 +60,7 @@ What is measured vs stated (the honesty bar)
     entrance probes: the production manifest at /api/attention/kernel-runtime
     and the sibling BML read front door at /api/ready. CAPABLE is the count of
     native handlers in deploy/kernel-router/production-routes.fk plus
-    deploy/front-door/api.bml whether or not every public router has been flipped
+    form/apps/coherence-network/api.bml whether or not every public router has been flipped
     yet. Byte parity remains useful evidence for promoted twins, but the
     operational gate is simpler: the website, API smoke, tool flows, native
     observability, and fallback all still work.
@@ -121,7 +121,7 @@ _KERNEL_ROUTER_FILES = [
 # is the whole request lifecycle, a categorically deeper move than serve_via_kernel
 # (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
 _KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
-_BML_FRONT_DOOR_CATALOG = ROOT / "deploy" / "front-door" / "api.bml"
+_BML_FRONT_DOOR_CATALOG = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
 _KERNEL_ROUTER_COMPOSE = ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml"
 _DEFAULT_FRONT_DOOR_PROBE_PATH = "/api/attention/kernel-runtime"
 _DEFAULT_BML_READ_PROBE_PATH = "/api/ready"

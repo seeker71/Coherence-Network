@@ -64,7 +64,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         "compost": [
             "api/app/services/substrate/form.py",
             "api/app/services/substrate/form_runtime.py",
-            "Form-engine.form via Python form_execute_text",
+            "pinned native Form kernel via the form submodule",
         ],
     },
     "software_writing": {

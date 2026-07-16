@@ -28,7 +28,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_API_BASE = "https://api.coherencycoin.com"
 DEFAULT_STATE_PATH = ROOT / "docs" / "system_audit" / "native_route_goal_state.json"
-FRONT_DOOR_BML = ROOT / "deploy" / "front-door" / "api.bml"
+FRONT_DOOR_BML = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
 PRODUCTION_ROUTES = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 TARGET_SHARE = 0.90
 WEB_PROXY_UPSTREAM_ENDPOINTS = {
@@ -589,7 +589,7 @@ def task_card(
     return {
         "goal": f"Promote {method} {endpoint} to a kernel-native high-grammar handler.",
         "files_allowed": [
-            "deploy/front-door/api.bml",
+            "form/apps/coherence-network/api.bml",
             "form/form-stdlib/tests/source-language-route-class-template-band.fk",
             "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
             "docs/system_audit/native_route_goal_state.json",

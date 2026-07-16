@@ -38,7 +38,7 @@ state — prefer Form. Three reasons:
 ### 1. Structured contracts — replace JSON with Form
 
 Examples currently in JSON that should migrate:
-- `docs/coherence-substrate/numeric-formats.canonical.json` → `.fk`
+- `form/contracts/numeric-formats.canonical.json` → `.fk`
 - `docs/coherence-substrate/kernel-conformance/*.json` → `.fk`
 - `docs/coherence-substrate/language.canonical.json` → `.fk`
 

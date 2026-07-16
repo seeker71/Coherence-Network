@@ -625,7 +625,7 @@
 ;     The earlier "integer-only / floats break determinism" was a misread of the BAND-VERDICT subset
 ;     (AUTHORING.md), never a kernel limit. The one real residue: whole-number floats display as 3.0
 ;     (Rust/Python) vs 3 (Go/TS/JS) — a display-canonicalization bug, not a compute one.
-;   THE NUMERIC STACK IS DEFINED. docs/coherence-substrate/numeric-formats.canonical.json holds 19
+;   THE NUMERIC STACK IS DEFINED. form/contracts/numeric-formats.canonical.json holds 19
 ;     formats — fp64/fp32/bf16/fp8-e4m3/fp8-e5m2/fp4/nf4/i4..i64/u8../bitnet-158/log-prob — each with
 ;     mantissa/exponent bits + an arithmetic_hint (native-fp, software-fp-via-fp32), plus conformance
 ;     vectors. formats.rs `apply_arith` is the per-format reference arithmetic; `canonical_vectors_pass`

@@ -1567,6 +1567,7 @@ def ingest_git_artifact(
     content_hash: str,
     size_bytes: int,
     mtime: Optional[float] = None,
+    answer_hash: Optional[str] = None,
 ) -> Tuple[Any, NodeID, NodeID]:
     """Ingest one git-tracked file as an Artifact cell.
 
@@ -1604,6 +1605,8 @@ def ingest_git_artifact(
         "size_bytes": int(size_bytes),
         "mtime": float(mtime) if mtime is not None else 0.0,
     }
+    if answer_hash is not None:
+        frontmatter["answer_hash"] = answer_hash
 
     blueprint_id = frontmatter_to_blueprint(session, frontmatter, BID_artifact())
     ctor_id = frontmatter_to_structured_ctor(session, frontmatter)

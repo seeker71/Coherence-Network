@@ -25,7 +25,7 @@ class MissingRef:
 _RX_COMMANDS: list[tuple[str, re.Pattern[str]]] = [
     ("pip_requirements", re.compile(r"\bpip(?:3)?\s+install\s+-r\s+([^\s\\]+)")),
     ("python_script", re.compile(r"\bpython(?:3)?\s+([^\s\\]+\.py)\b")),
-    ("shell_script", re.compile(r"\b(?:bash|sh)\s+([^\s\\]+\.sh)\b")),
+    ("shell_script", re.compile(r"(?<![-./A-Za-z0-9_])(?:bash|sh)\s+([^\s\\]+\.sh)\b")),
     ("exec_script", re.compile(r"(^|\s)(\./[^\s\\]+\.sh)\b")),
 ]
 
@@ -42,7 +42,11 @@ def _normalize(token: str) -> str:
 
 
 def _is_dynamic(token: str) -> bool:
-    return "$" in token or "${{" in token or token.startswith("http://") or token.startswith("https://")
+    return (
+        "$" in token
+        or "${{" in token
+        or token.startswith(("/", "~", "http://", "https://"))
+    )
 
 
 def _collect_missing() -> tuple[list[MissingRef], int]:

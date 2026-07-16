@@ -7,7 +7,7 @@
 # against an oracle, run the self-guided agent loop, or evaluate a Form expression
 # directly on the kernel. Local-first by design — a remote oracle (incl. Claude via
 # `claude -p`) is consulted only to review, never required to answer.
-set -u
+set -euo pipefail
 # resolve through symlinks — the installer links this onto PATH (~/.local/bin),
 # so BASH_SOURCE is the symlink; follow it to the real file in the cloned repo.
 src="${BASH_SOURCE[0]}"
@@ -18,23 +18,40 @@ done
 ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
 RAG="$ROOT/scripts/form_cli_rag.py"
 
+python_bridge() {
+  if [ -x "$ROOT/api/.venv/bin/python" ]; then
+    printf '%s\n' "$ROOT/api/.venv/bin/python"
+  elif [ -x "$ROOT/api/.venv/Scripts/python.exe" ]; then
+    printf '%s\n' "$ROOT/api/.venv/Scripts/python.exe"
+  else
+    command -v python3
+  fi
+}
+
 ensure_native_cli() {
-  bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
-  tries=0
-  while [ ! -x "$ROOT/form/form-cli" ] && [ "$tries" -lt 20 ]; do
-    sleep 1
-    tries=$((tries + 1))
-  done
-  if [ ! -x "$ROOT/form/form-cli" ]; then
+  if ! native_cli="$(bash "$ROOT/scripts/ensure_form_cli_native.sh" --print-path 2>/dev/null)"; then
+    echo "form-cli: native carrier refresh/verification failed" >&2
+    return 3
+  fi
+  if [ ! -x "$native_cli" ]; then
     echo "form-cli: native binary unavailable; run scripts/ensure_form_cli_native.sh" >&2
     return 3
   fi
-  printf '%s\n' "$ROOT/form/form-cli"
+  printf '%s\n' "$native_cli"
 }
 
 native_send() {
   b="$(ensure_native_cli)" || exit "$?"
-  (cd "${HOME:-$ROOT}" && printf '%s\nquit\n' "$1" | "$b" | sed '/^null$/d')
+  # One command followed by EOF has no synthetic quit result. Callers that need
+  # byte-exact answer payloads use native_send_file, never command substitution.
+  (cd "${HOME:-$ROOT}" && printf '%s\n' "$1" | "$b")
+}
+
+native_send_file() {
+  command="$1"
+  destination="$2"
+  b="$(ensure_native_cli)" || return "$?"
+  (cd "${HOME:-$ROOT}" && printf '%s\n' "$command" | "$b" >"$destination")
 }
 
 usage() {
@@ -71,7 +88,8 @@ form-cli — the one door (local-first, Form-native)
         score its tool-prediction against what the agent actually did (vs baseline)
         — watch how form-cli would have handled real work, without it being live
   form-cli index [INDEX_PATH]
-        heal the searchable index through the Form-shell rag-heal path
+        resolve the full corpus into substrate REF+CTOR identities, then heal
+        the typed searchable index; refuses to replace it if resolution fails
   form-cli search "<query>"
         Form-native grounded retrieval through the native form-cli grounded verb
   form-cli rag-ask "<question>" [-k N] [-m MODEL]
@@ -150,44 +168,173 @@ model_status() {
 }
 
 ask_native_local() {
-  q="$*"
-  [ -n "$q" ] || { echo "usage: form-cli ask '<question>'" >&2; exit 2; }
-  home="${HOME:-$ROOT}"
-  mkdir -p "$home/.coherence-network" || {
-    echo "form-cli ask: cannot create $home/.coherence-network" >&2
-    exit 3
-  }
-  printf '%s' "$q" > "$home/.coherence-network/rag-query.txt" || {
-    echo "form-cli ask: cannot stage local RAG query" >&2
-    exit 3
-  }
-  out="$(native_send "ask-staged")"
-  if [ -z "$out" ]; then
-    echo "form-cli: native staged ask returned no result; run form-cli index after T_flat is available" >&2
-    exit 4
-  fi
-  if printf '%s\n' "$out" | grep -q '^grounded:'; then
-    printf '%s\n' "trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial" >&2
-  elif printf '%s\n' "$out" | grep -q '^\[ask: local fkwu RAG index has no grounded hit\]'; then
-    receipt="$home/.coherence-network/ask-staged-model-call/current-receipt.json"
-    model_out="$("$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$q" "$receipt" 2>&1)"
-    model_rc=$?
-    if [[ "$model_rc" -eq 0 ]]; then
-      if printf '%s\n' "$model_out" | grep -q '^prose-generation:decoded-grounded-answer$'; then
-        printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  decoded-answer:yes  -> native-model-call-receipt" >&2
-        out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-grounded-decoded-answer\n%s' "$out" "$receipt" "$model_out")"
-      else
-        printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  -> native-model-call-receipt" >&2
-        out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-model-call-observed\nprose-generation:pending-full-tokenizer-gguf-to-metal-decode\n%s' "$out" "$receipt" "$model_out")"
-      fi
-    else
-      printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:no  -> native-miss" >&2
-      out="$(printf '%s\nmodel-call-lane:unavailable\n%s' "$out" "$model_out")"
-    fi
+  source_query_file=""
+  if [ "${1:-}" = "--query-file" ]; then
+    source_query_file="${2:-}"
+    [ -f "$source_query_file" ] && [ -s "$source_query_file" ] || {
+      echo "form-cli ask: staged query file is missing or empty" >&2
+      exit 2
+    }
+    shift 2
   else
-    printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  -> native-miss" >&2
+    q="$*"
+    [ -n "$q" ] || { echo "usage: form-cli ask '<question>'" >&2; exit 2; }
   fi
-  printf '%s\n' "$out"
+  home="${HOME:-$ROOT}"
+  request_dir="$home/.coherence-network/rag-requests"
+  if [ -L "$request_dir" ] || ! mkdir -p "$request_dir" || \
+     ! chmod 700 "$request_dir"; then
+    echo "form-cli ask: cannot create $request_dir" >&2
+    exit 3
+  fi
+  capture_dir="$(mktemp -d)" || {
+    echo "form-cli ask: cannot create byte-exact capture directory" >&2
+    exit 3
+  }
+  query_reservation="$(mktemp "$request_dir/req_XXXXXXXX")" || {
+    echo "form-cli ask: cannot reserve invocation-owned request" >&2
+    exit 3
+  }
+  query_file="${query_reservation}.query"
+  if [ -e "$query_file" ] || ! mv "$query_reservation" "$query_file"; then
+    rm -f "$query_reservation"
+    echo "form-cli ask: cannot name invocation-owned request" >&2
+    exit 3
+  fi
+  request_id="$(basename "$query_file" .query)"
+  receipt_file="$request_dir/$request_id.receipt"
+  cleanup_ask_native_local() {
+    rm -rf "$capture_dir"
+    rm -f "$query_file" "$receipt_file" "$receipt_file.consuming"
+  }
+  trap cleanup_ask_native_local EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  if [ -n "$source_query_file" ]; then
+    cp "$source_query_file" "$query_file"
+  else
+    printf '%s' "$q" >"$query_file"
+  fi || {
+    echo "form-cli ask: cannot stage invocation-owned RAG query" >&2
+    exit 3
+  }
+  py="$(python_bridge)"
+  native_source="$(ensure_native_cli)" || exit "$?"
+  native_source_digest="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$native_source")"
+  index="$home/.coherence-network/rag-index/index.jsonl"
+  run_offline_setup() {
+    setup_log="$capture_dir/offline-setup.log"
+    if ! "$ROOT/scripts/form_first_offline_setup.sh" >"$setup_log" 2>&1; then
+      echo "form-cli ask: grounded substrate/index bootstrap failed" >&2
+      sed 's/^/  /' "$setup_log" >&2
+      return 1
+    fi
+  }
+  if ! "$py" "$RAG" validate-current --index "$index" >/dev/null 2>&1; then
+    run_offline_setup || exit 3
+  fi
+  native_capture="$capture_dir/form-cli"
+  cp "$native_source" "$native_capture" || {
+    echo "form-cli ask: cannot capture immutable native carrier" >&2
+    exit 3
+  }
+  chmod 500 "$native_capture"
+  captured_digest="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$native_capture")"
+  source_digest_after="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$native_source")"
+  if [ "$native_source_digest" != "$captured_digest" ] || \
+     [ "$native_source_digest" != "$source_digest_after" ] || \
+     ! "$py" "$RAG" validate-current --index "$index" >/dev/null 2>&1; then
+    echo "form-cli ask: native carrier/index identity changed during capture" >&2
+    exit 3
+  fi
+  ask_native_send_file() {
+    captured_command="$1"
+    captured_destination="$2"
+    if ! (cd "$home" && printf '%s\n' "$captured_command" | \
+      "$native_capture" >"$captured_destination"); then
+      return 1
+    fi
+    digest_now="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$native_capture")"
+    [ "$digest_now" = "$captured_digest" ]
+  }
+  ask_out="$capture_dir/ask-staged.out"
+  trace_out="$capture_dir/ask-staged-trace.out"
+  query_key="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$query_file")" || {
+    echo "form-cli ask: query digest failed" >&2
+    exit 3
+  }
+  receipt="none|none|none|none|none|none|$query_key|0|0|none|none|none|none|none|0|0|none|none"
+  attempt=1
+  while [ "$attempt" -le 2 ]; do
+    ask_native_send_file "ask-request $request_id" "$ask_out" || {
+      echo "form-cli: native staged ask failed" >&2
+      exit 4
+    }
+    if [ ! -s "$ask_out" ]; then
+      echo "form-cli: native staged ask returned no result" >&2
+      exit 4
+    fi
+    IFS= read -r first_line <"$ask_out" || true
+    first_line="${first_line%$'\r'}"
+    node_id=""
+    if [[ "$first_line" =~ ^grounded:(@[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+      node_id="${BASH_REMATCH[1]}"
+    fi
+    if [ -z "$node_id" ]; then
+      break
+    fi
+    if "$py" "$RAG" trace-receipt "$node_id" --index "$index" \
+        --query-file "$query_file" --request-id "$request_id" \
+        >"$receipt_file" 2>/dev/null; then
+      IFS= read -r verified_receipt <"$receipt_file" || true
+      if [ -n "${verified_receipt:-}" ]; then
+        receipt="$verified_receipt"
+        break
+      fi
+    fi
+    if [ "$attempt" -eq 1 ]; then
+      run_offline_setup || exit 3
+      source_digest_retry="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$native_source")"
+      if [ "$source_digest_retry" != "$captured_digest" ] || \
+         ! "$py" "$RAG" validate-current --index "$index" >/dev/null 2>&1; then
+        echo "form-cli ask: retry reconciliation changed carrier identity" >&2
+        exit 3
+      fi
+      attempt=2
+      continue
+    fi
+    echo "form-cli ask: exact persisted grounding could not be reconciled" >&2
+    exit 5
+  done
+  printf '%s\n' "$receipt" >"$receipt_file" || {
+    echo "form-cli ask: cannot stage invocation-owned grounding receipt" >&2
+    exit 3
+  }
+  ask_native_send_file "ask-request-trace $request_id" "$trace_out" || {
+    echo "form-cli ask: native trust gate failed" >&2
+    exit 5
+  }
+  IFS= read -r trust_line <"$trace_out" || true
+  trust_line="${trust_line%$'\r'}"
+  if [ -z "${trust_line:-}" ] || [[ "$trust_line" != trust\ \ * ]]; then
+    echo "form-cli ask: native trust gate returned no valid trace" >&2
+    exit 5
+  fi
+  if [ -n "$node_id" ]; then
+    # A cryptographically grounded local hit is useful even when frequency or
+    # sufficiency correctly keeps the overall decision at partial/escalate.
+    # Observed callers enforce the stronger all-four-axis row explicitly.
+    if [[ "$trust_line" != trust\ \ path:native\ \ grounded:yes\ \ * ]]; then
+      echo "form-cli ask: native grounding attestation failed" >&2
+      exit 5
+    fi
+  elif [[ "$trust_line" != trust\ \ path:rented\ \ grounded:no\ \ * ]]; then
+    echo "form-cli ask: native miss trust shape is inconsistent" >&2
+    exit 5
+  fi
+  printf '%s\n' "$trust_line" >&2
+  tail -n +2 "$trace_out"
 }
 
 cmd="${1:-}"; shift 2>/dev/null || true
@@ -198,6 +345,7 @@ case "$cmd" in
   -p|--print) ask_native_local "$@" ;;  # one-shot print mode uses the local fkwu staged ask carrier
   -*)        exec bash "$ROOT/scripts/form_cli_ask.sh" "$cmd" "$@" ;; # ask flags (-m/-j/--remote/...) -> Form-native ask carrier
   ask)       ask_native_local "$@" ;;  # default ask is local fkwu staged RAG only
+  ask-file)  ask_native_local --query-file "${1:-}" ;;
   ask-staged-model-call) exec bash "$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$@" ;;
   ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
   grounded)  run_native_cli "grounded $*" ;;
@@ -218,7 +366,7 @@ case "$cmd" in
     run_native_cli "gguf-fullwidth-logits-cell $1" ;;
   model-gap-receipt) exec bash "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$@" ;;
   land)      exec bash "$ROOT/scripts/land_current_branch.sh" "$@" ;;
-  rag-ask)   exec python3 "$RAG" ask "$@" ;;
+  rag-ask)   ask_native_local "$@" ;;
   do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
   train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
@@ -228,10 +376,17 @@ case "$cmd" in
                   bash "$ROOT/scripts/form_cli_replay.sh" "$@" ;;
   search)    run_native_cli "grounded $*" ;;
   index)
+    py="$(python_bridge 2>/dev/null || true)"
+    [ -n "$py" ] || {
+      echo "form-cli index: verified substrate resolver unavailable (python3 missing)" >&2
+      exit 3
+    }
+    "$py" "$ROOT/scripts/coh_substrate.py" bootstrap || exit "$?"
+    ensure_native_cli >/dev/null || exit "$?"
     if [ "$#" -gt 0 ]; then
-      exec bash "$ROOT/form/scripts/rag-heal.sh" "$@"
+      exec "$py" "$RAG" heal --index "$1"
     fi
-    exec bash "$ROOT/form/scripts/rag-heal.sh" "${HOME:-$ROOT}/.coherence-network/rag-index/index.jsonl" ;;
+    exec "$py" "$RAG" heal ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;
   asm)       exec bash "$ROOT/scripts/form_cli_asm.sh" "$@" ;;
   gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;

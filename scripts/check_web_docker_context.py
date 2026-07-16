@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Catch web/ imports reaching above the Docker build context.
+"""Catch web imports reaching outside the source copied into the image.
 
-Dockerfile.web sets `web/` as its build context. Imports of the form
-`../../../experiments/...` or any path that climbs above `web/` resolve
-in local dev (the worktree has the full repo) but fail at `npm run build`
-inside the Docker image (the context is sandboxed to `web/`).
+Dockerfile.web uses the repository root as its build context and copies the
+canonical `web/` and `form/` trees into the builder. Relative imports may cross
+from `web/` into `form/`; imports outside those copied roots resolve in local
+dev but fail at `npm run build` inside the image.
 
 This guard surfaces the mismatch at commit-time instead of letting it
 become three consecutive failed deploys, as happened 2026-05-24 with
 PR #1966 (form-kernel/client.ts importing `../../../experiments/...`).
-The healing pattern is to vendor the needed files into `web/lib/.../vendor/`.
+The healing pattern is to copy a canonical source root in Dockerfile.web or
+move the dependency into an existing copied root, never to fork it into a
+browser-only vendor copy.
 
 Run:
     python3 scripts/check_web_docker_context.py
 
-Exits 1 if any web/ TypeScript file imports a path that escapes the
-web/ tree.
+Exits 1 if any web TypeScript import escapes the build's copied source roots.
 """
 
 from __future__ import annotations
@@ -33,18 +34,19 @@ IMPORT_RE = re.compile(
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = REPO_ROOT / "web"
+FORM_DIR = REPO_ROOT / "form"
+COPIED_SOURCE_ROOTS = (WEB_DIR.resolve(), FORM_DIR.resolve())
 
 
-def import_escapes_web(source_file: Path, import_spec: str) -> bool:
-    """True if a relative import resolves outside the web/ tree."""
+def import_escapes_build_sources(source_file: Path, import_spec: str) -> bool:
+    """True if a relative import resolves outside Docker-copied source roots."""
     if not import_spec.startswith("."):
         return False  # bare specifiers (e.g. "react", "@/components") are fine
     target = (source_file.parent / import_spec).resolve()
-    try:
-        target.relative_to(WEB_DIR.resolve())
-    except ValueError:
-        return True
-    return False
+    for root in COPIED_SOURCE_ROOTS:
+        if target == root or root in target.parents:
+            return False
+    return True
 
 
 def scan() -> list[tuple[Path, int, str]]:
@@ -62,7 +64,7 @@ def scan() -> list[tuple[Path, int, str]]:
                 continue
             for m in IMPORT_RE.finditer(text):
                 spec = m.group(1)
-                if import_escapes_web(path, spec):
+                if import_escapes_build_sources(path, spec):
                     line_no = text[: m.start()].count("\n") + 1
                     findings.append((path, line_no, spec))
     return findings
@@ -71,13 +73,13 @@ def scan() -> list[tuple[Path, int, str]]:
 def main() -> int:
     findings = scan()
     if not findings:
-        print("OK: no web/ imports escape the Docker build context")
+        print("OK: web imports stay within Docker-copied source roots")
         return 0
-    print("ERROR: web/ imports escape the Docker build context")
+    print("ERROR: web imports escape Docker-copied source roots")
     print()
     print("These imports resolve in local dev (full worktree) but fail")
-    print("inside the Docker build (context is sandboxed to web/).")
-    print("Vendor the needed files into web/lib/.../vendor/ to heal.")
+    print("inside the Docker build (only web/ and form/ source are copied).")
+    print("Copy the canonical source root or move the dependency; do not fork it.")
     print()
     for path, line, spec in findings:
         rel = path.relative_to(REPO_ROOT)

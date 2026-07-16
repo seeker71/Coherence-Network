@@ -253,6 +253,8 @@ is_macos_host() {
     [[ "$(uname -s 2>/dev/null || echo unknown)" == "Darwin" ]]
 }
 
+NATIVE_FORM_CLI="$(bash "$ROOT/scripts/ensure_form_cli_native.sh" --print-path)" || exit 3
+
 run_step form_cli_ask current-host "native fkwu grounded ask" true \
     "bin/form-cli ask substrate" \
     "$ROOT/bin/form-cli" ask substrate
@@ -274,8 +276,8 @@ run_step model_convergence current-host "native final-observations wide model-la
     "$ROOT/bin/form-cli" final-observations
 
 run_step decoded_answer current-host "native decoded answer binding" true \
-    "form/form-cli decoded-answer" \
-    bash -lc "printf 'decoded-answer\nquit\n' | '$ROOT/form/form-cli' | sed '/^null$/d'"
+    "native form-cli decoded-answer" \
+    bash -lc "printf 'decoded-answer\nquit\n' | '$NATIVE_FORM_CLI' | sed '/^null$/d'"
 
 run_step gguf_find_four_way current-host "GGUF find-by-name and absolute offset four-way" true \
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk" \

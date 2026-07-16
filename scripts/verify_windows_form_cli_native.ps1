@@ -11,6 +11,7 @@ param(
     [string]$Bash = "",
     [string]$Go = "go",
     [string]$Clang = "",
+    [string]$LlvmReadobj = "",
     [switch]$KeepBinary
 )
 
@@ -106,6 +107,7 @@ $formDir = Join-Path $repoRoot "form"
 $bashPath = Resolve-Tool -Requested $Bash -Names @("bash.exe", "bash") -Fallbacks @("C:\Program Files\Git\bin\bash.exe")
 $goPath = Resolve-Tool -Requested $Go -Names @("go.exe", "go") -Fallbacks @("C:\Program Files\Go\bin\go.exe")
 $clangPath = Resolve-Tool -Requested $Clang -Names @("clang.exe", "clang") -Fallbacks @("C:\Program Files\LLVM\bin\clang.exe")
+$llvmReadobjPath = Resolve-Tool -Requested $LlvmReadobj -Names @("llvm-readobj.exe", "llvm-readobj") -Fallbacks @("C:\Program Files\LLVM\bin\llvm-readobj.exe")
 $exe = Join-Path $formDir ".cache\form-cli-win.exe"
 
 $oldPath = $env:PATH
@@ -124,6 +126,27 @@ if (-not (Test-Path -LiteralPath $exe)) {
     throw "Expected native form-cli executable missing: $exe"
 }
 
+$headerOutput = (& $llvmReadobjPath --file-headers $exe 2>&1) -join "`n"
+if ($LASTEXITCODE -ne 0) {
+    throw "llvm-readobj could not inspect the native form-cli PE header"
+}
+$stackMatch = [regex]::Match(
+    $headerOutput,
+    "SizeOfStackReserve:\s+(0x[0-9A-Fa-f]+|[0-9]+)"
+)
+if (-not $stackMatch.Success) {
+    throw "Native form-cli PE header has no SizeOfStackReserve field"
+}
+$stackText = $stackMatch.Groups[1].Value
+$stackReserve = if ($stackText.StartsWith("0x")) {
+    [Convert]::ToInt64($stackText.Substring(2), 16)
+} else {
+    [Int64]::Parse($stackText)
+}
+if ($stackReserve -ne 16777216) {
+    throw "Native form-cli PE stack reserve is $stackReserve; expected 16777216"
+}
+
 $runtimePath = "$env:SystemRoot\System32;$env:SystemRoot"
 $oldPath = $env:PATH
 try {
@@ -131,7 +154,8 @@ try {
     $runtimeGo = Get-Command go -ErrorAction SilentlyContinue
     $runtimeClang = Get-Command clang -ErrorAction SilentlyContinue
     $runtimeLlvm = Get-Command llvm-objdump -ErrorAction SilentlyContinue
-    if ($runtimeGo -or $runtimeClang -or $runtimeLlvm) {
+    $runtimeReadobj = Get-Command llvm-readobj -ErrorAction SilentlyContinue
+    if ($runtimeGo -or $runtimeClang -or $runtimeLlvm -or $runtimeReadobj) {
         throw "Sanitized runtime PATH still resolves a build/oracle tool"
     }
 } finally {
@@ -157,9 +181,11 @@ $size = (Get-Item -LiteralPath $exe).Length
 Write-Host "PASS windows-form-cli-native exe=$exe bytes=$size"
 Write-Host "PASS windows-form-cli-ping output=pong"
 Write-Host "PASS windows-form-cli-verify native=fkwu embedded_source=true"
-Write-Host "PASS runtime-toolchain-free path=$runtimePath go=absent clang=absent llvm_objdump=absent"
+Write-Host "PASS windows-form-cli-pe-stack-reserve bytes=$stackReserve"
+Write-Host "PASS runtime-toolchain-free path=$runtimePath go=absent clang=absent llvm_objdump=absent llvm_readobj=absent"
 Write-Host "BUILD_CARRIER go=$goPath"
 Write-Host "BUILD_ORACLE clang=$clangPath"
+Write-Host "BUILD_ORACLE llvm_readobj=$llvmReadobjPath"
 
 if (-not $KeepBinary) {
     Remove-Item -LiteralPath $exe -Force

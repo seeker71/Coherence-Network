@@ -63,7 +63,7 @@ AGENT_START_PACKET: dict[str, Any] = {
             ),
             "on_the_way_out": [
                 "api/app/services/substrate/form.py and form_runtime.py (AST + evaluate)",
-                "Form-on-Form executed inside Python (form-engine.form via form_execute_text)",
+                "Form executed by the pinned native kernels in the form submodule",
                 "Treating kernel realization as a separate eval product",
             ],
             "already_native": [

@@ -162,7 +162,7 @@ jobs:
           server_log="$(mktemp)"
           ./target/release/form-kernel-rust serve \
             --port 19108 \
-            --routes ../../deploy/front-door/api.bml \
+            --routes ../apps/coherence-network/api.bml \
             --stdlib ../form-stdlib >"$server_log" 2>&1 &
           server_pid=$!
           cleanup() {
@@ -171,7 +171,10 @@ jobs:
           }
           trap cleanup EXIT
 
-          for _ in $(seq 1 30); do
+          # The canonical submodule route compiles 72 handlers on first boot.
+          # Hosted runners can cross the old 30-second edge while the server is
+          # already healthy; give native compilation a real readiness window.
+          for _ in $(seq 1 90); do
             if curl -fsS \
               -D /tmp/form-kernel-health.headers \
               http://127.0.0.1:19108/api/health \
@@ -205,6 +208,7 @@ jobs:
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |
+          bash scripts/ensure_form_cli_native.sh
           cd api && COHERENCE_TEST_SUITE=full pytest -q
 
       - name: Set up Node.js

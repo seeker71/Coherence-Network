@@ -122,7 +122,7 @@ done || true)
 # routers, services), plus substrate-native shape-files (.form) and
 # stdlib/kernel sources (.fk) so the substrate sees its own teaching tissue.
 CHANGED_CODE=$(printf '%s\n' "$ALL_CHANGED" \
-    | grep -E '^(web/app/(.*/)?(page|layout)\.tsx|web/components/.*\.tsx|web/lib/.*\.ts|api/app/routers/[^/]*\.py|api/app/services/[^/]*\.py|docs/coherence-substrate/[^/]*\.form|form/form-stdlib/.*\.fk)$' \
+    | grep -E '^(web/app/(.*/)?(page|layout)\.tsx|web/components/.*\.tsx|web/lib/.*\.ts|api/app/routers/[^/]*\.py|api/app/services/[^/]*\.py|docs/coherence-substrate/[^/]*\.form|docs/shared/[^/]*\.md|form/form-stdlib/.*\.fk)$' \
     | while IFS= read -r path; do
         [[ -f "$path" ]] && printf '%s\n' "$path"
       done \
@@ -157,26 +157,31 @@ if grep -Fxq training <<< "$CHANGED_ROUTES"; then
     python3 scripts/training_corpus.py --source git --range "$RANGE" || true
 fi
 
-# form-cli RAG memory — the index is WATER, kept fresh by content-addressing. When
-# any body source (recipe/spec/concept/substrate) changed in the range, heal the
-# index: re-embed only the drifted/missing delta, compost orphans. Delta-only and
-# offline; a no-op when nothing drifted. Never fail the merge over it.
-if grep -Fxq rag <<< "$CHANGED_ROUTES"; then
-    echo "[rag] healing the form-cli memory index for $RANGE (form shell / fkwu):"
-    bash form/scripts/rag-heal.sh || true
-fi
-
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
 if grep -Fxq full-form-refresh <<< "$CHANGED_ROUTES"; then
-    echo "[substrate] form gitlink commits unavailable — running full structured ingest:"
-    python3 scripts/coh_substrate.py ingest --all --structured
+    echo "[substrate] form gitlink commits unavailable — bootstrapping the complete grounded body:"
+    python3 scripts/coh_substrate.py bootstrap
 fi
 
 if [ -z "$CHANGED" ]; then
+    if grep -Fxq rag <<< "$CHANGED_ROUTES"; then
+        echo "[rag] corpus changed outside the ingest set — refusing a path-only index refresh" >&2
+        exit 1
+    fi
     echo "[substrate] no tracked changes in $RANGE — substrate stays current"
     exit 0
 fi
 
 echo "[substrate] re-ingesting changed files:"
 echo "$CHANGED" | python3 scripts/coh_substrate.py ingest-paths --from-stdin
+
+# Materialize only after the substrate mutation commits. The index id is the
+# source cell's CTOR NodeID, so healing before ingest would bind new bytes to an
+# old identity. The Python file is the retiring host projection; ranking and the
+# serving gate remain Form-native.
+if grep -Fxq rag <<< "$CHANGED_ROUTES"; then
+    echo "[rag] healing the NodeID-backed form-cli index for $RANGE:"
+    bash scripts/ensure_form_cli_native.sh >/dev/null
+    python3 scripts/form_cli_rag.py heal
+fi

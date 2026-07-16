@@ -6,7 +6,7 @@
 // agent is part of, perceived at once. (See lc-form-perceptron.)
 
 import bodymap from "./vision-bodymap.json";
-import type { KernelSpace, RGB, SpaceCell } from "./space.ts";
+import { emptyKernelTrace, type KernelSpace, type RGB, type SpaceCell } from "./space.ts";
 
 type RawCell = {
   id: string;
@@ -93,15 +93,7 @@ export function buildVisionSpace(): VisionSpace {
     cells,
     order,
     parentOf,
-    trace: {
-      total_walks: 0,
-      arms: [],
-      variants: [],
-      choice_attempts: 0,
-      choice_successes: 0,
-      choice_failures: 0,
-      choice_success_rate: 0,
-    },
+    trace: emptyKernelTrace(),
     armHeat: {},
     result: `${order.length} concepts, one body`,
     stdout: "",

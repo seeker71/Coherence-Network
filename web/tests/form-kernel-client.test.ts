@@ -11,7 +11,7 @@ describe("browser-facing Form kernel", () => {
     const run = runLocalFormBinary("(add 1 (mul 2 3))");
 
     expect(run.result).toBe("7");
-    expect(run.root).toMatch(/^@1\./);
+    expect(run.root).toMatch(/^@\d+(?:\.\d+)+$/);
     expect(run.trace.total_walks).toBeGreaterThan(0);
   });
 

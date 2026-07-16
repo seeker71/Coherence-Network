@@ -54,7 +54,7 @@
 | [check_runtime_drift.py](check_runtime_drift.py) | Fail when runtime drift exceeds known allowlist baseline. |
 | [check_spec_references.py](check_spec_references.py) | spec: full-code-traceability |
 | [check_traceability.py](check_traceability.py) | CI gate: check that new/modified specs have idea_id and code files have spec refs. |
-| [check_web_docker_context.py](check_web_docker_context.py) | Catch web/ imports reaching above the Docker build context. |
+| [check_web_docker_context.py](check_web_docker_context.py) | Ensure web imports stay within the canonical source roots copied into the Docker image. |
 | [claude_corpus.py](claude_corpus.py) | claude_corpus.py — CARRIER (data prep only). Taps Claude Code session transcripts |
 | [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
@@ -150,7 +150,7 @@
 | [form_cli_neural_lm_train.sh](form_cli_neural_lm_train.sh) | form_cli_neural_lm_train.sh — train the Form-native neural LM (neural-lm.fk) on the |
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
 | [form_cli_prove4.sh](form_cli_prove4.sh) | form_cli_prove4.sh — promote a closed recipe to a FOUR-WAY-proven stdlib cell. |
-| [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — RETIRING bootstrap bridge for the form-cli's self-healing memory. |
+| [form_cli_rag.py](form_cli_rag.py) | Filesystem/DB carrier for the native form-cli's self-healing memory. |
 | [form_cli_replay.sh](form_cli_replay.sh) | form_cli_replay.sh — measure how the native models do against the agent. |
 | [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |
 | [form_cli_self_review.sh](form_cli_self_review.sh) | form_cli_self_review.sh — the self-review flywheel, driven through form-cli. |
@@ -167,7 +167,7 @@
 | [form_echo_demo.sh](form_echo_demo.sh) | form_echo_demo.sh — `echo $1`, built with ZERO clang and direct Form -> asm, and |
 | [form_elf_so_android_receipt.sh](form_elf_so_android_receipt.sh) | form_elf_so_android_receipt.sh — the physical on-device receipt for form-elf-so.fk: |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
-| [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE. |
+| [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the complete grounded body home. |
 | [form_fs_fkwu_receipt.sh](form_fs_fkwu_receipt.sh) | form_fs_fkwu_receipt.sh — toolchain-free RUN receipt for form-fs on fkwu. |
 | [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
@@ -306,7 +306,6 @@
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
 | [run_claude_impl_once.sh](run_claude_impl_once.sh) | Run Claude locally on one real impl task: discover via public API (highest-ROI gap), |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | Run one Claude impl task (pinned spec), wait for terminal state, then write a report. |
-| [run_form_practice.py](run_form_practice.py) | Run any Form practice and record substrate cells plus witness ledger. |
 | [run_hati_os_api_band_suite.py](run_hati_os_api_band_suite.py) | Run API-oriented Form band proofs on the universal Hati-OS binary. |
 | [run_mvp_local_baseline.sh](run_mvp_local_baseline.sh) | _no top-of-file purpose_ |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
@@ -343,7 +342,6 @@
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
 | [substrate-py-to-fk.sh](substrate-py-to-fk.sh) | substrate-py-to-fk.sh — convert a substrate Python file to .fk via the |
-| [substrate_parity_harness.py](substrate_parity_harness.py) | substrate_parity_harness.py — read the body in both voices, side by side. |
 | [substrate_post_merge_hook.sh](substrate_post_merge_hook.sh) | Substrate auto-ingest hook. |
 | [substrate_read_hook.py](substrate_read_hook.py) | Claude Code PreToolUse hook — surface substrate annotation on file Reads. |
 | [sync-public-proof.sh](sync-public-proof.sh) | sync-public-proof.sh — keep web/public/PROOF.md identical to repo-root PROOF.md. |
@@ -397,7 +395,9 @@
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |
 | [verify_kernel_canary_public_gate.sh](verify_kernel_canary_public_gate.sh) | _no top-of-file purpose_ |
-| [verify_kernel_conformance.py](verify_kernel_conformance.py) | Verify substrate kernel conformance vectors against executable runtimes. |
+| [verify_kernel_conformance.py](verify_kernel_conformance.py) | Compatibility entrypoint for the canonical submodule conformance runner. |
+| [verify_kernel_single_authority.py](verify_kernel_single_authority.py) | Fail when executable Form/kernel authority leaks outside ``form/``. |
+| [verify_observed_deployment_ask.sh](verify_observed_deployment_ask.sh) | Exercise the complete deployed answer path after a WITNESS is recorded. |
 | [verify_remote_ops_smoke.sh](verify_remote_ops_smoke.sh) | _no top-of-file purpose_ |
 | [verify_web_api_deploy.sh](verify_web_api_deploy.sh) | _no top-of-file purpose_ |
 | [verify_whisper_block0.sh](verify_whisper_block0.sh) | scripts/verify_whisper_block0.sh — coordinate M6 validation check end-to-end. |

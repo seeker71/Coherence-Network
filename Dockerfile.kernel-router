@@ -112,7 +112,7 @@ COPY form/form-stdlib/ /app/form/form-stdlib/
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
 COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
 COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
-COPY deploy/front-door/api.bml /routes/api.bml
+COPY form/apps/coherence-network/api.bml /routes/api.bml
 
 # Source-backed native routes read the canonical idea markdown index directly.
 # This is not the mutable DB-backed registry; it is the repo source surface that

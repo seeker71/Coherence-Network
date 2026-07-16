@@ -8,7 +8,7 @@
 
 The format-recipes-as-substrate-cells architecture is now implemented across all four kernels, coordinated through one canonical JSON contract:
 
-- **Contract:** [`docs/coherence-substrate/numeric-formats.canonical.json`](numeric-formats.canonical.json) — 19 canonical formats (FP64/32/16, FP8 E4M3/E5M2, FP4 uniform, NF4, BF16, INT4–64 signed + unsigned, BitNet ternary, 1-bit XNOR, log-prob), 15 conformance vectors, intern-order spec
+- **Contract:** [`form/contracts/numeric-formats.canonical.json`](numeric-formats.canonical.json) — 19 canonical formats (FP64/32/16, FP8 E4M3/E5M2, FP4 uniform, NF4, BF16, INT4–64 signed + unsigned, BitNet ternary, 1-bit XNOR, log-prob), 15 conformance vectors, intern-order spec
 - **Architecture:** [`docs/coherence-substrate/numeric-types-plan.md`](numeric-types-plan.md)
 - **TS kernel:** `form/form-kernel-ts/src/{formats,numeric,numeric-bench}.ts` — proof of shape (Pass 0 / Pass 1 / Pass 2)
 - **Python kernel:** `api/app/services/substrate/numeric_formats.py` + `api/tests/test_numeric_formats.py`

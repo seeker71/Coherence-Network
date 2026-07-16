@@ -9,7 +9,7 @@ awaiting the front-door flip).
 
 ``kernel_first_capable_routes()`` reads that CAPABLE count from both native
 sources as DATA: ``deploy/kernel-router/production-routes.fk`` and the BML
-front-door catalog ``deploy/front-door/api.bml``. The subtle contract: the Form
+front-door catalog ``form/apps/coherence-network/api.bml``. The subtle contract: the Form
 manifest may bind ``/api/...`` routes as raw ``(list "<path>" <handler>)`` rows
 or as higher-grammar ``kh-route-data-ref`` rows resolved through the sibling
 route-data JSON. The BML catalog contributes ``route(...)`` rows. Path-only GET
