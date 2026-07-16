@@ -717,7 +717,7 @@ selected by observed recipe heat and proven by framebuffer dispatch/miss rows.
 
 `/api/ideas?query=kernel&limit=4` is now the persistence/HTTP exemplar for the
 Go carrier. The route source is
-[`deploy/front-door/api.bml`](../deploy/front-door/api.bml): a BML handler
+[`form/apps/coherence-network/api.bml`](../form/apps/coherence-network/api.bml): a BML handler
 (`api_ideas`) plus an `IdeasIndexRoute` route class. The handler reads a typed
 `kh-request`, applies query defaults, connects through the Form-visible
 PostgreSQL port, queries `graph_nodes(type='idea')`, computes the portfolio
@@ -734,7 +734,7 @@ Route-load command:
 cd form/form-kernel-go
 go run . serve --port 19086 \
   --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json \
-  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml
+  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../form/apps/coherence-network/api.bml
 ```
 
 Observed load:

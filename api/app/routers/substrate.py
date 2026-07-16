@@ -13,7 +13,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import signal
+import stat
+import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -21,7 +26,7 @@ from typing import Any
 from sqlalchemy.exc import OperationalError
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.substrate import (
     DOMAIN_RECIPE_SHAPE,
@@ -32,10 +37,6 @@ from app.services.substrate import (
     canonical_shape_names,
     find_cells_compatible_with,
     find_equivalent_cells,
-    form_evaluate_text,
-    form_execute_text,
-    form_stream_emit,
-    public_form_safety_violation,
     ingest_markdown_text,
     lattice_stats,
     lookup_cell,
@@ -44,6 +45,7 @@ from app.services.substrate import (
 )
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.unified_db import session as session_scope
+from app import config_loader
 
 
 router = APIRouter()
@@ -125,6 +127,46 @@ class NodeOut(BaseModel):
         )
 
 
+class ResolvedNodeOut(BaseModel):
+    id: NodeIDOut
+    resolved: bool
+    kind: str | None = None
+    cell: CellOut | None = None
+    node: NodeOut | None = None
+
+
+class GroundedAskRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=10000)
+
+    @field_validator("query")
+    @classmethod
+    def query_has_no_control_bytes(cls, value: str) -> str:
+        if any(ord(character) < 32 or ord(character) == 127 for character in value):
+            raise ValueError("query contains a control character")
+        return value
+
+
+class GroundedAskResponse(BaseModel):
+    query: str
+    trust: str
+    trust_fields: dict[str, str]
+    grounded_node_id: str | None = None
+    content_node_id: str | None = None
+    source_path: str | None = None
+    source_key: str | None = None
+    answer_key: str | None = None
+    answer: str
+    payload: str
+    native_challenge_digest: str
+    form_cli_binary_sha256: str
+    form_cli_table_sha256: str
+    form_cli_wrapper_sha256: str
+    form_cli_source_stamp: str
+    form_cli_build_id: str
+    kernel_runtime: str
+    elapsed_ms: int
+
+
 class EquivalentResponse(BaseModel):
     blueprint: NodeIDOut
     cells: list[CellOut]
@@ -180,6 +222,488 @@ def get_node(package: int, level: int, type_: int, instance: int) -> NodeOut:
         if orm is None:
             raise HTTPException(status_code=404, detail=f"node {nid} not found")
         return NodeOut.from_orm(orm)
+
+
+@router.get(
+    "/resolve/{package}/{level}/{type_}/{instance}",
+    response_model=ResolvedNodeOut,
+    tags=["substrate"],
+)
+def resolve_node(
+    package: int, level: int, type_: int, instance: int
+) -> ResolvedNodeOut:
+    """Resolve a universal NodeID, including a NamedCell REF.
+
+    NamedCell references live at ``@1.1.9.<cell_id>`` and intentionally do
+    not require a duplicate ``substrate_nodes`` row. This door proves that a
+    grounding identity still names a current cell; ordinary Blueprint/Recipe
+    NodeIDs continue through the interned-node lookup.
+    """
+    node_id = NodeID(package, level, type_, instance)
+    node_out = NodeIDOut.from_node_id(node_id)
+    assert node_out is not None
+    with session_scope() as session:
+        if package == 1 and level == 1 and type_ == 9:
+            row = (
+                session.query(SubstrateNamedCellORM)
+                .filter_by(cell_id=instance)
+                .one_or_none()
+            )
+            if row is None:
+                return ResolvedNodeOut(id=node_out, resolved=False)
+            from app.services.substrate.kernel import _orm_to_cell
+
+            return ResolvedNodeOut(
+                id=node_out,
+                resolved=True,
+                kind="named_cell_ref",
+                cell=CellOut.from_cell(_orm_to_cell(session, row)),
+            )
+
+        orm = lookup_node(session, node_id)
+        if orm is None:
+            return ResolvedNodeOut(id=node_out, resolved=False)
+        return ResolvedNodeOut(
+            id=node_out,
+            resolved=True,
+            kind=orm.domain,
+            node=NodeOut.from_orm(orm),
+        )
+
+
+def _grounded_ask_root() -> Path:
+    api_root = Path(__file__).resolve().parents[2]
+    if (api_root / "bin" / "form-cli").is_file():
+        return api_root
+    return api_root.parent
+
+
+_NODE_ID_RE = re.compile(r"^@[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_TRUST_RE = re.compile(
+    r"^trust  path:(native|rented)  grounded:(yes|no)  freq:(yes|no|unknown)  "
+    r"freq-source:(certified-form|semantic-model|human-gold|unmeasured)  "
+    r"suffic:(yes|no)  "
+    r"observed:(yes|no)  -> (OBSERVED|native-partial|rented)  "
+    r"decision:(accept|retry|escalate)  "
+    r"reason:(ok|empty|bad-shape|weak-content|low-confidence|low-trust)$"
+)
+
+
+def _run_native_wrapper(
+    command: list[str], *, cwd: Path, timeout: int
+) -> subprocess.CompletedProcess[bytes]:
+    """Run the wrapper in an isolated process group and reap the whole tree."""
+    popen_kwargs: dict[str, Any] = {
+        "cwd": cwd,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+    }
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_kwargs["start_new_session"] = True
+    process = subprocess.Popen(command, **popen_kwargs)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        if process.poll() is None:
+            process.kill()
+            process.communicate()
+        raise exc
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def _secure_native_query_directory(path: Path) -> None:
+    """Create the API staging directory without following a hostile symlink."""
+    try:
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+        metadata = path.lstat()
+        if path.is_symlink() or not stat.S_ISDIR(metadata.st_mode):
+            raise OSError("query directory is not a real directory")
+        if os.name != "nt":
+            os.chmod(path, 0o700)
+            metadata = path.lstat()
+            if metadata.st_uid != os.getuid() or stat.S_IMODE(metadata.st_mode) != 0o700:
+                raise OSError("query directory ownership/mode invalid")
+    except OSError as exc:
+        raise HTTPException(
+            status_code=503, detail="native query staging directory is insecure"
+        ) from exc
+
+
+def _parse_native_grounded_payload(
+    stdout: bytes,
+    stderr: bytes,
+) -> tuple[str, dict[str, str], dict[str, str], str, str]:
+    """Validate the complete byte protocol before exposing any native claim."""
+    try:
+        stderr_text = stderr.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=502, detail="native trust trace is not UTF-8") from exc
+    trust_lines = stderr_text.splitlines()
+    if len(trust_lines) != 1:
+        raise HTTPException(status_code=502, detail="native trust trace count invalid")
+    trust = trust_lines[0]
+    match = _TRUST_RE.fullmatch(trust)
+    if match is None:
+        raise HTTPException(status_code=502, detail="native trust trace schema invalid")
+    (
+        path,
+        grounded,
+        frequency,
+        frequency_source,
+        sufficient,
+        observed,
+        verdict,
+        decision,
+        reason,
+    ) = match.groups()
+    if path != "native":
+        raise HTTPException(
+            status_code=502,
+            detail="grounded ask returned a non-native path",
+        )
+    computed_observed = (
+        path == "native"
+        and grounded == "yes"
+        and frequency == "yes"
+        and frequency_source == "certified-form"
+        and sufficient == "yes"
+    )
+    if (observed == "yes") != computed_observed:
+        raise HTTPException(status_code=502, detail="native observed claim inconsistent")
+    expected_verdict = (
+        "OBSERVED"
+        if computed_observed
+        else ("native-partial" if path == "native" else "rented")
+    )
+    if verdict != expected_verdict:
+        raise HTTPException(status_code=502, detail="native verdict inconsistent")
+    if frequency == "yes" and frequency_source != "certified-form":
+        raise HTTPException(status_code=502, detail="native frequency source invalid")
+    if frequency == "no" and frequency_source in {
+        "certified-form",
+        "unmeasured",
+    }:
+        raise HTTPException(status_code=502, detail="native frequency source inconsistent")
+
+    if grounded == "no":
+        try:
+            miss_payload = stdout.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=502, detail="native miss payload is not UTF-8") from exc
+        if miss_payload.strip() not in {
+            "grounded:miss",
+            "[ask: local fkwu RAG index has no grounded hit]",
+        }:
+            raise HTTPException(status_code=502, detail="native miss payload invalid")
+        trust_fields = {
+            "path": path,
+            "grounded": grounded,
+            "freq": frequency,
+            "freq-source": frequency_source,
+            "suffic": sufficient,
+            "observed": observed,
+            "verdict": verdict,
+            "decision": decision,
+            "reason": reason,
+        }
+        return trust, trust_fields, {}, "", miss_payload
+
+    marker = b"\nanswer:"
+    marker_at = stdout.find(marker)
+    if marker_at < 0:
+        raise HTTPException(status_code=502, detail="native answer marker missing")
+    metadata_bytes = stdout[:marker_at]
+    try:
+        metadata_text = metadata_bytes.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="native grounded ask emitted non-UTF-8 protocol bytes",
+        ) from exc
+    allowed = {
+        "grounded",
+        "content-node",
+        "source-path",
+        "source-key",
+        "answer-key",
+        "retrieval-score",
+        "retrieval-runner-score",
+        "retrieval-query-total",
+        "retrieval-threshold",
+        "retrieval-confidence",
+        "local-lane",
+        "synthesis-lane",
+        "answer-byte-length",
+    }
+    bindings: dict[str, str] = {}
+    for line in metadata_text.splitlines():
+        if ":" not in line:
+            raise HTTPException(status_code=502, detail="native binding syntax invalid")
+        key, value = line.split(":", 1)
+        if key not in allowed or key in bindings or not value:
+            raise HTTPException(status_code=502, detail="native binding schema invalid")
+        bindings[key] = value
+    if set(bindings) != allowed:
+        raise HTTPException(status_code=502, detail="native binding set incomplete")
+    if not _NODE_ID_RE.fullmatch(bindings["grounded"]):
+        raise HTTPException(status_code=502, detail="native grounding REF invalid")
+    if not _NODE_ID_RE.fullmatch(bindings["content-node"]):
+        raise HTTPException(status_code=502, detail="native grounding CTOR invalid")
+    if not _SHA256_RE.fullmatch(bindings["source-key"]):
+        raise HTTPException(status_code=502, detail="native source key invalid")
+    if not _SHA256_RE.fullmatch(bindings["answer-key"]):
+        raise HTTPException(status_code=502, detail="native answer key invalid")
+    if bindings["local-lane"] != "fkwu-rag-grounded" or bindings[
+        "synthesis-lane"
+    ] != "fkwu-rag-grounded":
+        raise HTTPException(status_code=502, detail="native lane identity invalid")
+    numeric: dict[str, int] = {}
+    for key in (
+        "retrieval-score",
+        "retrieval-runner-score",
+        "retrieval-query-total",
+        "retrieval-threshold",
+        "retrieval-confidence",
+    ):
+        value = bindings[key]
+        if not value.isascii() or not value.isdecimal():
+            raise HTTPException(status_code=502, detail=f"native {key} invalid")
+        numeric[key] = int(value)
+    if not (
+        0 <= numeric["retrieval-runner-score"] <= numeric["retrieval-score"]
+        <= numeric["retrieval-query-total"]
+        and 0 < numeric["retrieval-threshold"]
+        <= numeric["retrieval-score"]
+        and 0 <= numeric["retrieval-confidence"] <= 100
+    ):
+        raise HTTPException(status_code=502, detail="native retrieval metrics inconsistent")
+    try:
+        answer_length = int(bindings["answer-byte-length"])
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail="native answer length invalid") from exc
+    if not 0 <= answer_length <= 1_000_000:
+        raise HTTPException(status_code=502, detail="native answer length out of range")
+    framed_answer = stdout[marker_at + len(marker):]
+    answer_bytes = framed_answer[:answer_length]
+    if len(answer_bytes) != answer_length or framed_answer[answer_length:] != b"\n":
+        raise HTTPException(status_code=502, detail="native answer framing invalid")
+    try:
+        answer = answer_bytes.decode("utf-8", errors="strict")
+        payload = (metadata_bytes + marker + answer_bytes).decode(
+            "utf-8", errors="strict"
+        )
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="native grounded ask emitted non-UTF-8 protocol bytes",
+        ) from exc
+    if hashlib.sha256(answer_bytes).hexdigest() != bindings["answer-key"]:
+        raise HTTPException(status_code=502, detail="native answer digest mismatch")
+    trust_fields = {
+        "path": path,
+        "grounded": grounded,
+        "freq": frequency,
+        "freq-source": frequency_source,
+        "suffic": sufficient,
+        "observed": observed,
+        "verdict": verdict,
+        "decision": decision,
+        "reason": reason,
+    }
+    return trust, trust_fields, bindings, answer, payload
+
+
+def _run_grounded_ask(query: str) -> GroundedAskResponse:
+    from app.services.native_runtime_observation import observe_native_runtime
+
+    timeout = config_loader.get_int("grounding", "native_ask_timeout_seconds", 20)
+    max_chars = config_loader.get_int("grounding", "native_ask_max_query_chars", 2000)
+    if len(query) > max_chars:
+        raise HTTPException(
+            status_code=413,
+            detail=f"query exceeds configured native ask limit ({max_chars} chars)",
+        )
+    root = _grounded_ask_root()
+    wrapper = root / "bin" / "form-cli"
+    if not wrapper.is_file():
+        raise HTTPException(status_code=503, detail="native form-cli wrapper unavailable")
+
+    observation_before = observe_native_runtime(force=True)
+    if observation_before.get("verified") is not True:
+        raise HTTPException(status_code=503, detail="native carrier observation failed")
+    if Path(str(observation_before.get("root") or "")).resolve() != root.resolve():
+        raise HTTPException(status_code=503, detail="native carrier root mismatch")
+    kernel_before = observation_before.get("kernel")
+    form_cli_before = observation_before.get("form_cli")
+    if (
+        not isinstance(kernel_before, dict)
+        or kernel_before.get("verified") is not True
+        or kernel_before.get("runtime") not in {"inline", "subprocess"}
+        or not isinstance(form_cli_before, dict)
+        or form_cli_before.get("verified") is not True
+    ):
+        raise HTTPException(status_code=503, detail="native carrier observation incomplete")
+    carrier_bindings_before = {
+        "native_challenge_digest": observation_before.get("challenge_digest"),
+        "form_cli_binary_sha256": form_cli_before.get("binary_sha256"),
+        "form_cli_table_sha256": form_cli_before.get("table_sha256"),
+        "form_cli_wrapper_sha256": form_cli_before.get("wrapper_sha256"),
+        "form_cli_source_stamp": form_cli_before.get("source_stamp"),
+        "form_cli_build_id": form_cli_before.get("build_id"),
+        "kernel_runtime": kernel_before.get("runtime"),
+        "kernel_binary_sha256": kernel_before.get("binary_sha256"),
+        "kernel_inline_sha256": kernel_before.get("inline_sha256"),
+    }
+    for key in (
+        "native_challenge_digest",
+        "form_cli_binary_sha256",
+        "form_cli_table_sha256",
+        "form_cli_wrapper_sha256",
+        "form_cli_source_stamp",
+    ):
+        if not _SHA256_RE.fullmatch(str(carrier_bindings_before[key] or "")):
+            raise HTTPException(status_code=503, detail=f"native carrier {key} invalid")
+    if any(
+        not str(carrier_bindings_before[key] or "")
+        for key in ("form_cli_source_stamp", "form_cli_build_id", "kernel_runtime")
+    ):
+        raise HTTPException(status_code=503, detail="native carrier identity invalid")
+
+    started = time.monotonic()
+    query_dir = Path.home() / ".coherence-network" / "api-queries"
+    _secure_native_query_directory(query_dir)
+    query_path = ""
+    try:
+        fd, query_path = tempfile.mkstemp(
+            dir=query_dir,
+            prefix="grounded-ask-",
+            suffix=".query",
+        )
+        with os.fdopen(fd, "wb") as query_out:
+            query_out.write(query.encode("utf-8"))
+            query_out.flush()
+            os.fsync(query_out.fileno())
+        try:
+            process = _run_native_wrapper(
+                [str(wrapper), "ask-file", query_path],
+                cwd=root,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise HTTPException(
+                status_code=504,
+                detail="native grounded ask timed out",
+            ) from exc
+        observation_after = observe_native_runtime(force=True)
+    finally:
+        if query_path:
+            try:
+                os.unlink(query_path)
+            except FileNotFoundError:
+                pass
+
+    if observation_after.get("verified") is not True:
+        raise HTTPException(status_code=503, detail="native carrier post-observation failed")
+    if Path(str(observation_after.get("root") or "")).resolve() != root.resolve():
+        raise HTTPException(status_code=503, detail="native carrier post-root mismatch")
+    kernel_after = observation_after.get("kernel")
+    form_cli_after = observation_after.get("form_cli")
+    if (
+        not isinstance(kernel_after, dict)
+        or kernel_after.get("verified") is not True
+        or not isinstance(form_cli_after, dict)
+        or form_cli_after.get("verified") is not True
+    ):
+        raise HTTPException(status_code=503, detail="native carrier post-observation incomplete")
+    carrier_bindings_after = {
+        "native_challenge_digest": observation_after.get("challenge_digest"),
+        "form_cli_binary_sha256": form_cli_after.get("binary_sha256"),
+        "form_cli_table_sha256": form_cli_after.get("table_sha256"),
+        "form_cli_wrapper_sha256": form_cli_after.get("wrapper_sha256"),
+        "form_cli_source_stamp": form_cli_after.get("source_stamp"),
+        "form_cli_build_id": form_cli_after.get("build_id"),
+        "kernel_runtime": kernel_after.get("runtime"),
+        "kernel_binary_sha256": kernel_after.get("binary_sha256"),
+        "kernel_inline_sha256": kernel_after.get("inline_sha256"),
+    }
+    if carrier_bindings_after != carrier_bindings_before:
+        raise HTTPException(status_code=503, detail="native carrier changed during ask")
+
+    if process.returncode != 0:
+        error_text = process.stderr.decode("utf-8", errors="replace")
+        last_error = next(
+            (line for line in reversed(error_text.splitlines()) if line.strip()),
+            "native form-cli failed",
+        )
+        raise HTTPException(status_code=503, detail=last_error[:500])
+    trust, trust_fields, bindings, answer, payload = _parse_native_grounded_payload(
+        process.stdout,
+        process.stderr,
+    )
+    return GroundedAskResponse(
+        query=query,
+        trust=trust,
+        trust_fields=trust_fields,
+        grounded_node_id=bindings.get("grounded"),
+        content_node_id=bindings.get("content-node"),
+        source_path=bindings.get("source-path"),
+        source_key=bindings.get("source-key"),
+        answer_key=bindings.get("answer-key"),
+        answer=answer,
+        payload=payload,
+        native_challenge_digest=str(
+            carrier_bindings_before["native_challenge_digest"]
+        ),
+        form_cli_binary_sha256=str(
+            carrier_bindings_before["form_cli_binary_sha256"]
+        ),
+        form_cli_table_sha256=str(
+            carrier_bindings_before["form_cli_table_sha256"]
+        ),
+        form_cli_wrapper_sha256=str(
+            carrier_bindings_before["form_cli_wrapper_sha256"]
+        ),
+        form_cli_source_stamp=str(
+            carrier_bindings_before["form_cli_source_stamp"]
+        ),
+        form_cli_build_id=str(carrier_bindings_before["form_cli_build_id"]),
+        kernel_runtime=str(carrier_bindings_before["kernel_runtime"]),
+        elapsed_ms=max(0, int((time.monotonic() - started) * 1000)),
+    )
+
+
+@router.post(
+    "/grounded-ask",
+    response_model=GroundedAskResponse,
+    tags=["substrate"],
+)
+def grounded_ask(req: GroundedAskRequest) -> GroundedAskResponse:
+    """Run the deployed c-bootstrapped Form ask lane and relay its native trace."""
+    if not req.query.strip():
+        raise HTTPException(status_code=422, detail="query must contain non-space text")
+    return _run_grounded_ask(req.query)
 
 
 @router.get("/equivalent/{domain}/{name:path}", response_model=EquivalentResponse, tags=["substrate"])
@@ -1249,29 +1773,15 @@ def _is_access_bootstrap_gap(exc: TypeError) -> bool:
 
 
 def _guard_public_form_expression(expression: str) -> None:
-    """Keep the public Form door to the body, not the host it runs on.
-
-    Form is a real language, and the public door computes with the body
-    freely — arithmetic, recursion, defn, list ops, cell lookup — and opens
-    consent-channel questions (`ask`). A few builtins are different in kind:
-    `pytest_passes` runs a subprocess and `file_*`/`symbol_in_file` read the
-    container's disk. Those reach the *host machine* — the ground the body
-    runs on, not the body itself — and they exist for in-process spec-proving.
-    Keeping them off the public door isn't a wall against guests; it's saying
-    plainly that the guest door speaks with the body, and the host is elsewhere.
-    """
-    violation = public_form_safety_violation(expression)
-    if violation is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"'{violation}' reaches the host machine (filesystem or "
-                f"subprocess) — the ground I run on, not my body. Here you can "
-                f"ask me anything structural (@cell, ?lattice, ?equivalent) and "
-                f"run any pure computation ('mode=run'); those host verbs live "
-                f"only in in-process spec-proving, not on this open door."
-            ),
-        )
+    """The retired Python evaluator never receives public expressions."""
+    del expression
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "the consumer-side Python Form evaluator was removed; use "
+            "POST /api/substrate/grounded-ask or the native form-cli carrier"
+        ),
+    )
 
 
 @router.get("/form", response_model=FormResultOut, tags=["substrate"])
@@ -1332,105 +1842,7 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
     Grammar lives in docs/coherence-substrate/form-language.md.
     """
     _guard_public_form_expression(req.expression)
-    with session_scope() as session:
-        try:
-            if req.mode == "streaming":
-                node_id = form_stream_emit(session, req.expression)
-                return FormResultOut(
-                    kind="recipe",
-                    node_id=NodeIDOut.from_node_id(node_id),
-                )
-            if req.mode == "run":
-                value = form_execute_text(session, req.expression)
-                return FormResultOut(kind="value", value=_runtime_value_out(value))
-            try:
-                result = form_evaluate_text(session, req.expression)
-            except TypeError as exc:
-                if not _is_access_bootstrap_gap(exc):
-                    raise
-                value = form_execute_text(session, req.expression)
-                return _form_result_from_runtime_value(value)
-        except LookupError as exc:
-            # The expression parsed and evaluated cleanly, but a cell or
-            # node it referenced isn't in the lattice. 404 is the honest
-            # answer — the body simply doesn't hold the thing referenced.
-            # Distinct from 400 (parser rejected the expression itself).
-            raise HTTPException(
-                status_code=404,
-                detail=f"form lookup failed: {exc}",
-            ) from exc
-        except MemoryError as exc:
-            # Defense-in-depth: the compute bounds (range/`*`/`+`) should catch
-            # allocation before it reaches here, but if one slips through, fail
-            # the request cleanly rather than let the worker die uncaught.
-            raise HTTPException(
-                status_code=400,
-                detail="form evaluation exceeded memory bounds",
-            ) from exc
-        except (
-            ValueError,
-            SyntaxError,
-            TypeError,
-            KeyError,
-            NameError,
-            RuntimeError,
-            IndexError,
-        ) as exc:
-            raise HTTPException(
-                status_code=400,
-                detail=f"form parse/eval failed: {type(exc).__name__}: {exc}",
-            ) from exc
-
-        if result.kind in {"node_id", "recipe"}:
-            return FormResultOut(
-                kind=result.kind,
-                node_id=NodeIDOut.from_node_id(result.value),
-            )
-        if result.kind == "cell":
-            return FormResultOut(kind="cell", cell=CellOut.from_cell(result.value))
-        if result.kind == "view":
-            return FormResultOut(kind="view", view=_cell_view_out(result.value))
-        if result.kind == "cells":
-            return FormResultOut(
-                kind="cells",
-                cells=[CellOut.from_cell(c) for c in result.value],
-            )
-        if result.kind == "views":
-            return FormResultOut(
-                kind="views",
-                views=[_cell_view_out(v) for v in result.value],
-            )
-        if result.kind == "lattice":
-            # ?lattice — substrate-snapshot lens
-            return FormResultOut(kind="lattice", lattice=result.value)
-        if result.kind == "keywords":
-            # ?keywords — grammar-introspection lens
-            return FormResultOut(kind="keywords", keywords=list(result.value))
-        if result.kind == "vocabulary":
-            # ?vocabulary — verb-cluster histogram. Translate type_ ints to
-            # category names so the response is legible without a category
-            # lookup table on the caller's side.
-            from app.services.substrate.category import BBasic, RBasic
-
-            raw = result.value
-            named: dict[str, dict[str, int]] = {"recipes": {}, "blueprints": {}}
-            for type_int, count in raw.get("recipes", {}).items():
-                try:
-                    name = RBasic(type_int).name
-                except ValueError:
-                    name = f"type_{type_int}"
-                named["recipes"][name] = count
-            for type_int, count in raw.get("blueprints", {}).items():
-                try:
-                    name = BBasic(type_int).name
-                except ValueError:
-                    name = f"type_{type_int}"
-                named["blueprints"][name] = count
-            return FormResultOut(kind="vocabulary", vocabulary=named)
-        raise HTTPException(
-            status_code=500,
-            detail=f"unknown FormResult.kind: {result.kind}",
-        )
+    raise AssertionError("unreachable")
 
 
 @router.post(

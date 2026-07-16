@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 281
+**Total files**: 242
 
 | File | Purpose |
 |---|---|
@@ -62,6 +62,7 @@
 | [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
+| [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
 | [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
@@ -110,10 +111,10 @@
 | [test_form_cli_ask.py](test_form_cli_ask.py) | form_cli `ask` front door: serve Form-native, route the rest, capture for learning. |
 | [test_form_cli_capture.py](test_form_cli_capture.py) | form_cli `capture` — live training catalog: request + raw + transmuted, both kept. |
 | [test_form_cli_carriers.py](test_form_cli_carriers.py) | Regression coverage for thin form-cli host carriers. |
+| [test_form_cli_grounding_runtime.py](test_form_cli_grounding_runtime.py) | Executable proof for the NodeID-backed Form-first grounding runtime. |
 | [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
 | [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
-| [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |
 | [test_form_validate_shards.py](test_form_validate_shards.py) | Changed-path selection for the Form validation shards. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
@@ -144,8 +145,8 @@
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
 | [test_kernel_attribution_report.py](test_kernel_attribution_report.py) | Regression tests for kernel attribution parity sensing. |
-| [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
 | [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Latency sensing for the inline (PyO3) kernel path. |
+| [test_kernel_single_authority.py](test_kernel_single_authority.py) | _no top-of-file purpose_ |
 | [test_kernel_submodule_contract.py](test_kernel_submodule_contract.py) | Contract for the canonical coherence-kernel consumer boundary. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
 | [test_lens_translation_boundaries.py](test_lens_translation_boundaries.py) | _no top-of-file purpose_ |
@@ -209,57 +210,16 @@
 | [test_story_protocol_e2e.py](test_story_protocol_e2e.py) | End-to-end integration flow for the story-protocol-integration arc. |
 | [test_substrate.py](test_substrate.py) | Flow-centric tests for the coherence-substrate. |
 | [test_substrate_artifact_domain.py](test_substrate_artifact_domain.py) | Tests for the ARTIFACT domain — git-tracked files as substrate cells. |
-| [test_substrate_auto_reactive.py](test_substrate_auto_reactive.py) | Auto-firing reactive subscriptions. |
-| [test_substrate_concept_structured.py](test_substrate_concept_structured.py) | Concept domain — structured composition discipline. |
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
 | [test_substrate_edge_categories.py](test_substrate_edge_categories.py) | Edge-category sensing over source substrate files. |
-| [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
-| [test_substrate_form_args_try_methods.py](test_substrate_form_args_try_methods.py) | Method args + try/catch + cell-method dispatch + nested ?-queries. |
-| [test_substrate_form_ast_access.py](test_substrate_form_ast_access.py) | Pin Access + MethodCall in the structural Form evaluator. |
-| [test_substrate_form_bml_full.py](test_substrate_form_bml_full.py) | Close the remaining surface gaps named in form-language.md. |
-| [test_substrate_form_bml_state.py](test_substrate_form_bml_state.py) | BML state-stack + exception-flow primitives in Form. |
-| [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
-| [test_substrate_form_builtins.py](test_substrate_form_builtins.py) | Built-in functions in Form runtime — list ops, type coercion, numerics. |
-| [test_substrate_form_check.py](test_substrate_form_check.py) | Static resolution + blueprint-type checking — the third walk over a Form AST. |
-| [test_substrate_form_decompile_round_trip.py](test_substrate_form_decompile_round_trip.py) | Source round-trip fidelity: text → Recipe → text' → Recipe' is identity. |
-| [test_substrate_form_dict_literals.py](test_substrate_form_dict_literals.py) | Dict literals + field access on dicts. |
-| [test_substrate_form_endpoint.py](test_substrate_form_endpoint.py) | Smoke tests for POST /api/substrate/form — the substrate-native query DSL |
-| [test_substrate_form_eval.py](test_substrate_form_eval.py) | Tests for the data-driven evaluator — operator-symbol → recipe-category. |
-| [test_substrate_form_extensions.py](test_substrate_form_extensions.py) | Form-language extensions: shape-filter, `with`/`.self`, atom-ref filters. |
-| [test_substrate_form_indexing_ternary.py](test_substrate_form_indexing_ternary.py) | List/string indexing + ternary expressions. |
-| [test_substrate_form_introspection.py](test_substrate_form_introspection.py) | Tests for the recipe-introspection primitives — the meta-circular seam. |
-| [test_substrate_form_lens.py](test_substrate_form_lens.py) | Form lens operators — `?lattice` and `?keywords`. |
-| [test_substrate_form_loops.py](test_substrate_form_loops.py) | for/while loops + `set` for mutation across iterations. |
-| [test_substrate_form_operators.py](test_substrate_form_operators.py) | Tests for operator self-hosting — the last keyword-layer gap. |
-| [test_substrate_form_question_effects.py](test_substrate_form_question_effects.py) | Form runtime bridge to the agent question SSE channel. |
-| [test_substrate_form_registries.py](test_substrate_form_registries.py) | Tests for the three runtime-extensible registries Form now consults: |
-| [test_substrate_form_rules.py](test_substrate_form_rules.py) | Tests for runtime-registered Form keywords. |
-| [test_substrate_form_runtime.py](test_substrate_form_runtime.py) | Recipe-execution engine — Form expressions running, not just interning. |
-| [test_substrate_form_runtime_dispatch.py](test_substrate_form_runtime_dispatch.py) | Runtime semantics for the eleven AST nodes form_runtime didn't yet handle. |
-| [test_substrate_form_self_hosted.py](test_substrate_form_self_hosted.py) | Form-level interpreter — proof that Form walks its own Recipe NodeIDs. |
-| [test_substrate_form_speculation.py](test_substrate_form_speculation.py) | Tests for parser-level speculation — backtracking-without-sediment. |
-| [test_substrate_form_stream.py](test_substrate_form_stream.py) | Equivalence tests for the streaming-emit Form parser. |
-| [test_substrate_form_streaming.py](test_substrate_form_streaming.py) | Streaming parser — `tokenize_iter`, `tokenize_chunks`, `parse_chunks`. |
-| [test_substrate_form_string_interp.py](test_substrate_form_string_interp.py) | String interpolation and multiline strings. |
-| [test_substrate_grammar.py](test_substrate_grammar.py) | Tests for substrate-resident grammar — the BMF-shaped seed. |
 | [test_substrate_kernel_image_proposals.py](test_substrate_kernel_image_proposals.py) | Public kernel-image proposal preview contract. |
 | [test_substrate_kernel_parity.py](test_substrate_kernel_parity.py) | Substrate ↔ kernel parity — the kernel reaches the lattice and agrees. |
 | [test_substrate_numeric_schema.py](test_substrate_numeric_schema.py) | Numeric schema sentinels for the coherence-substrate vocabulary. |
-| [test_substrate_parallel_eval.py](test_substrate_parallel_eval.py) | Parallel kernel execution — Python and Form agree on every supported expression. |
-| [test_substrate_presence_structured.py](test_substrate_presence_structured.py) | Presence domain — structural composition discipline. |
-| [test_substrate_raise_value_list_literals.py](test_substrate_raise_value_list_literals.py) | List literals execute, raise carries values, catch sees them as .self. |
 | [test_substrate_read_hook.py](test_substrate_read_hook.py) | Tests for the Claude Code PreToolUse hook that surfaces substrate |
-| [test_substrate_recipe_eval.py](test_substrate_recipe_eval.py) | Recipe-execution engine — runtime semantics for the pure-computation core. |
 | [test_substrate_resonance.py](test_substrate_resonance.py) | Flow-centric tests for the dimensional vocabulary and resonance edges. |
 | [test_substrate_route_resolver.py](test_substrate_route_resolver.py) | Pins the route → page.tsx resolver behind GET /api/substrate/page. |
-| [test_substrate_self_host.py](test_substrate_self_host.py) | Tests for partial self-hosting — Form's grammar expressed as Form rules. |
 | [test_substrate_spec_idea_structured.py](test_substrate_spec_idea_structured.py) | Spec + Idea domains — structural composition discipline. |
-| [test_substrate_string_literal_recovery.py](test_substrate_string_literal_recovery.py) | String literals recover their value at runtime. |
-| [test_substrate_strings.py](test_substrate_strings.py) | Tests for the substrate string-table — cross-process-stable interning. |
-| [test_substrate_structured_ctor.py](test_substrate_structured_ctor.py) | Structural composition discipline — the new structured CTOR encoder. |
 | [test_substrate_surprise_adjacency.py](test_substrate_surprise_adjacency.py) | Tests for the substrate-surprise adjacency refinement. |
-| [test_substrate_vocabulary_commute.py](test_substrate_vocabulary_commute.py) | `?vocabulary` lens + commutative resonance edges. |
-| [test_substrate_word_domain.py](test_substrate_word_domain.py) | Tests for the WORD domain — prose-as-recipe encoder + tokenizer + lookup. |
 | [test_super_idea_rollup.py](test_super_idea_rollup.py) | Tests for super-idea rollup criteria (spec: super-idea-rollup-criteria). |
 | [test_sync_kb_to_db.py](test_sync_kb_to_db.py) | _no top-of-file purpose_ |
 | [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |

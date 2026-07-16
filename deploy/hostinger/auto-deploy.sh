@@ -69,6 +69,36 @@ run_with_timeout() {
   fi
 }
 
+bootstrap_and_verify_local_grounding() {
+  # Deployment owns making the native body operational. Certification belongs
+  # to the later GitHub-runner public observation, never to this host-local step.
+  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+      sh -lc '
+        set -eu
+        cd /app
+        for state_dir in rag-index rag-requests attestation api-queries; do
+          test -d "/root/.coherence-network/$state_dir"
+          probe="/root/.coherence-network/$state_dir/.deploy-write-probe.$$"
+          : > "$probe"
+          rm -f "$probe"
+        done
+        python3 scripts/coh_substrate.py bootstrap
+        python3 scripts/form_cli_rag.py heal
+        out="$(mktemp)"
+        err="$(mktemp)"
+        trap '\''rm -f "$out" "$err"'\'' EXIT
+        bin/form-cli ask "observed auto learning reversible experiment champion challenger" >"$out" 2>"$err"
+        grep -Eq "^trust  path:native  grounded:yes .*suffic:yes" "$err"
+        grep -Eq "^grounded:@[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$" "$out"
+        cat "$err"
+        cat "$out"
+      ' 2>&1 | tee -a "$LOG_FILE"; then
+    log "FAIL: complete substrate/RAG bootstrap or local native grounded ask failed"
+    return 1
+  fi
+  log "Local grounding: complete corpus indexed and native ask proven ✓"
+}
+
 require_file() {
   local path="$1"
   if [[ ! -e "$path" ]]; then
@@ -335,6 +365,9 @@ if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   # Aligned repo + api is necessary, not sufficient — raise any stopped
   # siblings (web, pulse) before resting, or this exit masks their silence.
   ensure_all_services_up || exit 1
+  # A rerun after a witness/index failure must heal and prove the already-live
+  # release; SHA alignment alone is not completion.
+  bootstrap_and_verify_local_grounding || exit 1
   exit 0
 fi
 
@@ -348,13 +381,24 @@ fi
 
 sync_pinned_submodules
 
+FORM_SOURCE_SHA="$(git -C "$REPO_DIR" rev-parse "${TARGET_SHA}:form")"
+if [[ ! "$FORM_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+  log "FATAL: target form gitlink is not a full commit SHA"
+  exit 1
+fi
+
 python3 - <<PY
 from pathlib import Path
 
 sha = "${TARGET_SHA}"
 env_path = Path("${COMPOSE_ROOT}/.env")
 lines = env_path.read_text().splitlines()
-keys = {"GIT_COMMIT_SHA": sha, "DEPLOYED_SHA": sha}
+keys = {
+    "GIT_COMMIT_SHA": sha,
+    "DEPLOYED_SHA": sha,
+    "COHERENCE_SOURCE_SHA": sha,
+    "COHERENCE_FORM_SHA": "${FORM_SOURCE_SHA}",
+}
 out = []
 seen = set()
 for line in lines:
@@ -375,6 +419,7 @@ PY
 
 python3 - <<PY
 import json
+import os
 from pathlib import Path
 
 sha = "${TARGET_SHA}"
@@ -387,6 +432,32 @@ web["updated_at"] = sha
 tmp_path = config_path.with_suffix(config_path.suffix + ".tmp")
 tmp_path.write_text(json.dumps(config, indent=2) + "\n")
 tmp_path.replace(config_path)
+
+# Production loads this higher-precedence file inside the API container.  Keep
+# the live release identity file-backed and atomic; environment SHA stamps are
+# compatibility metadata only and are never the observer's authority.
+runtime_path = Path("/root/.coherence-network/config.json")
+runtime_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+runtime = json.loads(runtime_path.read_text()) if runtime_path.exists() else {}
+runtime["deployed_sha"] = sha
+runtime.setdefault("web", {})["deployed_sha"] = sha
+runtime["web"]["updated_at"] = sha
+runtime.setdefault("deployment_observer", {})["enabled"] = True
+runtime_tmp = runtime_path.with_name(f".{runtime_path.name}.{os.getpid()}.tmp")
+fd = os.open(runtime_tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+try:
+    payload = (json.dumps(runtime, indent=2, sort_keys=True) + "\n").encode()
+    os.write(fd, payload)
+    os.fsync(fd)
+finally:
+    os.close(fd)
+os.replace(runtime_tmp, runtime_path)
+os.chmod(runtime_path, 0o600)
+directory_fd = os.open(runtime_path.parent, os.O_RDONLY)
+try:
+    os.fsync(directory_fd)
+finally:
+    os.close(directory_fd)
 PY
 
 cd "$COMPOSE_ROOT"
@@ -426,99 +497,197 @@ else
   log "compose build contexts: no pinned github SHA found (local-context build?) — skipped"
 fi
 
-# api + web + pulse share the same repo and SHA. Rebuilding all three
-# on every push keeps the witness in step with what it's probing —
-# when the web page's marker vocabulary drifts (as it did when locale
-# messages started embedding "Something went wrong" inline), the
-# pulse probe that reads those pages needs to redeploy alongside to
-# pick up the updated marker, otherwise it silences real organs on
-# false positives.
-#
-# Path-aware fast path: when ALL changed files between OLD_SHA and
-# TARGET_SHA fall within a static-only allowlist, skip the heavy
-# rebuild and just sync the changed files into the running containers.
-# Turns a 2.5h deploy for a static asset into ~5 seconds.
-#
-# Conservative allowlist — anything outside falls back to the full
-# rebuild path. Adding a path here means "this file does NOT require
-# a container rebuild to take effect."
+# The runtime config stays on the existing read-only parent bind. Grounding
+# state is intentionally narrower: four root-owned host directories become
+# writable nested binds, so no code can rewrite config or unrelated host state.
+GROUNDING_STATE_ROOT="/root/.coherence-network/runtime"
+install -d -m 0700 \
+  "$GROUNDING_STATE_ROOT/rag-index" \
+  "$GROUNDING_STATE_ROOT/rag-requests" \
+  "$GROUNDING_STATE_ROOT/attestation" \
+  "$GROUNDING_STATE_ROOT/api-queries"
+chown -R root:root "$GROUNDING_STATE_ROOT"
 
-is_static_only_change() {
-  local from="$1" to="$2"
-  # Fall back to rebuild if SHA comparison isn't available (first deploy,
-  # detached state, etc.) — we never skip rebuild without evidence.
-  if [[ -z "$from" || -z "$to" || "$from" == "$to" ]]; then
-    return 1
-  fi
-  local changed
-  changed="$(changed_paths_between "$from" "$to" 2>/dev/null || true)"
-  if [[ -z "$changed" ]]; then
-    # No detected changes but SHAs differ → unknown; rebuild to be safe.
-    return 1
-  fi
-  # Each line is a path relative to repo root. Test against the
-  # static-only allowlist. Any single path outside it returns 1.
-  while IFS= read -r path; do
-    [[ -z "$path" ]] && continue
-    case "$path" in
-      web/public/*) ;;
-      docs/*) ;;
-      channels/*) ;;
-      scripts/*.sh) ;;
-      *.md) ;;
-      *.fkb) ;;
-      proof.fk) ;;
-      we.fkb) ;;
-      PROOF.md) ;;
-      # Fourth-arm validation tissue: test bands and the fkwu manifest are run
-      # only by validate.sh, never loaded by the api/web runtime (the api serves
-      # routes through form-stdlib MODULES, which stay outside this allowlist and
-      # still force a rebuild). So a pure band-admission merge skips the heavy
-      # rebuild+force-recreate that was straining the witness on every fourth-arm
-      # commit — deployed_sha still advances on the fast path.
-      form/form-stdlib/tests/*) ;;
-      form/fourth-arm-bands.txt) ;;
-      *) return 1 ;;
-    esac
-  done <<< "$changed"
-  return 0
+# The image itself carries immutable parent/form source labels.  Compose must
+# pass both reviewed commit IDs into every API build, including later `up
+# --build` canaries; relying on the container environment would only self-stamp
+# runtime claims after the image had already been built.
+python3 - "$COMPOSE_ROOT/docker-compose.yml" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+lines = path.read_text(encoding="utf-8").splitlines()
+
+def indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+api_index = next(
+    (i for i, line in enumerate(lines) if line.strip() == "api:" and indent(line) > 0),
+    None,
+)
+if api_index is None:
+    raise SystemExit("compose API service missing")
+api_indent = indent(lines[api_index])
+api_end = next(
+    (
+        i
+        for i in range(api_index + 1, len(lines))
+        if lines[i].strip() and indent(lines[i]) <= api_indent
+    ),
+    len(lines),
+)
+build_index = next(
+    (
+        i
+        for i in range(api_index + 1, api_end)
+        if lines[i].strip() == "build:"
+    ),
+    None,
+)
+if build_index is None:
+    raise SystemExit("compose API build mapping missing")
+build_indent = indent(lines[build_index])
+build_end = next(
+    (
+        i
+        for i in range(build_index + 1, api_end)
+        if lines[i].strip() and indent(lines[i]) <= build_indent
+    ),
+    api_end,
+)
+args_index = next(
+    (
+        i
+        for i in range(build_index + 1, build_end)
+        if lines[i].strip() == "args:"
+    ),
+    None,
+)
+values = {
+    "COHERENCE_SOURCE_SHA": "${COHERENCE_SOURCE_SHA}",
+    "COHERENCE_FORM_SHA": "${COHERENCE_FORM_SHA}",
 }
+if args_index is None:
+    child = " " * (build_indent + 2)
+    grandchild = " " * (build_indent + 4)
+    insertion = [f"{child}args:"] + [
+        f'{grandchild}{key}: "${{{key}}}"' for key in values
+    ]
+    lines[build_end:build_end] = insertion
+else:
+    args_indent = indent(lines[args_index])
+    args_end = next(
+        (
+            i
+            for i in range(args_index + 1, build_end)
+            if lines[i].strip() and indent(lines[i]) <= args_indent
+        ),
+        build_end,
+    )
+    block = lines[args_index + 1 : args_end]
+    list_style = any(line.strip().startswith("-") for line in block if line.strip())
+    kept = [
+        line
+        for line in block
+        if not any(key in line for key in values)
+    ]
+    child = " " * (args_indent + 2)
+    if list_style:
+        additions = [f'{child}- {key}=${{{key}}}' for key in values]
+    else:
+        additions = [f'{child}{key}: "${{{key}}}"' for key in values]
+    lines[args_index + 1 : args_end] = kept + additions
 
-sync_web_public() {
-  # Copy any changed web/public/* files into the running web container.
-  # Next.js serves /public/* from disk at any path, so a cp is sufficient
-  # for the new file to be reachable on the next request.
-  local from="$1" to="$2"
-  local changed
-  changed="$(changed_paths_between "$from" "$to" 2>/dev/null \
-              | grep '^web/public/' || true)"
-  if [[ -z "$changed" ]]; then
-    log "web/public sync: no changes"
-    return 0
-  fi
-  while IFS= read -r path; do
-    [[ -z "$path" ]] && continue
-    local dest="/app/${path#web/}"
-    log "web/public sync: $path -> web:$dest"
-    docker compose exec -T web sh -lc "mkdir -p $(dirname "$dest")" 2>&1 | tee -a "$LOG_FILE" || true
-    docker compose cp "$REPO_DIR/$path" "web:$dest" 2>&1 | tee -a "$LOG_FILE"
-  done <<< "$changed"
+# A read-only /root/.coherence-network parent mount protects config. Add only
+# the exact writable runtime surfaces as nested bind mounts; Docker gives the
+# more-specific child mount precedence over the read-only parent.
+api_index = next(
+    i for i, line in enumerate(lines)
+    if line.strip() == "api:" and indent(line) > 0
+)
+api_indent = indent(lines[api_index])
+api_end = next(
+    (
+        i for i in range(api_index + 1, len(lines))
+        if lines[i].strip() and indent(lines[i]) <= api_indent
+    ),
+    len(lines),
+)
+volumes_index = next(
+    (
+        i for i in range(api_index + 1, api_end)
+        if lines[i].strip() == "volumes:"
+    ),
+    None,
+)
+mounts = [
+    "/root/.coherence-network/runtime/rag-index:/root/.coherence-network/rag-index:rw",
+    "/root/.coherence-network/runtime/rag-requests:/root/.coherence-network/rag-requests:rw",
+    "/root/.coherence-network/runtime/attestation:/root/.coherence-network/attestation:rw",
+    "/root/.coherence-network/runtime/api-queries:/root/.coherence-network/api-queries:rw",
+]
+targets = tuple(item.split(":", 2)[1] for item in mounts)
+if volumes_index is None:
+    child = " " * (api_indent + 2)
+    grandchild = " " * (api_indent + 4)
+    lines[api_end:api_end] = [f"{child}volumes:"] + [
+        f'{grandchild}- "{mount}"' for mount in mounts
+    ]
+else:
+    volumes_indent = indent(lines[volumes_index])
+    volumes_end = next(
+        (
+            i for i in range(volumes_index + 1, api_end)
+            if lines[i].strip() and indent(lines[i]) <= volumes_indent
+        ),
+        api_end,
+    )
+    block = lines[volumes_index + 1 : volumes_end]
+    first_child = next((line.strip() for line in block if line.strip()), "-")
+    if not first_child.startswith("-"):
+        raise SystemExit("compose API volumes must use list syntax")
+    kept = [line for line in block if not any(target in line for target in targets)]
+    child = " " * (volumes_indent + 2)
+    lines[volumes_index + 1 : volumes_end] = kept + [
+        f'{child}- "{mount}"' for mount in mounts
+    ]
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+compose_source_sha="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" config --format json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["build"]["args"]["COHERENCE_SOURCE_SHA"])')"
+compose_form_sha="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" config --format json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["build"]["args"]["COHERENCE_FORM_SHA"])')"
+if [[ "$compose_source_sha" != "$TARGET_SHA" || "$compose_form_sha" != "$FORM_SOURCE_SHA" ]]; then
+  log "FATAL: compose API build provenance args do not match target/form commits"
+  exit 1
+fi
+log "compose API provenance: parent=${TARGET_SHA:0:12} form=${FORM_SOURCE_SHA:0:12}"
+docker compose -f "$COMPOSE_ROOT/docker-compose.yml" config --format json \
+  | python3 -c '
+import json, sys
+service = json.load(sys.stdin)["services"]["api"]
+volumes = {item["target"]: item for item in service.get("volumes", [])}
+expected = {
+    "/root/.coherence-network/rag-index",
+    "/root/.coherence-network/rag-requests",
+    "/root/.coherence-network/attestation",
+    "/root/.coherence-network/api-queries",
 }
-
-# Compute the minimal set of services that actually need a rebuild based on
-# which paths changed. Each service has its own source tree:
-#   - api    ← api/**, scripts/** (api copies scripts into the image at build)
-#   - web    ← web/**
-#   - pulse  ← pulse/**
-# When only the web/ tree changed, rebuilding the api container is pure waste
-# AND it forces a 502 window on the api Traefik route for no code reason.
-# This narrows both the build time and the swap window: if api isn't touched,
-# the api container is never stopped, and clients on /api/* see zero downtime
-# while web rolls.
+missing = sorted(target for target in expected if target not in volumes)
+readonly = sorted(target for target in expected if volumes.get(target, {}).get("read_only"))
+if missing or readonly:
+    raise SystemExit(f"grounding state bind contract failed missing={missing} readonly={readonly}")
+'
+log "compose API grounding state: four narrow writable binds verified"
+# Select the additional services whose source changed. The deployment body
+# always adds API to this set below because the observer requires an image
+# whose immutable revision label equals TARGET_SHA; web and pulse remain
+# path-scoped to avoid unrelated rebuilds.
 #
-# Conservative fallback: anything outside the recognized roots → rebuild ALL
-# three services (current behavior). We only narrow the set when we can
-# positively account for every changed file.
+# Conservative fallback: anything outside the recognized roots rebuilds all
+# three services. We narrow only when every changed path is accounted for.
 services_to_rebuild() {
   local from="$1" to="$2"
   if [[ -z "$from" || -z "$to" || "$from" == "$to" ]]; then
@@ -662,118 +831,108 @@ if [[ -n "$RUNNING_SHA" ]] && git cat-file -e "${RUNNING_SHA}^{commit}" 2>/dev/n
   DIFF_BASE="$RUNNING_SHA"
 fi
 
-STATIC_FAST_PATH_ALLOWED=1
-if [[ -z "$RUNNING_SHA" ]]; then
-  STATIC_FAST_PATH_ALLOWED=0
-  log "Static-only fast path disabled: running API health unavailable"
-fi
+# The independent observer binds the target SHA to immutable image labels and
+# reproduces both native carriers from that exact source.  Therefore every
+# target commit rebuilds the API image; a new SHA can never be injected into an
+# old image through environment/config recreation.
+REBUILD_SERVICES="$(services_to_rebuild "$DIFF_BASE" "$TARGET_SHA")"
+case " ${REBUILD_SERVICES} " in
+  *" api "*) ;;
+  *) REBUILD_SERVICES="api ${REBUILD_SERVICES}" ;;
+esac
 if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
-  STATIC_FAST_PATH_ALLOWED=0
-  log "Static-only fast path disabled: Hati web host labels changed and must be applied by compose"
+  case " ${REBUILD_SERVICES} " in
+    *" web "*) ;;
+    *)
+      REBUILD_SERVICES="${REBUILD_SERVICES} web"
+      log "Hati web hosts: forcing web service update so Traefik receives the new host labels"
+      ;;
+  esac
 fi
+log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services, diff_base=${DIFF_BASE:0:12})"
 
-if [[ "$STATIC_FAST_PATH_ALLOWED" == "1" && "$DIFF_BASE" != "$TARGET_SHA" ]] && is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
-  log "Static-only change detected ($DIFF_BASE -> $TARGET_SHA); skipping rebuild"
-  sync_web_public "$DIFF_BASE" "$TARGET_SHA"
-  # The subsequent sync_field_docs / sync_repo_docs / etc. functions
-  # below will pick up the api-side static syncs as they would in a
-  # rebuild flow. No `docker compose build` needed.
-else
-  REBUILD_SERVICES="$(services_to_rebuild "$DIFF_BASE" "$TARGET_SHA")"
-  if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
-    case " ${REBUILD_SERVICES} " in
-      *" web "*) ;;
-      *)
-        REBUILD_SERVICES="${REBUILD_SERVICES} web"
-        log "Hati web hosts: forcing web service update so Traefik receives the new host labels"
-        ;;
-    esac
-  fi
-  log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services, diff_base=${DIFF_BASE:0:12})"
+build_started="$(date +%s)"
+log "docker compose build ${REBUILD_SERVICES}"
+# shellcheck disable=SC2086 -- intentional word-splitting on service list
+docker compose build ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+build_ended="$(date +%s)"
+build_elapsed=$((build_ended - build_started))
+log "TIMING: docker compose build took ${build_elapsed}s"
 
-  build_started="$(date +%s)"
-  log "docker compose build ${REBUILD_SERVICES}"
-  # shellcheck disable=SC2086 -- intentional word-splitting on service list
-  docker compose build ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
-  build_ended="$(date +%s)"
-  build_elapsed=$((build_ended - build_started))
-  log "TIMING: docker compose build took ${build_elapsed}s"
-
-  up_started="$(date +%s)"
-  # --wait holds the command until the new containers report healthy (per
-  # their HEALTHCHECK), so we never declare "deployed" while Traefik is
-  # still routing to a half-warm container. --wait-timeout 180s matches the
-  # wait_for_running deadline used below for the legacy state-only check.
-  # --force-recreate guarantees a fresh container even when the image hash
-  # didn't change — a build that's an all-cache-hit produces the same image,
-  # and without --force-recreate compose would skip the restart, leaving the
-  # running container's env (GIT_COMMIT_SHA, DEPLOYED_SHA) at the old values.
-  # That was the silent-skip pattern that pinned production at 4183d306 for
-  # 5h+; we never again trust compose's "no config change detected" verdict.
-  # If --wait is unsupported by the installed compose version, fall back to
-  # plain `up -d --force-recreate`.
-  # Clear leftover hash-prefixed containers from a prior interrupted recreate
-  # (e.g. `998358986afb_coherence-network-api-1`). --force-recreate builds a
-  # temp-named container then renames it onto the canonical name; if an earlier
-  # run died mid-swap, the orphan keeps the name and every later recreate fails
-  # with "container name ... already in use". Removing only the hash-prefixed
-  # strays leaves the live container running — no downtime in the common case.
-  orphans="$(docker ps -a --format '{{.Names}}' | grep -E '^[0-9a-f]{6,}_coherence-network-[a-z0-9-]+-1$' || true)"
-  if [[ -n "$orphans" ]]; then
-    log "clearing recreate orphans: $(echo "$orphans" | tr '\n' ' ')"
-    echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
-  fi
-  # Docker may report async removal-in-progress for the hash-prefixed
-  # recreate container. Wait until names are actually released before asking
-  # compose to start the same service again.
-  # shellcheck disable=SC2086 -- intentional word-splitting on service list
-  wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
-  log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
-  # shellcheck disable=SC2086 -- intentional word-splitting on service list
-  if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
-    log "docker compose up --wait failed or unsupported; falling back to plain up -d --force-recreate"
+up_started="$(date +%s)"
+# --wait holds the command until the new containers report healthy (per
+# their HEALTHCHECK), so we never declare "deployed" while Traefik is
+# still routing to a half-warm container. --wait-timeout 180s matches the
+# wait_for_running deadline used below for the legacy state-only check.
+# --force-recreate guarantees a fresh container even when the image hash
+# didn't change — a build that's an all-cache-hit produces the same image,
+# and without --force-recreate compose would skip the restart, leaving the
+# running container's env (GIT_COMMIT_SHA, DEPLOYED_SHA) at the old values.
+# That was the silent-skip pattern that pinned production at 4183d306 for
+# 5h+; we never again trust compose's "no config change detected" verdict.
+# If --wait is unsupported by the installed compose version, fall back to
+# plain `up -d --force-recreate`.
+# Clear leftover hash-prefixed containers from a prior interrupted recreate
+# (e.g. `998358986afb_coherence-network-api-1`). --force-recreate builds a
+# temp-named container then renames it onto the canonical name; if an earlier
+# run died mid-swap, the orphan keeps the name and every later recreate fails
+# with "container name ... already in use". Removing only the hash-prefixed
+# strays leaves the live container running — no downtime in the common case.
+orphans="$(docker ps -a --format '{{.Names}}' | grep -E '^[0-9a-f]{6,}_coherence-network-[a-z0-9-]+-1$' || true)"
+if [[ -n "$orphans" ]]; then
+  log "clearing recreate orphans: $(echo "$orphans" | tr '\n' ' ')"
+  echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
+fi
+# Docker may report async removal-in-progress for the hash-prefixed
+# recreate container. Wait until names are actually released before asking
+# compose to start the same service again.
+# shellcheck disable=SC2086 -- intentional word-splitting on service list
+wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
+log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
+# shellcheck disable=SC2086 -- intentional word-splitting on service list
+if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
+  log "docker compose up --wait failed or unsupported; falling back to plain up -d --force-recreate"
+  # shellcheck disable=SC2086
+  if ! docker compose up -d --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
+    # Last resort for the name-swap conflict: stop+remove the services
+    # outright (compose-aware), then bring them up clean. Costs a few seconds
+    # of downtime per service but never wedges on a held name. This is the
+    # manual recovery (`compose rm -fs` + `up -d`) that resolved it by hand.
+    log "force-recreate still conflicted; stop+remove then clean up -d"
     # shellcheck disable=SC2086
-    if ! docker compose up -d --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
-      # Last resort for the name-swap conflict: stop+remove the services
-      # outright (compose-aware), then bring them up clean. Costs a few seconds
-      # of downtime per service but never wedges on a held name. This is the
-      # manual recovery (`compose rm -fs` + `up -d`) that resolved it by hand.
-      log "force-recreate still conflicted; stop+remove then clean up -d"
-      # shellcheck disable=SC2086
-      docker compose rm -fsv ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE" || true
-      # shellcheck disable=SC2086 -- intentional word-splitting on service list
-      wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
-      # shellcheck disable=SC2086
-      docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+    docker compose rm -fsv ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE" || true
+    # shellcheck disable=SC2086 -- intentional word-splitting on service list
+    wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
+    # shellcheck disable=SC2086
+    docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+  fi
+fi
+up_ended="$(date +%s)"
+up_elapsed=$((up_ended - up_started))
+log "TIMING: docker compose up took ${up_elapsed}s"
+
+# Post-condition: every targeted service MUST end up running. The recreate
+# dance — and its rm-then-up recovery — can silently leave a service down.
+# That took the whole site offline once: api came back, web + pulse did not,
+# and nothing noticed for ~an hour. Never declare a deploy done with a
+# service missing; clear orphans for it, recreate, and fail loudly if it
+# still won't start. This only touches services that are NOT running, so it
+# can't disturb a healthy one.
+# shellcheck disable=SC2086 -- intentional word-splitting on service list
+for svc in ${REBUILD_SERVICES}; do
+  if ! docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
+    log "post-deploy: ${svc} is NOT running — clearing orphans and forcing a clean recreate"
+    docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${svc}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+    wait_for_recreate_orphans_gone "$svc"
+    docker compose up -d "${svc}" 2>&1 | tee -a "$LOG_FILE" || true
+    sleep 3
+    if docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
+      log "post-deploy: ${svc} recovered"
+    else
+      log "FATAL post-deploy: ${svc} STILL not running after clean recreate — site may be degraded"
     fi
   fi
-  up_ended="$(date +%s)"
-  up_elapsed=$((up_ended - up_started))
-  log "TIMING: docker compose up took ${up_elapsed}s"
-
-  # Post-condition: every targeted service MUST end up running. The recreate
-  # dance — and its rm-then-up recovery — can silently leave a service down.
-  # That took the whole site offline once: api came back, web + pulse did not,
-  # and nothing noticed for ~an hour. Never declare a deploy done with a
-  # service missing; clear orphans for it, recreate, and fail loudly if it
-  # still won't start. This only touches services that are NOT running, so it
-  # can't disturb a healthy one.
-  # shellcheck disable=SC2086 -- intentional word-splitting on service list
-  for svc in ${REBUILD_SERVICES}; do
-    if ! docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
-      log "post-deploy: ${svc} is NOT running — clearing orphans and forcing a clean recreate"
-      docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${svc}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
-      wait_for_recreate_orphans_gone "$svc"
-      docker compose up -d "${svc}" 2>&1 | tee -a "$LOG_FILE" || true
-      sleep 3
-      if docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
-        log "post-deploy: ${svc} recovered"
-      else
-        log "FATAL post-deploy: ${svc} STILL not running after clean recreate — site may be degraded"
-      fi
-    fi
-  done
-fi
+done
 
 
 sync_field_docs() {
@@ -842,8 +1001,9 @@ sync_form_stdlib
 # into the container and re-runs the ingester. Re-ingestion is
 # idempotent — content-addressed Blueprint NodeIDs hash-match existing
 # cells. Memory cells live outside the repo (in ~/.claude/) and are
-# skipped automatically. Non-blocking: any failure logs and the deploy
-# still succeeds; the substrate's empty state is visible via the API.
+# skipped automatically. Grounding is a deployment contract: an incomplete
+# substrate or path-only RAG index fails the deploy instead of shipping a
+# healthy-looking service whose core cannot answer from its own body.
 # Runs AFTER wait_for_running api so the DB connection is stable.
 sync_substrate_content() {
   log "substrate: syncing content + scripts into api container"
@@ -939,20 +1099,25 @@ run_substrate_ingest() {
   fi
 
   if [[ -n "$full_refresh_reason" ]]; then
-    log "substrate: ${full_refresh_reason} — running --all --structured"
+    log "substrate: ${full_refresh_reason} — bootstrapping the complete grounded body"
     set +e
-    run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-600}" \
-      docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
+    # A measured cold SQLite bootstrap of the complete 1,546-source corpus can
+    # exceed twenty minutes while structured concept CTORs are interned. Give
+    # the complete rebuild a full hour; a timeout must never manufacture a
+    # partial "ready" body.
+    run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-3600}" \
+      docker compose exec -T api sh -lc \
+        'cd /app && python3 scripts/coh_substrate.py bootstrap && python3 scripts/form_cli_rag.py heal' \
       2>&1 | tee -a "$LOG_FILE"
     local rc=$?
     set -e
     ended="$(date +%s)"
     elapsed=$((ended - started))
-    log "substrate: ingest --all took ${elapsed}s (rc=$rc)"
+    log "substrate: complete bootstrap took ${elapsed}s (rc=$rc)"
     if [[ "$rc" -ne 0 ]]; then
-      log "substrate: ingest returned $rc — non-blocking, deploy continues"
+      log "FAIL: grounded substrate/RAG bootstrap returned $rc"
     fi
-    return 0
+    return "$rc"
   fi
 
   # Ingestable tissue: the .md content domains PLUS the substrate's own
@@ -964,7 +1129,7 @@ run_substrate_ingest() {
   # the per-file loop below dispatches every path through ingest-paths.
   local changed
   changed="$(printf '%s\n' "$all_changed" \
-              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^form/form-stdlib/.*\.fk$' \
+              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form-stdlib/.*\.fk$' \
               | while IFS= read -r path; do
                   [[ -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
                 done \
@@ -1001,8 +1166,21 @@ run_substrate_ingest() {
 
   ended="$(date +%s)"
   elapsed=$((ended - started))
-  log "substrate: ingest of $count files took ${elapsed}s (final rc=$rc)"
-  return 0
+  if [[ "$rc" -eq 0 ]] && grep -Eq \
+      '^(specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md|form/form-stdlib/.*\.fk)$' \
+      <<< "$changed"; then
+    run_with_timeout "${SUBSTRATE_RAG_HEAL_TIMEOUT_SECONDS:-300}" \
+      docker compose exec -T api sh -lc \
+        'cd /app && python3 scripts/form_cli_rag.py heal' \
+      2>&1 | tee -a "$LOG_FILE"
+    rc=$?
+  fi
+
+  log "substrate: ingest + NodeID RAG heal of $count files took ${elapsed}s (final rc=$rc)"
+  if [[ "$rc" -ne 0 ]]; then
+    log "FAIL: incremental grounded substrate/RAG refresh returned $rc"
+  fi
+  return "$rc"
 }
 
 # Wait for both containers to reach the "running" state in docker compose.
@@ -1494,9 +1672,8 @@ run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
 # build was a cache-noop with stale env, the restart didn't actually
 # happen, or the env vars didn't propagate. Failing here makes the stall
 # loud instead of letting workflow Verify-step retries chase a ghost.
-# Skipped only when the static-only fast path ran (no rebuild expected
-# to change the running SHA).
-if [[ "$DIFF_BASE" != "$TARGET_SHA" ]] && ! is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
+# Every deploy path, including the build-free static path, performs the same
+# independent local route observation and binds it to TARGET_SHA.
   # The api container reaching docker "running" state does not mean uvicorn is
   # already accepting requests on :8000. wait_for_running (and the --wait
   # fallback when no compose healthcheck fires) can return while the app is
@@ -1536,7 +1713,8 @@ except Exception:
     exit 1
   fi
   log "Post-deploy verify: api container at ${POST_SHA:0:12} ✓"
-fi
+
+  bootstrap_and_verify_local_grounding || exit 1
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 

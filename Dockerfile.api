@@ -34,9 +34,27 @@
 # -----------------------------------------------------------------------------
 # Stage 1 — build form-kernel-rust: the native binary (must) + PyO3 wheel (best-effort)
 # -----------------------------------------------------------------------------
-FROM rust:1.86-slim-bookworm AS kernel-builder
+ARG COHERENCE_SOURCE_SHA
+ARG COHERENCE_FORM_SHA
+
+FROM rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944 AS kernel-builder
+
+ARG COHERENCE_SOURCE_SHA
+ARG COHERENCE_FORM_SHA
 
 WORKDIR /build
+
+# The executable bootstrap proof independently computes HMAC fixtures with
+# OpenSSL.  This package is proof tooling only; the emitted C and Rust carriers
+# do not link it and the runtime image never receives it.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
+      | grep -Eq '^[0-9a-f]{40}$' \
+ && test "$(printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
+      | grep -Ec '^[0-9a-f]{40}$')" = 2
 
 # Copy the kernel crate. The crate is self-contained — no workspace, no
 # repo-relative path deps — so this is all the source it needs. pyproject.toml
@@ -45,6 +63,26 @@ COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock form/form
 COPY form/form-kernel-rust/src ./src
 COPY form/form-kernel-rust/libraries ./libraries
 COPY form/form-kernel-rust/recipes ./recipes
+
+# The public grounded-ask route uses the same c-bootstrapped fkwu form-cli as
+# the local wrapper. Build the committed emitted-C carrier here; no Go/runtime
+# compiler enters the final image. A stale emitted carrier fails this image
+# build instead of silently deploying a different trust gate.
+COPY form/form-stdlib /build/form-cli-src/form-stdlib
+COPY form/scripts /build/form-cli-src/scripts
+COPY form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
+RUN cd /build/form-cli-src \
+ && CC=cc FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh /build/form-cli \
+ && test "$(printf 'ping\n' | /build/form-cli)" = "pong" \
+ && mkdir -p /tmp/form-cli-proof/.coherence-network/rag-requests \
+ && printf '70726f6f66|6465706c6f7965642070726f6f66206b65726e656c\n' \
+      > /tmp/form-cli-proof/.coherence-network/rag-requests/docker.embed \
+ && (cd /tmp/form-cli-proof \
+      && printf 'embed-request docker\n' | /build/form-cli) \
+      | grep -F '"embedding_kind":"form-semantic-v2"' >/dev/null \
+ && bash scripts/form_cli_bootstrap_proof.sh /build/form-cli \
+ && sha256sum /build/form-cli | cut -d' ' -f1 > /build/form-cli.sha256 \
+ && test -x /build/form-cli
 
 # Build the release binary (the subprocess carrier). Cargo's default target
 # dir is /build/target. This is the load-bearing build — it must succeed; the
@@ -76,11 +114,21 @@ RUN mkdir -p /build/dist \
 # -----------------------------------------------------------------------------
 # Stage 2 — Python runtime
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS runtime
+FROM python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba AS runtime
+
+ARG COHERENCE_SOURCE_SHA
+ARG COHERENCE_FORM_SHA
+
+RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
+      | grep -Eq '^[0-9a-f]{40}$' \
+ && test "$(printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
+      | grep -Ec '^[0-9a-f]{40}$')" = 2
 
 LABEL org.opencontainers.image.title="coherence-network-api"
 LABEL org.opencontainers.image.description="Coherence Network API — FastAPI with form-kernel-rust embedded for transmuted endpoints"
-LABEL org.opencontainers.image.source="https://github.com/seeker51/Coherence-Network"
+LABEL org.opencontainers.image.source="https://github.com/seeker71/Coherence-Network"
+LABEL org.opencontainers.image.revision="${COHERENCE_SOURCE_SHA}"
+LABEL org.opencontainers.image.coherence-form-revision="${COHERENCE_FORM_SHA}"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -111,8 +159,11 @@ RUN python -m pip install --upgrade pip \
 # the copy (the COPY itself creates the parent). The binary is the single
 # artifact this image needs from the Rust build — no toolchain shipped.
 COPY --from=kernel-builder /build/target/release/form-kernel-rust /app/bin/form-kernel-rust
+COPY --from=kernel-builder /build/form-cli /app/form/form-cli
+COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
 RUN chmod +x /app/bin/form-kernel-rust \
- && /app/bin/form-kernel-rust --expr "(add 2 3)" || true
+ /app/form/form-cli \
+ && test "$(/app/bin/form-kernel-rust --expr '(add 2 3)')" = 5
 
 # Inline carrier (PyO3): install the form_kernel_rust wheel if the builder
 # produced one. The COPY of the dist DIRECTORY always succeeds (even empty) —
@@ -138,6 +189,10 @@ COPY api/ ./
 # post-build (substrate ingest). Ship them at build time too so the image
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
+COPY bin/form-cli ./bin/form-cli
+COPY bin/form-cli.sha256 ./bin/form-cli.sha256
+RUN chmod +x ./bin/form-cli \
+ && test "$(sha256sum ./bin/form-cli | cut -d' ' -f1)" = "$(cat ./bin/form-cli.sha256)"
 
 # Form stdlib sources are executable runtime material. BML/Python-BMF grammar
 # support lands here, so production must carry these files instead of treating

@@ -135,3 +135,9 @@ from app.services.substrate.orm import (  # noqa: F401
 from app.services.substrate.substrate_strings import (  # noqa: F401
     SubstrateStringORM,
 )
+
+# External deployment observer — one-time GitHub OIDC challenge/replay ledger
+from app.services.deployment_observer_service import (  # noqa: F401
+    DeploymentObserverChallengeORM,
+    DeploymentObserverTokenUseORM,
+)

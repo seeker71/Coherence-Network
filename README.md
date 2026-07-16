@@ -384,7 +384,7 @@ Native route promotion loop: `/goal` means run
 `python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400`;
 `/loop` means run the same script with `/loop --write-state`. The loop ranks
 method+path runtime events by observed web API traffic, overlays
-`deploy/front-door/api.bml` and `deploy/kernel-router/production-routes.fk`, and
+`form/apps/coherence-network/api.bml` and `deploy/kernel-router/production-routes.fk`, and
 writes `docs/system_audit/native_route_goal_state.json` with the next route/task
 card. Treat that JSON as an edge lens: the native cell surface is
 `form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry

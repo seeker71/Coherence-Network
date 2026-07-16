@@ -42,107 +42,6 @@ from app.services.substrate.kernel import (
     view_cell_through_blueprint,
     vocabulary_histogram,
 )
-from app.services.substrate.form import (
-    FormResult,
-    evaluate as form_evaluate,
-    evaluate_text as form_evaluate_text,
-    parse as form_parse,
-    serialize_cell as form_serialize_cell,
-    serialize_node_id as form_serialize_node_id,
-)
-from app.services.substrate.form_stream import (
-    parse_and_emit as form_stream_emit,
-)
-from app.services.substrate.form_runtime import (
-    Frame as FormFrame,
-    execute as form_execute,
-    form_execute_text,
-    public_form_safety_violation,
-)
-from app.services.substrate.form_check import (
-    Diagnostic as FormDiagnostic,
-    check_ast as form_check_ast,
-    check_text as form_check_text,
-)
-from app.services.substrate.grammar import (
-    BID_grammar,
-    FormRule,
-    list_form_rules,
-    lookup_form_rule,
-    register_form_rule,
-)
-from app.services.substrate.form_builders import (
-    Build,
-    CaptureRef,
-    Const,
-    MapBuild,
-    execute_template,
-    make_builder_from_template,
-    recipe_to_template,
-    template_to_recipe,
-)
-from app.services.substrate.form_eval import (
-    list_eval_mappings,
-    lookup_eval_category,
-    register_eval,
-    reset_eval_registry,
-)
-from app.services.substrate.form_speculation import (
-    FailSignal,
-    SpeculationContext,
-    SpeculationFrame,
-    SpeculationResult,
-    StopSignal,
-    choice,
-    speculate,
-)
-from app.services.substrate.form_operators import (
-    OperatorRule,
-    list_operators,
-    lookup_binary_operator,
-    lookup_operator,
-    lookup_unary_prefix_operator,
-    parse_with_precedence,
-    register_operator,
-    reset_operator_registry,
-    unregister_operator,
-)
-from app.services.substrate.self_host import (
-    bootstrap_full_self_host,
-    bootstrap_self_host,
-    bootstrap_self_host_operators,
-    list_bootstrap_self_host_keywords,
-)
-from app.services.substrate.form_rules import (
-    Capture,
-    IdentCapture,
-    Literal,
-    Opt,
-    RepeatedCapture,
-    Sequence,
-    list_builders,
-    list_registered_keywords,
-    load_all_keywords_from_substrate,
-    load_keyword_from_substrate,
-    lookup_builder,
-    lookup_form_keyword,
-    pattern_to_recipe,
-    recipe_to_pattern,
-    register_builder,
-    register_form_keyword,
-    unregister_form_keyword,
-)
-from app.services.substrate.recipe_eval import (
-    Environment as RecipeEnvironment,
-    ExecutionContext,
-    RaiseSignal,
-    eval_recipe,
-    eval_text as recipe_eval_text,
-)
-# Note: FailSignal/StopSignal are NOT re-exported from recipe_eval to avoid
-# collision with the parser-level versions already exported by form_speculation.
-# Import them directly from recipe_eval when needed at the runtime layer:
-#     from app.services.substrate.recipe_eval import FailSignal, StopSignal
 from app.services.substrate.resonance import (
     BID_geometric_form,
     BID_harmonic,
@@ -297,82 +196,6 @@ __all__ = [
     "ingest_witness_event",
     "parse_markdown",
     "parse_markdown_file",
-    # Form
-    "FormResult",
-    "form_evaluate",
-    "form_evaluate_text",
-    "form_execute",
-    "form_execute_text",
-    "public_form_safety_violation",
-    "form_check_text",
-    "form_check_ast",
-    "FormDiagnostic",
-    "FormFrame",
-    "form_parse",
-    "form_serialize_cell",
-    "form_serialize_node_id",
-    "form_stream_emit",
-    # Grammar — substrate-resident parse rules (BMF-shaped seed)
-    "BID_grammar",
-    "FormRule",
-    "list_form_rules",
-    "lookup_form_rule",
-    "register_form_rule",
-    # Rule-driven extension — runtime keyword registration
-    "Capture",
-    "IdentCapture",
-    "Literal",
-    "Opt",
-    "RepeatedCapture",
-    "Sequence",
-    "list_builders",
-    "list_registered_keywords",
-    "load_all_keywords_from_substrate",
-    "load_keyword_from_substrate",
-    "lookup_builder",
-    "lookup_form_keyword",
-    "pattern_to_recipe",
-    "recipe_to_pattern",
-    "register_builder",
-    "register_form_keyword",
-    "unregister_form_keyword",
-    # Substrate-resident builders (Build/CaptureRef/Const template DSL)
-    "Build",
-    "CaptureRef",
-    "Const",
-    "MapBuild",
-    "execute_template",
-    "make_builder_from_template",
-    "recipe_to_template",
-    "template_to_recipe",
-    # Self-hosting
-    "bootstrap_self_host",
-    "bootstrap_self_host_operators",
-    "bootstrap_full_self_host",
-    "list_bootstrap_self_host_keywords",
-    # Operator registry
-    "OperatorRule",
-    "list_operators",
-    "lookup_binary_operator",
-    "lookup_operator",
-    "lookup_unary_prefix_operator",
-    "parse_with_precedence",
-    "register_operator",
-    "reset_operator_registry",
-    "unregister_operator",
-    # Eval-category registry (data-driven evaluator)
-    "list_eval_mappings",
-    "lookup_eval_category",
-    "register_eval",
-    "reset_eval_registry",
-    # Parser-level speculation (backtracking-without-sediment)
-    "FailSignal",
-    "SpeculationContext",
-    "SpeculationFrame",
-    "SpeculationResult",
-    "StopSignal",
-    "choice",
-    "speculate",
     # Resonance — dimensional vocabulary + edge authoring
     "BID_geometric_form",
     "BID_harmonic",
@@ -390,12 +213,6 @@ __all__ = [
     "carries_ratio_edge",
     "commutative_edge",
     "embeds_in_edge",
-    # Recipe-execution engine (runtime semantics for form-layer constructs)
-    "ExecutionContext",
-    "RaiseSignal",
-    "RecipeEnvironment",
-    "eval_recipe",
-    "recipe_eval_text",
     "cell_resonance_signature",
     "coherence_distance",
     "coherence_score",

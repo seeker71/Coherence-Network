@@ -27,7 +27,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BML_CATALOG = ROOT / "deploy" / "front-door" / "api.bml"
+BML_CATALOG = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
 DEFAULT_DB_CONFIG = Path.home() / ".coherence-network" / "secrets" / "form-kernel-postgres-tunnel.json"
 DEFAULT_PUBLIC_BASE = "https://api.coherencycoin.com"
 DEFAULT_NATIVE_BASE = "http://127.0.0.1:19086"

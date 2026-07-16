@@ -1,11 +1,10 @@
-"""MCP exposure for the coherence-substrate: every sibling agent reaches Form.
+"""MCP compatibility exposure after Form execution moved to the native carrier.
 
 Three tools land here:
 
-- `coherence_substrate_run` — full meta-circular runtime (defn, match,
-  recursion, `.children[i]`, `.value`, arithmetic, conditionals).
-- `coherence_substrate_query` — lookup-mode Form evaluation (intern +
-  structural answer; `?equivalent`, `|>` projection, cell lookups).
+- `coherence_substrate_run` and `coherence_substrate_query` — explicit retired
+  doors that direct callers to native form-cli / grounded-ask without retaining
+  a second Python interpreter.
 - `coherence_substrate_stats` — lattice census.
 
 Without these the substrate is a Claude-only surface. With them, Codex
@@ -22,30 +21,20 @@ def test_substrate_tools_registered():
     assert "coherence_substrate_stats" in TOOL_MAP
 
 
-def test_substrate_run_arithmetic():
-    r = TOOL_MAP["coherence_substrate_run"]["handler"]({"expression": "1 + 2 * 3"})
-    assert r == {"value": 7}
-
-
-def test_substrate_run_conditional():
-    r = TOOL_MAP["coherence_substrate_run"]["handler"](
-        {"expression": "if 5 > 3 then 100 else 200"}
-    )
-    assert r == {"value": 100}
-
-
-def test_substrate_run_recursion():
-    """The full runtime is reachable — defn, recursion, the works."""
-    src = "do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }"
-    r = TOOL_MAP["coherence_substrate_run"]["handler"]({"expression": src})
-    assert r == {"value": 720}
-
-
-def test_substrate_run_string_interpolation():
-    r = TOOL_MAP["coherence_substrate_run"]["handler"](
-        {"expression": '"hello ${1 + 2}"'}
-    )
-    assert r == {"value": "hello 3"}
+def test_substrate_run_refuses_consumer_side_python_execution():
+    expected = {
+        "error": "consumer-side Python Form execution was removed; use the native "
+        "form-cli carrier or POST /api/substrate/grounded-ask"
+    }
+    for expression in (
+        "1 + 2 * 3",
+        "if 5 > 3 then 100 else 200",
+        "do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }",
+        '"hello ${1 + 2}"',
+    ):
+        assert TOOL_MAP["coherence_substrate_run"]["handler"](
+            {"expression": expression}
+        ) == expected
 
 
 def test_substrate_run_missing_expression_returns_error():

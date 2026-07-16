@@ -22,6 +22,7 @@ class EndpointContract:
     path: str
     validator: Validator
     description: str
+    max_ms: float | None = None
 
 
 def _is_list_payload(body: Any, *keys: str) -> bool:
@@ -54,7 +55,13 @@ API_CONTRACTS: list[EndpointContract] = [
     EndpointContract("federation_nodes", "/api/federation/nodes", lambda body: isinstance(body, list), "federation nodes list"),
     EndpointContract("providers_stats", "/api/providers/stats", lambda body: _has_keys(body, "providers", "summary"), "provider stats"),
     EndpointContract("federation_stats", "/api/federation/nodes/stats", lambda body: _has_keys(body, "nodes", "providers", "total_measurements"), "federation stats"),
-    EndpointContract("automation_usage", "/api/automation/usage?force_refresh=true", lambda body: _has_keys(body, "providers", "tracked_providers"), "automation usage"),
+    EndpointContract(
+        "automation_usage",
+        "/api/automation/usage?force_refresh=true",
+        lambda body: _has_keys(body, "providers", "tracked_providers"),
+        "automation usage (live provider refresh)",
+        12000.0,
+    ),
     EndpointContract("automation_readiness", "/api/automation/usage/readiness?force_refresh=true", lambda body: _has_keys(body, "providers", "all_required_ready", "blocking_issues"), "automation readiness"),
     EndpointContract("friction_report", "/api/friction/report?window_days=7", lambda body: _has_keys(body, "total_events", "open_events", "top_block_types"), "friction report"),
     EndpointContract("friction_events", "/api/friction/events?limit=20", lambda body: _is_list_payload(body, "items"), "friction events"),
@@ -114,21 +121,23 @@ def main() -> int:
 
     for contract in API_CONTRACTS:
         status, elapsed_ms, body = _request_json(args.api_base, contract.path)
-        ok = status == 200 and elapsed_ms <= args.max_ms and contract.validator(body)
+        max_ms = contract.max_ms or args.max_ms
+        ok = status == 200 and elapsed_ms <= max_ms and contract.validator(body)
         report["curated"].append(
             {
                 "name": contract.name,
                 "path": contract.path,
                 "status_code": status,
                 "elapsed_ms": elapsed_ms,
+                "max_ms": max_ms,
                 "ok": ok,
                 "description": contract.description,
             }
         )
         if status != 200:
             failures.append(f"{contract.name}: status {status}")
-        elif elapsed_ms > args.max_ms:
-            failures.append(f"{contract.name}: {elapsed_ms:.2f}ms > {args.max_ms:.2f}ms")
+        elif elapsed_ms > max_ms:
+            failures.append(f"{contract.name}: {elapsed_ms:.2f}ms > {max_ms:.2f}ms")
         elif not contract.validator(body):
             failures.append(f"{contract.name}: response shape mismatch")
         time.sleep(0.15)

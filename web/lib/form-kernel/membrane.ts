@@ -30,7 +30,7 @@
 // GLSL from the table. Adding a texture vocabulary = adding a row.
 
 import * as THREE from "three";
-import { RBasic } from "./vendor/kernel.ts";
+import { RBasic } from "../../../form/form-kernel-ts/src/kernel.ts";
 import type { KernelSpace, SpaceCell } from "./space.ts";
 
 export const MAX_PORES = 32;

@@ -294,14 +294,18 @@ grep -Fq "'deploy/front-door/**'" "$WORKFLOW" \
 grep -Fq "COPY form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
 
-grep -Fq "COPY deploy/front-door/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
+grep -Fq "COPY form/apps/coherence-network/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
   || fail "kernel-router image does not carry the BML front-door catalog"
 
 grep -Fq 'Path(`/api/runtime/events`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the runtime-events BML route"
 
-grep -Fq 'coherence-api-kernel-native-first.rule: "Host(`api.coherencycoin.com`)"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+grep -Fq 'coherence-api-kernel-native-first.rule: "Host(`api.coherencycoin.com`) && !PathPrefix(`/api/deployment-observer/`) && !QueryRegexp(`observation_nonce`,`^[A-Za-z0-9_-]{43}$`)"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not make the API host native-first"
+grep -Fq '!PathPrefix(`/api/deployment-observer/`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not reserve the authenticated observer control plane for the API"
+grep -Fq '!QueryRegexp(`observation_nonce`,`^[A-Za-z0-9_-]{43}$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not reserve nonce-bound public health observation for the API"
 
 grep -Fq 'coherence-api-kernel-native-first.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router native-first ingress does not target the production manifest service"
@@ -391,7 +395,7 @@ grep -Fq 'PathRegexp(`^/api/sensings/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/d
 grep -Fq 'PathRegexp(`^/api/translations/[^/]+/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the translations entity BML template route"
 
-if ! python3 - "$ROOT_DIR/deploy/front-door/api.bml" "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" <<'PY'
+if ! python3 - "$ROOT_DIR/form/apps/coherence-network/api.bml" "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -518,100 +522,100 @@ grep -Fq 'api_attention_kernel_runtime' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
 
-grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "runtime events handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_views_stats"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_views_stats"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "views stats handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_reaction_concept_summary"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_reaction_concept_summary"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "reaction summary handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "reaction threads handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "concept voices handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "concept carried-by handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "presence resonances handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "presence places handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_graph_node_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_graph_node_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "graph node detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_update"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_update"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea update handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_question_create"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_question_create"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea question create handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_question_answer"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_question_answer"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea question answer handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "graph node edges handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "agent task log handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_attention_kernel_runtime"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_attention_kernel_runtime"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "runtime attention handler does not emit native proof headers"
 
-grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "agent task log route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "presence places route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(GraphNodeDetailRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(GraphNodeDetailRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "graph node detail route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaDetailRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaDetailRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea detail route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaUpdateRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaUpdateRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea update route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea question create route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea question answer route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(KernelRuntimeAttentionRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(KernelRuntimeAttentionRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "runtime attention route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "graph node edges route class is not exported in the BML routes list"
 
-grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "spec registry handler does not emit native proof headers with x-total-count"
 
-grep -Fq 'api-native-ok-json("api_spec_registry_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_spec_registry_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "spec registry detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_specs"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_specs"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "idea specs handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "sensings handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_lenses"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_lenses"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "lenses handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "sensing detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_translations_entity"' "$ROOT_DIR/deploy/front-door/api.bml" \
+grep -Fq 'api-native-ok-json("api_translations_entity"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
   || fail "translations entity handler does not emit native proof headers"
 
 grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \

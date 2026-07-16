@@ -250,7 +250,7 @@ def main() -> int:
     from app.services.substrate import ingest_spec_file
     from app.services.unified_db import session as session_scope
     from app.services.substrate.kernel import lookup_cell
-    from app.services.substrate.form_runtime import (
+    from app.services.substrate.projection import (
         _resolve_access, _node_children, _trivial_value,
     )
     from app.services.substrate.category import RBasic, RType
@@ -261,7 +261,7 @@ def main() -> int:
     def ctor_walk(session, ctor_nid, field):
         if ctor_nid is None:
             return None
-        from app.services.substrate.form_runtime import (
+        from app.services.substrate.projection import (
             _node_category as _cat,
         )
         for let_nid in _node_children(session, ctor_nid):

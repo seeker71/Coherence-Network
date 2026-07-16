@@ -11,7 +11,7 @@ recipe's NodeID is computed via content-addressing over the
 NodeID via content-addressing.
 
 Cross-kernel coordination lives in
-``docs/coherence-substrate/numeric-formats.canonical.json``. Every kernel
+``form/contracts/numeric-formats.canonical.json``. Every kernel
 (Python, TS, Go, Rust) reads that same contract and interns the formats
 in the same order with the same child structure. The format-recipe NodeIDs
 produced by this module match — by construction — the shape the TS kernel
@@ -223,7 +223,7 @@ def _float_to_two_i32(v: float) -> Tuple[int, int]:
 
 
 def _canonical_json_path() -> Path:
-    """Resolve ``docs/coherence-substrate/numeric-formats.canonical.json``.
+    """Resolve ``form/contracts/numeric-formats.canonical.json``.
 
     Walks up from this file's location to the repo root, then down to the
     canonical contract. Works in worktrees and in the main repo.
@@ -231,12 +231,12 @@ def _canonical_json_path() -> Path:
     here = Path(__file__).resolve()
     # api/app/services/substrate/numeric_formats.py — 5 parents up to repo root
     for parent in [here.parent] + list(here.parents):
-        candidate = parent / "docs" / "coherence-substrate" / "numeric-formats.canonical.json"
+        candidate = parent / "form" / "contracts" / "numeric-formats.canonical.json"
         if candidate.exists():
             return candidate
     raise FileNotFoundError(
         "Could not locate numeric-formats.canonical.json; "
-        "expected at docs/coherence-substrate/ relative to the repo root"
+        "expected at form/contracts/ relative to the repo root"
     )
 
 
