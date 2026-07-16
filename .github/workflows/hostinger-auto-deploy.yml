@@ -178,6 +178,10 @@ jobs:
           done
 
   observe-public-deployment:
+    # The OIDC observer deliberately accepts only protected-main push and
+    # scheduled identities. A manual rollback/deploy uses inputs.sha and must
+    # not mint a witness for github.sha or weaken that identity policy.
+    if: github.event_name == 'push' || github.event_name == 'schedule'
     needs: deploy-hostinger
     permissions:
       contents: none

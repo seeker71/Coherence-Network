@@ -138,6 +138,17 @@ def test_runtime_policy_pin_matches_the_reusable_workflow_call() -> None:
     assert len(deployment_observer_service.PINNED_OBSERVER_WORKFLOW_SHA) == 40
 
 
+def test_manual_deploy_cannot_issue_a_witness_for_the_wrong_sha() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/hostinger-auto-deploy.yml").read_text(
+        encoding="utf-8"
+    )
+    observer_job = workflow.split("  observe-public-deployment:\n", 1)[1]
+    assert "if: github.event_name == 'push' || github.event_name == 'schedule'" in (
+        observer_job
+    )
+    assert "workflow_dispatch" not in observer_job.split("    uses:", 1)[0]
+
+
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
     policy: ObserverOIDCPolicy,
     signing_key: tuple[rsa.RSAPrivateKey, dict],
