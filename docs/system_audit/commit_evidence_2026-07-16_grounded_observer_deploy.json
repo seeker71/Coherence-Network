@@ -111,6 +111,7 @@
   "evidence_refs": [
     "coherence-kernel PR #253 merged exact-decimal round_ndigits into fkwu as f9cb9a382128638931f97ed61734cf7382c8d0dd.",
     "coherence-kernel PR #254 published the corrected consumer distribution pin d6255d6bb52f9431e9af4a74a6a32ea70ad7dcbc.",
+    "Immutable consumer commit 64b62db38db2c7cfd85e4f6a4d87eb20282df6a9 contains the fkwu-only public observer bytes and is the OIDC workflow pin.",
     "Direct fkwu round-ndigits band scored 24; the sibling primitive harness reported 1 ok, 0 divergent.",
     "No Go, Rust, TypeScript, flatten, PyO3, preload, or sibling fallback participates in API recipe execution.",
     "Observed:yes remains unavailable until the final consumer merge is deployed and the authenticated public WITNESS matches it."
