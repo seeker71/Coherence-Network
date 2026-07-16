@@ -665,6 +665,56 @@ def test_native_observer_rejects_digest_matched_but_behaviorally_fake_carrier(
     assert "carrier identity mismatch" in result["error"]
 
 
+def test_native_observer_uses_receipted_host_carrier_outside_submodule(tmp_path):
+    root = tmp_path
+    bootstrap = root / "form" / "form-stdlib" / "bootstrap"
+    carrier = root / ".cache" / "form-cli-native" / "linux-amd64" / "form-cli"
+    bootstrap.mkdir(parents=True)
+    carrier.parent.mkdir(parents=True)
+    carrier.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    carrier.chmod(0o755)
+    source_sha = "c" * 64
+    binary_sha = hashlib.sha256(carrier.read_bytes()).hexdigest()
+    (bootstrap / "form-cli.source.sha256").write_text(
+        source_sha + "\n", encoding="ascii"
+    )
+    (root / ".cache" / "form-cli-native" / "selected.json").write_text(
+        json.dumps(
+            {
+                "schema": "selected-form-cli-carrier-v1",
+                "native_path": str(carrier),
+                "binary_sha256": binary_sha,
+                "source_sha256": source_sha,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert native_runtime_observation._selected_form_cli_binary(root) == carrier
+
+    escaped = root / "outside-form-cli"
+    escaped.write_bytes(carrier.read_bytes())
+    escaped.chmod(0o755)
+    receipt = root / ".cache" / "form-cli-native" / "selected.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "schema": "selected-form-cli-carrier-v1",
+                "native_path": str(escaped),
+                "binary_sha256": binary_sha,
+                "source_sha256": source_sha,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        native_runtime_observation.NativeRuntimeObservationError,
+        match="escapes the host-native cache",
+    ):
+        native_runtime_observation._selected_form_cli_binary(root)
+
+
 def test_wrapper_manifest_and_fail_closed_native_flow_are_current():
     wrapper = ROOT / "bin" / "form-cli"
     manifest = (ROOT / "bin" / "form-cli.sha256").read_text(encoding="ascii").strip()

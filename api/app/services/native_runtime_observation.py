@@ -78,6 +78,62 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
     return _sha256_file(committed), str(committed)
 
 
+def _selected_form_cli_binary(root: Path) -> Path:
+    """Return the host-native carrier selected by the bootstrap proof.
+
+    Production images place their built carrier at ``form/form-cli`` beside
+    its digest authority.  Source checkouts instead keep host-specific
+    carriers outside the pinned submodule and record the exact selection in a
+    receipt.  Reading that receipt is essential on Linux/Windows runners,
+    where the convenience ``form/form-cli`` file may target another host.
+    """
+    image_binary = root / "form" / "form-cli"
+    if (root / "form" / "form-cli.sha256").is_file():
+        return image_binary
+
+    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
+    if not receipt_path.is_file():
+        return image_binary
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier receipt malformed"
+        ) from exc
+    if receipt.get("schema") != "selected-form-cli-carrier-v1":
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier receipt schema mismatch"
+        )
+    native_path = receipt.get("native_path")
+    binary_sha = receipt.get("binary_sha256")
+    source_sha = receipt.get("source_sha256")
+    if not isinstance(native_path, str) or not native_path:
+        raise NativeRuntimeObservationError("selected form-cli carrier path missing")
+    if not isinstance(binary_sha, str) or not _HEX64.fullmatch(binary_sha):
+        raise NativeRuntimeObservationError("selected form-cli carrier digest malformed")
+    if not isinstance(source_sha, str) or not _HEX64.fullmatch(source_sha):
+        raise NativeRuntimeObservationError("selected form-cli source digest malformed")
+    binary = Path(native_path)
+    if not binary.is_absolute():
+        binary = root / binary
+    binary = binary.resolve()
+    carrier_root = (root / ".cache" / "form-cli-native").resolve()
+    if not binary.is_relative_to(carrier_root):
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier escapes the host-native cache"
+        )
+    if not binary.is_file() or not os.access(binary, os.X_OK):
+        raise NativeRuntimeObservationError("selected form-cli carrier unavailable")
+    if _sha256_file(binary) != binary_sha:
+        raise NativeRuntimeObservationError("selected form-cli carrier digest mismatch")
+    source_digest_file = (
+        root / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+    )
+    if source_digest_file.read_text(encoding="ascii").strip() != source_sha:
+        raise NativeRuntimeObservationError("selected form-cli source digest mismatch")
+    return binary
+
+
 def _run_cli_line(binary: Path, command: str, *, cwd: Path) -> str:
     process = subprocess.run(
         [str(binary)],
@@ -106,7 +162,7 @@ def _run_cli_line(binary: Path, command: str, *, cwd: Path) -> str:
 def _observe_form_cli(
     root: Path, *, challenge_input: str | None = None
 ) -> dict[str, Any]:
-    binary = root / "form" / "form-cli"
+    binary = _selected_form_cli_binary(root)
     table = root / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
     stamp_file = root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp"
     source_digest_file = (
@@ -237,6 +293,7 @@ def _artifact_fingerprint(root: Path) -> str:
     paths = [
         root / "form" / "form-cli",
         root / "form" / "form-cli.sha256",
+        root / ".cache" / "form-cli-native" / "selected.json",
         root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp",
         root
         / "form"
@@ -247,6 +304,10 @@ def _artifact_fingerprint(root: Path) -> str:
         root / "bin" / "form-cli",
         root / "bin" / "form-cli.sha256",
     ]
+    try:
+        paths.append(_selected_form_cli_binary(root))
+    except Exception:
+        pass
     try:
         from app.services.form_kernel_bridge import kernel_bin_path
 
