@@ -33,7 +33,7 @@ from app.services.deployment_observer_service import (
     health_url,
     issue_challenge,
     nonce_sha256,
-    rust_challenge_expected,
+    fkwu_challenge_expected,
     stable_health_projection,
 )
 from app.services import deployment_observer_service
@@ -256,12 +256,12 @@ def _health(nonce: str, *, timestamp: str = "2026-07-15T10:00:00Z") -> bytes:
         "integrity_verified": True,
         "integrity_compromised": False,
         "schema_ok": True,
-        "kernel_runtime": "subprocess",
+        "kernel_runtime": "fkwu",
         "kernel_challenge": {
             "input_sha256": challenge_input,
-            "result": rust_challenge_expected(challenge_input),
+            "result": fkwu_challenge_expected(challenge_input),
             "verified": True,
-            "runtime": "subprocess",
+            "runtime": "fkwu",
             "binary_sha256": "1" * 64,
         },
         "form_cli_challenge": {
@@ -292,7 +292,7 @@ def _direct(nonce: str) -> bytes:
             "challenge_input_sha256": challenge_input,
             "container_id": "8" * 64,
             "image_id": "sha256:" + "9" * 64,
-            "kernel_result": rust_challenge_expected(challenge_input),
+            "kernel_result": fkwu_challenge_expected(challenge_input),
             "kernel_binary_sha256": "1" * 64,
             "form_cli_result": form_cli_challenge_expected(challenge_input),
             "form_cli_protocol": "form-cli-v2",
@@ -462,9 +462,9 @@ def test_authenticated_observation_persists_and_reverifies_the_complete_witness(
             lambda _challenge: {
                 "verified": True,
                 "kernel": {
-                    "runtime": "subprocess",
+                    "runtime": "fkwu",
                     "binary_sha256": "1" * 64,
-                    "result": int(rust_challenge_expected(challenge_input)),
+                    "result": int(fkwu_challenge_expected(challenge_input)),
                 },
                 "form_cli": {
                     "binary_sha256": "2" * 64,

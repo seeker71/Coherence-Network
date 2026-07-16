@@ -9,10 +9,8 @@ on:
       - 'pulse/**'
       - 'deploy/hostinger/**'
       - 'deploy/front-door/**'
-      - 'deploy/kernel-router/**'
       - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
-      - 'scripts/verify_kernel_canary_public_gate.sh'
       - 'scripts/form_cli_rag.py'
       - 'scripts/ensure_form_cli_native.sh'
       - 'scripts/form_first_offline_setup.sh'
@@ -26,7 +24,6 @@ on:
       - 'bin/form-cli.sha256'
       - 'form'
       - 'form/form-stdlib/**'
-      - 'form/form-kernel-rust/**'
       - 'kernels/python_bmf/**'
   schedule:
     # Refresh the full independent observation well inside its 24-hour TTL.

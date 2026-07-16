@@ -45,7 +45,7 @@ class TestWeightedAverageEndpoint:
         assert data["average"] == 0.8125
         assert data["values"] == [0.5, 0.75, 1.0]
         assert data["weights"] == [0.25, 0.25, 0.5]
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_equal_weights_is_arithmetic_mean(self, client: AsyncClient):

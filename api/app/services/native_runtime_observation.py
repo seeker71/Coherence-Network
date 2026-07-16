@@ -204,27 +204,22 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
         )
     else:
         from app.services.deployment_observer_service import (
-            rust_challenge_expected,
-            rust_challenge_expression,
+            fkwu_challenge_expected,
+            fkwu_challenge_expression,
         )
 
-        expression = rust_challenge_expression(challenge_input)
-        expected = int(rust_challenge_expected(challenge_input))
-        value = int(form_kernel_bridge.run_recipe(expression, timeout=10))
-        runtime = "subprocess"
-    if value != expected or runtime not in {"inline", "subprocess"}:
+        expression = fkwu_challenge_expression(challenge_input)
+        expected = int(fkwu_challenge_expected(challenge_input))
+        value, runtime = form_kernel_bridge.run_kernel(
+            expression,
+            parse=int,
+            timeout=10,
+        )
+    if value != expected or runtime != "fkwu":
         raise NativeRuntimeObservationError("kernel known-answer challenge failed")
     binary = form_kernel_bridge.kernel_bin_path()
     binary_sha = _sha256_file(binary) if binary.is_file() else None
-    inline_path = None
-    inline_sha = None
-    inline = getattr(form_kernel_bridge, "_INLINE_KERNEL", None)
-    if runtime == "inline" and inline is not None:
-        candidate = Path(str(getattr(inline, "__file__", "")))
-        if candidate.is_file():
-            inline_path = str(candidate)
-            inline_sha = _sha256_file(candidate)
-    if binary_sha is None and inline_sha is None:
+    if binary_sha is None:
         raise NativeRuntimeObservationError("kernel carrier digest unavailable")
     return {
         "verified": True,
@@ -233,8 +228,8 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
         "expected": expected,
         "result": value,
         "binary_sha256": binary_sha,
-        "inline_path": inline_path,
-        "inline_sha256": inline_sha,
+        "execution_authority": "c-bootstrap-fkwu",
+        "sibling_kernel_role": "differential-reference-only",
     }
 
 

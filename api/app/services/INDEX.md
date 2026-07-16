@@ -115,7 +115,7 @@
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |
 | [field_view_attribution_service.py](field_view_attribution_service.py) | Field story view attribution receipts and CC circulation rows. |
-| [form_kernel_bridge.py](form_kernel_bridge.py) | Form kernel bridge — run form-kernel-rust inline (PyO3) or via subprocess. |
+| [form_kernel_bridge.py](form_kernel_bridge.py) | Form execution bridge — run recipes on the c-bootstrapped fkwu kernel. |
 | [frequency_editor.py](frequency_editor.py) | Frequency editor — finds and rewrites institutional-frequency phrases. |
 | [frequency_field.py](frequency_field.py) | Frequency field analysis — token and phrase level dissonance detection. |
 | [frequency_profile_service.py](frequency_profile_service.py) | Frequency profile service — dynamic, multi-view, multi-hop. |

@@ -159,8 +159,8 @@ jobs:
           target_sha="$1"
           form_source_commit="$2"
           challenge_input="$3"
-          rust_expected="$4"
-          rust_expression="$5"
+          fkwu_expected="$4"
+          fkwu_expression="$5"
           form_expected="$6"
           compose=/docker/coherence-network/docker-compose.yml
           container="$(docker compose -f "$compose" ps -q api)"
@@ -177,14 +177,14 @@ jobs:
           [[ "$build_context" =~ Coherence-Network\.git#([0-9a-f]{40})$ ]]
           api_build_context_sha="${BASH_REMATCH[1]}"
           [[ "$api_build_context_sha" == "$target_sha" ]]
-          kernel_binary_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-kernel-rust | cut -d' ' -f1)"
+          kernel_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/fkwu | cut -d' ' -f1)"
           form_cli_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli | cut -d' ' -f1)"
           form_cli_wrapper_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-cli | cut -d' ' -f1)"
           form_cli_table_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli-table.txt | cut -d' ' -f1)"
           form_cli_stamp_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli.stamp | cut -d' ' -f1)"
           form_cli_source_sha256="$(docker exec "$container_id" sh -c 'tr -d "\r\n" < /app/form/form-stdlib/bootstrap/form-cli.source.sha256')"
-          kernel_result="$(docker exec "$container_id" /app/bin/form-kernel-rust --expr "$rust_expression")"
-          [[ "$kernel_result" == "$rust_expected" ]]
+          kernel_result="$(docker exec "$container_id" /app/bin/form-cli eval "$fkwu_expression")"
+          [[ "$kernel_result" == "$fkwu_expected" ]]
           form_line="$(printf 'carrier-challenge %s\n' "$challenge_input" | docker exec -i "$container_id" /app/form/form-cli)"
           IFS='|' read -r form_label form_source_echo form_input_echo form_result form_extra <<< "$form_line"
           [[ "$form_label" == carrier-challenge-v1 ]]
@@ -225,7 +225,7 @@ jobs:
           },sort_keys=True,separators=(",",":")))
           PY
           REMOTE
-          builder='docker.io/library/rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944'
+          builder='docker.io/library/python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba'
           curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
             --connect-timeout 5 --max-time 60 \
             "https://codeload.github.com/seeker71/coherence-kernel/tar.gz/${form_source_commit}" \
@@ -241,23 +241,20 @@ jobs:
             "$builder" bash -lc '
               set -euo pipefail
               apt-get update
-              apt-get install -y --no-install-recommends openssl
+              apt-get install -y --no-install-recommends gcc libc6-dev openssl
               mkdir -p /build /build/form-cli-src
-              cp /source/form-kernel-rust/Cargo.toml /source/form-kernel-rust/Cargo.lock /source/form-kernel-rust/pyproject.toml /build/
-              cp -a /source/form-kernel-rust/src /source/form-kernel-rust/libraries /source/form-kernel-rust/recipes /build/
+              cp -a /source/runtime /build/runtime
               cp -a /source/form-stdlib /build/form-cli-src/form-stdlib
               cp -a /source/scripts /build/form-cli-src/scripts
               cp /source/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
               cd /build/form-cli-src
               CC=cc FORM_CLI_FORCE_LINK=1 /build/form-cli-src/build-form-cli.sh /out/form-cli
               bash /build/form-cli-src/scripts/form_cli_bootstrap_proof.sh /out/form-cli
-              cd /build
-              cargo build --release --bin form-kernel-rust
-              strip target/release/form-kernel-rust
-              cp target/release/form-kernel-rust /out/form-kernel-rust
+              cc -O2 -o /out/fkwu /build/runtime/fkwu-uni.c
+              test "$(/out/fkwu --src /source/bootstrap/ground.fk 2>/dev/null)" = 42
             '
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
-          reproduced_kernel_sha="$(sha256sum "$reproduced_dir/form-kernel-rust" | cut -d' ' -f1)"
+          reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
           source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
           source_digest="$(tr -d '\r\n' < "$source_dir/form-stdlib/bootstrap/form-cli.source.sha256")"
           source_table_sha="$(sha256sum "$source_dir/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
@@ -366,7 +363,7 @@ jobs:
           first,second,third,fourth=(
               int(challenge_input[i:i+4],16) for i in range(0,16,4)
           )
-          rust_expected=(((first*17+second)*19+third)*23)+fourth
+          fkwu_expected=(((first*17+second)*19+third)*23)+fourth
           form_expected=hashlib.sha256(
               b"form-cli-carrier-challenge-v1\n"+challenge_input.encode("ascii")
           ).hexdigest()
@@ -386,12 +383,12 @@ jobs:
           form=body.get("form_cli_challenge")
           if not isinstance(kernel,dict) or not isinstance(form,dict):
               raise SystemExit("health carrier challenge missing")
-          if kernel.get("input_sha256") != challenge_input or str(kernel.get("result")) != str(rust_expected):
-              raise SystemExit("Rust carrier result mismatch")
-          if kernel.get("verified") is not True or kernel.get("runtime") not in {"inline","subprocess"}:
-              raise SystemExit("Rust carrier not verified")
+          if kernel.get("input_sha256") != challenge_input or str(kernel.get("result")) != str(fkwu_expected):
+              raise SystemExit("fkwu carrier result mismatch")
+          if kernel.get("verified") is not True or kernel.get("runtime") != "fkwu":
+              raise SystemExit("fkwu carrier not verified")
           if body.get("kernel_runtime") != kernel.get("runtime"):
-              raise SystemExit("Rust runtime projection mismatch")
+              raise SystemExit("fkwu runtime projection mismatch")
           if form.get("input_sha256") != challenge_input or form.get("result") != form_expected:
               raise SystemExit("form-cli carrier result mismatch")
           if form.get("verified") is not True or form.get("protocol") != "form-cli-v2":
@@ -417,7 +414,7 @@ jobs:
               "integrity_compromised":False,
               "schema_ok":True,
               "kernel_runtime":kernel["runtime"],
-              "kernel_result":str(rust_expected),
+              "kernel_result":str(fkwu_expected),
               **digest_fields,
               "form_cli_result":form_expected,
               "form_cli_protocol":"form-cli-v2",
@@ -429,7 +426,7 @@ jobs:
           direct=json.loads(direct_raw.decode("utf-8"),object_pairs_hook=unique)
           if direct.get("target_sha") != target or direct.get("challenge_input_sha256") != challenge_input:
               raise SystemExit("direct probe challenge mismatch")
-          if direct.get("kernel_result") != str(rust_expected) or direct.get("form_cli_result") != form_expected:
+          if direct.get("kernel_result") != str(fkwu_expected) or direct.get("form_cli_result") != form_expected:
               raise SystemExit("direct probe result mismatch")
           if any(direct.get(field) != value for field,value in digest_fields.items()):
               raise SystemExit("direct/public carrier digest mismatch")

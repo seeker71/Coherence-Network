@@ -44,7 +44,7 @@ class TestNodeIdDistanceEndpoint:
         assert data["distance"] == 7
         assert data["a"] == [1, 5, 4, 1]
         assert data["b"] == [1, 4, 4, 7]
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_zero_distance(self, client: AsyncClient):

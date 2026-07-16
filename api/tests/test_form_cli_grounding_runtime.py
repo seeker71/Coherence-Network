@@ -106,7 +106,7 @@ def _carrier_observation(root: Path, *, challenge: str = "1" * 64) -> dict:
         "challenge_digest": challenge,
         "kernel": {
             "verified": True,
-            "runtime": "subprocess",
+            "runtime": "fkwu",
             "binary_sha256": "2" * 64,
             "inline_sha256": None,
         },
@@ -560,7 +560,7 @@ def test_api_binds_stable_native_carrier_before_and_after_ask(tmp_path, monkeypa
     assert response.form_cli_binary_sha256 == "3" * 64
     assert response.form_cli_table_sha256 == "4" * 64
     assert response.form_cli_wrapper_sha256 == "5" * 64
-    assert response.kernel_runtime == "subprocess"
+    assert response.kernel_runtime == "fkwu"
 
 
 def test_api_rejects_fake_root_and_mid_request_carrier_drift(tmp_path, monkeypatch):
@@ -657,7 +657,7 @@ def test_native_observer_rejects_digest_matched_but_behaviorally_fake_carrier(
     monkeypatch.setattr(
         native_runtime_observation,
         "_observe_kernel",
-        lambda: {"verified": True, "runtime": "subprocess", "binary_sha256": "b" * 64},
+        lambda: {"verified": True, "runtime": "fkwu", "binary_sha256": "b" * 64},
     )
     native_runtime_observation.reset_native_runtime_observation_cache()
     result = native_runtime_observation.observe_native_runtime(force=True)

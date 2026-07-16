@@ -46,8 +46,8 @@ PINNED_ENVIRONMENT = "Production"
 PINNED_CALLER_WORKFLOW = ".github/workflows/hostinger-auto-deploy.yml"
 PINNED_OBSERVER_WORKFLOW = ".github/workflows/public-deployment-observer.yml"
 REPRODUCIBLE_BUILDER_IMAGE = (
-    "docker.io/library/rust:1.86-slim-bookworm@"
-    "sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944"
+    "docker.io/library/python:3.11-slim-bookworm@"
+    "sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba"
 )
 _NONCE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -168,7 +168,7 @@ def carrier_challenge_input_sha256(nonce: str) -> str:
     ).hexdigest()
 
 
-def rust_challenge_expected(challenge_input: str) -> str:
+def fkwu_challenge_expected(challenge_input: str) -> str:
     if not _HEX64_RE.fullmatch(challenge_input):
         raise DeploymentObserverError("carrier-challenge-input")
     first, second, third, fourth = (
@@ -178,7 +178,7 @@ def rust_challenge_expected(challenge_input: str) -> str:
     return str((((first * 17 + second) * 19 + third) * 23) + fourth)
 
 
-def rust_challenge_expression(challenge_input: str) -> str:
+def fkwu_challenge_expression(challenge_input: str) -> str:
     if not _HEX64_RE.fullmatch(challenge_input):
         raise DeploymentObserverError("carrier-challenge-input")
     first, second, third, fourth = (
@@ -262,12 +262,12 @@ def stable_health_projection(
     if not isinstance(kernel, dict) or not isinstance(form_cli, dict):
         raise DeploymentObserverError("observer-health-carriers")
     runtime = kernel.get("runtime")
-    if runtime not in {"inline", "subprocess"} or body.get("kernel_runtime") != runtime:
+    if runtime != "fkwu" or body.get("kernel_runtime") != runtime:
         raise DeploymentObserverError("observer-health-kernel-runtime")
     if kernel.get("input_sha256") != challenge_input:
         raise DeploymentObserverError("observer-health-kernel-input")
     kernel_result = str(kernel.get("result") or "")
-    if kernel_result != rust_challenge_expected(challenge_input):
+    if kernel_result != fkwu_challenge_expected(challenge_input):
         raise DeploymentObserverError("observer-health-kernel-result")
     if kernel.get("verified") is not True:
         raise DeploymentObserverError("observer-health-kernel-verification")
@@ -328,7 +328,7 @@ def validate_direct_probe(
         "api_build_context_sha": target_sha,
         "image_revision": target_sha,
         "challenge_input_sha256": challenge_input,
-        "kernel_result": rust_challenge_expected(challenge_input),
+        "kernel_result": fkwu_challenge_expected(challenge_input),
         "form_cli_result": form_cli_challenge_expected(challenge_input),
         "form_cli_protocol": "form-cli-v2",
         "reproducible_builder_image": REPRODUCIBLE_BUILDER_IMAGE,

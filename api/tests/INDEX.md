@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 242
+**Total files**: 241
 
 | File | Purpose |
 |---|---|
@@ -145,14 +145,14 @@
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
 | [test_kernel_attribution_report.py](test_kernel_attribution_report.py) | Regression tests for kernel attribution parity sensing. |
-| [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Latency sensing for the inline (PyO3) kernel path. |
+| [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Production execution authority checks for c-bootstrapped fkwu. |
 | [test_kernel_single_authority.py](test_kernel_single_authority.py) | _no top-of-file purpose_ |
 | [test_kernel_submodule_contract.py](test_kernel_submodule_contract.py) | Contract for the canonical coherence-kernel consumer boundary. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
 | [test_lens_translation_boundaries.py](test_lens_translation_boundaries.py) | _no top-of-file purpose_ |
 | [test_libretranslate_backend.py](test_libretranslate_backend.py) | LibreTranslate backend — verifies translation + glossary post-substitution. |
 | [test_mcp_remote_no_oauth.py](test_mcp_remote_no_oauth.py) | _no top-of-file purpose_ |
-| [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP exposure for the coherence-substrate: every sibling agent reaches Form. |
+| [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP compatibility exposure after Form execution moved to the native carrier. |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
 | [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |

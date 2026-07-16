@@ -53,7 +53,7 @@ class TestGroundedValueEndpoint:
         assert data["value_realization_pct"] == 0.625  # min(12.5/20.0, 1.0)
         # 1.0*0.30 + 0.7*0.25 + 1.0*0.25 + 0.6*0.10 + 0.3*0.10 = 0.815
         assert data["computed_confidence"] == 0.815
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_realization_guard_zero_potential(self, client: AsyncClient):
