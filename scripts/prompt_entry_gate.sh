@@ -169,12 +169,35 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
   exit 1
 fi
 
-# Form-first is an entry invariant, not an optional setup hint. The bootstrap
-# has a complete-source fast path, so warm turns only verify coverage/freshness;
-# a fresh or partially populated clone is repaired before any reasoning begins.
-if ! ./scripts/form_first_offline_setup.sh; then
-  echo "prompt-entry-guide: Form-first substrate/RAG bootstrap failed."
-  exit 1
+# Form-first stays the reasoning invariant, while the documented default entry
+# remains usable before API dependencies have been installed.  Warm, prepared
+# worktrees reconcile the complete index here; fresh worktrees report the exact
+# deferred command.  Full proof always requires and runs the reconciliation.
+form_bootstrap_ready=0
+FORM_BOOTSTRAP_PYTHON=()
+if [[ -x "api/.venv/bin/python" ]]; then
+  FORM_BOOTSTRAP_PYTHON=("api/.venv/bin/python")
+elif [[ -x "api/.venv/Scripts/python.exe" ]]; then
+  FORM_BOOTSTRAP_PYTHON=("api/.venv/Scripts/python.exe")
+elif [[ "$PYTHON3_AVAILABLE" == "1" ]]; then
+  FORM_BOOTSTRAP_PYTHON=("${PYTHON3_CMD[@]}")
+fi
+if [[ ${#FORM_BOOTSTRAP_PYTHON[@]} -gt 0 ]] && \
+  "${FORM_BOOTSTRAP_PYTHON[@]}" -c \
+    'import sys; sys.path.insert(0, "api"); import app.services.substrate; import app.services.grounding_source' \
+    >/dev/null 2>&1; then
+  form_bootstrap_ready=1
+fi
+
+if [[ "$force_full" == "1" || "$form_bootstrap_ready" == "1" ]]; then
+  if ! ./scripts/form_first_offline_setup.sh; then
+    echo "prompt-entry-guide: Form-first substrate/RAG bootstrap failed."
+    exit 1
+  fi
+else
+  echo "prompt-entry-guide: Form-first bootstrap deferred; API dependencies are not installed."
+  echo "Install the API dependencies, then run:"
+  echo "  ./scripts/form_first_offline_setup.sh"
 fi
 
 print_claude_orientation

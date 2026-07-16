@@ -32,6 +32,12 @@ on:
     # Refresh the full independent observation well inside its 24-hour TTL.
     # This runs the same deploy/prove body against the current protected main.
     - cron: '17 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to deploy (defaults to the triggering SHA)"
+        required: false
+        type: string
 concurrency:
   group: hostinger-auto-deploy-main
   cancel-in-progress: false
@@ -47,7 +53,7 @@ jobs:
       HOSTINGER_DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH || '/docker/coherence-network' }}
       PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://api.coherencycoin.com' }}
       PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherencycoin.com' }}
-      TARGET_SHA: ${{ github.sha }}
+      TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
         with:

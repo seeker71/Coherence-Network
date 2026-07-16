@@ -34,15 +34,18 @@
       "cd web && npm run build",
       "./scripts/verify_worktree_local_web.sh --start",
       "./bin/form-cli ask 'observed auto learning reversible experiment champion challenger'",
+      "bash -n scripts/prompt_entry_gate.sh scripts/settle_public_deploy.sh",
+      "make prompt-guide",
+      "python3 scripts/validate_workflow_references.py",
       "python3 scripts/generate_repo_indexes.py --check",
       "git diff --check"
     ],
-    "notes": "Single authority passed; 56 focused tests, 403 non-holdout API tests, and the CI-equivalent full suite (1,996 passed, 3 skipped) passed; canonical Go/Rust/TypeScript expression and FORMBIN2 conformance passed; Hostinger form deploy path passed with 62 BML GET/read routes; Next.js production build and the full local API/web matrix passed. The real 1,549-cell native ask returned path:native, grounded:yes, suffic:yes, NodeID @1.1.9.985, CTOR @1.4.9.2529, and a source/answer digest-bound excerpt. Frequency and observed remain honestly unmeasured before the independent public deployment witness exists."
+    "notes": "Single authority passed; 56 focused tests, 403 non-holdout API tests, and the CI-equivalent full suite (1,996 passed, 3 skipped) passed; canonical Go/Rust/TypeScript expression and FORMBIN2 conformance passed; Hostinger form deploy path passed with 62 BML GET/read routes; Next.js production build and the full local API/web matrix passed. The real 1,549-cell native ask returned path:native, grounded:yes, suffic:yes, NodeID @1.1.9.985, CTOR @1.4.9.2529, and a source/answer digest-bound excerpt. The deploy workflow retains its SHA-addressed manual recovery trigger, and the cheap prompt guide now defers Form bootstrap only when fresh-checkout API dependencies are absent while prepared/full runs reconcile all 1,549 sources. Frequency and observed remain honestly unmeasured before the independent public deployment witness exists."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "notes": "Consumer PR checks run after the bootstrap commit is pushed."
+    "notes": "Exact-head Thread Gates run 29464471967, Windows Host Floor run 29464472076, and GitGuardian passed at 4c6f34f27ceaae6003a231d8fdd774cfadcc116c. Review-thread repairs for manual deploy recovery and dependency-light prompt entry require one final exact-head rerun."
   },
   "deploy_validation": {
     "status": "pending",
@@ -100,7 +103,8 @@
     "The consumer native-carrier selector now reuses only a behaviorally source-bound host carrier, writes host build products to a platform cache outside the pinned submodule, and performs the documented one-time submodule bootstrap link when a committed platform binary is absent.",
     "The selector publishes a source-and-binary-digest-bound native-path receipt; the Python cold-start bridge re-hashes that carrier on every embedding batch and never launches a nested platform shell.",
     "Windows composition observed STATUS_STACK_OVERFLOW (0xC00000FD) at the unchanged 600-byte Form tokenizer; the pinned coherence-kernel builder now reserves 16 MiB with linker-target-specific syntax, and the Windows gate reads the produced PE header before behavioral proof.",
-    "The staged ask wrapper removes only the terminal CR from Windows CRLF control lines before NodeID/trust parsing; grounded answer payload bytes remain digest-bound and unmodified."
+    "The staged ask wrapper removes only the terminal CR from Windows CRLF control lines before NodeID/trust parsing; grounded answer payload bytes remain digest-bound and unmodified.",
+    "The SHA-addressed workflow_dispatch recovery lane remains available to settle_public_deploy.sh, and prompt entry distinguishes a dependency-absent fresh checkout from a prepared or force-full Form bootstrap."
   ],
   "change_files": [
     ".github/workflows/hostinger-auto-deploy.yml",
