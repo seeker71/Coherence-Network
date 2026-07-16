@@ -12,6 +12,9 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services.form_kernel_bridge import active_runtime, kernel_available
+from app.services.native_runtime_observation import (
+    reset_native_runtime_observation_cache,
+)
 
 BASE = "http://test"
 
@@ -48,6 +51,7 @@ class TestFkwuExecutionAuthority:
 
     @pytest.mark.anyio
     async def test_health_reports_fkwu(self, client: AsyncClient):
+        reset_native_runtime_observation_cache()
         response = await client.get("/api/health")
         assert response.status_code == 200
         assert response.json()["kernel_runtime"] == "fkwu"

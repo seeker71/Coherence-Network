@@ -20,7 +20,6 @@ KERNEL_CANARY_COMPOSE_PATH = ROOT / "deploy" / "kernel-router" / "docker-compose
 HOSTINGER_AUTO_DEPLOY_PATH = ROOT / "deploy" / "hostinger" / "auto-deploy.sh"
 HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "hostinger-auto-deploy.yml"
 PUBLIC_DEPLOY_CONTRACT_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "public-deploy-contract.yml"
-PUBLIC_CANARY_VERIFY_PATH = ROOT / "scripts" / "verify_kernel_canary_public_gate.sh"
 KERNEL_BIN = ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
@@ -238,7 +237,6 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     auto_deploy = _text(HOSTINGER_AUTO_DEPLOY_PATH)
     hostinger_workflow = _text(HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH)
     public_contract_workflow = _text(PUBLIC_DEPLOY_CONTRACT_WORKFLOW_PATH)
-    verify_script = _text(PUBLIC_CANARY_VERIFY_PATH)
 
     assert 'ROUTES_FILE: "/routes/production-routes.fk"' in compose
     assert 'traefik.enable: "true"' in compose
@@ -267,43 +265,16 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     assert 'KERNEL_ROUTER_CONFIG_FILE: "/run/coherence-network/config.json"' in compose
     assert "/root/.coherence-network/config.json:/run/coherence-network/config.json:ro" in compose
 
-    assert "ensure_kernel_router_canary" in auto_deploy
-    assert "docker-compose.kernel-router.yml" in auto_deploy
-    assert "clearing stale containers for ${service}" in auto_deploy
-    assert "up -d --build --no-deps --force-recreate" in auto_deploy
-    assert "$service listener did not accept local HTTP within" in auto_deploy
-    assert "X-Form-Native-Public-Gate: 1" in auto_deploy
-    assert '\\"decision_receipt\\"' in auto_deploy
-    assert '\\"native_invitation\\"' in auto_deploy
-    assert '\\"state\\":\\"native-invitation-contract\\"' in auto_deploy
-    assert '\\"native_protocol\\":\\"Form/BML mutation recipe\\"' in auto_deploy
-    assert '\\"executes\\":true' in auto_deploy
-    assert "performed-by-http-native-persistence" in auto_deploy
-    assert '\\"ordinary_traffic_flip_performed\\":true' in auto_deploy
-    assert "Native Default Local" in auto_deploy
-    assert '\\"native_default_invitation\\":true' in auto_deploy
-    assert '\\"route_binding\\":\\"kernel-http-native-default-invitation\\"' in auto_deploy
-    assert '\\"selected_path\\":\\"implicit-native-invitation\\"' in auto_deploy
-    assert "X-Form-Python-Fallback: 1" in auto_deploy
-    assert "X-Form-Router: fanout-python" in auto_deploy
+    assert "retire_sibling_kernel_routers" in auto_deploy
+    assert 'local services=(kernel-router kernel-router-bml-front-door)' in auto_deploy
+    assert 'docker compose "${compose_args[@]}" stop "${services[@]}"' in auto_deploy
+    assert 'docker compose "${compose_args[@]}" rm -f "${services[@]}"' in auto_deploy
+    assert "no sibling runtime containers remain" in auto_deploy
+    assert "\nensure_kernel_router_canary\n" not in auto_deploy
 
     for workflow in (hostinger_workflow, public_contract_workflow):
-        assert "'deploy/kernel-router/**'" in workflow
-        assert "'scripts/verify_kernel_canary_public_gate.sh'" in workflow
+        assert "'deploy/kernel-router/**'" not in workflow
+        assert "'scripts/verify_kernel_canary_public_gate.sh'" not in workflow
 
-    assert "Verify kernel public canary" in hostinger_workflow
-    assert "./scripts/verify_kernel_canary_public_gate.sh" in hostinger_workflow
-    assert "native_public_gate" in verify_script
-    assert "executes_true" in verify_script
-    assert "performed-by-http-native-persistence" in verify_script
-    assert "assert_native_default_body" in verify_script
-    assert "native_default_invitation" in verify_script
-    assert "native_invitation_state" in verify_script
-    assert "Form/BML mutation recipe" in verify_script
-    assert "native_invitation_declined" in verify_script
-    assert "implicit-native-invitation" in verify_script
-    assert "public Traefik no-header default entered native default route" in verify_script
-    assert '"potential_value":1' in verify_script
-    assert '"estimated_cost":1' in verify_script
-    assert "fallback_router" in verify_script
-    assert "fanout-python" in verify_script
+    assert "Verify kernel public canary" not in hostinger_workflow
+    assert "./scripts/verify_kernel_canary_public_gate.sh" not in hostinger_workflow

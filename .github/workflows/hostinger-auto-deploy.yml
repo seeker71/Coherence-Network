@@ -177,10 +177,6 @@ jobs:
             attempt=$((attempt + 1))
           done
 
-      - name: Verify kernel public canary
-        run: |
-          ./scripts/verify_kernel_canary_public_gate.sh "${PUBLIC_DEPLOY_API_BASE}"
-
   observe-public-deployment:
     needs: deploy-hostinger
     permissions:

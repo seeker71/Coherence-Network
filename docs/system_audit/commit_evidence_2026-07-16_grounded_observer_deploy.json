@@ -21,6 +21,7 @@
     "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_form_kernel_bridge_structure_access.py",
     "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_native_mutation_public_gate.py",
     "api/tests/test_utils_breath_balance.py",
     "api/tests/test_utils_coherence_weight.py",
     "api/tests/test_utils_concept_match_score.py",
@@ -70,7 +71,7 @@
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "notes": "Exact-head PR checks will build the fkwu image path and run the Windows host floor after push."
+    "notes": "The first exact-head Thread Gates run passed the fkwu authority build and sibling primitive band, then exposed two stale full-suite contracts: a cached pre-build health observation and assertions that deploy workflows still activated the retired Rust router. Both were repaired and pass 11/11 in the exact focused full-suite band; rerun pending. Windows remained active on its fkwu model-composition receipt."
   },
   "deploy_validation": {
     "status": "pending",
@@ -138,6 +139,7 @@
     "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_form_kernel_bridge_structure_access.py",
     "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_native_mutation_public_gate.py",
     "api/tests/test_utils_breath_balance.py",
     "api/tests/test_utils_coherence_weight.py",
     "api/tests/test_utils_concept_match_score.py",
