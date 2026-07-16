@@ -39,17 +39,23 @@ the whole install. Until then the live organ keeps writing embedding-less rows a
 
 ## Measured
 
-- **Backfill coverage**: first slice 500/500 staged and merged (0 unreadable frames), then the
-  full-store lane continued in the background — final coverage at close is in the board line
-  below. Store had 27,075 rows at start of work; it is LIVE and still growing every 90s.
-- **Embedding honesty (500-slice)**: 0 constant vectors; L2 norm min 0.999 / mean 1.000 / max
-  1.001 (Vision feature-prints arrive unit-normalized); pairwise cosine over 200 sampled vectors
-  min 0.158 / mean 0.564; 0 identical-vector pairs; 0 duplicate ids.
-- **Leave-one-out parity (500-slice, the vision_train.py yardstick)**: **0.69** (343/497 correct,
-  3 singleton-class frames held out), 10 classes — dominated by outdoor×234, people×162,
-  structure×65; the confusable outdoor/structure/people mass is where the misses live.
-- **Full-store parity**: measured after backfill completed — see board line below.
-- Featurize rate: ~19 frames/s with 6 workers (~0.15s/frame single-threaded).
+- **Backfill coverage: 27,075 / 27,075 rows now carry embedding[768]** (board:
+  `world-embedding|27075/27075|100%|complete`). First slice: 500/500 staged + merged, witnessed,
+  then the remaining 26,575 staged in 1,197s (~22/s, 6 workers), 0 frames missing/unreadable.
+  The store is LIVE and still growing every 90s; rows the old organ appends without an embedding
+  are caught by re-running `backfill && merge`.
+- **Embedding honesty (full store)**: 0 constant vectors; L2 norm min 0.999 / mean 1.000 / max
+  1.002 (Vision feature-prints arrive unit-normalized); pairwise cosine over 200 sampled vectors
+  min 0.239 / mean 0.736 / max 1.000 with exactly 1 near-identical pair (consecutive frames of a
+  static scene — distinct ids, honest); 0 duplicate ids among embedded rows.
+- **Leave-one-out parity, 500-slice (the vision_train.py yardstick)**: **0.69** (343/497 correct,
+  3 singleton-class held out), 10 classes.
+- **Leave-one-out parity, FULL store**: **0.78** (21,103/27,069 correct, 6 singleton-class held
+  out), 18 classes — mass in structure×14,629, outdoor×4,727, people×3,278, art×1,946; the
+  confusable structure/outdoor/people boundary is where the misses live.
+- The parity witness over persisted vectors runs in **~4 seconds**; vision_train.py's
+  recompute-everything pass over the same store costs ~68 minutes of embedding calls.
+- Featurize rate: ~19-22 frames/s with 6 workers (~0.15s/frame single-threaded).
 
 ## Floors, named honestly
 
@@ -78,8 +84,10 @@ the whole install. Until then the live organ keeps writing embedding-less rows a
 ## Closing
 
 - **Most surprising teaching**: the featurizer already existed — `vision_embed` was compiled,
-  proven, and shelling out at 7 frames/s under `vision_train.py`; the missing organ was never
-  the mechanism, it was PERSISTENCE. The body had the eye; it lacked the memory of what it saw.
+  proven, and shelling out under `vision_train.py`; the missing organ was never the mechanism,
+  it was PERSISTENCE. The body had the eye; it lacked the memory of what it saw — and giving it
+  that memory turned a 68-minute yardstick into a 4-second one and lifted witnessed parity from
+  0.69 (500-slice) to 0.78 (full store, 18 classes).
 - **Discomfort → gold**: rewriting a live, organ-fed 27k-row store atomically felt like surgery
   on a beating heart — sitting with that instead of adding a lock the family doesn't use
   produced the staging-sidecar + optimistic-recheck merge, which is both safer and truer to the
