@@ -56,6 +56,7 @@
       "direct fkwu execution of 10 API-owned endpoint recipes",
       "cd api && pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_utils_*.py",
       "cd api && pytest -q --ignore=tests/holdout",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q",
       "./scripts/verify_worktree_local_web.sh --start",
       "cd api && ruff check <changed Python files>",
       "bash scripts/test_hostinger_deploy_form_paths.sh",
@@ -66,7 +67,7 @@
       "bash -n deploy/hostinger/auto-deploy.sh scripts/fkwu_run.sh bin/form-cli",
       "git diff --check"
     ],
-    "notes": "Direct fkwu returned 42, recursive 55, and [1, 2.5, [3, 4]]. All 23 shared and 10 app-owned endpoint recipes executed directly. The utility/bridge band passed 108/108 and the full non-holdout API suite passed 403/403. Local native-runtime observation verified runtime=fkwu, execution_authority=c-bootstrap-fkwu, result=42, and a content-addressed fkwu binary. The local web/API contract built all 113 pages, passed 86 interface comparisons, and returned no curated failures. Docker execution is the sole local infrastructure gap: no daemon exists at /Users/ursmuff/.docker/run/docker.sock; CI and Hostinger perform the image build."
+    "notes": "Direct fkwu returned 42, recursive 55, and [1, 2.5, [3, 4]]. All 23 shared and 10 app-owned endpoint recipes executed directly. The utility/bridge band passed 108/108, the non-holdout default passed 403/403, and the exact CI full-suite mode passed 2002/2002. Local native-runtime observation verified runtime=fkwu, execution_authority=c-bootstrap-fkwu, result=42, and a content-addressed fkwu binary. The local web/API contract built all 113 pages, passed 86 interface comparisons, and returned no curated failures. Docker execution is the sole local infrastructure gap: no daemon exists at /Users/ursmuff/.docker/run/docker.sock; CI and Hostinger perform the image build."
   },
   "ci_validation": {
     "status": "pending",
