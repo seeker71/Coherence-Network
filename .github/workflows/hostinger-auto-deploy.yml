@@ -183,3 +183,12 @@ jobs:
       - name: Verify kernel public canary
         run: |
           ./scripts/verify_kernel_canary_public_gate.sh "${PUBLIC_DEPLOY_API_BASE}"
+
+  observe-public-deployment:
+    needs: deploy-hostinger
+    permissions:
+      contents: none
+      id-token: write
+    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@f1166a6e64517fec5c232b07396ff61c9cf53afa
+    secrets:
+      hostinger_ssh_key: ${{ secrets.HOSTINGER_SSH_KEY }}

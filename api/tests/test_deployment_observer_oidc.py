@@ -36,6 +36,7 @@ from app.services.deployment_observer_service import (
     rust_challenge_expected,
     stable_health_projection,
 )
+from app.services import deployment_observer_service
 from app.services.deployment_observation import (
     DeploymentObservationError,
     record_authenticated_deployment_observation,
@@ -47,6 +48,7 @@ from app.services.unified_db import Base
 
 TARGET = "a" * 40
 OBSERVER_SHA = "b" * 40
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _b64(raw: bytes) -> str:
@@ -121,6 +123,19 @@ def _token(private: rsa.RSAPrivateKey, claims: dict, *, header: dict | None = No
         f"{head}.{body}".encode("ascii"), padding.PKCS1v15(), hashes.SHA256()
     )
     return f"{head}.{body}.{_b64(signature)}"
+
+
+def test_runtime_policy_pin_matches_the_reusable_workflow_call() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/hostinger-auto-deploy.yml").read_text(
+        encoding="utf-8"
+    )
+    expected = (
+        "uses: seeker71/Coherence-Network/"
+        ".github/workflows/public-deployment-observer.yml@"
+        f"{deployment_observer_service.PINNED_OBSERVER_WORKFLOW_SHA}"
+    )
+    assert expected in workflow
+    assert len(deployment_observer_service.PINNED_OBSERVER_WORKFLOW_SHA) == 40
 
 
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(

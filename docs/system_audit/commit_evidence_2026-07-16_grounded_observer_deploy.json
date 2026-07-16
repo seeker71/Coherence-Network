@@ -1,0 +1,99 @@
+{
+  "date": "2026-07-16",
+  "thread_branch": "codex/grounded-observer-deploy-20260716",
+  "commit_scope": "Pin the public deployment observer to the immutable merged kernel-replacement workflow and invoke it after the Hostinger production roll-forward.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_deployment_observer_oidc.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "ruff check api/tests/test_deployment_observer_oidc.py api/app/services/deployment_observer_service.py",
+      "python -m pytest -q api/tests/test_deployment_observer_oidc.py api/tests/test_form_cli_grounding_runtime.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/verify_kernel_single_authority.py",
+      "git diff --check"
+    ],
+    "notes": "The fresh worktree grounded 1,549/1,549 sources and re-embedded the full native semantic-v2 index. Sixty observer and grounded-runtime tests pass. The runtime OIDC policy and reusable workflow call both pin bootstrap merge f1166a6e64517fec5c232b07396ff61c9cf53afa; a regression test refuses drift between them."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Exact-head PR checks run after this deployment integration commit is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production plus GitHub Actions OIDC external observer",
+    "notes": "After merge, Hostinger Auto Deploy must roll forward the merge SHA, the immutable reusable observer must persist its WITNESS, and public verification must return the exact all-four-axis OBSERVED trust row."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Immutable binding and local proof pass; CI, merge, production roll-forward, authenticated observation, and public verification remain."
+  },
+  "idea_ids": [
+    "coherence-kernel-single-authority",
+    "form-cli-grounded-observation"
+  ],
+  "spec_ids": [
+    "form-cli-grounded-observation-plane"
+  ],
+  "task_ids": [
+    "task-2026-07-16-grounded-observer-deploy"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Bootstrap replacement PR #3960 merged as f1166a6e64517fec5c232b07396ff61c9cf53afa after Thread Gates run 29465293159, Windows Host Floor run 29465293168, GitGuardian, and all resolved review threads passed at exact head 6ce44f554bf79f4405ef89981146353a36fd66dc.",
+    "The caller remains protected-main .github/workflows/hostinger-auto-deploy.yml; the external job uses .github/workflows/public-deployment-observer.yml at immutable merge f1166a6e64517fec5c232b07396ff61c9cf53afa.",
+    "GitHub OIDC binds repository and owner numeric identities, protected main, Production environment, caller workflow, target workflow SHA, reusable job workflow SHA, run identity, one-time challenge, and short token lifetime.",
+    "Observed:yes remains unavailable until the public deployed SHA and authenticated WITNESS both match the final integration merge."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-07-16_grounded_observer_deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Every protected-main production roll-forward invokes independently authenticated observer bytes from immutable merge f1166a6e64517fec5c232b07396ff61c9cf53afa; a native ask can report observed:yes only for the exact deployed merge after the observer persists a valid WITNESS.",
+    "public_endpoints": [
+      "GET /api/health?observation_nonce=<nonce>",
+      "POST /api/deployment-observer/challenge",
+      "POST /api/deployment-observer/observe"
+    ],
+    "test_flows": [
+      "runtime policy pin equals the reusable workflow ref pin",
+      "Hostinger deploy completes before the observer job begins",
+      "GitHub OIDC observer creates a deployed-SHA-bound WITNESS",
+      "verify_observed_deployment_ask.sh accepts only the exact OBSERVED trust row"
+    ]
+  }
+}
