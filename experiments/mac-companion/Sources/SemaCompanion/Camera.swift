@@ -3,6 +3,7 @@ import AVFoundation
 import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
+import Vision
 
 // Camera — this Mac's eye, wired into the recognition pipeline. A still every ~20s (energy-light,
 // not a stream), written to the face and vision inboxes the producers already drain. The macOS
@@ -17,6 +18,9 @@ final class CameraModel: NSObject, ObservableObject {
     @Published var framesSaved = 0
     @Published var lastFrameAt: Date? = nil
     @Published var status = "camera idle"
+    // Live eye: normalized face rects (Vision boundingBox), published only while a preview is on
+    // screen so the Recognition room can draw boxes over the live feed. "Who" stays the feed's job.
+    @Published var faceRects: [CGRect] = []
     // AVFoundation session objects are thread-safe; the capture queue touches them off the main actor
     nonisolated(unsafe) private let session = AVCaptureSession()
     nonisolated(unsafe) private let output = AVCaptureVideoDataOutput()
@@ -24,6 +28,20 @@ final class CameraModel: NSObject, ObservableObject {
     private let queue = DispatchQueue(label: "earth.hati.camera")
     // owned by the serial capture queue only — safe there
     nonisolated(unsafe) private var lastCapture = Date(timeIntervalSince1970: 0)
+    // Live-preview gate: face detection runs ONLY while the eye is shown (energy-light ethos held).
+    nonisolated(unsafe) private var previewing = false
+    nonisolated(unsafe) private var lastFaceAt = Date(timeIntervalSince1970: 0)
+
+    /// The running session, for an on-screen live preview (AVCaptureVideoPreviewLayer). The same eye
+    /// that offers stills to the pipeline — one organ, now also watchable.
+    var previewSession: AVCaptureSession { session }
+
+    /// Turn live face-boxing on/off — the room calls this on appear/disappear so detection only runs
+    /// while you are actually watching the eye.
+    func setPreviewing(_ on: Bool) {
+        queue.async { [weak self] in self?.previewing = on }
+        if !on { faceRects = [] }
+    }
 
     private let faceInbox = URL(fileURLWithPath: NSHomeDirectory() + "/.coherence-network/face-training/inbox")
     private let visionInbox = URL(fileURLWithPath: NSHomeDirectory() + "/.coherence-network/vision-training/inbox")
@@ -77,10 +95,20 @@ final class CameraModel: NSObject, ObservableObject {
 
 extension CameraModel: AVCaptureVideoDataOutputSampleBufferDelegate {
     nonisolated func captureOutput(_ o: AVCaptureOutput, didOutput buf: CMSampleBuffer, from c: AVCaptureConnection) {
+        guard let px = CMSampleBufferGetImageBuffer(buf) else { return }
         let now = Date()
+        // Live eye — only while the room shows the preview; ~4/s, just face rectangles so the boxes
+        // stay live. Runs before the 20s still gate so it isn't starved by it.
+        if previewing, now.timeIntervalSince(lastFaceAt) >= 0.25 {
+            lastFaceAt = now
+            let req = VNDetectFaceRectanglesRequest()
+            try? VNImageRequestHandler(cvPixelBuffer: px, orientation: .up, options: [:]).perform([req])
+            let rects = (req.results ?? []).map { $0.boundingBox }
+            Task { @MainActor in self.faceRects = rects }
+        }
+        // Energy-light still every 20s → the face/vision inboxes (unchanged).
         guard now.timeIntervalSince(lastCapture) >= cameraIntervalSec else { return }
         lastCapture = now
-        guard let px = CMSampleBufferGetImageBuffer(buf) else { return }
         let ci = CIImage(cvPixelBuffer: px)
         guard let cg = ctx.createCGImage(ci, from: ci.extent) else { return }
         Task { @MainActor in self.write(cg) }

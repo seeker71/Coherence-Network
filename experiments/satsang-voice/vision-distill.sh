@@ -21,6 +21,11 @@ shopt -s nullglob
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ORACLE="$HERE/vision_classify"
 [[ -x "$ORACLE" ]] || swiftc -O "$HERE/vision_classify.swift" -o "$ORACLE" 2>/dev/null || ORACLE="/tmp/vision_classify"
+# the NATIVE featurizer: whole-frame Vision feature-print (768-d), persisted at ingest so the
+# student (vision_train / world_featurize) never has to re-derive it. Missing binary degrades
+# honestly: the row is written without an embedding and world_featurize.py backfill catches it.
+EMBED="$HERE/vision_embed"
+[[ -x "$EMBED" ]] || swiftc -O "$HERE/vision_embed.swift" -o "$EMBED" 2>/dev/null || EMBED=""
 STORE="$HOME/.coherence-network/vision-training"; mkdir -p "$STORE/frames" "$STORE/inbox"
 SET="$STORE/samples.jsonl"
 TARGET=10000
@@ -41,13 +46,20 @@ for frame in "$@"; do
     kept="$STORE/frames/$hash.$(printf '%s' "${frame##*.}")"
     [[ -f "$kept" ]] || cp "$frame" "$kept"
     ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    python3 - "$hash" "$kept" "$labels" "$ts" <<'PY' >> "$SET"
+    emb=""
+    [[ -n "$EMBED" ]] && emb="$("$EMBED" "$kept" 2>/dev/null)"
+    python3 - "$hash" "$kept" "$labels" "$ts" "$emb" <<'PY' >> "$SET"
 import json, sys
-h, path, labels, ts = sys.argv[1:5]
+h, path, labels, ts, emb = sys.argv[1:6]
 try: lab = json.loads(labels)
 except Exception: lab = []
-print(json.dumps({"id": h, "frame": path, "oracle": "apple-vision", "labels": lab,
-                  "ts": ts, "split": "train", "distill_state": "teacher-labelled"}))
+row = {"id": h, "frame": path, "oracle": "apple-vision", "labels": lab,
+       "ts": ts, "split": "train", "distill_state": "teacher-labelled"}
+try:
+    v = [round(float(x), 5) for x in emb.split(",")] if emb else []
+    if len(v) == 768: row["embedding"] = v
+except Exception: pass
+print(json.dumps(row))
 PY
     top="$(printf '%s' "$labels" | python3 -c "import json,sys; d=json.load(sys.stdin); d=sorted(d,key=lambda x:-x.get('confidence',0)); print(', '.join(f\"{x['label']}({x['confidence']:.2f})\" for x in d[:3]))" 2>/dev/null)"
     echo "labelled $hash -> $top"
