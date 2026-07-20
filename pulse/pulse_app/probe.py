@@ -244,16 +244,14 @@ def _build_url(
         "api_substrate_page": (
             f"{api}/api/substrate/page?route=/", "json", "GET", None,
         ),
-        # Substrate Form evaluator — the playground's primary surface.
-        # The known-good expression is one that any healthy lattice
-        # carries (lc-pulse is the Living Collective root). A 4xx/5xx
-        # here means the structural evaluator regressed or the cell
-        # disappeared from the body — either is a real silence.
+        # Native Form runtime authority. The consumer-side Python evaluator
+        # at /api/substrate/form is retired (HTTP 410), so sensing it as a
+        # living organ creates a permanent false silence.
         "api_substrate_form": (
-            f"{api}/api/substrate/form",
+            f"{api}/api/utils/kernel_status",
             "json",
-            "POST",
-            {"expression": "@concept(lc-pulse).blueprint"},
+            "GET",
+            None,
         ),
         # Substrate offer lane — the WRITE path. On 2026-07-02 the public
         # ingest door hung for hours behind a wedged count-sweep transaction

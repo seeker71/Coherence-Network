@@ -348,6 +348,7 @@
 
   "github": {
     "_doc": "GitHub integration settings.",
+    "api_base": "https://api.github.com",
     "token": null,
     "api_token": null
   },

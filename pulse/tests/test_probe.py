@@ -82,8 +82,9 @@ BROKEN_SUBSTRATE_PAGE = {
 }
 
 HEALTHY_SUBSTRATE_FORM = {
-    "kind": "node_id",
-    "node_id": {"package": 1, "level": 5, "type": 4, "instance": 1},
+    "active": "native-kernel",
+    "available": True,
+    "python_authority": False,
 }
 
 HEALTHY_SUBSTRATE_INGEST = {
@@ -209,7 +210,7 @@ def _handler(
                 ),
                 headers={"content-type": "application/json"},
             )
-        if path == "/api/substrate/form":
+        if path == "/api/utils/kernel_status":
             return httpx.Response(
                 substrate_form_status,
                 content=json.dumps(
@@ -320,7 +321,7 @@ async def test_docker_local_bases_probe_public_witness_path():
                 content=json.dumps(HEALTHY_SUBSTRATE_PAGE),
                 headers={"content-type": "application/json"},
             )
-        if host == "api.coherencycoin.com" and path == "/api/substrate/form":
+        if host == "api.coherencycoin.com" and path == "/api/utils/kernel_status":
             return httpx.Response(
                 200,
                 content=json.dumps(HEALTHY_SUBSTRATE_FORM),
@@ -353,7 +354,7 @@ async def test_docker_local_bases_probe_public_witness_path():
     assert ("api.coherencycoin.com", "/api/health") in seen
     assert ("api.coherencycoin.com", "/api/ready") in seen
     assert ("api.coherencycoin.com", "/api/ideas") in seen
-    assert ("api.coherencycoin.com", "/api/substrate/form") in seen
+    assert ("api.coherencycoin.com", "/api/utils/kernel_status") in seen
     assert ("coherencycoin.com", "/") in seen
     assert ("api", "/api/health") not in seen
     assert ("web", "/") not in seen
@@ -415,13 +416,13 @@ async def test_substrate_offer_flags_missing_canary_cell():
 
 
 @pytest.mark.asyncio
-async def test_substrate_form_flags_unexpected_kind():
-    """A 200 response with the wrong shape (kind != node_id) is still silence."""
-    surprise = {"kind": "value", "value": 42}
+async def test_substrate_form_flags_unexpected_runtime():
+    """A 200 response naming a non-native authority is still silence."""
+    surprise = {"active": "python", "available": True, "python_authority": True}
     by = await _run(_handler(substrate_form_body=surprise))
     sample = by["substrate_form"]
     assert sample.ok is False
-    assert "kind='value'" in (sample.detail or "")
+    assert "active runtime='python'" in (sample.detail or "")
 
 
 @pytest.mark.asyncio

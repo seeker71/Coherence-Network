@@ -370,20 +370,7 @@ def extract_db_contention(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
-    """Substrate Form evaluator: POST /api/substrate/form returns kind=node_id.
-
-    Probes with `@concept(lc-pulse).blueprint` — a known-good
-    expression against the Living Collective root, the warmest cell
-    in the lattice. A healthy substrate returns
-    `{"kind": "node_id", "node_id": {...}}`. A 4xx with a TypeError
-    detail (the AST evaluator missing a branch for tree-navigation
-    nodes) or a 404 (lc-pulse missing from the body) both register
-    as real silence.
-
-    This organ keeps tension on the playground's primary surface so
-    the next regression in Form evaluation wakes the body instead of
-    waiting for a visitor to notice the first quest is broken.
-    """
+    """Native Form runtime authority after retirement of the Python evaluator."""
     if r.status == 0:
         return OrganVerdict(False, r.error or "transport failure")
     if r.status >= 400:
@@ -393,9 +380,12 @@ def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    kind = body.get("kind")
-    if kind != "node_id":
-        return OrganVerdict(False, f"kind={kind!r}, expected 'node_id'")
+    if body.get("active") != "native-kernel":
+        return OrganVerdict(False, f"unexpected active runtime={body.get('active')!r}")
+    if body.get("available") is not True:
+        return OrganVerdict(False, "native Form runtime unavailable")
+    if body.get("python_authority") is not False:
+        return OrganVerdict(False, "Python authority unexpectedly active")
     return OrganVerdict(True)
 
 
@@ -564,10 +554,8 @@ ORGANS: list[Organ] = [
         name="substrate_form",
         label="Substrate Form",
         description=(
-            "POST /api/substrate/form — the playground's primary surface. "
-            "Tested with @concept(lc-pulse).blueprint, the warmest cell in the "
-            "Living Collective. A regression here is the silence the first "
-            "quest button was suffering."
+            "GET /api/utils/kernel_status — the native Form runtime authority. "
+            "The retired Python evaluator is no longer treated as a living organ."
         ),
         upstream=UPSTREAM_API_SUBSTRATE_FORM,
         extractor=extract_substrate_form,

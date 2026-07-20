@@ -650,4 +650,22 @@ done
 grep -Fq 'CMD ["node", "web/server.js"]' "$ROOT_DIR/Dockerfile.web" \
   || fail "web image does not launch the repository-rooted Next standalone server"
 
+grep -Fq 'COPY --from=builder /src/web/.next/static ./web/.next/static' "$ROOT_DIR/Dockerfile.web" \
+  || fail "web image does not carry Next static assets beside the repository-rooted standalone server"
+
+grep -Fq 'COPY --from=builder /src/web/public ./web/public' "$ROOT_DIR/Dockerfile.web" \
+  || fail "web image does not carry public assets beside the repository-rooted standalone server"
+
+grep -Fq '"api_base": "https://api.github.com"' "$ROOT_DIR/api/config/api.json" \
+  || fail "canonical API config does not declare the public GitHub API origin"
+
+grep -Fq 'if not isinstance(github, dict):' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not normalize null GitHub runtime configuration"
+
+grep -Fq 'if not isinstance(api_base, str) or not api_base.strip():' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not repair missing, null, or blank GitHub API origins"
+
+grep -Fq 'github["api_base"] = "https://api.github.com"' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not seed the native release-gate GitHub API origin"
+
 echo "hostinger form deploy path: PASS"
