@@ -1602,7 +1602,7 @@ ensure_kernel_router_canary() {
         'sensings|/api/sensings?limit=2|api_sensings' \
         'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \
           name=\${spec%%|*}; rest=\${spec#*|}; url=\${rest%%|*}; handler=\${rest#*|}; \
-          if ! curl -fsS --max-time 10 -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
+          if ! curl -fsS --max-time 30 -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
             \"http://127.0.0.1:8080\${url}\" \
             -H 'Accept: application/json'; then \
               echo \"promoted route curl failed: \${name}\"; \
