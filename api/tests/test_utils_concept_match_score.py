@@ -57,7 +57,7 @@ class TestConceptMatchScoreEndpoint:
         assert data["score"] == 0.825
         assert data["keywords"] == ["energy", "flow", "coherence", "xyz"]
         assert data["concept_keywords"] == ["energy", "tissue"]
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_matches_real_score_concept(self, client: AsyncClient):

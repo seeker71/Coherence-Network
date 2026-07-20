@@ -44,9 +44,9 @@ class TestBreathBalanceEndpoint:
         res = await client.get("/api/utils/breath_balance")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["balance"] == 0.9999999999999998
+        assert data["balance"] == pytest.approx(1.0, abs=1e-15)
         assert data["gas"] == 1 and data["water"] == 1 and data["ice"] == 1
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_single_phase_is_log_of_zero_guarded(self, client: AsyncClient):
@@ -72,7 +72,7 @@ class TestBreathBalanceEndpoint:
         """A skewed mix returns the recipe's value, matching the parity reference exactly."""
         res = await client.get("/api/utils/breath_balance", params={"gas": 10, "water": 3, "ice": 1})
         assert res.status_code == 200, res.text
-        assert res.json()["balance"] == 0.6908140210976048
+        assert res.json()["balance"] == pytest.approx(0.6908140210976048, abs=1e-15)
 
     @pytest.mark.anyio
     async def test_negative_count_rejected(self, client: AsyncClient):

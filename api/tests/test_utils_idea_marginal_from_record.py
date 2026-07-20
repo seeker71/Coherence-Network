@@ -47,7 +47,7 @@ class TestIdeaMarginalFromRecordEndpoint:
         data = res.json()
         assert data["marginal_return"] == 0.8
         assert data["idea"]["potential_value"] == 8.0
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_distinct_idea_matches_parity_reference(self, client: AsyncClient):

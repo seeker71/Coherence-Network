@@ -18,11 +18,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.services.form_kernel_bridge import (
-    inline_available,
-    kernel_available,
-    load_recipe,
-)
+from app.services.form_kernel_bridge import kernel_available, load_recipe
 
 BASE = "http://test"
 
@@ -51,7 +47,7 @@ class TestCoherenceWeightEndpoint:
         assert data["weight"] == 16185
         assert data["threshold"] == 50
         assert data["values"] == [72, 38, 91, 55, 28, 67, 84, 45, 95, 12]
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_custom_inputs(self, client: AsyncClient):
@@ -111,12 +107,12 @@ class TestCoherenceWeightEndpoint:
         test_recipe_resolves test above still catches the missing-recipe
         regression without a kernel.
         """
-        if not (inline_available() or kernel_available()):
+        if not kernel_available():
             pytest.skip("no kernel reachable in this env — recipe-resolution test covers it")
         res = await client.get("/api/utils/coherence_weight")
         assert res.status_code == 200, res.text
         runtime = res.json()["runtime"]
-        assert runtime in ("inline", "subprocess")
+        assert runtime == "fkwu"
 
     @pytest.mark.anyio
     async def test_kernel_status_visibility(self, client: AsyncClient):

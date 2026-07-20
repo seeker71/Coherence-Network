@@ -48,7 +48,7 @@ class TestIdeaGroundingSummaryEndpoint:
         assert data["specs_with_value_count"] == 2
         assert data["max_event_count"] == 7
         assert data["spec_count_in"] == 3
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_distinct_specs_match_parity_reference(self, client: AsyncClient):

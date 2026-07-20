@@ -41,7 +41,7 @@ class TestNodeIdCompatibilityEndpoint:
         assert data["compatibility"] == 2
         assert data["a"] == [1, 5, 4, 1]
         assert data["b"] == [1, 4, 4, 7]
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_all_coordinates_match(self, client: AsyncClient):

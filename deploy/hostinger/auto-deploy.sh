@@ -476,9 +476,9 @@ PY
 cd "$COMPOSE_ROOT"
 
 # Sync the Dockerfile.api from the repo into the compose root. The api
-# image is built with form-kernel-rust baked in at /app/bin/ so transmuted
-# endpoints (/api/utils/coherence_weight, ...) shell into the native
-# binary instead of falling back to inline Python. The build context for
+# image is built with the c-bootstrap fkwu at /app/form/fkwu so transmuted
+# endpoints (/api/utils/coherence_weight, ...) execute direct Form source on
+# the sole production kernel. The build context for
 # the api service stays the repo dir; only the Dockerfile path is sourced
 # from the repo so the compose root can keep referencing it as
 # `dockerfile: Dockerfile.api` without manual VPS upkeep.
@@ -734,7 +734,6 @@ services_to_rebuild() {
       pulse/*)         need_pulse=1 ;;
       form)                     need_api=1 ;;
       form/form-stdlib/*)      need_api=1 ;;
-      form/form-kernel-rust/*) need_api=1 ;;
       # scripts/ is mounted as content but also copied into the api image
       # at build time for the substrate ingester. Rebuild api when they change.
       scripts/*.py)    need_api=1 ;;
@@ -1665,6 +1664,29 @@ ensure_kernel_router_canary() {
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
 }
 
+# Rust/Go/TypeScript are proof siblings, never deployed execution authorities.
+# Remove containers left by the retired kernel-router overlay before observing
+# the API. The API image itself carries the sole production runtime: /app/form/fkwu.
+retire_sibling_kernel_routers() {
+  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml")
+  if [[ -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
+    compose_args+=(-f "$KERNEL_CANARY_COMPOSE_FILE")
+  fi
+  local services=(kernel-router kernel-router-bml-front-door)
+  log "fkwu authority: retiring sibling kernel-router containers"
+  docker compose "${compose_args[@]}" stop "${services[@]}" >/dev/null 2>&1 || true
+  docker compose "${compose_args[@]}" rm -f "${services[@]}" >/dev/null 2>&1 || true
+  local service remaining
+  for service in "${services[@]}"; do
+    remaining="$(containers_for_service "$service")"
+    if [[ -n "$remaining" ]]; then
+      log "FAIL: sibling runtime container still present for ${service}: $(echo "$remaining" | tr '\n' ' ')"
+      return 1
+    fi
+  done
+  log "fkwu authority: no sibling runtime containers remain"
+}
+
 # Raise any service a prior cancelled rollout left stopped before the hard
 # checks below — they verify the whole body, not only the rebuilt scope.
 ensure_all_services_up || true
@@ -1683,7 +1705,7 @@ else
   exit 1
 fi
 
-ensure_kernel_router_canary
+retire_sibling_kernel_routers
 
 sync_substrate_content
 # Use DIFF_BASE (RUNNING_SHA when known) so substrate ingest catches any

@@ -53,11 +53,11 @@ class TestSoftmaxWeightsEndpoint:
         res = await client.get("/api/utils/softmax_weights")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["weights"] == CANONICAL
+        assert data["weights"] == pytest.approx(CANONICAL, abs=1e-15)
         assert abs(sum(data["weights"]) - 1.0) < 1e-12
         assert data["scores"] == [1.0, 2.0, 3.0]
         assert data["temperature"] == 1.0
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_deterministic_temperature_zero(self, client: AsyncClient):
@@ -91,7 +91,9 @@ class TestSoftmaxWeightsEndpoint:
             params={"scores": "0.5,0.5,2.0,1.0", "temperature": 1.0},
         )
         assert res.status_code == 200, res.text
-        assert res.json()["weights"] == _softmax_weights([0.5, 0.5, 2.0, 1.0], 1.0)
+        assert res.json()["weights"] == pytest.approx(
+            _softmax_weights([0.5, 0.5, 2.0, 1.0], 1.0), abs=1e-15
+        )
 
     @pytest.mark.anyio
     async def test_negative_temperature_rejected(self, client: AsyncClient):

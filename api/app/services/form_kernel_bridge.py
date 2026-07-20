@@ -1,19 +1,9 @@
-"""Form kernel bridge — run form-kernel-rust inline (PyO3) or via subprocess.
+"""Form execution bridge — run recipes on the c-bootstrapped fkwu kernel.
 
-The compatibility API still hosts the HTTP route, but a transmuted endpoint's
-body is a Form recipe. The route delegates to the kernel instead of executing
-the computation in Python.
-
-Two paths, ordered by speed:
-
-  1. ``inline``           — PyO3 extension ``form_kernel_rust`` imported
-                            once at module load; each request is a C call
-                            into Rust, no process spawn. Sub-millisecond
-                            overhead. The hot path when available.
-  2. ``subprocess``       — shell out to the ``form-kernel-rust`` binary.
-                            Same kernel, but fork+exec ~ms-scale overhead.
-                            Used when the PyO3 module is unavailable but
-                            the binary did.
+The compatibility API still hosts HTTP, but every transmuted endpoint body is
+a Form recipe executed directly by c-bootstrapped fkwu. Go,
+Rust, and TypeScript are differential oracles for primitives and native
+assumptions; none is selectable as a production execution carrier.
 
 Shared kernel recipes remain beside their Python twins under
 form/form-kernel-ts/seedbank/python-adapter/examples/ and are verified by
@@ -23,8 +13,8 @@ then to the shared coherence-kernel seedbank.
 
 The habit form. Three layers, each shorter to reach for than the last:
 
-    run_recipe(fk_source)                 # raw subprocess kernel call
-    run_kernel(fk_source, parse)          # inline or subprocess kernel call
+    run_recipe(fk_source)                 # raw fkwu execution
+    run_kernel(fk_source, parse)          # fkwu execution + result coercion
     serve_via_kernel(                     # load .fk from disk, inject
         recipe_path,                      #   inputs as (let ...) bindings,
         bindings={"x": 5, "ys": [1,2]},   #   run through the kernel
@@ -35,82 +25,34 @@ A new transmuted endpoint should need ~5 lines: load recipe path, build
 bindings dict, call serve_via_kernel, return the response model. Network-owned
 endpoint recipes live under api/app/form_recipes/. Reusable recipes with a
 cross-runtime Python twin belong upstream in coherence-kernel's seedbank, where
-they remain parity-tested across CPython / TS evalPython / form-kernel-rust.
+they remain differential-tested across the sibling reference walkers and fkwu.
 """
 from __future__ import annotations
 
-import logging
 import os
 import re
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Inline kernel (PyO3) — imported once at module load.
-#
-# Built from form/form-kernel-rust via `maturin develop --release` (or the
-# wheel installed by the deploy pipeline). If the import fails — extension
-# missing, ABI mismatch, env without Rust — we set _INLINE_KERNEL to None and
-# the subprocess carrier may still serve if the binary is present. Either way
-# callers see (value, runtime) and runtime names the path that served.
-# ---------------------------------------------------------------------------
-try:
-    import form_kernel_rust as _INLINE_KERNEL  # type: ignore[import-not-found]
-    logger.info("form-kernel: inline PyO3 extension loaded")
-except Exception as _e:  # pragma: no cover — environment-dependent
-    _INLINE_KERNEL = None
-    logger.info("form-kernel: PyO3 extension not available (%s) — subprocess path", _e)
-
-
-# ---------------------------------------------------------------------------
-# Route preload (PyO3 Preloader) — the warm kernel parses each endpoint recipe
-# ONCE and runs (handle, bindings) per request, dropping the per-request parse
-# that the inline-with-inject path still pays.
-#
-# The Preloader is a single warm Kernel+Arena (mirroring cli_serve). The bridge
-# holds one process-wide instance and a {recipe_key -> handle} map. The recipe
-# is split into a `setup` part (the defns + constant lets, walked once into the
-# Preloader's root frame) and a `body` part (the trailing call, parsed once);
-# per request only the body is walked with the request's bindings in a child
-# frame. Built only when the PyO3 extension is present; everything below
-# no-ops cleanly to the inline/subprocess carrier ladder otherwise.
-# ---------------------------------------------------------------------------
-try:
-    _PRELOADER = _INLINE_KERNEL.Preloader() if _INLINE_KERNEL is not None else None
-except Exception as _e:  # pragma: no cover — extension without Preloader (old build)
-    _PRELOADER = None
-    logger.info("form-kernel: Preloader unavailable (%s) — inline-with-parse path", _e)
-
-# recipe_key (absolute .fk path + sorted binding names) -> route handle (int).
-_PRELOAD_HANDLES: dict[str, int] = {}
-
-
 def preload_available() -> bool:
-    """True when the warm Preloader (route-preload PyO3 pair) is usable."""
-    return _PRELOADER is not None
+    """Compatibility readout: sibling-kernel preload is not an execution path."""
+    return False
 
 
 def inline_available() -> bool:
-    """True when the form_kernel_rust PyO3 extension is importable."""
-    return _INLINE_KERNEL is not None
+    """Compatibility readout: the retired Rust inline runtime is disabled."""
+    return False
 
 
 def active_runtime() -> str:
     """Name the kernel path that would serve the next transmuted endpoint.
 
-    Reads as one of ``inline``, ``subprocess``, ``unavailable`` — same
-    string the per-request ``runtime`` field carries. Used by /api/health
-    to give the witness a one-glance view of which path is hot today.
-    Lazy: no kernel call is made; this checks availability flags only.
+    Reads as ``fkwu`` or ``unavailable``. Sibling walkers never appear here:
+    they are cross-check witnesses, not runtime candidates.
     """
-    if _INLINE_KERNEL is not None:
-        return "inline"
     if _kernel_binary_available_lazy():
-        return "subprocess"
+        return "fkwu"
     return "unavailable"
 
 
@@ -121,86 +63,83 @@ def _kernel_binary_available_lazy() -> bool:
     except Exception:
         return False
 
-_KERNEL_BIN_ENV = "FORM_KERNEL_RUST_BIN"
-# Default path: repo-relative to api/app/services/, four levels up to repo
-# root, then into form/form-kernel-rust/target/release/form-kernel-rust.
-# On Windows, cargo emits the binary with a `.exe` suffix.
-_KERNEL_BIN_NAME = "form-kernel-rust.exe" if os.name == "nt" else "form-kernel-rust"
-_DEFAULT_KERNEL_BIN = (
-    Path(__file__).resolve().parent.parent.parent.parent
-    / "form"
-    / "form-kernel-rust"
-    / "target"
-    / "release"
-    / _KERNEL_BIN_NAME
-)
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_IMAGE_ROOT = Path("/app")
+
+
+def _wrapper_path() -> Path:
+    """Resolve the host membrane that stages source for generic fkwu."""
+    for candidate in (
+        _REPO_ROOT / "bin" / "form-cli",
+        _IMAGE_ROOT / "bin" / "form-cli",
+    ):
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    return _REPO_ROOT / "bin" / "form-cli"
 
 
 def kernel_bin_path() -> Path:
-    """Return the path to the form-kernel-rust binary."""
-    override = os.environ.get(_KERNEL_BIN_ENV)
-    if override:
-        return Path(override)
-    return _DEFAULT_KERNEL_BIN
+    """Return the direct-source fkwu binary used by recipe execution."""
+    image = _IMAGE_ROOT / "form" / "fkwu"
+    if image.is_file() and os.access(image, os.X_OK):
+        return image
+    checkout = _REPO_ROOT / "form" / "fkwu"
+    if checkout.is_file() and os.access(checkout, os.X_OK):
+        return checkout
+    cache = _REPO_ROOT / "form" / ".cache" / "fkwu-runtime"
+    candidates = sorted(cache.glob("fkwu-*"), key=lambda path: path.stat().st_mtime)
+    return candidates[-1] if candidates else cache / "fkwu-unbuilt"
 
 
 def kernel_available() -> bool:
-    """True when the kernel binary is on disk and executable."""
+    """True when direct fkwu is executable or its pinned bootstrap can build."""
     p = kernel_bin_path()
-    return p.is_file() and os.access(p, os.X_OK)
+    wrapper = _wrapper_path()
+    source = _REPO_ROOT / "form" / "runtime" / "fkwu-uni.c"
+    header = _REPO_ROOT / "form" / "runtime" / "fkwu-optable.h"
+    return (
+        wrapper.is_file()
+        and os.access(wrapper, os.X_OK)
+        and (
+            (p.is_file() and os.access(p, os.X_OK))
+            or (source.is_file() and header.is_file())
+        )
+    )
 
 
 def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
-    """Run a Form recipe through form-kernel-rust, return stdout's last line.
+    """Run a Form recipe through c-bootstrapped fkwu, return its root value.
 
     fk_source is the textual .fk content — a top-level (do ...) form whose
     final expression's value is the kernel's printed result.
 
-    Raises RuntimeError if the kernel binary is missing or the run fails.
+    Go, Rust, and TypeScript do not enter this path.
     """
     bin_path = kernel_bin_path()
     if not kernel_available():
-        raise RuntimeError(f"form-kernel-rust binary not found at {bin_path}")
+        raise RuntimeError(f"c-bootstrapped fkwu binary not found at {bin_path}")
 
-    with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as f:
-        f.write(fk_source)
-        fk_path = f.name
-
-    try:
-        proc = subprocess.run(
-            [str(bin_path), fk_path],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-    finally:
-        try:
-            os.unlink(fk_path)
-        except OSError:
-            pass
+    proc = subprocess.run(
+        [str(_wrapper_path()), "eval", fk_source],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
 
     if proc.returncode != 0:
         raise RuntimeError(
-            f"form-kernel-rust failed (exit {proc.returncode}): {proc.stderr.strip()}"
+            f"fkwu failed (exit {proc.returncode}): {proc.stderr.strip()}"
         )
     out = proc.stdout.rstrip("\n").splitlines()
     if not out:
-        raise RuntimeError("form-kernel-rust produced no output")
-    return out[-1]
+        raise RuntimeError("fkwu produced no output")
+    return out[0]
 
 
 def run_inline(fk_source: str) -> Any:
-    """Run fk_source through the inline PyO3 kernel.
-
-    Returns a native Python value — the same shape Value.display() would
-    print, but typed (ints stay ints, floats stay floats, lists are list).
-    Raises RuntimeError if the PyO3 module isn't loaded; the kernel itself
-    raises RuntimeError on malformed input.
-    """
-    if _INLINE_KERNEL is None:
-        raise RuntimeError("form-kernel PyO3 extension not loaded")
-    return _INLINE_KERNEL.compile_and_run(fk_source)
+    """The sibling Rust inline carrier is intentionally unavailable."""
+    raise RuntimeError("sibling kernels are differential witnesses, not runtimes")
 
 
 def run_kernel(
@@ -208,41 +147,13 @@ def run_kernel(
     parse: Callable[[str], Any] = lambda s: s,
     timeout: float = 10.0,
 ) -> tuple[Any, str]:
-    """Run fk_source through the fastest available kernel carrier.
-
-    Returns ``(value, runtime)`` where runtime is one of:
-      - ``"inline"``         — PyO3 extension served the request
-      - ``"subprocess"``     — fork+exec of the form-kernel-rust binary
-
-    The two kernel paths share the same Rust runtime; ``parse`` is applied
-    to the kernel's textual output only on the subprocess path (the inline
-    path already returns typed values). If neither kernel carrier is reachable,
-    this raises RuntimeError; transmuted routes no longer execute Python
-    computation as an alternate runtime path.
-    """
-    # Hot path: PyO3 inline. Already-typed return — `parse` is a no-op for
-    # ints/floats/lists, and the routers' `parse=int` lambdas are safe to
-    # apply to an int (int(int) == int).
-    if _INLINE_KERNEL is not None:
-        value = run_inline(fk_source)
-        # Be tolerant: if parse is the default (returns input) or accepts
-        # both str and the native type, run it; if it strictly wants str
-        # (rare), the caller will see the same value either way.
-        try:
-            return parse(value), "inline"
-        except (TypeError, ValueError):
-            # Fall through to stringified-roundtrip so a str-only parse
-            # still works inline.
-            return parse(str(value) if not isinstance(value, str) else value), "inline"
-
-    # Warm path: subprocess to the bin.
+    """Run source on the one production kernel and return ``(..., 'fkwu')``."""
     if kernel_available():
         raw = run_recipe(fk_source, timeout=timeout)
-        return parse(raw), "subprocess"
+        return parse(raw), "fkwu"
 
     raise RuntimeError(
-        "form-kernel unavailable: PyO3 extension is not loaded and "
-        f"form-kernel-rust binary was not found at {kernel_bin_path()}"
+        f"c-bootstrapped fkwu runtime unavailable at {kernel_bin_path()}"
     )
 
 
@@ -264,10 +175,8 @@ def run_kernel(
 # below the repo root, so four `.parent` hops land on the root and the seedbank
 # tree resolves directly. In the deploy image, Dockerfile.api flattens `api/`
 # onto /app (COPY api/ ./), so the bridge lives at /app/app/services/... and the
-# same four hops reach `/` — a DIFFERENT place than the source layout. To make
-# the recipe home explicit and image-independent, FORM_RECIPE_DIR overrides the
-# computed path; Dockerfile.api sets it to where it copies the committed `.fk`.
-_RECIPE_DIR_ENV = "FORM_RECIPE_DIR"
+# same four hops reach `/` — a DIFFERENT place than the source layout. The image
+# path is therefore an explicit file-backed candidate, not environment config.
 _SEEDBANK_EXAMPLES_DEFAULT = (
     Path(__file__).resolve().parent.parent.parent.parent
     / "form"
@@ -282,12 +191,19 @@ _APP_RECIPES_DIR = Path(__file__).resolve().parent.parent / "form_recipes"
 def seedbank_examples_dir() -> Path:
     """Return the absolute path to the python-adapter examples directory.
 
-    Honors ``FORM_RECIPE_DIR`` when set (the deploy image points it at the
-    baked-in recipe directory); otherwise computes the source-checkout default.
+    Selects the baked-in image directory when present, otherwise the source
+    checkout directory. Both are pinned files from the same submodule commit.
     """
-    override = os.environ.get(_RECIPE_DIR_ENV)
-    if override:
-        return Path(override)
+    image = (
+        _IMAGE_ROOT
+        / "form"
+        / "form-kernel-ts"
+        / "seedbank"
+        / "python-adapter"
+        / "examples"
+    )
+    if image.is_dir():
+        return image
     return _SEEDBANK_EXAMPLES_DEFAULT
 
 
@@ -301,7 +217,7 @@ def resolve_recipe_path(recipe_path: str | Path) -> Path:
 
     Coherence Network-owned recipes take precedence under ``api/app``. A name
     not present there falls through to the shared coherence-kernel seedbank,
-    preserving the existing ``FORM_RECIPE_DIR`` deploy-image contract.
+    preserving the same pinned source identity in checkout and deploy image.
     """
     p = Path(recipe_path)
     if p.is_absolute():
@@ -322,24 +238,15 @@ def load_recipe(recipe_path: str | Path) -> str:
     return p.read_text(encoding="utf-8")
 
 
-# Conventional blueprint NodeID for a record marshalled from a Python dict /
-# model — the structured-input tag. Matches lib.rs STRUCTURED_INPUT_BLUEPRINT so
-# a record injected as this literal on the subprocess path and one marshalled
-# inline (py_to_value's dict arm) share the same blueprint. The recipe reads
-# fields by name (record_get), not by blueprint, so the value only needs to be
-# stable and consistent across the two carriers.
-_STRUCTURED_INPUT_BLUEPRINT = "(make_nodeid 1 5 4 1)"
-
-
 def _as_field_dict(value: Any) -> dict | None:
     """Normalize a model / object into a flat ``{field: value}`` dict, or None.
 
     The bridge's answer to the object-OR-dict polymorphism the blocked functions
     carry (``_safe_float(obj, f)`` reads ``obj.f`` from a model *or* ``obj[f]``
     from a dict). Rather than teach the kernel both access paths, we DISSOLVE the
-    branch HERE: every structured value is normalized to a dict before it
-    marshals to a Record, so the recipe only ever sees Records and reads fields
-    homogeneously. A dict passes through; a Pydantic model becomes ``model_dump()``;
+    branch HERE: every structured value is normalized to one first-order fkwu
+    dictionary value, so the recipe reads fields homogeneously through ``_get``.
+    A dict passes through; a Pydantic model becomes ``model_dump()``;
     a plain object with ``__dict__`` becomes its instance attributes. Anything
     without a field view returns None (the caller treats it as a leaf value).
     """
@@ -376,13 +283,13 @@ def _fk_literal(value: Any) -> str:
 
     Supported: int, float, bool, str, list of supported, dict, and any model /
     object normalizable to a field dict — the structure-access marshalling. A
-    dict OR a model (via ``model_dump()`` / ``__dict__``) becomes a
-    ``(record_new <blueprint> "k" v ...)`` form a transmuted recipe reads via
-    ``record_get``; a list recurses element-wise, so a ``list[dict|model]``
-    becomes a ``(list (record_new ...) ...)`` — the list-of-records shape a
+    dict OR a model (via ``model_dump()`` / ``__dict__``) becomes the
+    first-order value ``(list "__dict__" "k" v ...)`` read through ``_get``;
+    a list recurses element-wise, so a ``list[dict|model]`` becomes a list of
+    those dictionary values — the list-of-records shape a
     reduction recipe folds over. Normalizing model→dict at this boundary is what
-    dissolves the object-OR-dict polymorphism: the recipe only ever sees
-    Records. Strings get Lisp-style double-quote escaping. Anything with no
+    dissolves the object-OR-dict polymorphism. Strings get Lisp-style
+    double-quote escaping. Anything with no
     scalar/list/field view raises TypeError — the kernel's value model is small
     and deliberate.
     """
@@ -403,12 +310,11 @@ def _fk_literal(value: Any) -> str:
         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
     if isinstance(value, dict):
-        # Structure-access: a dict marshals to a kernel Record. Keys are field
-        # names (strings); values are any supported literal. The recipe reads
-        # fields by name via record_get — the same shape py_to_value's dict arm
-        # builds inline, so the subprocess and inline carriers agree.
+        # The marker selects keyed `_get`; alternating key/value cells keep
+        # transport semantics in Form data, with no record parser special-case
+        # added to the C seed.
         if not value:
-            return f"(record_new {_STRUCTURED_INPUT_BLUEPRINT})"
+            return '(list "__dict__")'
         parts = []
         for k, v in value.items():
             if not isinstance(k, str):
@@ -418,14 +324,14 @@ def _fk_literal(value: Any) -> str:
                 )
             escaped_key = k.replace("\\", "\\\\").replace('"', '\\"')
             parts.append(f'"{escaped_key}" {_fk_literal(v)}')
-        return f"(record_new {_STRUCTURED_INPUT_BLUEPRINT} " + " ".join(parts) + ")"
+        return '(list "__dict__" ' + " ".join(parts) + ")"
     if isinstance(value, (list, tuple)):
         if not value:
             return "(list)"
         return "(list " + " ".join(_fk_literal(v) for v in value) + ")"
     # Last: a structured object (Pydantic model / dataclass / namespace) that
-    # isn't already a dict. Normalize to its field dict and marshal as a Record —
-    # the model→dict→record step that dissolves the object-OR-dict polymorphism
+    # isn't already a dict. Normalize to its first-order dictionary value —
+    # the model→dict step that dissolves the object-OR-dict polymorphism
     # at the boundary, so a list[model] marshals identically to a list[dict].
     field_dict = _as_field_dict(value)
     if field_dict is not None:
@@ -496,123 +402,6 @@ def inject_bindings(recipe_source: str, bindings: Mapping[str, Any]) -> str:
     return "".join(out_parts)
 
 
-# ---------------------------------------------------------------------------
-# Route-preload split + run — the no-parse-per-request path.
-# ---------------------------------------------------------------------------
-
-
-def split_recipe(recipe_source: str, binding_names: set[str]) -> tuple[str, str]:
-    """Split a transmuted-endpoint recipe into (setup, body) for preload.
-
-    The recipe shape is ``(do <defn...> <input lets...> <final call>)`` — the
-    same contract ``inject_bindings`` relies on. ``setup`` is a ``(do ...)`` of
-    every top-level form EXCEPT the input ``(let NAME ...)`` forms (NAME in
-    ``binding_names``) and the final expression; it is walked once into the
-    Preloader's root frame so its closures bind a single time. ``body`` is the
-    final expression — the trailing call — parsed once and walked per request
-    with the inputs bound in a child frame.
-
-    The input lets are dropped (not rewritten): the body's references to those
-    names resolve against the per-request child frame instead. Reuses the same
-    paren-balanced scanner ``inject_bindings`` uses, so the two stay in lockstep
-    on what counts as a top-level form.
-
-    Raises ValueError if the recipe is not a single ``(do ...)`` form, or if no
-    final expression remains after removing setup + input lets.
-    """
-    src = recipe_source.strip()
-    if not (src.startswith("(do") and src.endswith(")")):
-        raise ValueError("split_recipe: recipe must be a single (do ...) form")
-    # Inner span: everything between `(do` and the matching `)`.
-    inner = src[3:-1].strip()
-
-    # Walk inner's top-level forms in order. Each form is either `(...)`
-    # paren-balanced or a bare atom; only paren forms occur in these recipes.
-    forms: list[str] = []
-    i = 0
-    n = len(inner)
-    while i < n:
-        c = inner[i]
-        if c.isspace():
-            i += 1
-            continue
-        if c == "(":
-            end = _scan_balanced(inner, i)
-            forms.append(inner[i:end])
-            i = end
-        else:
-            # A bare atom (shouldn't appear in these recipes, but stay honest).
-            j = i
-            while j < n and not inner[j].isspace():
-                j += 1
-            forms.append(inner[i:j])
-            i = j
-
-    if not forms:
-        raise ValueError("split_recipe: empty (do ...) recipe")
-
-    # The final form is the body (the result expression). Everything before it,
-    # minus the input lets, is the setup.
-    body = forms[-1]
-    setup_forms: list[str] = []
-    for form in forms[:-1]:
-        m = _LET_HEAD.match(form)
-        if m is not None and m.group(1) in binding_names:
-            # Input let — dropped; its name is supplied per request instead.
-            continue
-        setup_forms.append(form)
-
-    setup = "(do " + " ".join(setup_forms) + ")" if setup_forms else ""
-    return setup, body
-
-
-def _recipe_key(recipe_path: str | Path, binding_names: set[str]) -> str:
-    """Stable key for the preload handle map: absolute path + sorted names."""
-    p = resolve_recipe_path(recipe_path)
-    return f"{p}::{','.join(sorted(binding_names))}"
-
-
-def preload_route(recipe_path: str | Path, binding_names: set[str]) -> int | None:
-    """Load a recipe into the warm Preloader once; return its handle.
-
-    Idempotent per (recipe, binding-name-set): the first call splits + parses;
-    subsequent calls return the cached handle. Returns None when the Preloader
-    isn't available (caller falls back to the inline-with-parse path). Any split
-    or parse failure also returns None — the body never blocks a request on the
-    preload optimization; it degrades to the proven path.
-    """
-    if _PRELOADER is None:
-        return None
-    key = _recipe_key(recipe_path, binding_names)
-    handle = _PRELOAD_HANDLES.get(key)
-    if handle is not None:
-        return handle
-    try:
-        source = load_recipe(recipe_path)
-        setup, body = split_recipe(source, binding_names)
-        handle = _PRELOADER.load_route(setup, body)
-    except Exception as e:  # pragma: no cover — recipe-shape dependent
-        logger.info(
-            "form-kernel: preload_route(%s) failed (%s) — inline-with-parse path",
-            recipe_path, e,
-        )
-        return None
-    _PRELOAD_HANDLES[key] = handle
-    return handle
-
-
-def run_preloaded(handle: int, bindings: Mapping[str, Any]) -> Any:
-    """Run a preloaded route with per-request bindings — no re-parse.
-
-    Returns a native typed value (the Preloader converts through the same
-    value_to_py the inline path uses). Raises RuntimeError if the Preloader
-    isn't loaded; the kernel raises on a malformed binding value.
-    """
-    if _PRELOADER is None:
-        raise RuntimeError("form-kernel Preloader not loaded")
-    return _PRELOADER.run(handle, dict(bindings))
-
-
 def serve_via_kernel(
     recipe_path: str | Path,
     bindings: Mapping[str, Any],
@@ -634,44 +423,9 @@ def serve_via_kernel(
             parse=int,
         )
 
-    Path ladder, fastest first:
-      - route-preload    — warm Preloader, recipe parsed ONCE at first use, per
-        request only the body walks with the bindings in a child frame (no
-        per-request tokenize/read/defn-rebind). The hottest path. It is a SUB-
-        MODE of the inline carrier, so it still reports ``runtime == "inline"``
-        — the client cares which kernel carrier served (inline PyO3 vs
-        subprocess), not which inline micro-optimization. The parse-drop is an
-        internal speedup measured by scripts/kernel_readiness_harness.py.
-      - ``inline``       — warm PyO3 kernel, but inject literals + re-parse the
-        whole recipe each call (used if preload split/parse failed for this
-        recipe).
-      - ``subprocess``   — fork+exec kernel carrier when inline is unavailable.
-
-    Missing or failing kernel carriers remain hard failures so Python does not
-    silently resume ownership.
+    Missing or failing fkwu remains a hard failure so Python or a sibling
+    walker never silently resumes ownership.
     """
-
-    # Hottest path: the recipe is parsed once into the warm Preloader and only
-    # the trailing call walks per request. Falls through to inline-with-parse if
-    # the Preloader is absent or this recipe didn't split/parse cleanly. Reports
-    # "inline" — same carrier, the preload is an internal parse-drop.
-    if bindings:
-        handle = preload_route(recipe_path, set(bindings))
-        if handle is not None:
-            try:
-                value = run_preloaded(handle, bindings)
-            except Exception as e:  # degrade to the proven inline path
-                logger.info(
-                    "form-kernel: run_preloaded failed (%s) — inline-with-parse path", e
-                )
-            else:
-                try:
-                    return parse(value), "inline"
-                except (TypeError, ValueError):
-                    return (
-                        parse(str(value) if not isinstance(value, str) else value),
-                        "inline",
-                    )
 
     # The .fk recipe is a deploy-time-compiled artifact. Absence is now a hard
     # route-deploy failure, not a signal to execute the computation in Python.

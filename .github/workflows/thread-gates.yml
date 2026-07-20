@@ -150,61 +150,21 @@ jobs:
             --fail-on-regression
           cat maintainability_audit_report.json
 
-      - name: Build Rust Form kernel
+      - name: Build c-bootstrap fkwu authority
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |
-          cd form/form-kernel-rust
-          cargo build --release
+          cc -O2 -o form/fkwu form/runtime/fkwu-uni.c
+          test "$(form/fkwu --src form/bootstrap/ground.fk 2>/dev/null)" = 42
+          test "$(form/fkwu --src form/bootstrap/ground-recursive.fk 10 2>/dev/null)" = 55
 
-      - name: Smoke native Rust HTTP kernel
+      - name: Prove fkwu execution and sibling primitive agreement
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |
-          cd form/form-kernel-rust
-          server_log="$(mktemp)"
-          ./target/release/form-kernel-rust serve \
-            --port 19108 \
-            --routes ../apps/coherence-network/api.bml \
-            --stdlib ../form-stdlib >"$server_log" 2>&1 &
-          server_pid=$!
-          cleanup() {
-            kill "$server_pid" 2>/dev/null || true
-            wait "$server_pid" 2>/dev/null || true
-          }
-          trap cleanup EXIT
-
-          # The canonical submodule route compiles 72 handlers on first boot.
-          # Hosted runners can cross the old 30-second edge while the server is
-          # already healthy; give native compilation a real readiness window.
-          for _ in $(seq 1 90); do
-            if curl -fsS \
-              -D /tmp/form-kernel-health.headers \
-              http://127.0.0.1:19108/api/health \
-              -o /tmp/form-kernel-health.json 2>/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-
-          if [ ! -s /tmp/form-kernel-health.json ]; then
-            cat "$server_log"
-            exit 1
-          fi
-          cat /tmp/form-kernel-health.headers
-          cat /tmp/form-kernel-health.json
-          grep -q "X-Form-Router: native-kernel" /tmp/form-kernel-health.headers
-          grep -q '"kernel_runtime":"form-kernel-rust"' /tmp/form-kernel-health.json
-
-          curl -fsS \
-            -D /tmp/form-kernel-proposal.headers \
-            -H "Content-Type: application/json" \
-            -X POST http://127.0.0.1:19108/api/substrate/kernel-image/proposals \
-            --data-binary '{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"thread-gate-bml-front-door-canary"}' \
-            -o /tmp/form-kernel-proposal.json
-          cat /tmp/form-kernel-proposal.headers
-          cat /tmp/form-kernel-proposal.json
-          grep -q "X-Form-Router: native-kernel" /tmp/form-kernel-proposal.headers
-          grep -q '"state":"kernel-image-proposal-preview"' /tmp/form-kernel-proposal.json
-          grep -q '"proof_passed":true' /tmp/form-kernel-proposal.json
+          test "$(bin/form-cli eval '(add 20 22)')" = 42
+          test "$(bin/form-cli eval '(do (defn sum-to (n) (if (eq n 0) 0 (add n (sum-to (sub n 1))))) (sum-to 10))')" = 55
+          test "$(bin/form-cli eval '(list 1 2.5 (list 3 4))')" = '[1, 2.5, [3, 4]]'
+          test "$(form/fkwu --src form/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
+          form/validate.sh form-stdlib/tests/round-ndigits-band.fk
 
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'

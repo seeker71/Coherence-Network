@@ -63,7 +63,7 @@ class TestCostVectorEndpoint:
         assert data["external_cc"] == 0.0
         assert data["total_cc"] == 33.333
         assert data["estimated_cost"] == 33.333
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_zero_all_components_zero(self, client: AsyncClient):
@@ -119,7 +119,7 @@ class TestValueVectorEndpoint:
         assert data["revenue_cc"] == 0.0
         assert data["total_cc"] == 9.205
         assert data["potential_value"] == 9.205
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_zero_all_components_zero(self, client: AsyncClient):

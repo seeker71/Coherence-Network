@@ -398,14 +398,12 @@ case "$cmd" in
   preflight) exec bash "$ROOT/scripts/form_cli_preflight.sh" "$@" ;;
   eval)
     [ -n "${1:-}" ] || { echo "usage: form-cli eval '<form-expression>'" >&2; exit 2; }
-    tf="$(mktemp --suffix=.fk)"
-    empty="$(mktemp)"
-    printf '(print %s)\n' "$1" > "$tf"
-    printf '\n' > "$empty"
-    out="$(bash "$ROOT/scripts/fkwu_run.sh" "$empty" "$tf" 2>&1)"
+    tf="$(mktemp "${TMPDIR:-/tmp}/form-cli-eval.XXXXXXXX")"
+    printf '%s\n' "$1" > "$tf"
+    out="$(bash "$ROOT/scripts/fkwu_run.sh" --src "$tf")"
     rc=$?
-    rm -f "$tf" "$empty"
-    printf '%s\n' "$out" | sed '/^null$/d'
+    rm -f "$tf"
+    printf '%s\n' "$out" | sed '/^null$/d' | tail -1
     exit "$rc" ;;
   *) usage ;;
 esac

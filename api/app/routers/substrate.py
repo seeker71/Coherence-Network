@@ -560,7 +560,7 @@ def _run_grounded_ask(query: str) -> GroundedAskResponse:
     if (
         not isinstance(kernel_before, dict)
         or kernel_before.get("verified") is not True
-        or kernel_before.get("runtime") not in {"inline", "subprocess"}
+        or kernel_before.get("runtime") != "fkwu"
         or not isinstance(form_cli_before, dict)
         or form_cli_before.get("verified") is not True
     ):

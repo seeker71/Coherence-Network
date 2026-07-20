@@ -1,0 +1,189 @@
+{
+  "date": "2026-07-16",
+  "thread_branch": "codex/grounded-observer-deploy-20260716",
+  "commit_scope": "Make c-bootstrapped fkwu the sole API execution and deployment runtime, constrain Go/Rust/TypeScript to primitive conformance, and bind public observation to the fkwu artifact.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    ".github/workflows/public-deployment-observer.yml",
+    ".github/workflows/thread-gates.yml",
+    "Dockerfile.api",
+    "api/app/routers/health.py",
+    "api/app/routers/kernel_shared.py",
+    "api/app/routers/substrate.py",
+    "api/app/routers/utils.py",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/native_runtime_observation.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_ask.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_form_kernel_bridge_structure_access.py",
+    "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_weighted_average.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "deploy/hostinger/auto-deploy.sh",
+    "form",
+    "scripts/fkwu_run.sh",
+    "scripts/form_cli.py",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bin/form-cli eval '(add 20 22)'",
+      "bin/form-cli eval recursive sum-to-10",
+      "bin/form-cli eval nested numeric list",
+      "direct fkwu execution of 23 shared endpoint recipes",
+      "direct fkwu execution of 10 API-owned endpoint recipes",
+      "cd api && pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_utils_*.py",
+      "cd api && pytest -q --ignore=tests/holdout",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "bash scripts/ensure_form_cli_native.sh --print-path && python3 -m pytest api/tests/test_form_cli_grounding_runtime.py::test_native_observer_uses_receipted_host_carrier_outside_submodule api/tests/test_kernel_inline_latency.py::TestFkwuExecutionAuthority::test_health_reports_fkwu -q",
+      "cd api && python3 -m pytest -q tests/test_form_cli_grounding_runtime.py::test_native_observer_uses_receipted_host_carrier_outside_submodule tests/test_kernel_inline_latency.py",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "cd api && ruff check <changed Python files>",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/verify_kernel_single_authority.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/fkwu_run.sh bin/form-cli",
+      "git diff --check"
+    ],
+    "notes": "Direct fkwu returned 42, recursive 55, and [1, 2.5, [3, 4]]. All 23 shared and 10 app-owned endpoint recipes executed directly. The utility/bridge band passed 108/108, the non-holdout default passed 403/403, and the exact CI full-suite mode passed 2002/2002. The Linux digest-authority regression is covered alongside the runtime health band: 4/4 focused tests pass, and the non-holdout API suite passes 403/403. Local native-runtime observation verified runtime=fkwu, execution_authority=c-bootstrap-fkwu, result=42, and a content-addressed fkwu binary. The local web/API contract built all 113 pages, passed 86 interface comparisons, and returned no curated failures. Docker execution is the sole local infrastructure gap: no daemon exists at /Users/ursmuff/.docker/run/docker.sock; CI and Hostinger perform the image build."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Exact-head Windows Host Floor passed all fkwu floor, field-relay, FNRI, JIT, model-composition, and packaging checks (run 29470000048). Linux Thread Gates independently passed the fkwu authority build and sibling primitive band. Its full suite exposed that the observer selected the receipted Linux carrier but still searched for a nonexistent committed Linux binary as digest authority. The observer now uses the already schema- and digest-validated selection receipt as digest authority before considering optional committed platform carriers. The focused runtime band passes 4/4 and the non-holdout API suite passes 403/403 locally; exact-head CI rerun remains pending. Review also exposed that manual dispatch uses inputs.sha while the immutable OIDC observer is intentionally bound to github.sha; the observer job is limited to its accepted protected-main push and schedule identities, so a manual rollback cannot mint a witness for the wrong commit."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production plus GitHub Actions OIDC external observer",
+    "notes": "The deploy removes retired kernel-router containers, runs the API image with /app/form/fkwu, reproduces that C binary independently, and records a fkwu-bound WITNESS before public observed=yes can pass."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local fkwu execution is complete; CI, merge, production roll-forward, authenticated observation, and public verification remain."
+  },
+  "idea_ids": [
+    "coherence-kernel-single-authority",
+    "form-cli-grounded-observation"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "form-cli-grounded-observation-plane"
+  ],
+  "task_ids": [
+    "task-2026-07-16-fkwu-production-authority"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "architecture", "acceptance-criteria"]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "deployment", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "evidence_refs": [
+    "coherence-kernel PR #253 merged exact-decimal round_ndigits into fkwu as f9cb9a382128638931f97ed61734cf7382c8d0dd.",
+    "coherence-kernel PR #254 published the corrected consumer distribution pin d6255d6bb52f9431e9af4a74a6a32ea70ad7dcbc.",
+    "Immutable consumer commit 64b62db38db2c7cfd85e4f6a4d87eb20282df6a9 contains the fkwu-only public observer bytes and is the OIDC workflow pin.",
+    "Direct fkwu round-ndigits band scored 24; the sibling primitive harness reported 1 ok, 0 divergent.",
+    "No Go, Rust, TypeScript, flatten, PyO3, preload, or sibling fallback participates in API recipe execution.",
+    "Observed:yes remains unavailable until the final consumer merge is deployed and the authenticated public WITNESS matches it."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    ".github/workflows/public-deployment-observer.yml",
+    ".github/workflows/thread-gates.yml",
+    "Dockerfile.api",
+    "MANIFEST.md",
+    "api/app/routers/health.py",
+    "api/app/routers/kernel_shared.py",
+    "api/app/routers/substrate.py",
+    "api/app/routers/utils.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/native_runtime_observation.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_ask.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_form_kernel_bridge_structure_access.py",
+    "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_weighted_average.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-07-16_grounded_observer_deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "scripts/INDEX.md",
+    "scripts/fkwu_run.sh",
+    "scripts/form_cli.py",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Every production recipe executes on c-bootstrapped fkwu; sibling kernels can only cross-check named primitive assumptions; public observed=yes is tied to the reproduced fkwu binary and exact deployed merge.",
+    "public_endpoints": [
+      "GET /api/health?observation_nonce=<nonce>",
+      "POST /api/deployment-observer/challenge",
+      "POST /api/deployment-observer/observe",
+      "POST /api/substrate/ask"
+    ],
+    "test_flows": [
+      "build /app/form/fkwu from the pinned submodule C source and execute direct source proofs",
+      "remove retired sibling-router containers",
+      "independently reproduce and hash fkwu in the OIDC observer",
+      "persist a deployed-SHA and fkwu-binary-bound WITNESS",
+      "verify_observed_deployment_ask.sh accepts only the exact OBSERVED trust row"
+    ]
+  }
+}

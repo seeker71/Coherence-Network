@@ -53,7 +53,7 @@ def test_same_input_same_sig():
     assert form_cli._io_sig("(mul 17 23)") != form_cli._io_sig("(mul 17 24)")
 
 
-@pytest.mark.skipif(not _HAVE_KERNEL, reason="form-kernel-rust binary not built in this env")
+@pytest.mark.skipif(not _HAVE_KERNEL, reason="fkwu form-cli wrapper unavailable")
 def test_compute_lane_runs_form_native():
     res = form_cli.ask_handle("(mul 17 23)")
     assert res["lane"] == "form-native:compute"

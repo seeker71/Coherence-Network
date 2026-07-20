@@ -106,7 +106,7 @@ def _carrier_observation(root: Path, *, challenge: str = "1" * 64) -> dict:
         "challenge_digest": challenge,
         "kernel": {
             "verified": True,
-            "runtime": "subprocess",
+            "runtime": "fkwu",
             "binary_sha256": "2" * 64,
             "inline_sha256": None,
         },
@@ -560,7 +560,7 @@ def test_api_binds_stable_native_carrier_before_and_after_ask(tmp_path, monkeypa
     assert response.form_cli_binary_sha256 == "3" * 64
     assert response.form_cli_table_sha256 == "4" * 64
     assert response.form_cli_wrapper_sha256 == "5" * 64
-    assert response.kernel_runtime == "subprocess"
+    assert response.kernel_runtime == "fkwu"
 
 
 def test_api_rejects_fake_root_and_mid_request_carrier_drift(tmp_path, monkeypatch):
@@ -657,12 +657,66 @@ def test_native_observer_rejects_digest_matched_but_behaviorally_fake_carrier(
     monkeypatch.setattr(
         native_runtime_observation,
         "_observe_kernel",
-        lambda: {"verified": True, "runtime": "subprocess", "binary_sha256": "b" * 64},
+        lambda: {"verified": True, "runtime": "fkwu", "binary_sha256": "b" * 64},
     )
     native_runtime_observation.reset_native_runtime_observation_cache()
     result = native_runtime_observation.observe_native_runtime(force=True)
     assert result["verified"] is False
     assert "carrier identity mismatch" in result["error"]
+
+
+def test_native_observer_uses_receipted_host_carrier_outside_submodule(tmp_path):
+    root = tmp_path
+    bootstrap = root / "form" / "form-stdlib" / "bootstrap"
+    carrier = root / ".cache" / "form-cli-native" / "linux-amd64" / "form-cli"
+    bootstrap.mkdir(parents=True)
+    carrier.parent.mkdir(parents=True)
+    carrier.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    carrier.chmod(0o755)
+    source_sha = "c" * 64
+    binary_sha = hashlib.sha256(carrier.read_bytes()).hexdigest()
+    (bootstrap / "form-cli.source.sha256").write_text(
+        source_sha + "\n", encoding="ascii"
+    )
+    (root / ".cache" / "form-cli-native" / "selected.json").write_text(
+        json.dumps(
+            {
+                "schema": "selected-form-cli-carrier-v1",
+                "native_path": str(carrier),
+                "binary_sha256": binary_sha,
+                "source_sha256": source_sha,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert native_runtime_observation._selected_form_cli_binary(root) == carrier
+    assert native_runtime_observation._expected_form_cli_digest(root) == (
+        binary_sha,
+        str(root / ".cache" / "form-cli-native" / "selected.json"),
+    )
+
+    escaped = root / "outside-form-cli"
+    escaped.write_bytes(carrier.read_bytes())
+    escaped.chmod(0o755)
+    receipt = root / ".cache" / "form-cli-native" / "selected.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "schema": "selected-form-cli-carrier-v1",
+                "native_path": str(escaped),
+                "binary_sha256": binary_sha,
+                "source_sha256": source_sha,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        native_runtime_observation.NativeRuntimeObservationError,
+        match="escapes the host-native cache",
+    ):
+        native_runtime_observation._selected_form_cli_binary(root)
 
 
 def test_wrapper_manifest_and_fail_closed_native_flow_are_current():

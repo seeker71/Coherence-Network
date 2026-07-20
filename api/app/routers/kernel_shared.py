@@ -8,10 +8,9 @@ modules keeps each one small; sharing one router object keeps every route at
 its exact ``/api/utils/...`` path with a single ``include_router`` call in
 ``app.main``.
 
-Transmutation as a habit toward the question Urs named: "can we replace
-FastAPI with native Form kernel?" Each endpoint carries the same shape across
-three runtimes — CPython, TS evalPython, form-kernel-rust — and at request-time
-prefers the native kernel via ``serve_via_kernel``.
+Each endpoint executes on c-bootstrapped fkwu through ``serve_via_kernel``.
+CPython, Go, Rust, and TypeScript remain differential references for the same
+primitive/native assumptions; they are not runtime fallbacks.
 """
 from __future__ import annotations
 
@@ -23,11 +22,29 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.form_kernel_bridge import (
     active_runtime,
-    inline_available,
     kernel_available,
     kernel_bin_path,
     serve_via_kernel,
 )
+
+__all__ = [
+    "Annotated",
+    "APIRouter",
+    "BaseModel",
+    "ConfigDict",
+    "Field",
+    "HTTPException",
+    "Query",
+    "active_runtime",
+    "kernel_available",
+    "kernel_bin_path",
+    "logger",
+    "router",
+    "serve_via_kernel",
+    "_coerce_float_list",
+    "_parse_floats",
+    "_parse_values",
+]
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/utils", tags=["utils"])
@@ -74,11 +91,9 @@ def _parse_floats(raw: str, label: str) -> list[float]:
 def _coerce_float_list(value: object) -> list[float]:
     """Coerce a kernel result into a list[float].
 
-    The inline path hands back a real Python list (value_to_py's List arm);
-    the subprocess path hands back the kernel's display string, e.g.
+    Direct fkwu hands back the kernel's display string, e.g.
     ``[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]``. One
-    coercion serves both kernel carriers so the route reads ``runtime``
-    honestly regardless of path.
+    coercion preserves the numeric list at the HTTP membrane.
     """
     if isinstance(value, (list, tuple)):
         return [float(v) for v in value]
@@ -97,8 +112,7 @@ def _coerce_float_list(value: object) -> list[float]:
 def _coerce_int_list(value: object) -> list[int]:
     """Coerce a kernel result into a list[int].
 
-    The inline path hands back a real Python list (value_to_py's List arm); the
-    subprocess path hands back the kernel's display string, e.g. ``[3, 10, 2,
+    Direct fkwu hands back the kernel's display string, e.g. ``[3, 10, 2,
     7]``. One coercion serves both kernel carriers so the route reads
     ``runtime`` honestly regardless of path.
     """

@@ -135,11 +135,10 @@ class HealthResponse(_BaseHealthResponse):
         str,
         Field(
             description=(
-                "Which form-kernel path would serve a transmuted endpoint "
-                "in this container right now — 'inline' (PyO3 extension), "
-                "'subprocess' (form-kernel-rust binary), or 'unavailable' "
-                "(no kernel carrier reachable). Lets the witness see at a "
-                "glance whether a deploy lost the hot path."
+                "Which production Form execution path is live: 'fkwu' for the "
+                "c-bootstrapped universal kernel, or 'unavailable'. Go, Rust, "
+                "and TypeScript are differential references and never appear "
+                "as execution candidates."
             )
         ),
     ] = "unavailable"

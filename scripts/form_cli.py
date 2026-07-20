@@ -60,7 +60,6 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -972,10 +971,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
 # destination is the native form-macho binary running this loop directly
 # (docs/coherence-substrate/form-cli-north-star.form).
 
-_KERNEL_BIN = Path(
-    os.environ.get("FORM_KERNEL_RUST_BIN")
-    or (REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust")
-)
+_KERNEL_BIN = REPO_ROOT / "bin" / "form-cli"
 _ASK_CAPTURE = Path(
     os.environ.get("FORM_CLI_CAPTURE") or (REPO_ROOT / "logs" / "form_cli_io_match.jsonl")
 )
@@ -998,22 +994,20 @@ def _is_form_expr(request: str) -> bool:
 
 
 def _kernel_eval(expr: str) -> tuple[str | None, str | None]:
-    """Evaluate a Form expression on the kernel (builtins: math, logic, lists).
+    """Evaluate a Form expression on c-bootstrapped fkwu.
+
     Returns (value, None) on success or (None, reason) on failure."""
     if not (_KERNEL_BIN.is_file() and os.access(_KERNEL_BIN, os.X_OK)):
         return None, "kernel-unavailable"
-    with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as f:
-        f.write(f"(do {expr})\n")
-        path = f.name
     try:
-        proc = subprocess.run([str(_KERNEL_BIN), path], capture_output=True, text=True, timeout=10)
+        proc = subprocess.run(
+            [str(_KERNEL_BIN), "eval", expr],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
     except (subprocess.TimeoutExpired, OSError) as e:
         return None, f"kernel-error:{e}"
-    finally:
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
     if proc.returncode != 0:
         stderr = (proc.stderr or "").strip().splitlines()
         return None, stderr[-1] if stderr else "kernel-error"

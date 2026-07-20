@@ -44,7 +44,7 @@ class TestIdeaGroundedCostSumEndpoint:
         assert data["spec_actual_cost_sum"] == 5.25
         assert data["spec_actual_value_sum"] == 3.75
         assert data["spec_count_in"] == 3
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_distinct_specs_match_parity_reference(self, client: AsyncClient):

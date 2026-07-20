@@ -54,7 +54,7 @@
 | [check_runtime_drift.py](check_runtime_drift.py) | Fail when runtime drift exceeds known allowlist baseline. |
 | [check_spec_references.py](check_spec_references.py) | spec: full-code-traceability |
 | [check_traceability.py](check_traceability.py) | CI gate: check that new/modified specs have idea_id and code files have spec refs. |
-| [check_web_docker_context.py](check_web_docker_context.py) | Ensure web imports stay within the canonical source roots copied into the Docker image. |
+| [check_web_docker_context.py](check_web_docker_context.py) | Catch web imports reaching outside the source copied into the image. |
 | [claude_corpus.py](claude_corpus.py) | claude_corpus.py — CARRIER (data prep only). Taps Claude Code session transcripts |
 | [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
@@ -105,7 +105,7 @@
 | [fkwu_form_cli_metal_direct_receipt.sh](fkwu_form_cli_metal_direct_receipt.sh) | fkwu_form_cli_metal_direct_receipt.sh |
 | [fkwu_form_cli_metal_matvec_receipt.sh](fkwu_form_cli_metal_matvec_receipt.sh) | fkwu_form_cli_metal_matvec_receipt.sh |
 | [fkwu_form_cli_metal_model_cell_receipt.sh](fkwu_form_cli_metal_model_cell_receipt.sh) | fkwu_form_cli_metal_model_cell_receipt.sh |
-| [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
+| [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — enter the c-bootstrapped fkwu runtime. |
 | [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via the current form-cli band. |
 | [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |

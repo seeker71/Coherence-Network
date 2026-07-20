@@ -2,28 +2,26 @@
 idea_id: coherence-substrate
 status: active
 source:
-  - file: form/form-stdlib/form-flatten.fk
-    symbols: [flt-ops, flt-op2]
-  - file: form/form-stdlib/hati-os-kernel-emit.fk
-    symbols: [fkc-flat, fkc-arm-slots, fkc-emit-universal]
+  - file: form/runtime/fkwu-uni.c
+    symbols: []
   - file: form/form-stdlib/primitive-registry.fk
     symbols: [prim, prim-name]
-  - file: form/scripts/fourth-arm.sh
-    symbols: [build_fourth, fourth_table]
-  - file: docs/coherence-substrate/standard-receipt.form
+  - file: scripts/fkwu_run.sh
     symbols: []
+  - file: api/app/services/form_kernel_bridge.py
+    symbols: [run_recipe, run_kernel, serve_via_kernel]
 requirements:
-  - "Single production kernel: c-bootstrap fkwu (+ form-cli on same binary); Go/Rust/TS shrink to oracle/bootstrap only, then compost"
+  - "Single production execution kernel: c-bootstrap fkwu; Go/Rust/TS cross-check basic primitives and native assumptions only"
   - "One native catalog (primitive-registry + fkwu dispatch pool); no hand-maintained per-op tags in four places"
   - "One JIT path: recipe → form-asm bytes → native; compost jit.go / clang production / parallel plugin JIT"
   - "New host-io and kernel surface lands in Form stdlib + registry first; sibling kernels frozen"
-  - "Proof graduates from four interpreted walkers to standard receipt (platform traces on fkwu form-cli)"
+  - "Production proof executes fkwu; sibling runs are explicitly labeled primitive conformance checks"
 done_when:
   - "Phase 0 gate: validate_fkwu_native_surface.py passes in CI on every form/validate.sh run"
   - "Phase 1: native-op-manifest is source for flt-ops rows (generated or single .fk manifest); zero manual flt-ops edits for new natives"
   - "Phase 2: fkwu BUILD uses form-asm (macho/pe/elf), not clang; table flatten runs on fkwu, not Go bin-go"
   - "Phase 3: form-cli built from c-bootstrap fkwu; scripts/form_fs_fkwu_receipt.sh class of receipts pass on mac/windows/android"
-  - "Phase 4: validate.sh default leg is fkwu-only; Go/Rust/TS removed from required legs or composted"
+  - "Phase 4: deployment and API expose only fkwu; Go/Rust/TS remain bounded primitive witnesses"
 test: "cd form && python3 scripts/validate_fkwu_native_surface.py && python3 scripts/gen_flt_ops_from_manifest.py && python3 scripts/sync_native_op_manifest.py && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk"
 constraints:
   - "Do not add new registerNative entries to Go/Rust/TS except oracle bugfixes on frozen allowlist"
@@ -36,7 +34,10 @@ constraints:
 
 ## Purpose
 
-The body’s north star is a **minimal non-Form bootstrap** that replaces itself, with **everything else Form-native** (compiler, primitives, host ports, grammar loader, JIT, kernel). Today we still maintain **four parallel native surfaces** (Go, Rust, TS, fkwu tag maps) and **multiple JIT paths** — that is the wrong destination.
+The body’s execution runtime is the c-bootstrapped **fkwu** kernel. Go, Rust,
+and TypeScript are retained only to challenge basic primitive semantics and
+native assumptions. They are not alternate runtimes, HTTP front doors,
+fallbacks, preload paths, or deployment candidates.
 
 This spec is the **collapse plan**: phased moves from today’s honest floor to the standard receipt in `docs/coherence-substrate/standard-receipt.form`, with explicit **stop rules** so effort stops feeding parallel kernels.
 
@@ -44,7 +45,7 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 
 - [ ] **R1 — Gate on every validate:** `validate_fkwu_native_surface.py` runs at start of `form/validate.sh` and fails on tag drift or missing `fkc-flat` coverage.
 - [ ] **R2 — Manifest is source of truth:** `native-op-manifest.fk` drives `flt-ops` via generator; no hand-edited per-op tags without manifest row.
-- [ ] **R3 — Sibling freeze:** Go/Rust/TS accept oracle-only changes; new natives land in Form stdlib + fkwu emit chain only.
+- [x] **R3 — Sibling boundary:** Go/Rust/TS participate only in primitive/native-assumption conformance; production execution and observation require `fkwu`.
 - [ ] **R4 — Receipt honesty:** Standard receipt rows stay `pending` until c-bootstrap fkwu + form-cli traces exist on mac/windows/android.
 
 ## Stop rules (effective immediately)
@@ -55,7 +56,7 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 | New hand-assigned fkwu tag in `flt-ops` without gate | **Blocked** — Phase 1 manifest |
 | New `jit.go` / Go plugin / Rust libloading JIT feature | **Blocked** — fkwu + form-asm only |
 | clang/zig-cc as production fkwu build | **Blocked** after Phase 2 — oracle only until then |
-| Four-way as reason to grow Rust/TS surface | **Blocked** — fkwu-first; siblings oracle-only |
+| Sibling kernel as API/deploy/runtime fallback | **Blocked** — siblings cross-check primitives only |
 
 ## Phases
 
@@ -100,16 +101,19 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 
 **Exit:** `standard-receipt.form` rows observed for core bands.
 
-### Phase 4 — Sibling compost
+### Phase 4 — Bound sibling proof surface
 
-**Goal:** Go/Rust/TS kernels equal **minimal oracle**, then removed.
+**Goal:** Go/Rust/TS remain useful and permanently bounded to basic primitive
+and native-implementation cross-checks.
 
-- [ ] `validate.sh` — fkwu required; siblings optional divergence alarms on shrink list
-- [ ] Delete or archive `form-kernel-go/rust/ts` eval paths not needed for bootstrap
-- [ ] Compost `jit.go`, plugin JIT, duplicate lexers
-- [ ] Update `CLAUDE.md` / `kernel-self-composition.form` to cite fkwu+form-asm only
+- [x] API runtime returns only `fkwu`; inline/preload/subprocess sibling selection is retired
+- [x] API image builds and ships `/app/form/fkwu`; no sibling binary enters the image
+- [x] deploy removes legacy sibling-router containers before observation
+- [x] thread gate executes fkwu and invokes siblings only on the `round_ndigits` primitive band
+- [ ] Classify every remaining sibling test as primitive/native conformance or retire it
 
-**Exit:** CI and local proof run with **one** kernel binary; no four-way on three interpreters.
+**Exit:** CI and deployment have one execution kernel; every sibling invocation
+names the primitive assumption it cross-checks.
 
 ## Architecture target
 
@@ -121,6 +125,8 @@ bootstrap bytes (form-asm, once)
  Form recipes: flatten · emit · JIT · ports · grammar · self-replace
         ↓
    next fkwu / dylibs / tables (content-addressed)
+
+ Go / Rust / TypeScript ── primitive + native-assumption comparison only
 ```
 
 ## Files to Create/Modify
@@ -152,7 +158,7 @@ cd form && python3 scripts/validate_fkwu_native_surface.py \
 
 ## Out of Scope
 
-- Removing Go/Rust/TS kernels in this phase (Phase 4)
+- Removing Go/Rust/TS primitive witnesses
 - form-asm production fkwu build without clang (Phase 2)
 - Platform receipt scripts on mac/windows/android (Phase 3)
 - Arity-class dispatch replacing per-op tags (end of Phase 1 — design only)

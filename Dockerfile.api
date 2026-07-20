@@ -2,29 +2,9 @@
 #
 # Coherence Network API image.
 #
-# Two stages:
-#   1. kernel-builder — compiles form/form-kernel-rust → release binary AND
-#                       (best-effort) the form_kernel_rust PyO3 wheel (maturin)
-#   2. runtime         — Python 3.11 FastAPI, with the kernel binary copied in
-#                       and the PyO3 wheel pip-installed when present
-#
-# Two carriers come out of the builder, ordered by how the bridge prefers them:
-#
-#   • inline (PyO3)  — the form_kernel_rust wheel, a warm in-process Rust kernel
-#     imported once at module load (no spawn, no socket). Sub-200µs hot path.
-#     Built by maturin in the builder stage; pip-installed in runtime. abi3-py39
-#     so the wheel built by the builder's python imports under runtime's 3.11.
-#   • subprocess     — the /app/bin/form-kernel-rust binary; FORM_KERNEL_RUST_BIN
-#     points there, so api/app/services/form_kernel_bridge.py shells into the
-#     native binary at request time.
-#
-# Both are ADDITIVE and the inline build is NON-FATAL: if maturin fails (or is
-# unavailable), no wheel is produced, the runtime pip-install is a no-op, and
-# the bridge's import of form_kernel_rust fails gracefully → it falls back to
-# the subprocess binary (and that to inline Python). The image always builds and
-# the API always starts; inline is an enhancement, never a hard dependency.
-# Without the binary either, /api/utils/coherence_weight reports
-# runtime="python-fallback".
+# The builder emits the c-bootstrap fkwu, the only production recipe runtime.
+# Go, Rust, and TypeScript conformance belongs in CI; no sibling kernel enters
+# this image as either a runtime or a fallback.
 #
 # This Dockerfile lives in the repo so the build context the deploy script
 # uses (the repo root, cloned onto the VPS at /docker/coherence-network/repo)
@@ -32,37 +12,26 @@
 # this file via `build: { context: ./repo, dockerfile: Dockerfile.api }`.
 
 # -----------------------------------------------------------------------------
-# Stage 1 — build form-kernel-rust: the native binary (must) + PyO3 wheel (best-effort)
+# Stage 1 — build the pinned c-bootstrap fkwu and native form-cli
 # -----------------------------------------------------------------------------
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 
-FROM rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944 AS kernel-builder
+FROM python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba AS kernel-builder
 
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 
 WORKDIR /build
 
-# The executable bootstrap proof independently computes HMAC fixtures with
-# OpenSSL.  This package is proof tooling only; the emitted C and Rust carriers
-# do not link it and the runtime image never receives it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl \
+ && apt-get install -y --no-install-recommends gcc libc6-dev openssl \
  && rm -rf /var/lib/apt/lists/*
 
 RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
       | grep -Eq '^[0-9a-f]{40}$' \
  && test "$(printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
       | grep -Ec '^[0-9a-f]{40}$')" = 2
-
-# Copy the kernel crate. The crate is self-contained — no workspace, no
-# repo-relative path deps — so this is all the source it needs. pyproject.toml
-# is the maturin manifest for the PyO3 wheel build below.
-COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock form/form-kernel-rust/pyproject.toml ./
-COPY form/form-kernel-rust/src ./src
-COPY form/form-kernel-rust/libraries ./libraries
-COPY form/form-kernel-rust/recipes ./recipes
 
 # The public grounded-ask route uses the same c-bootstrapped fkwu form-cli as
 # the local wrapper. Build the committed emitted-C carrier here; no Go/runtime
@@ -84,31 +53,15 @@ RUN cd /build/form-cli-src \
  && sha256sum /build/form-cli | cut -d' ' -f1 > /build/form-cli.sha256 \
  && test -x /build/form-cli
 
-# Build the release binary (the subprocess carrier). Cargo's default target
-# dir is /build/target. This is the load-bearing build — it must succeed; the
-# subprocess path depends on this binary being present in the final image.
-RUN cargo build --release --bin form-kernel-rust \
- && strip target/release/form-kernel-rust \
- && ls -la target/release/form-kernel-rust
-
-# Best-effort: build the form_kernel_rust PyO3 wheel (the inline carrier).
-# NON-FATAL by design — every step is guarded with `|| true` and the wheel
-# directory is always created, so a maturin/toolchain failure here cannot break
-# the binary above or the image. If no wheel lands in /build/dist, the runtime
-# pip-install is a no-op and the bridge falls back to the subprocess binary.
-#
-# maturin is installed via pip (--break-system-packages: bookworm marks the
-# system env externally-managed under PEP 668; this build container is
-# disposable so writing to it is fine). The wheel is abi3-py39 (Cargo.toml
-# pyo3 features), so the interpreter maturin builds against here need not match
-# the runtime's CPython 3.11 — the stable ABI wheel imports across 3.9+.
-RUN mkdir -p /build/dist \
- && ( apt-get update \
-      && apt-get install -y --no-install-recommends python3 python3-pip \
-      && python3 -m pip install --break-system-packages --no-cache-dir 'maturin>=1.5,<2.0' \
-      && maturin build --release --features pyo3 --out /build/dist \
-      && ls -la /build/dist \
-    ) || echo "form_kernel_rust wheel build skipped — runtime falls back to subprocess"
+# Compile the exact c-bootstrap shipped by the pinned coherence-kernel
+# distribution. Direct source is the gate: no flatten table is generated.
+COPY form/runtime /build/runtime
+COPY form/bootstrap /build/bootstrap
+RUN cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c \
+ && test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42 \
+ && test "$(cd /build && ./fkwu --src bootstrap/ground-recursive.fk 10 2>/dev/null)" = 55 \
+ && test "$(cd /build && ./fkwu --src bootstrap/ground-numeric-list.fk 2>/dev/null)" = '[1, 2.5, [3, 4]]' \
+ && test "$(cd /build && ./fkwu --src form-cli-src/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
 
 
 # -----------------------------------------------------------------------------
@@ -125,7 +78,7 @@ RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
       | grep -Ec '^[0-9a-f]{40}$')" = 2
 
 LABEL org.opencontainers.image.title="coherence-network-api"
-LABEL org.opencontainers.image.description="Coherence Network API — FastAPI with form-kernel-rust embedded for transmuted endpoints"
+LABEL org.opencontainers.image.description="Coherence Network API — FastAPI membrane with c-bootstrapped fkwu recipe execution"
 LABEL org.opencontainers.image.source="https://github.com/seeker71/Coherence-Network"
 LABEL org.opencontainers.image.revision="${COHERENCE_SOURCE_SHA}"
 LABEL org.opencontainers.image.coherence-form-revision="${COHERENCE_FORM_SHA}"
@@ -134,15 +87,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    FORM_KERNEL_RUST_BIN=/app/bin/form-kernel-rust \
-    FORM_RECIPE_DIR=/app/form/form-kernel-ts/seedbank/python-adapter/examples \
     PORT=8000
 
 WORKDIR /app
 
-# OS deps for psycopg2-binary, neo4j driver, healthchecks, and the kernel
-# subprocess (the kernel itself is statically linked Rust, but curl is needed
-# by the healthcheck and shell utilities by the deploy scripts).
+# OS deps for psycopg2-binary, neo4j driver, healthchecks, and shell utilities.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl \
@@ -155,31 +104,12 @@ COPY api/requirements.txt ./requirements.txt
 RUN python -m pip install --upgrade pip \
  && python -m pip install -r requirements.txt
 
-# Copy the kernel binary from the builder stage. /app/bin must exist before
-# the copy (the COPY itself creates the parent). The binary is the single
-# artifact this image needs from the Rust build — no toolchain shipped.
-COPY --from=kernel-builder /build/target/release/form-kernel-rust /app/bin/form-kernel-rust
+# Copy only the two production carriers.
+COPY --from=kernel-builder /build/fkwu /app/form/fkwu
 COPY --from=kernel-builder /build/form-cli /app/form/form-cli
 COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
-RUN chmod +x /app/bin/form-kernel-rust \
- /app/form/form-cli \
- && test "$(/app/bin/form-kernel-rust --expr '(add 2 3)')" = 5
-
-# Inline carrier (PyO3): install the form_kernel_rust wheel if the builder
-# produced one. The COPY of the dist DIRECTORY always succeeds (even empty) —
-# unlike a glob, which would fail the build when no wheel exists. The install
-# is NON-FATAL: a missing/failed wheel leaves form_kernel_rust unimportable and
-# the bridge falls back to the subprocess binary above. The runtime confirms
-# whether the inline path is live without failing the build either way.
-COPY --from=kernel-builder /build/dist/ /tmp/form-kernel-wheels/
-RUN if ls /tmp/form-kernel-wheels/*.whl >/dev/null 2>&1; then \
-      python -m pip install --no-cache-dir /tmp/form-kernel-wheels/*.whl \
-        && python -c "import form_kernel_rust; print('form-kernel: inline PyO3 wheel installed')" \
-        || echo "form-kernel: inline PyO3 wheel install failed — subprocess fallback active"; \
-    else \
-      echo "form-kernel: no inline PyO3 wheel — subprocess fallback active"; \
-    fi \
- && rm -rf /tmp/form-kernel-wheels
+COPY form/runtime /app/form/runtime
+RUN chmod +x /app/form/fkwu /app/form/form-cli
 
 # API source. The api/ dir is the package root inside the container; the
 # Procfile uses `app.main:app` so /app needs to BE the api directory contents.
@@ -189,29 +119,27 @@ COPY api/ ./
 # post-build (substrate ingest). Ship them at build time too so the image
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
+COPY form/scripts/ ./form/scripts/
 COPY bin/form-cli ./bin/form-cli
 COPY bin/form-cli.sha256 ./bin/form-cli.sha256
 RUN chmod +x ./bin/form-cli \
  && test "$(sha256sum ./bin/form-cli | cut -d' ' -f1)" = "$(cat ./bin/form-cli.sha256)"
 
-# Form stdlib sources are executable runtime material. BML/Python-BMF grammar
-# support lands here, so production must carry these files instead of treating
-# them as inert repository content.
+# Form stdlib sources are executable runtime material. Direct fkwu evaluation
+# prepends the pinned core before each endpoint recipe.
 COPY form/form-stdlib/ ./form/form-stdlib/
 # Native carrier selection verifies the image-built binary with the pinned
 # Form proof helper before writing its receipt. Keep those scripts beside the
 # stdlib in the runtime image; they are verification tissue, not a toolchain.
-COPY form/scripts/ ./form/scripts/
+RUN test "$(./bin/form-cli eval '(add 20 22)')" = 42
 
 # Transmuted-endpoint recipes. api/app/services/form_kernel_bridge.py resolves
 # `load_recipe("endpoint_*_demo.fk")` against
 # <repo-root>/form/form-kernel-ts/seedbank/python-adapter/examples/ — which,
 # with api/ flattened onto /app, is /app/form/form-kernel-ts/seedbank/
 # python-adapter/examples/. Without these `.fk` on disk, load_recipe raises
-# FileNotFoundError and the four utils endpoints degrade to python-fallback
-# (correct values, but NOT kernel-served). Baking the four committed recipes in
-# lets the warm PyO3 kernel actually serve them. Only the four the live API
-# loads are copied — the other regenerable demo `.fk` stay out of the image.
+# FileNotFoundError and route execution fails closed. The complete live shared
+# recipe set is baked from the same coherence-kernel pin as fkwu.
 COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.fk \

@@ -61,6 +61,24 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
         if not _HEX64.fullmatch(expected):
             raise NativeRuntimeObservationError("form-cli digest manifest malformed")
         return expected, str(manifest)
+    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
+    if receipt_path.is_file():
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier receipt malformed"
+            ) from exc
+        expected = receipt.get("binary_sha256")
+        if receipt.get("schema") != "selected-form-cli-carrier-v1":
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier receipt schema mismatch"
+            )
+        if not isinstance(expected, str) or not _HEX64.fullmatch(expected):
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier digest malformed"
+            )
+        return expected, str(receipt_path)
     system = platform.system().lower()
     machine = platform.machine().lower()
     machine = {"aarch64": "arm64", "amd64": "x86_64"}.get(machine, machine)
@@ -76,6 +94,62 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
             "no committed or image-built form-cli digest authority"
         )
     return _sha256_file(committed), str(committed)
+
+
+def _selected_form_cli_binary(root: Path) -> Path:
+    """Return the host-native carrier selected by the bootstrap proof.
+
+    Production images place their built carrier at ``form/form-cli`` beside
+    its digest authority.  Source checkouts instead keep host-specific
+    carriers outside the pinned submodule and record the exact selection in a
+    receipt.  Reading that receipt is essential on Linux/Windows runners,
+    where the convenience ``form/form-cli`` file may target another host.
+    """
+    image_binary = root / "form" / "form-cli"
+    if (root / "form" / "form-cli.sha256").is_file():
+        return image_binary
+
+    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
+    if not receipt_path.is_file():
+        return image_binary
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier receipt malformed"
+        ) from exc
+    if receipt.get("schema") != "selected-form-cli-carrier-v1":
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier receipt schema mismatch"
+        )
+    native_path = receipt.get("native_path")
+    binary_sha = receipt.get("binary_sha256")
+    source_sha = receipt.get("source_sha256")
+    if not isinstance(native_path, str) or not native_path:
+        raise NativeRuntimeObservationError("selected form-cli carrier path missing")
+    if not isinstance(binary_sha, str) or not _HEX64.fullmatch(binary_sha):
+        raise NativeRuntimeObservationError("selected form-cli carrier digest malformed")
+    if not isinstance(source_sha, str) or not _HEX64.fullmatch(source_sha):
+        raise NativeRuntimeObservationError("selected form-cli source digest malformed")
+    binary = Path(native_path)
+    if not binary.is_absolute():
+        binary = root / binary
+    binary = binary.resolve()
+    carrier_root = (root / ".cache" / "form-cli-native").resolve()
+    if not binary.is_relative_to(carrier_root):
+        raise NativeRuntimeObservationError(
+            "selected form-cli carrier escapes the host-native cache"
+        )
+    if not binary.is_file() or not os.access(binary, os.X_OK):
+        raise NativeRuntimeObservationError("selected form-cli carrier unavailable")
+    if _sha256_file(binary) != binary_sha:
+        raise NativeRuntimeObservationError("selected form-cli carrier digest mismatch")
+    source_digest_file = (
+        root / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+    )
+    if source_digest_file.read_text(encoding="ascii").strip() != source_sha:
+        raise NativeRuntimeObservationError("selected form-cli source digest mismatch")
+    return binary
 
 
 def _run_cli_line(binary: Path, command: str, *, cwd: Path) -> str:
@@ -106,7 +180,7 @@ def _run_cli_line(binary: Path, command: str, *, cwd: Path) -> str:
 def _observe_form_cli(
     root: Path, *, challenge_input: str | None = None
 ) -> dict[str, Any]:
-    binary = root / "form" / "form-cli"
+    binary = _selected_form_cli_binary(root)
     table = root / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
     stamp_file = root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp"
     source_digest_file = (
@@ -204,27 +278,22 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
         )
     else:
         from app.services.deployment_observer_service import (
-            rust_challenge_expected,
-            rust_challenge_expression,
+            fkwu_challenge_expected,
+            fkwu_challenge_expression,
         )
 
-        expression = rust_challenge_expression(challenge_input)
-        expected = int(rust_challenge_expected(challenge_input))
-        value = int(form_kernel_bridge.run_recipe(expression, timeout=10))
-        runtime = "subprocess"
-    if value != expected or runtime not in {"inline", "subprocess"}:
+        expression = fkwu_challenge_expression(challenge_input)
+        expected = int(fkwu_challenge_expected(challenge_input))
+        value, runtime = form_kernel_bridge.run_kernel(
+            expression,
+            parse=int,
+            timeout=10,
+        )
+    if value != expected or runtime != "fkwu":
         raise NativeRuntimeObservationError("kernel known-answer challenge failed")
     binary = form_kernel_bridge.kernel_bin_path()
     binary_sha = _sha256_file(binary) if binary.is_file() else None
-    inline_path = None
-    inline_sha = None
-    inline = getattr(form_kernel_bridge, "_INLINE_KERNEL", None)
-    if runtime == "inline" and inline is not None:
-        candidate = Path(str(getattr(inline, "__file__", "")))
-        if candidate.is_file():
-            inline_path = str(candidate)
-            inline_sha = _sha256_file(candidate)
-    if binary_sha is None and inline_sha is None:
+    if binary_sha is None:
         raise NativeRuntimeObservationError("kernel carrier digest unavailable")
     return {
         "verified": True,
@@ -233,8 +302,8 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
         "expected": expected,
         "result": value,
         "binary_sha256": binary_sha,
-        "inline_path": inline_path,
-        "inline_sha256": inline_sha,
+        "execution_authority": "c-bootstrap-fkwu",
+        "sibling_kernel_role": "differential-reference-only",
     }
 
 
@@ -242,6 +311,7 @@ def _artifact_fingerprint(root: Path) -> str:
     paths = [
         root / "form" / "form-cli",
         root / "form" / "form-cli.sha256",
+        root / ".cache" / "form-cli-native" / "selected.json",
         root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp",
         root
         / "form"
@@ -252,6 +322,10 @@ def _artifact_fingerprint(root: Path) -> str:
         root / "bin" / "form-cli",
         root / "bin" / "form-cli.sha256",
     ]
+    try:
+        paths.append(_selected_form_cli_binary(root))
+    except Exception:
+        pass
     try:
         from app.services.form_kernel_bridge import kernel_bin_path
 
