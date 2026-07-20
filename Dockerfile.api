@@ -198,6 +198,10 @@ RUN chmod +x ./bin/form-cli \
 # support lands here, so production must carry these files instead of treating
 # them as inert repository content.
 COPY form/form-stdlib/ ./form/form-stdlib/
+# Native carrier selection verifies the image-built binary with the pinned
+# Form proof helper before writing its receipt. Keep those scripts beside the
+# stdlib in the runtime image; they are verification tissue, not a toolchain.
+COPY form/scripts/ ./form/scripts/
 
 # Transmuted-endpoint recipes. api/app/services/form_kernel_bridge.py resolves
 # `load_recipe("endpoint_*_demo.fk")` against
