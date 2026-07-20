@@ -653,7 +653,13 @@ grep -Fq 'CMD ["node", "web/server.js"]' "$ROOT_DIR/Dockerfile.web" \
 grep -Fq '"api_base": "https://api.github.com"' "$ROOT_DIR/api/config/api.json" \
   || fail "canonical API config does not declare the public GitHub API origin"
 
-grep -Fq 'runtime.setdefault("github", {}).setdefault("api_base", "https://api.github.com")' "$DEPLOY_SCRIPT" \
+grep -Fq 'if not isinstance(github, dict):' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not normalize null GitHub runtime configuration"
+
+grep -Fq 'if not isinstance(api_base, str) or not api_base.strip():' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not repair missing, null, or blank GitHub API origins"
+
+grep -Fq 'github["api_base"] = "https://api.github.com"' "$DEPLOY_SCRIPT" \
   || fail "deploy script does not seed the native release-gate GitHub API origin"
 
 echo "hostinger form deploy path: PASS"

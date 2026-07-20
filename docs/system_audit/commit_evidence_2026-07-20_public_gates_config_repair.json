@@ -20,7 +20,7 @@
     "results": [
       "Hostinger deployment contract passed",
       "canonical API configuration contains the public GitHub API origin",
-      "deployment seeds only an absent runtime API origin and preserves overrides and credentials",
+      "deployment normalizes null GitHub configuration, repairs missing/null/blank API origins, and preserves non-empty overrides and credentials",
       "JSON and shell syntax checks passed"
     ]
   },
