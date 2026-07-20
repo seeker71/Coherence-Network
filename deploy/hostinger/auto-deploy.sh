@@ -501,11 +501,21 @@ fi
 # state is intentionally narrower: four root-owned host directories become
 # writable nested binds, so no code can rewrite config or unrelated host state.
 GROUNDING_STATE_ROOT="/root/.coherence-network/runtime"
+GROUNDING_TARGET_ROOT="/root/.coherence-network"
 install -d -m 0700 \
   "$GROUNDING_STATE_ROOT/rag-index" \
   "$GROUNDING_STATE_ROOT/rag-requests" \
   "$GROUNDING_STATE_ROOT/attestation" \
   "$GROUNDING_STATE_ROOT/api-queries"
+# The compose service also bind-mounts GROUNDING_TARGET_ROOT read-only. That
+# parent mount hides the image's pre-created directories, so runc can only
+# attach the four narrower writable binds when their target directories exist
+# in the host parent before container creation.
+install -d -m 0700 \
+  "$GROUNDING_TARGET_ROOT/rag-index" \
+  "$GROUNDING_TARGET_ROOT/rag-requests" \
+  "$GROUNDING_TARGET_ROOT/attestation" \
+  "$GROUNDING_TARGET_ROOT/api-queries"
 chown -R root:root "$GROUNDING_STATE_ROOT"
 
 # The image itself carries immutable parent/form source labels.  Compose must

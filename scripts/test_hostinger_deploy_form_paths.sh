@@ -634,6 +634,10 @@ grep -Fq '/root/.coherence-network/rag-index' "$ROOT_DIR/Dockerfile.api" \
 for state_dir in rag-index rag-requests attestation api-queries; do
   grep -Fq "/root/.coherence-network/$state_dir" "$ROOT_DIR/Dockerfile.api" \
     || fail "API image does not pre-create grounding mountpoint: $state_dir"
+  grep -Fq 'GROUNDING_TARGET_ROOT="/root/.coherence-network"' "$DEPLOY_SCRIPT" \
+    || fail "deploy script does not declare the host grounding target root"
+  grep -Fq '"$GROUNDING_TARGET_ROOT/'"$state_dir"'"' "$DEPLOY_SCRIPT" \
+    || fail "deploy script does not pre-create host grounding target: $state_dir"
 done
 
 echo "hostinger form deploy path: PASS"
