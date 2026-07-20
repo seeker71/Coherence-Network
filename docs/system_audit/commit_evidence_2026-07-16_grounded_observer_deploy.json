@@ -58,6 +58,7 @@
       "cd api && pytest -q --ignore=tests/holdout",
       "cd api && COHERENCE_TEST_SUITE=full pytest -q",
       "bash scripts/ensure_form_cli_native.sh --print-path && python3 -m pytest api/tests/test_form_cli_grounding_runtime.py::test_native_observer_uses_receipted_host_carrier_outside_submodule api/tests/test_kernel_inline_latency.py::TestFkwuExecutionAuthority::test_health_reports_fkwu -q",
+      "cd api && python3 -m pytest -q tests/test_form_cli_grounding_runtime.py::test_native_observer_uses_receipted_host_carrier_outside_submodule tests/test_kernel_inline_latency.py",
       "./scripts/verify_worktree_local_web.sh --start",
       "cd api && ruff check <changed Python files>",
       "bash scripts/test_hostinger_deploy_form_paths.sh",
@@ -68,12 +69,12 @@
       "bash -n deploy/hostinger/auto-deploy.sh scripts/fkwu_run.sh bin/form-cli",
       "git diff --check"
     ],
-    "notes": "Direct fkwu returned 42, recursive 55, and [1, 2.5, [3, 4]]. All 23 shared and 10 app-owned endpoint recipes executed directly. The utility/bridge band passed 108/108, the non-holdout default passed 403/403, and the exact CI full-suite mode passed 2002/2002. Local native-runtime observation verified runtime=fkwu, execution_authority=c-bootstrap-fkwu, result=42, and a content-addressed fkwu binary. The local web/API contract built all 113 pages, passed 86 interface comparisons, and returned no curated failures. Docker execution is the sole local infrastructure gap: no daemon exists at /Users/ursmuff/.docker/run/docker.sock; CI and Hostinger perform the image build."
+    "notes": "Direct fkwu returned 42, recursive 55, and [1, 2.5, [3, 4]]. All 23 shared and 10 app-owned endpoint recipes executed directly. The utility/bridge band passed 108/108, the non-holdout default passed 403/403, and the exact CI full-suite mode passed 2002/2002. The Linux digest-authority regression is covered alongside the runtime health band: 4/4 focused tests pass, and the non-holdout API suite passes 403/403. Local native-runtime observation verified runtime=fkwu, execution_authority=c-bootstrap-fkwu, result=42, and a content-addressed fkwu binary. The local web/API contract built all 113 pages, passed 86 interface comparisons, and returned no curated failures. Docker execution is the sole local infrastructure gap: no daemon exists at /Users/ursmuff/.docker/run/docker.sock; CI and Hostinger perform the image build."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "notes": "Exact-head Windows Host Floor passed all fkwu floor, field-relay, FNRI, JIT, model-composition, and packaging checks (run 29470000048). Linux Thread Gates independently passed the fkwu authority build and sibling primitive band. Its full suite exposed that the native observer hashed the submodule convenience form-cli rather than the receipted Linux carrier selected outside the submodule; the observer now validates and follows the source-stamped selected-carrier receipt, including cache-bound path and digest checks. The exact regression band passes 2/2 locally. Two unrelated load-sensitive timing assertions also missed their legacy ceilings on that runner and will be judged by the exact-head rerun. Review also exposed that manual dispatch uses inputs.sha while the immutable OIDC observer is intentionally bound to github.sha; the observer job is now limited to its accepted protected-main push and schedule identities, so a manual rollback cannot mint a witness for the wrong commit."
+    "notes": "Exact-head Windows Host Floor passed all fkwu floor, field-relay, FNRI, JIT, model-composition, and packaging checks (run 29470000048). Linux Thread Gates independently passed the fkwu authority build and sibling primitive band. Its full suite exposed that the observer selected the receipted Linux carrier but still searched for a nonexistent committed Linux binary as digest authority. The observer now uses the already schema- and digest-validated selection receipt as digest authority before considering optional committed platform carriers. The focused runtime band passes 4/4 and the non-holdout API suite passes 403/403 locally; exact-head CI rerun remains pending. Review also exposed that manual dispatch uses inputs.sha while the immutable OIDC observer is intentionally bound to github.sha; the observer job is limited to its accepted protected-main push and schedule identities, so a manual rollback cannot mint a witness for the wrong commit."
   },
   "deploy_validation": {
     "status": "pending",

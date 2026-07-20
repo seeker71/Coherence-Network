@@ -692,6 +692,10 @@ def test_native_observer_uses_receipted_host_carrier_outside_submodule(tmp_path)
     )
 
     assert native_runtime_observation._selected_form_cli_binary(root) == carrier
+    assert native_runtime_observation._expected_form_cli_digest(root) == (
+        binary_sha,
+        str(root / ".cache" / "form-cli-native" / "selected.json"),
+    )
 
     escaped = root / "outside-form-cli"
     escaped.write_bytes(carrier.read_bytes())

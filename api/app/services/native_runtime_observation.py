@@ -61,6 +61,24 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
         if not _HEX64.fullmatch(expected):
             raise NativeRuntimeObservationError("form-cli digest manifest malformed")
         return expected, str(manifest)
+    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
+    if receipt_path.is_file():
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier receipt malformed"
+            ) from exc
+        expected = receipt.get("binary_sha256")
+        if receipt.get("schema") != "selected-form-cli-carrier-v1":
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier receipt schema mismatch"
+            )
+        if not isinstance(expected, str) or not _HEX64.fullmatch(expected):
+            raise NativeRuntimeObservationError(
+                "selected form-cli carrier digest malformed"
+            )
+        return expected, str(receipt_path)
     system = platform.system().lower()
     machine = platform.machine().lower()
     machine = {"aarch64": "arm64", "amd64": "x86_64"}.get(machine, machine)
