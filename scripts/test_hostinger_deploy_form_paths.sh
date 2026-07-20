@@ -496,6 +496,9 @@ grep -Fq 'API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.pa
 [[ "$(grep -c 'bash scripts/ensure_form_cli_native.sh' "$DEPLOY_SCRIPT")" -ge 3 ]] \
   || fail "deploy heal paths do not materialize the native carrier receipt before RAG verification"
 
+grep -Fq 'COPY form/scripts/ ./form/scripts/' "$ROOT_DIR/Dockerfile.api" \
+  || fail "API runtime image does not carry the pinned native carrier identity proof scripts"
+
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
 
