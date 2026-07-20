@@ -36,7 +36,10 @@ import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-API_ROOT = os.path.join(ROOT, "api")
+# Source worktrees keep the package at ROOT/api/app; the production API image
+# flattens api/ into /app, so copied deployment scripts see ROOT/app instead.
+# Select the package-bearing root explicitly in either layout.
+API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.path.join(ROOT, "api")
 if API_ROOT not in sys.path:
     sys.path.insert(0, API_ROOT)
 
