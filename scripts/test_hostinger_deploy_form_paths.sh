@@ -174,6 +174,13 @@ grep -Fxq 'form/form-stdlib/form-ontology.json' <<<"$expanded_paths" \
 [[ "$(services_to_rebuild "$SUPER_V1" "$SUPER_V2")" == "api" ]] \
   || fail "an exact form gitlink bump does not route to an API rebuild"
 
+printf '%s\n' 'CMD ["node", "web/server.js"]' >"$SUPER_REPO/Dockerfile.web"
+git -C "$SUPER_REPO" add Dockerfile.web
+git -C "$SUPER_REPO" commit -qm 'repair web standalone entrypoint'
+SUPER_V3="$(git -C "$SUPER_REPO" rev-parse HEAD)"
+[[ "$(services_to_rebuild "$SUPER_V2" "$SUPER_V3")" == "web" ]] \
+  || fail "a root Dockerfile.web change does not route to a web rebuild"
+
 DOCKER_CALLS="$ROUTING_FIXTURE/docker.calls"
 LOG_FILE="$ROUTING_FIXTURE/deploy.log"
 DIFF_BASE="$SUPER_V1"
