@@ -650,6 +650,12 @@ done
 grep -Fq 'CMD ["node", "web/server.js"]' "$ROOT_DIR/Dockerfile.web" \
   || fail "web image does not launch the repository-rooted Next standalone server"
 
+grep -Fq 'COPY --from=builder /src/web/.next/static ./web/.next/static' "$ROOT_DIR/Dockerfile.web" \
+  || fail "web image does not carry Next static assets beside the repository-rooted standalone server"
+
+grep -Fq 'COPY --from=builder /src/web/public ./web/public' "$ROOT_DIR/Dockerfile.web" \
+  || fail "web image does not carry public assets beside the repository-rooted standalone server"
+
 grep -Fq '"api_base": "https://api.github.com"' "$ROOT_DIR/api/config/api.json" \
   || fail "canonical API config does not declare the public GitHub API origin"
 
