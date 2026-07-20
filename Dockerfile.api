@@ -239,6 +239,16 @@ COPY specs/ ./specs/
 COPY ideas/ ./ideas/
 COPY docs/ ./docs/
 
+# Production runs this image with a read-only root filesystem and overlays
+# four narrow writable grounding-state bind mounts. Docker cannot create a
+# missing bind target inside a read-only rootfs during container startup, so
+# keep the mountpoints in the immutable image itself.
+RUN install -d -m 0700 \
+      /root/.coherence-network/rag-index \
+      /root/.coherence-network/rag-requests \
+      /root/.coherence-network/attestation \
+      /root/.coherence-network/api-queries
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

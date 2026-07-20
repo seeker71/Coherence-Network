@@ -111,6 +111,7 @@ jobs:
 
       - name: Record collective review status (PRs, non-blocking)
         if: ${{ github.event_name == 'pull_request' }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

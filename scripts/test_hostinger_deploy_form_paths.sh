@@ -628,4 +628,12 @@ if awk '/^is_static_only_change\(\)/,/^}/ { print }' "$DEPLOY_SCRIPT" | grep -Fq
   fail "form/* is still treated as static-only"
 fi
 
+grep -Fq '/root/.coherence-network/rag-index' "$ROOT_DIR/Dockerfile.api" \
+  || fail "API image does not pre-create the writable RAG index mountpoint"
+
+for state_dir in rag-index rag-requests attestation api-queries; do
+  grep -Fq "/root/.coherence-network/$state_dir" "$ROOT_DIR/Dockerfile.api" \
+    || fail "API image does not pre-create grounding mountpoint: $state_dir"
+done
+
 echo "hostinger form deploy path: PASS"
