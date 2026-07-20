@@ -443,6 +443,10 @@ runtime["deployed_sha"] = sha
 runtime.setdefault("web", {})["deployed_sha"] = sha
 runtime["web"]["updated_at"] = sha
 runtime.setdefault("deployment_observer", {})["enabled"] = True
+# The native release-gate route reads only the production runtime config.
+# Seed the public GitHub API origin while preserving any operator-provided
+# override and all credential fields already held in that file.
+runtime.setdefault("github", {}).setdefault("api_base", "https://api.github.com")
 runtime_tmp = runtime_path.with_name(f".{runtime_path.name}.{os.getpid()}.tmp")
 fd = os.open(runtime_tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 try:

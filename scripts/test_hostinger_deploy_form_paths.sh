@@ -650,4 +650,10 @@ done
 grep -Fq 'CMD ["node", "web/server.js"]' "$ROOT_DIR/Dockerfile.web" \
   || fail "web image does not launch the repository-rooted Next standalone server"
 
+grep -Fq '"api_base": "https://api.github.com"' "$ROOT_DIR/api/config/api.json" \
+  || fail "canonical API config does not declare the public GitHub API origin"
+
+grep -Fq 'runtime.setdefault("github", {}).setdefault("api_base", "https://api.github.com")' "$DEPLOY_SCRIPT" \
+  || fail "deploy script does not seed the native release-gate GitHub API origin"
+
 echo "hostinger form deploy path: PASS"
