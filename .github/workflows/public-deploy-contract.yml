@@ -8,11 +8,9 @@ on:
       - 'web/**'
       - 'deploy/hostinger/**'
       - 'deploy/front-door/**'
-      - 'deploy/kernel-router/**'
       - 'Dockerfile*'
       - 'docker-compose*.yml'
       - 'scripts/verify_web_api_deploy.sh'
-      - 'scripts/verify_kernel_canary_public_gate.sh'
       - '.github/workflows/**'
   schedule:
     - cron: "17 6 * * *"  # daily (was twice daily)

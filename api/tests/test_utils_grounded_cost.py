@@ -52,7 +52,7 @@ class TestGroundedCostEndpoint:
         assert data["spec_count_in"] == 2
         assert data["commit_count_in"] == 1
         assert data["lineage_count_in"] == 2
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_distinct_records_match_parity_reference(self, client: AsyncClient):

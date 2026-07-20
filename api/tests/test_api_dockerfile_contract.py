@@ -48,26 +48,15 @@ def _dependency_name(value: str) -> str:
     return match.group(1).lower().replace("_", "-")
 
 
-def test_api_kernel_builder_rust_toolchain_supports_locked_edition2024_crates() -> None:
+def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
-    lockfile = (REPO_ROOT / "form" / "form-kernel-rust" / "Cargo.lock").read_text(
-        encoding="utf-8"
-    )
 
-    assert 'name = "idna_adapter"' in lockfile
-    assert 'version = "1.2.2"' in lockfile
-
-    match = re.search(
-        r"^FROM rust:(?P<major>\d+)\.(?P<minor>\d+)-slim-bookworm"
-        r"@sha256:(?P<digest>[0-9a-f]{64}) AS kernel-builder$",
-        dockerfile,
-        re.MULTILINE,
-    )
-    assert match is not None
-
-    toolchain = (int(match.group("major")), int(match.group("minor")))
-    assert toolchain >= (1, 86)
-    assert len(match.group("digest")) == 64
+    assert "COPY form/runtime /build/runtime" in dockerfile
+    assert "cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c" in dockerfile
+    assert "COPY --from=kernel-builder /build/fkwu /app/form/fkwu" in dockerfile
+    assert "COPY form/runtime /app/form/runtime" in dockerfile
+    assert "cargo build" not in dockerfile
+    assert "form-kernel-rust" not in dockerfile
 
 
 def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
@@ -140,20 +129,11 @@ def test_dockerfile_copies_app_endpoint_recipes_with_api_tree() -> None:
         assert (REPO_ROOT / _APP_RECIPE_DIR_REL / name).is_file()
 
 
-def test_dockerfile_copies_endpoint_recipes_to_recipe_dir() -> None:
-    """Dockerfile.api copies the four recipes and points FORM_RECIPE_DIR there.
-
-    The bridge resolves bare recipe names against FORM_RECIPE_DIR (when set).
-    This asserts (a) every endpoint .fk is COPY'd into the image, and (b) the
-    COPY destination matches the FORM_RECIPE_DIR env exactly — so load_recipe
-    resolves on disk in the container and the kernel actually serves.
-    """
+def test_dockerfile_copies_endpoint_recipes_to_file_backed_recipe_dir() -> None:
+    """The image carries every direct-source recipe at the bridge's fixed path."""
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
 
-    env_match = re.search(r"FORM_RECIPE_DIR=(\S+)", dockerfile)
-    assert env_match is not None, "Dockerfile.api must set FORM_RECIPE_DIR"
-    recipe_dir = env_match.group(1).rstrip("/")
-    assert recipe_dir == f"/app/{_RECIPE_DIR_REL}", recipe_dir
+    assert "FORM_RECIPE_DIR" not in dockerfile
 
     # Every endpoint recipe is named as a COPY source.
     for name in _ENDPOINT_RECIPES:
@@ -161,7 +141,7 @@ def test_dockerfile_copies_endpoint_recipes_to_recipe_dir() -> None:
             f"Dockerfile.api must COPY {name} into the image"
         )
 
-    # The COPY destination directory matches FORM_RECIPE_DIR (image path).
+    # The COPY destination is the explicit file-backed image path used by the bridge.
     assert f"./{_RECIPE_DIR_REL}/" in dockerfile, (
         "Dockerfile.api COPY destination must be the recipe dir under /app"
     )

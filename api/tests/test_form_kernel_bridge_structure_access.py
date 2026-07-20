@@ -6,13 +6,9 @@ of it, rather than receiving the inputs pre-flattened into separate scalars.
 This is the capability the kernels/API_KERNEL_READINESS.md doc names as the
 gate behind the bulk of remaining transmutation candidates.
 
-The marshalling seam lives in two places that must agree:
-  - ``_fk_literal`` renders a Python dict as a ``(record_new <blueprint> "k" v
-    ...)`` literal — the subprocess path (and the inline-with-parse path).
-  - lib.rs ``py_to_value`` builds a ``Value::Record`` from a Python dict — the
-    inline (Preloader) path. (Exercised in production; this dev env runs the
-    subprocess path, so the assertion here covers the literal seam and the
-    end-to-end read.)
+The marshalling seam is ``_fk_literal``: it renders a Python dict as the direct
+first-order Form value ``(list "__dict__" "k" v ...)`` consumed by fkwu. There
+is no alternate inline/Preloader representation in the production path.
 
 The recipe reads each field via the ``_get`` native (the python-bmf SUBSCRIPT
 lowering), which now reads Record fields. The route is
@@ -20,8 +16,6 @@ lowering), which now reads Record fields. The route is
 the parity_suite gate, and the bridge marshalling is what these tests cover.
 """
 from __future__ import annotations
-
-import os
 
 import pytest
 
@@ -73,18 +67,18 @@ def _marginal_from_idea_py(idea: dict) -> float:
 
 
 class TestFkLiteralRecord:
-    """_fk_literal marshals a dict onto a record_new literal."""
+    """_fk_literal marshals a dict onto fkwu's first-order dict value."""
 
-    def test_dict_renders_as_record_new(self):
+    def test_dict_renders_as_first_order_value(self):
         lit = _fk_literal({"potential_value": 8.0, "count": 7, "tag": "alive"})
-        assert lit.startswith('(record_new (make_nodeid 1 5 4 1) ')
+        assert lit.startswith('(list "__dict__" ')
         assert '"potential_value" 8.0' in lit
         assert '"count" 7' in lit
         assert '"tag" "alive"' in lit
         assert lit.endswith(")")
 
-    def test_empty_dict_renders_as_bare_record(self):
-        assert _fk_literal({}) == "(record_new (make_nodeid 1 5 4 1))"
+    def test_empty_dict_renders_as_tagged_empty_value(self):
+        assert _fk_literal({}) == '(list "__dict__")'
 
     def test_nested_list_value_in_record(self):
         lit = _fk_literal({"weights": [1.0, 2.0]})
@@ -128,7 +122,7 @@ class TestModelToRecordNormalization:
         assert _as_field_dict("text") is None
         assert _as_field_dict([1, 2]) is None
 
-    def test_model_renders_as_record_new(self):
+    def test_model_renders_as_first_order_value(self):
         from pydantic import BaseModel
 
         class Spec(BaseModel):
@@ -136,7 +130,7 @@ class TestModelToRecordNormalization:
             actual_value: float
 
         lit = _fk_literal(Spec(event_count=3, actual_value=1.5))
-        assert lit.startswith("(record_new (make_nodeid 1 5 4 1) ")
+        assert lit.startswith('(list "__dict__" ')
         assert '"event_count" 3' in lit
         assert '"actual_value" 1.5' in lit
 
@@ -155,8 +149,8 @@ class TestListOfRecordMarshalling:
             {"event_count": 0, "actual_value": 0.0},
         ]
         lit = _fk_literal(specs)
-        assert lit.startswith("(list (record_new ")
-        assert lit.count("record_new") == 2
+        assert lit.startswith('(list (list "__dict__" ')
+        assert lit.count('"__dict__"') == 2
         assert '"event_count" 3' in lit
         assert '"event_count" 0' in lit
 
@@ -205,8 +199,8 @@ class TestListOfRecordReductionEndToEnd:
     """A list[record] binding flows into a recipe that folds a field and returns a list."""
 
     @pytest.mark.skipif(
-        not kernel_available() and not os.environ.get("FORM_KERNEL_RUST_BIN"),
-        reason="form-kernel-rust binary not available; list-of-record reduction needs the kernel",
+        not kernel_available(),
+        reason="fkwu source/binary not available; list-of-record reduction needs the kernel",
     )
     @pytest.mark.parametrize(
         "specs,expected",
@@ -237,13 +231,13 @@ class TestListOfRecordReductionEndToEnd:
             bindings={"specs": specs},
             parse=_coerce_int_list,
         )
-        assert runtime in ("inline", "subprocess")
+        assert runtime == "fkwu"
         assert value == expected
         assert value == _grounding_summary_py(specs)
 
     @pytest.mark.skipif(
-        not kernel_available() and not os.environ.get("FORM_KERNEL_RUST_BIN"),
-        reason="form-kernel-rust binary not available; list-of-model reduction needs the kernel",
+        not kernel_available(),
+        reason="fkwu source/binary not available; list-of-model reduction needs the kernel",
     )
     def test_list_of_models_reduction_matches_dicts(self):
         """A list of Pydantic models reduces to the same result as a list of dicts."""
@@ -262,7 +256,7 @@ class TestListOfRecordReductionEndToEnd:
             bindings={"specs": models},
             parse=_coerce_int_list,
         )
-        assert runtime in ("inline", "subprocess")
+        assert runtime == "fkwu"
         assert value == [2, 10, 2, 7]
 
 
@@ -270,8 +264,8 @@ class TestStructureAccessEndToEnd:
     """A dict binding flows into a recipe that reads fields and returns a scalar."""
 
     @pytest.mark.skipif(
-        not kernel_available() and not os.environ.get("FORM_KERNEL_RUST_BIN"),
-        reason="form-kernel-rust binary not available; structure-access read needs the kernel",
+        not kernel_available(),
+        reason="fkwu source/binary not available; structure-access read needs the kernel",
     )
     def test_record_binding_read_matches_python(self):
         """dict -> record binding -> recipe reads fields via _get -> scalar == python."""
@@ -288,7 +282,7 @@ class TestStructureAccessEndToEnd:
             bindings={"idea": idea},
             parse=float,
         )
-        assert runtime in ("inline", "subprocess")
+        assert runtime == "fkwu"
         assert abs(value - _marginal_from_idea_py(idea)) < 1e-12
         assert value == 0.8
 

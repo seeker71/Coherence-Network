@@ -51,7 +51,7 @@ class TestShannonEntropyEndpoint:
         data = res.json()
         assert data["entropy"] == 1.0
         assert data["gas"] == 1 and data["water"] == 1 and data["ice"] == 1
-        assert data["runtime"] in ("inline", "subprocess")
+        assert data["runtime"] == "fkwu"
 
     @pytest.mark.anyio
     async def test_single_phase_is_log_of_zero_guarded(self, client: AsyncClient):

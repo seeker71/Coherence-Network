@@ -9,10 +9,8 @@ on:
       - 'pulse/**'
       - 'deploy/hostinger/**'
       - 'deploy/front-door/**'
-      - 'deploy/kernel-router/**'
       - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
-      - 'scripts/verify_kernel_canary_public_gate.sh'
       - 'scripts/form_cli_rag.py'
       - 'scripts/ensure_form_cli_native.sh'
       - 'scripts/form_first_offline_setup.sh'
@@ -26,7 +24,6 @@ on:
       - 'bin/form-cli.sha256'
       - 'form'
       - 'form/form-stdlib/**'
-      - 'form/form-kernel-rust/**'
       - 'kernels/python_bmf/**'
   schedule:
     # Refresh the full independent observation well inside its 24-hour TTL.
@@ -180,6 +177,15 @@ jobs:
             attempt=$((attempt + 1))
           done
 
-      - name: Verify kernel public canary
-        run: |
-          ./scripts/verify_kernel_canary_public_gate.sh "${PUBLIC_DEPLOY_API_BASE}"
+  observe-public-deployment:
+    # The OIDC observer deliberately accepts only protected-main push and
+    # scheduled identities. A manual rollback/deploy uses inputs.sha and must
+    # not mint a witness for github.sha or weaken that identity policy.
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    needs: deploy-hostinger
+    permissions:
+      contents: none
+      id-token: write
+    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@64b62db38db2c7cfd85e4f6a4d87eb20282df6a9
+    secrets:
+      hostinger_ssh_key: ${{ secrets.HOSTINGER_SSH_KEY }}
