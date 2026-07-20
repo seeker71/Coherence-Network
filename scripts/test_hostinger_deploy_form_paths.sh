@@ -493,6 +493,9 @@ grep -Fq 'curl -fsS --max-time 30 -D /tmp/promoted-' "$DEPLOY_SCRIPT" \
 grep -Fq 'API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.path.join(ROOT, "api")' "$ROOT_DIR/scripts/form_cli_rag.py" \
   || fail "RAG carrier does not resolve both flattened image and repository API package layouts"
 
+[[ "$(grep -c 'bash scripts/ensure_form_cli_native.sh' "$DEPLOY_SCRIPT")" -ge 3 ]] \
+  || fail "deploy heal paths do not materialize the native carrier receipt before RAG verification"
+
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
 
