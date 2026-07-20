@@ -83,6 +83,7 @@ bootstrap_and_verify_local_grounding() {
           rm -f "$probe"
         done
         python3 scripts/coh_substrate.py bootstrap
+        bash scripts/ensure_form_cli_native.sh
         python3 scripts/form_cli_rag.py heal
         out="$(mktemp)"
         err="$(mktemp)"
@@ -1131,7 +1132,7 @@ run_substrate_ingest() {
     # partial "ready" body.
     run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-3600}" \
       docker compose exec -T api sh -lc \
-        'cd /app && python3 scripts/coh_substrate.py bootstrap && python3 scripts/form_cli_rag.py heal' \
+        'cd /app && python3 scripts/coh_substrate.py bootstrap && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
       2>&1 | tee -a "$LOG_FILE"
     local rc=$?
     set -e
@@ -1195,7 +1196,7 @@ run_substrate_ingest() {
       <<< "$changed"; then
     run_with_timeout "${SUBSTRATE_RAG_HEAL_TIMEOUT_SECONDS:-300}" \
       docker compose exec -T api sh -lc \
-        'cd /app && python3 scripts/form_cli_rag.py heal' \
+        'cd /app && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
       2>&1 | tee -a "$LOG_FILE"
     rc=$?
   fi

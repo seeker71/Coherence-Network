@@ -44,6 +44,13 @@ if [ -e "$FORM_DIR/form-cli.sha256" ]; then
 fi
 LOG="$FORM_DIR/form-stdlib/.cache/form-cli-native-build.log"
 RECEIPT="$ROOT/.cache/form-cli-native/selected.json"
+# Production runs with /app read-only and exposes the attestation directory as
+# writable state. Source worktrees retain the repository-local cache fallback.
+ATTESTATION_DIR="$(cd ~ && pwd)/.coherence-network/attestation"
+if [ -d "$ATTESTATION_DIR" ]; then
+  LOG="$ATTESTATION_DIR/form-cli-native-build.log"
+  RECEIPT="$ATTESTATION_DIR/selected-form-cli-carrier.json"
+fi
 
 mkdir -p "$(dirname "$LOG")" "$TARGET_DIR"
 
