@@ -56,7 +56,12 @@ NATIVE_EMBED_REQUEST_MAX_BYTES = 4 * 1024 * 1024
 # short cells cannot exhaust the carrier while assembling its response.
 NATIVE_EMBED_REQUEST_MAX_ITEMS = 128
 NATIVE_EMBED_TEXT_MAX_BYTES = 600
-NATIVE_CARRIER_RECEIPT = Path(ROOT) / ".cache" / "form-cli-native" / "selected.json"
+_ATTESTATION_DIR = Path.home() / ".coherence-network" / "attestation"
+NATIVE_CARRIER_RECEIPT = (
+    _ATTESTATION_DIR / "selected-form-cli-carrier.json"
+    if _ATTESTATION_DIR.is_dir()
+    else Path(ROOT) / ".cache" / "form-cli-native" / "selected.json"
+)
 NATIVE_SOURCE_DIGEST_FILE = (
     Path(ROOT) / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
 )

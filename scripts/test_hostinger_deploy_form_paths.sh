@@ -499,6 +499,12 @@ grep -Fq 'API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.pa
 grep -Fq 'COPY form/scripts/ ./form/scripts/' "$ROOT_DIR/Dockerfile.api" \
   || fail "API runtime image does not carry the pinned native carrier identity proof scripts"
 
+grep -Fq 'RECEIPT="$ATTESTATION_DIR/selected-form-cli-carrier.json"' "$ROOT_DIR/scripts/ensure_form_cli_native.sh" \
+  || fail "native carrier selection does not write its receipt to the writable attestation mount"
+
+grep -Fq '_ATTESTATION_DIR / "selected-form-cli-carrier.json"' "$ROOT_DIR/scripts/form_cli_rag.py" \
+  || fail "RAG verification does not read the native carrier receipt from the writable attestation mount"
+
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
 
