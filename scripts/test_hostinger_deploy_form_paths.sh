@@ -490,6 +490,9 @@ grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
 grep -Fq 'curl -fsS --max-time 30 -D /tmp/promoted-' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not bound promoted BML read route curl probes"
 
+grep -Fq 'API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.path.join(ROOT, "api")' "$ROOT_DIR/scripts/form_cli_rag.py" \
+  || fail "RAG carrier does not resolve both flattened image and repository API package layouts"
+
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
 
