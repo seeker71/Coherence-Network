@@ -640,4 +640,7 @@ for state_dir in rag-index rag-requests attestation api-queries; do
     || fail "deploy script does not pre-create host grounding target: $state_dir"
 done
 
+grep -Fq 'CMD ["node", "web/server.js"]' "$ROOT_DIR/Dockerfile.web" \
+  || fail "web image does not launch the repository-rooted Next standalone server"
+
 echo "hostinger form deploy path: PASS"
