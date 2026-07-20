@@ -4,6 +4,7 @@
   "commit_scope": "Restore the public web and API deployment by pre-creating the four writable grounding-state bind targets required by the read-only API container root filesystem.",
   "files_owned": [
     "Dockerfile.api",
+    ".github/workflows/thread-gates.yml",
     "scripts/test_hostinger_deploy_form_paths.sh",
     "docs/system_audit/commit_evidence_2026-07-20_web_api_container_mount_repair.json",
     "docs/system_audit/model_executor_runs.jsonl"
@@ -14,11 +15,13 @@
       "make prompt-guide",
       "make wellness",
       "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_workflow_references.py",
       "git diff --check"
     ],
     "results": [
       "startup and wellness sensing completed",
       "Hostinger deployment contract passed, including all four immutable image mountpoints",
+      "the collective-review advisory is now genuinely non-blocking when GitHub's reviews API is unavailable",
       "diff whitespace check passed",
       "local Docker image build was unavailable because the desktop Docker daemon was not running; GitHub deployment performs the authoritative image build"
     ]
@@ -62,11 +65,13 @@
   "evidence_refs": [
     "https://github.com/seeker71/Coherence-Network/actions/runs/29703726621",
     "Dockerfile.api",
+    ".github/workflows/thread-gates.yml",
     "deploy/hostinger/auto-deploy.sh",
     "scripts/test_hostinger_deploy_form_paths.sh"
   ],
   "change_files": [
     "Dockerfile.api",
+    ".github/workflows/thread-gates.yml",
     "scripts/test_hostinger_deploy_form_paths.sh",
     "docs/system_audit/commit_evidence_2026-07-20_web_api_container_mount_repair.json",
     "docs/system_audit/model_executor_runs.jsonl"
