@@ -714,6 +714,8 @@ services_to_rebuild() {
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
     case "$path" in
+      Dockerfile.api)   need_api=1 ;;
+      Dockerfile.web)   need_web=1 ;;
       api/*)           need_api=1 ;;
       web/*)           need_web=1 ;;
       pulse/*)         need_pulse=1 ;;

@@ -41,4 +41,4 @@ COPY --from=builder /src/api/config ./api/config
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "web/server.js"]
