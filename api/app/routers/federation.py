@@ -874,15 +874,19 @@ async def send_message(node_id: str, body: NodeMessage):
     return msg
 
 
-@router.get("/federation/nodes/{node_id}/messages", summary="Get messages for this node (direct + broadcasts). Marks them as read")
+@router.get("/federation/nodes/{node_id}/messages", summary="Get messages for this node (direct + broadcasts)")
 async def get_messages(
     node_id: str,
     since: str | None = Query(None, description="ISO timestamp — only messages after this time"),
     unread_only: bool = Query(True, description="Only messages not yet read by this node"),
     limit: int = Query(50, ge=1, le=200),
     include_self: bool = Query(False, description="Include messages sent by this node"),
+    mark_read: bool = Query(
+        True,
+        description="Mark returned messages as read. Set false for non-consuming observation.",
+    ),
 ):
-    """Get messages for this node (direct + broadcasts). Marks them as read."""
+    """Get messages for this node; observation is consuming only when requested."""
     results = _query_messages(
         node_id,
         since=since,
@@ -891,9 +895,9 @@ async def get_messages(
         include_self=include_self,
     )
 
-    # Mark as read
-    msg_ids = {m["id"] for m in results}
-    _mark_messages_read(node_id, msg_ids)
+    if mark_read:
+        msg_ids = {m["id"] for m in results}
+        _mark_messages_read(node_id, msg_ids)
 
     return {"node_id": node_id, "messages": results, "count": len(results)}
 

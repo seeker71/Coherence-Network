@@ -25,7 +25,7 @@
 #   mesh_command_receiver.sh --dispatch <to> <text>   # local proof: send a signed command
 #
 # Config (env, all optional):
-#   MR_NODE_ID        this device's node id on the bus           (default sema-macos)
+#   MR_NODE_ID        this device's node id on the bus (default ~/.coherence-network/node_id, then sema-macos)
 #   MR_API_BASE       federation API base                        (default https://api.coherencycoin.com)
 #   MR_TRUSTED        comma list of lineage dispatcher node ids  (default claude-sema-cloud)
 #   MR_KEY_FILE       lineage signing key (mode 600)             (default ~/.coherence-network/mesh-lineage.key)
@@ -37,7 +37,10 @@ set -uo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 ROOT="${MR_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-NODE_ID="${MR_NODE_ID:-sema-macos}"
+NODE_ID_FILE="${MR_NODE_ID_FILE:-$HOME/.coherence-network/node_id}"
+FILE_NODE_ID=""
+[ -s "$NODE_ID_FILE" ] && IFS= read -r FILE_NODE_ID < "$NODE_ID_FILE"
+NODE_ID="${MR_NODE_ID:-${FILE_NODE_ID:-sema-macos}}"
 API_BASE="${MR_API_BASE:-https://api.coherencycoin.com}"
 TRUSTED="${MR_TRUSTED:-claude-sema-cloud}"
 KEY_FILE="${MR_KEY_FILE:-$HOME/.coherence-network/mesh-lineage.key}"
@@ -45,6 +48,9 @@ LISTEN_FILE="${MR_LISTEN_FILE:-$HOME/.coherence-network/mesh-receiver.listening}
 DEFAULT_MODE="${MR_DEFAULT_MODE:-default}"
 LOG="${MR_LOG:-$HOME/.coherence-network/mesh-receiver.log}"
 TIMEOUT="${MR_TIMEOUT:-900}"
+POLL_RETRIES="${MR_POLL_RETRIES:-4}"
+RETRY_SLEEP="${MR_RETRY_SLEEP:-2}"
+CURL="${MR_CURL:-curl}"
 CLAUDE="$HOME/.local/bin/claude"
 KERNEL="$ROOT/form/form-kernel-go/bin-go"
 RECIPE="$ROOT/form/form-stdlib/mesh-command.fk"
@@ -87,7 +93,7 @@ is_lineage() { case ",$TRUSTED," in *",$1,"*) return 0;; *) return 1;; esac; }
 post_body() {  # json_body
   local code i
   for i in 1 2 3 4; do
-    code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' -X POST \
+    code="$("$CURL" -sS --max-time 25 -o /dev/null -w '%{http_code}' -X POST \
             "$API_BASE/api/federation/nodes/$NODE_ID/messages" \
             -H 'content-type: application/json' -d "$1" 2>/dev/null)"
     case "$code" in 2*) return 0;; esac
@@ -158,12 +164,24 @@ resend() {
   log "RESEND delivered=$n"
 }
 
+# A brief API restart is a strained edge, not a terminal acknowledgement.
+# Retry the same non-mutating inbox read before recording one failed cycle.
+fetch_inbox() {
+  local attempt resp
+  for ((attempt=1; attempt<=POLL_RETRIES; attempt++)); do
+    resp="$("$CURL" -fsS --max-time 20 \
+      "$API_BASE/api/federation/nodes/$NODE_ID/messages?unread_only=true&limit=20" 2>/dev/null)"
+    if [ -n "$resp" ]; then printf '%s' "$resp"; return 0; fi
+    [ "$attempt" -lt "$POLL_RETRIES" ] && sleep $(( attempt * RETRY_SLEEP ))
+  done
+  return 1
+}
+
 cycle() {
   local resp rows mid frm to ty text pl is_cmd for_me trust route
-  resp="$(curl -sS --max-time 20 "$API_BASE/api/federation/nodes/$NODE_ID/messages?unread_only=true&limit=20" 2>/dev/null)"
-  [ -n "$resp" ] || { log "POLL  no response from bus"; return; }
+  resp="$(fetch_inbox)" || { log "POLL  no response from bus after $POLL_RETRIES attempts"; return; }
   rows="$(printf '%s' "$resp" | jq -c '.messages[]?' 2>/dev/null)"
-  [ -n "$rows" ] || return
+  [ -n "$rows" ] || return 0
   while IFS= read -r m; do
     [ -n "$m" ] || continue
     mid="$(printf '%s' "$m" | jq -r '.id')"
@@ -195,7 +213,7 @@ dispatch() {  # to_node text [from_node] [permission_mode]
   key="$(cat "$KEY_FILE" 2>/dev/null)"
   [ -n "$key" ] || { echo "no lineage key at $KEY_FILE" >&2; return 1; }
   sig="$(printf '%s\n%s' "$to" "$text" | openssl dgst -sha256 -hmac "$key" -hex 2>/dev/null | sed 's/^.*= *//')"
-  curl -sS --max-time 20 -X POST "$API_BASE/api/federation/nodes/$from/messages" \
+  "$CURL" -sS --max-time 20 -X POST "$API_BASE/api/federation/nodes/$from/messages" \
     -H 'content-type: application/json' \
     -d "$(jq -nc --arg fn "$from" --arg tn "$to" --arg tx "$text" --arg sig "$sig" --arg cap "$from" --arg md "$mode" \
           '{from_node:$fn,to_node:$tn,type:"command",text:$tx,payload:{sig:$sig,capture_to:$cap,permission_mode:$md}}')" \
@@ -208,5 +226,6 @@ case "${1:---once}" in
   --loop)     while true; do resend; cycle; sleep "${2:-60}"; done ;;
   --resend)   resend ;;
   --dispatch) shift; dispatch "$@" ;;
-  *) echo "usage: $0 [--once | --loop [secs] | --resend | --dispatch <to> <text> [from] [mode]]" >&2; exit 2 ;;
+  --identity) printf '%s\n' "$NODE_ID" ;;
+  *) echo "usage: $0 [--once | --loop [secs] | --resend | --dispatch <to> <text> [from] [mode] | --identity]" >&2; exit 2 ;;
 esac

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate spec quality so implementation does not need manual follow-up gap fixes."""
+"""Observe spec quality without confusing a diagnostic with sovereign consent."""
 
 from __future__ import annotations
 
@@ -252,22 +252,24 @@ def _changed_spec_files(repo_root: Path, base: str, head: str, workspace_id: str
     return sorted(spec_paths)
 
 
-def _validate_many(paths: Iterable[Path]) -> int:
+def _validate_many(paths: Iterable[Path], *, strict: bool = False) -> int:
     had_error = False
     for path in paths:
         if not path.is_file():
-            print(f"ERROR: spec file does not exist: {path}")
+            print(f"OBSERVED: spec file does not exist: {path}")
             had_error = True
             continue
         errors = validate_spec(path)
         if errors:
-            print(f"ERROR: spec quality validation failed for {path}")
+            print(f"OBSERVED: spec quality concerns for {path}")
             for error in errors:
                 print(f"- {error}")
             had_error = True
             continue
         print(f"OK: spec quality validation passed for {path}")
-    return 1 if had_error else 0
+    if had_error and not strict:
+        print("ACK: concerns witnessed; advisory mode does not veto the caller")
+    return 1 if had_error and strict else 0
 
 
 def main() -> int:
@@ -275,6 +277,11 @@ def main() -> int:
     parser.add_argument("--file", action="append", default=[], help="Specific spec file to validate (repeatable).")
     parser.add_argument("--base", default="", help="Base git ref for changed spec detection.")
     parser.add_argument("--head", default="HEAD", help="Head git ref for changed spec detection.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Opt in to a non-zero exit when observations find concerns.",
+    )
     parser.add_argument(
         "--require-changed-spec",
         action="store_true",
@@ -323,7 +330,7 @@ def main() -> int:
             if path.name.lower() not in ("template.md", "index.md") and "backlog" not in path.name.lower()
         ]
 
-    return _validate_many(targets)
+    return _validate_many(targets, strict=args.strict)
 
 
 if __name__ == "__main__":

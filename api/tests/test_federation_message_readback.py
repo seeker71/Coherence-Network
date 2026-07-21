@@ -86,3 +86,40 @@ async def test_federation_messages_include_self_only_when_requested() -> None:
         )
         assert loopback.status_code == 200, loopback.text
         assert any(row["id"] == msg_id and row["text"] == "loopback voice" for row in loopback.json()["messages"])
+
+
+@pytest.mark.asyncio
+async def test_federation_message_observation_can_be_non_consuming() -> None:
+    sender = _node_id()
+    receiver = _node_id()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        sent = await client.post(
+            f"/api/federation/nodes/{sender}/messages",
+            json={"from_node": sender, "to_node": receiver, "text": "observe without consuming"},
+        )
+        assert sent.status_code == 201, sent.text
+        msg_id = sent.json()["id"]
+
+        observed = await client.get(
+            f"/api/federation/nodes/{receiver}/messages",
+            params={"unread_only": "true", "mark_read": "false"},
+        )
+        assert msg_id in {row["id"] for row in observed.json()["messages"]}
+
+        still_unread = await client.get(
+            f"/api/federation/nodes/{receiver}/messages",
+            params={"unread_only": "true", "mark_read": "false"},
+        )
+        assert msg_id in {row["id"] for row in still_unread.json()["messages"]}
+
+        consumed = await client.get(
+            f"/api/federation/nodes/{receiver}/messages",
+            params={"unread_only": "true"},
+        )
+        assert msg_id in {row["id"] for row in consumed.json()["messages"]}
+
+        after = await client.get(
+            f"/api/federation/nodes/{receiver}/messages",
+            params={"unread_only": "true", "mark_read": "false"},
+        )
+        assert msg_id not in {row["id"] for row in after.json()["messages"]}
