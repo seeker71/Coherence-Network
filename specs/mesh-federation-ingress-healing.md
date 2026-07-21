@@ -35,16 +35,36 @@ without retry. Heal those seams in their existing homes.
 
 ## Requirements
 
-- [ ] **R1:** `GET /api/federation/nodes/{node_id}/messages` accepts
+- [x] **R1:** `GET /api/federation/nodes/{node_id}/messages` accepts
   `mark_read=false`; returned messages remain unread until a consuming read.
-- [ ] **R2:** Existing callers retain `mark_read=true` by default.
-- [ ] **R3:** The receiver resolves identity in this order: `MR_NODE_ID`, the
+- [x] **R2:** Existing callers retain `mark_read=true` by default.
+- [x] **R3:** The receiver resolves identity in this order: `MR_NODE_ID`, the
   first non-empty line of `~/.coherence-network/node_id`, then `sema-macos`.
-- [ ] **R4:** The installer uses the same identity order.
-- [ ] **R5:** Inbox polling retries transient empty/failed reads a bounded four
+- [x] **R4:** The installer uses the same identity order.
+- [x] **R5:** Inbox polling retries transient empty/failed reads a bounded four
   times before recording one strained-edge failure.
-- [ ] **R6:** `--identity` exposes the receiver's enacted identity without
+- [x] **R6:** `--identity` exposes the receiver's enacted identity without
   polling or executing work.
+
+## Current Floor — witnessed 2026-07-22
+
+- The transport healing above is merged and its focused suite passes: 9 tests.
+- `federation-graph-offer.fk` now composes the message and directed edge as
+  content-addressed native cells and acknowledges the offer with `node`.
+- The native graph band returns `1111` on `fkwu`; the CLI receipt band returns
+  `ack=node|message_node=content-addressed|edge_node=content-addressed|observed=1`.
+- A regenerated standalone macOS `form-cli` returns that same receipt directly.
+- This is not yet the standard sovereignty receipt: regeneration used the Rust
+  flatten witness and clang linked the emitted carrier; Windows and Android
+  traces and live network-carrier binding remain pending.
+
+## North Star
+
+Bind the existing network byte carrier directly to `federation-graph-offer` so
+Form owns message identity, edge identity, and `nothing | 0 | 1 | node` on both
+ends. Then earn macOS, Windows, and Android traces from the c-bootstrap
+`form-cli` path with no Python, Bash, Go, Rust, TypeScript, or clang in the
+receipt loop. Transport code carries bytes only; it never decides the graph.
 
 ## Files
 
@@ -88,9 +108,9 @@ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evid
 
 ## Gaps
 
-- Delivery and `read_by` remain transport observations, not application-level
-  acknowledgements. The `nothing | 0 | 1 | node` response belongs to the
-  recipient protocol and is not fabricated here.
+- Delivery and `read_by` remain transport observations. Native
+  `nothing | 0 | 1 | node` acknowledgement now exists and is witnessed locally,
+  but the public network carrier is not yet bound to it end-to-end.
 - Already-installed launch agents need one installer refresh to inherit the
   canonical NodeID. The source fix does not silently rewrite a running process.
 - Public deployment observation freshness is a separate deployment-witness
