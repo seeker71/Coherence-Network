@@ -1,6 +1,8 @@
-# Spec Quality Gate
+# Spec Quality Witness
 
-Purpose: prevent low-quality specs from reaching implementation, where they create manual follow-up fix requests.
+Purpose: surface spec-quality concerns for the cell making the change. The
+default is advisory: observations inform trust and do not override the cell's
+decision. Use `--strict` only when that caller explicitly chooses a veto.
 
 ## Core Rule
 
@@ -14,6 +16,12 @@ If a spec is being authored directly:
 
 ```bash
 python3 scripts/validate_spec_quality.py --file specs/<spec-file>.md
+```
+
+To opt in to enforcement for a bounded context:
+
+```bash
+python3 scripts/validate_spec_quality.py --strict --file specs/<spec-file>.md
 ```
 
 ## What The Gate Enforces
