@@ -1,0 +1,67 @@
+{
+  "date": "2026-07-22",
+  "thread_branch": "codex/mesh-federation-heal",
+  "commit_scope": "Re-ground the federation floor, pin the merged native Form graph offer and source-bound carrier, and update the north star to direct carrier binding plus platform receipts.",
+  "files_owned": [
+    "form",
+    "README.md",
+    "docs/coherence-substrate/standard-receipt.form",
+    "specs/mesh-federation-ingress-healing.md",
+    "docs/system_audit/commit_evidence_2026-07-22_native_federation_graph_floor.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "form/form-cli: federation-offer msg-reground mac android command e30=",
+      "form/form-cli: carrier-id",
+      "python3 -m pytest -q api/tests/test_federation_message_readback.py api/tests/test_mesh_command_receiver.py api/tests/test_spec_quality_advisory.py"
+    ],
+    "results": [
+      "prompt entry grounded 1551/1551 sources",
+      "standalone native form-cli returned ack=node with content-addressed message and edge",
+      "carrier-id source digest matched the merged bootstrap source digest",
+      "9 focused regression tests passed"
+    ]
+  },
+  "ci_validation": {"status": "pending", "reason": "Exact-head pull-request checks have not run yet."},
+  "deploy_validation": {"status": "pending", "reason": "Public carrier binding is the next movement and is not claimed here."},
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Federation graph identity and acknowledgement are native Form cells locally; the existing public byte carrier still needs direct binding on both ends.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/federation/nodes/{node_id}/messages"],
+    "test_flows": ["native message identity", "native directed edge identity", "nothing|0|1|node acknowledgement", "mac/windows/android carrier traces"]
+  },
+  "phase_gate": {"can_move_next_phase": false, "reason": "The local native graph floor and exact carrier identity are observed; CI, deployment, end-to-end carrier binding, and the standalone fsh front door remain pending."},
+  "idea_ids": ["federation-and-nodes", "mesh-federation-ingress-healing"],
+  "spec_ids": ["mesh-federation-ingress-healing", "fkwu-only-kernel-collapse"],
+  "task_ids": ["native-federation-graph-floor-20260722"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "frequency correction", "acceptance"]},
+    {"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["implementation", "regrounding", "validation", "lineage"]}
+  ],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-5"},
+  "evidence_refs": [
+    "coherence-kernel PR #354",
+    "coherence-kernel PR #356",
+    "form/form-stdlib/tests/federation-graph-offer-band.fk -> 1111 on fkwu",
+    "form/form-stdlib/tests/federation-graph-offer-cli-band.fk -> ack=node",
+    "form/form-stdlib/tests/form-freq-check-band.fk -> 65535 on fkwu",
+    "standalone macOS form-cli source digest 69b1f09ecb5c867ca057b7c01ed28e298b7550fef7efde10885919c239e3667c",
+    "Standalone fsh front door remains pending: the staged launcher emitted raw table values and was not accepted as a witness."
+  ],
+  "change_files": [
+    "form",
+    "README.md",
+    "docs/coherence-substrate/standard-receipt.form",
+    "specs/mesh-federation-ingress-healing.md",
+    "docs/system_audit/commit_evidence_2026-07-22_native_federation_graph_floor.json"
+  ],
+  "change_intent": "runtime_feature",
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI Codex with native Form carrier evidence",
+    "native_body_share": "Form owns content-addressed message and edge composition plus the node acknowledgement; standalone form-cli executes it.",
+    "rented_oracle_share": "The agent authored documentation and evidence; Git and validation tools remain host carriers.",
+    "trust_matrix": {"path": "merged kernel pin plus standalone native receipt", "grounded": true, "freq": true, "suffic": true, "observed": true}
+  }
+}

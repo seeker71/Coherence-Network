@@ -28,8 +28,16 @@
 ; four-way-in-CI is NOT the platform receipt; a Go-built form-cli is NOT c-bootstrap; bash-driven
 ; validate.sh is NOT toolchain-free. Each is a real rung below the bar, named as such.
 ;
-; ── HONEST FLOOR TODAY (2026-06-23) — nothing yet earns the full receipt ──
+; ── HONEST FLOOR TODAY (re-witnessed 2026-07-22) — nothing yet earns the full receipt ──
 ;
+;   - Federation graph engineering moved one rung: federation-graph-offer.fk
+;     composes a message plus directed edge as content-addressed cells and returns
+;     the axiom-5 NODE acknowledgement. The fkwu band returns 1111; its CLI band
+;     returns ack=node|message_node=content-addressed|edge_node=content-addressed|observed=1;
+;     and a standalone macOS form-cli returns the same receipt. This is a LOCAL
+;     native graph floor, not yet a network or standard receipt: the refreshed
+;     bootstrap table was flattened by the Rust proof sibling and linked by clang,
+;     and Windows/Android plus end-to-end carrier traces remain pending.
 ;   - Decision bodies (fr-route 127, fiv-verdict 511, fq-drain 127) cross FOUR-WAY incl. the fkwu arm,
 ;     AND lower to native binary. That is strong — but it is observed via validate.sh (bash) with the
 ;     Go/Rust/TS walkers present, on the build host, not on mac/windows/android devices.
@@ -52,6 +60,9 @@
 ; do, not a claim to make:
 ;
 ; ── THE ROAD TO EARNING IT (each step a real rung) ──
+;   0. Bind the federation byte carrier to federation-graph-offer on both ends;
+;      transport carries bytes while Form alone decides message/edge identity and
+;      the nothing|0|1|node acknowledgement.
 ;   1. fkwu form-cli emitted from the C bootstrap as the standard runner (retire Go-built form-cli for
 ;      the receipt path): form-asm -> {form-macho mac, form-pe-coff windows, form-elf android} -> fkwu.
 ;   2. a band/recipe run via THAT form-cli on the build host with NO go/rust/ts/clang/bash/python -> the
