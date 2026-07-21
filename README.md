@@ -219,6 +219,14 @@ first — the primitive set, the proof-band shape, the validate invocation, and 
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
 
+Federation graph floor, re-witnessed 2026-07-22: native `form-cli` now composes
+a federation message and directed edge as content-addressed Form cells and
+returns the axiom-5 `node` acknowledgement. The local macOS standalone receipt
+is observed; public carrier binding and c-bootstrap Windows/Android receipts
+remain pending. The next movement is not another transport schema: bind the
+existing byte carrier to this native cell on both ends, leaving transport to
+carry bytes and Form to decide graph identity and acknowledgement.
+
 Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
 runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
 run on the emitted universal kernel `fkwu`. Evidence can say "all kernels" only
