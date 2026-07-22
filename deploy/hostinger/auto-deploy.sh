@@ -1115,7 +1115,7 @@ run_substrate_ingest() {
   #     wrong SHA path)
   #   - git diff fails for any reason
   local from="$1" to="$2"
-  local started ended elapsed all_changed full_refresh_reason=""
+  local started ended elapsed all_changed full_refresh_reason="" old_form_sha new_form_sha
   started="$(date +%s)"
 
   if [[ -z "$from" || "$from" == "$to" ]]; then
@@ -1124,6 +1124,15 @@ run_substrate_ingest() {
     full_refresh_reason="changed-path comparison unavailable"
   elif grep -Fxq 'form/.gitlink-diff-unavailable' <<< "$all_changed"; then
     full_refresh_reason="form gitlink commits unavailable"
+  else
+    old_form_sha="$(git -C "$REPO_DIR" rev-parse "${from}:form" 2>/dev/null || true)"
+    new_form_sha="$(git -C "$REPO_DIR" rev-parse "${to}:form" 2>/dev/null || true)"
+    if [[ -n "$old_form_sha" && -n "$new_form_sha" && "$old_form_sha" != "$new_form_sha" ]]; then
+      # The persisted RAG binding includes the native Form source identity.
+      # Incremental ingest must not ask an old binding to interpret a new body;
+      # rebuild the complete grounded index first, then heal its carrier stamp.
+      full_refresh_reason="native Form source identity changed"
+    fi
   fi
 
   if [[ -n "$full_refresh_reason" ]]; then
