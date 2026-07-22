@@ -87,7 +87,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PORT=8000
+    PORT=8000 \
+    COHERENCE_FORM_GRAPH_STORE=/root/.coherence-network/federation-graph
 
 WORKDIR /app
 
@@ -179,7 +180,8 @@ RUN install -d -m 0700 \
       /root/.coherence-network/rag-index \
       /root/.coherence-network/rag-requests \
       /root/.coherence-network/attestation \
-      /root/.coherence-network/api-queries
+      /root/.coherence-network/api-queries \
+      /root/.coherence-network/federation-graph
 
 EXPOSE 8000
 
