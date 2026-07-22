@@ -88,7 +88,12 @@ bootstrap_and_verify_local_grounding() {
         out="$(mktemp)"
         err="$(mktemp)"
         trap '\''rm -f "$out" "$err"'\'' EXIT
-        bin/form-cli ask "observed auto learning reversible experiment champion challenger" >"$out" 2>"$err"
+        if ! bin/form-cli ask "observed auto learning reversible experiment champion challenger" >"$out" 2>"$err"; then
+          cat "$err" >&2
+          cat "$out"
+          echo "local native grounded ask exited non-zero" >&2
+          exit 1
+        fi
         grep -Eq "^trust  path:native  grounded:yes .*suffic:yes" "$err"
         grep -Eq "^grounded:@[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$" "$out"
         cat "$err"
