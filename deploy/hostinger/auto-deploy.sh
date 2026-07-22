@@ -76,7 +76,7 @@ bootstrap_and_verify_local_grounding() {
       sh -lc '
         set -eu
         cd /app
-        for state_dir in rag-index rag-requests attestation api-queries; do
+        for state_dir in rag-index rag-requests attestation api-queries federation-graph; do
           test -d "/root/.coherence-network/$state_dir"
           probe="/root/.coherence-network/$state_dir/.deploy-write-probe.$$"
           : > "$probe"
@@ -519,7 +519,8 @@ install -d -m 0700 \
   "$GROUNDING_STATE_ROOT/rag-index" \
   "$GROUNDING_STATE_ROOT/rag-requests" \
   "$GROUNDING_STATE_ROOT/attestation" \
-  "$GROUNDING_STATE_ROOT/api-queries"
+  "$GROUNDING_STATE_ROOT/api-queries" \
+  "$GROUNDING_STATE_ROOT/federation-graph"
 # The compose service also bind-mounts GROUNDING_TARGET_ROOT read-only. That
 # parent mount hides the image's pre-created directories, so runc can only
 # attach the four narrower writable binds when their target directories exist
@@ -528,7 +529,8 @@ install -d -m 0700 \
   "$GROUNDING_TARGET_ROOT/rag-index" \
   "$GROUNDING_TARGET_ROOT/rag-requests" \
   "$GROUNDING_TARGET_ROOT/attestation" \
-  "$GROUNDING_TARGET_ROOT/api-queries"
+  "$GROUNDING_TARGET_ROOT/api-queries" \
+  "$GROUNDING_TARGET_ROOT/federation-graph"
 chown -R root:root "$GROUNDING_STATE_ROOT"
 
 # The image itself carries immutable parent/form source labels.  Compose must
@@ -649,6 +651,7 @@ mounts = [
     "/root/.coherence-network/runtime/rag-requests:/root/.coherence-network/rag-requests:rw",
     "/root/.coherence-network/runtime/attestation:/root/.coherence-network/attestation:rw",
     "/root/.coherence-network/runtime/api-queries:/root/.coherence-network/api-queries:rw",
+    "/root/.coherence-network/runtime/federation-graph:/root/.coherence-network/federation-graph:rw",
 ]
 targets = tuple(item.split(":", 2)[1] for item in mounts)
 if volumes_index is None:
@@ -697,13 +700,14 @@ expected = {
     "/root/.coherence-network/rag-requests",
     "/root/.coherence-network/attestation",
     "/root/.coherence-network/api-queries",
+    "/root/.coherence-network/federation-graph",
 }
 missing = sorted(target for target in expected if target not in volumes)
 readonly = sorted(target for target in expected if volumes.get(target, {}).get("read_only"))
 if missing or readonly:
     raise SystemExit(f"grounding state bind contract failed missing={missing} readonly={readonly}")
 '
-log "compose API grounding state: four narrow writable binds verified"
+log "compose API grounding state: five narrow writable binds verified"
 # Select the additional services whose source changed. The deployment body
 # always adds API to this set below because the observer requires an image
 # whose immutable revision label equals TARGET_SHA; web and pulse remain
