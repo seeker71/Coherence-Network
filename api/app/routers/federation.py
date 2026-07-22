@@ -7,7 +7,6 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -57,6 +56,7 @@ from app.services import federation_substrate_service
 from app.services import federation_value_flow_service
 from app.services.federation_value_flow_service import SignatureRejection
 from app.services import openclaw_node_bridge_service
+from app.services import native_federation_graph_service
 from app.services import unified_db as _udb
 
 router = APIRouter()
@@ -746,7 +746,7 @@ class NodeMessage(BaseModel):
 
 
 def _store_message(msg_dict: dict[str, Any]) -> dict[str, Any]:
-    """Persist a message to PostgreSQL. Falls back to fire-and-forget on DB error."""
+    """Persist the native graph's message projection to PostgreSQL."""
     try:
         from app.services.federation_service import NodeMessageRecord
         from app.services import unified_db as _udb
@@ -764,8 +764,10 @@ def _store_message(msg_dict: dict[str, Any]) -> dict[str, Any]:
             )
             session.add(record)
             session.commit()
+    except RuntimeError:
+        raise
     except Exception as e:
-        _msg_log.warning("Failed to persist message %s: %s", msg_dict.get("id"), e)
+        raise RuntimeError(f"failed to persist message projection {msg_dict.get('id')}: {e}") from e
     return msg_dict
 
 
@@ -790,19 +792,15 @@ def _query_messages(
     limit: int = 50,
     include_self: bool = False,
 ) -> list[dict[str, Any]]:
-    """Query messages from PostgreSQL for a specific node."""
+    """Traverse Form's graph, then load matching PostgreSQL projections."""
     try:
         from app.services.federation_service import NodeMessageRecord
         from app.services import unified_db as _udb
-        from sqlalchemy import or_
-
+        ids = native_federation_graph_service.visible_ids(node_id)
+        if not ids:
+            return []
         with _udb.session() as session:
-            q = session.query(NodeMessageRecord).filter(
-                or_(
-                    NodeMessageRecord.to_node == node_id,
-                    NodeMessageRecord.to_node.is_(None),  # broadcasts
-                )
-            )
+            q = session.query(NodeMessageRecord).filter(NodeMessageRecord.id.in_(ids))
             if not include_self:
                 q = q.filter(NodeMessageRecord.from_node != node_id)
             if since:
@@ -816,6 +814,8 @@ def _query_messages(
                     continue
                 results.append(row)
             return results
+    except RuntimeError:
+        raise
     except Exception as e:
         _msg_log.warning("Failed to query messages for %s: %s", node_id, e)
         return []
@@ -823,12 +823,16 @@ def _query_messages(
 
 def _get_message(message_id: str) -> dict[str, Any] | None:
     try:
+        if not native_federation_graph_service.has(message_id):
+            return None
         from app.services.federation_service import NodeMessageRecord
         from app.services import unified_db as _udb
 
         with _udb.session() as session:
             rec = session.query(NodeMessageRecord).filter(NodeMessageRecord.id == message_id).first()
             return _message_record_to_dict(rec) if rec else None
+    except RuntimeError:
+        raise
     except Exception as e:
         _msg_log.warning("Failed to get message %s: %s", message_id, e)
         return None
@@ -856,15 +860,24 @@ def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
 @router.post("/federation/nodes/{node_id}/messages", status_code=201, summary="Send a message from this node. Set to_node=null to broadcast")
 async def send_message(node_id: str, body: NodeMessage):
     """Send a message from this node. Set to_node=null to broadcast."""
+    timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        graph = native_federation_graph_service.offer(
+            from_node=node_id, to_node=body.to_node, kind=body.type,
+            text=body.text, payload=body.payload, timestamp=timestamp,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     msg = {
-        "id": f"msg_{uuid4().hex[:12]}",
+        "id": graph["message_id"],
         "from_node": node_id,
         "to_node": body.to_node,
         "type": body.type,
         "payload": body.payload,
         "text": body.text,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": timestamp,
         "read_by": [],
+        "graph_ack": graph,
     }
     _store_message(msg)
     _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
@@ -887,13 +900,16 @@ async def get_messages(
     ),
 ):
     """Get messages for this node; observation is consuming only when requested."""
-    results = _query_messages(
-        node_id,
-        since=since,
-        unread_only=unread_only,
-        limit=limit,
-        include_self=include_self,
-    )
+    try:
+        results = _query_messages(
+            node_id,
+            since=since,
+            unread_only=unread_only,
+            limit=limit,
+            include_self=include_self,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if mark_read:
         msg_ids = {m["id"] for m in results}
@@ -905,7 +921,10 @@ async def get_messages(
 @router.get("/federation/messages/{message_id}", summary="Read a federation node message by id")
 async def get_message_by_id(message_id: str):
     """Read a federation node message by id."""
-    msg = _get_message(message_id)
+    try:
+        msg = _get_message(message_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if msg is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return msg
@@ -914,15 +933,24 @@ async def get_message_by_id(message_id: str):
 @router.post("/federation/broadcast", status_code=201, summary="Broadcast a message to all nodes")
 async def broadcast_message(body: NodeMessage):
     """Broadcast a message to all nodes."""
+    timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        graph = native_federation_graph_service.offer(
+            from_node=body.from_node, to_node=None, kind=body.type,
+            text=body.text, payload=body.payload, timestamp=timestamp,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     msg = {
-        "id": f"msg_{uuid4().hex[:12]}",
+        "id": graph["message_id"],
         "from_node": body.from_node,
         "to_node": None,
         "type": body.type,
         "payload": body.payload,
         "text": body.text,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": timestamp,
         "read_by": [],
+        "graph_ack": graph,
     }
     _store_message(msg)
     _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])

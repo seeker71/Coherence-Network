@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from uuid import uuid4
+import re
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -39,6 +40,9 @@ async def test_federation_message_can_be_read_back_by_id() -> None:
         )
         assert sent.status_code == 201, sent.text
         msg_id = sent.json()["id"]
+        assert re.fullmatch(r"msg_[0-9a-f]{64}", msg_id)
+        assert sent.json()["graph_ack"]["persisted"] == "1"
+        assert sent.json()["graph_ack"]["traversable"] == "1"
 
         fetched = await client.get(f"/api/federation/messages/{msg_id}")
         assert fetched.status_code == 200, fetched.text

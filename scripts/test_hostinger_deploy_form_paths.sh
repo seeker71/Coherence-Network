@@ -653,7 +653,7 @@ fi
 grep -Fq '/root/.coherence-network/rag-index' "$ROOT_DIR/Dockerfile.api" \
   || fail "API image does not pre-create the writable RAG index mountpoint"
 
-for state_dir in rag-index rag-requests attestation api-queries; do
+for state_dir in rag-index rag-requests attestation api-queries federation-graph; do
   grep -Fq "/root/.coherence-network/$state_dir" "$ROOT_DIR/Dockerfile.api" \
     || fail "API image does not pre-create grounding mountpoint: $state_dir"
   grep -Fq 'GROUNDING_TARGET_ROOT="/root/.coherence-network"' "$DEPLOY_SCRIPT" \
