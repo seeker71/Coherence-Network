@@ -159,17 +159,18 @@ in the keystore beside the other keys, at `~/.coherence-network/keys.json`
 
 Set `secret` only if you set `SECRET` in the script.
 
-The sheet's **id** is not a credential — it says where the ledger lands, not
-who may write — so it goes in the editable config
-(`~/.coherence-network/config.json`) instead:
+The sheet's **id** is already set. It ships in `api/config/api.json` under
+`grocery.sheet_id`, so a fresh deploy points at the hub's ledger with
+nothing to configure. `GET /api/grocery/sheet` reports where the mirror
+lands and how many entries are waiting, and the app shows an **Open the
+sheet** link.
+
+To point a different hub at a different sheet, override it in the editable
+config (`~/.coherence-network/config.json`):
 
 ```json
-{ "grocery_sheet_id": "<SHEET_ID>" }
+{ "grocery_sheet_id": "<OTHER_SHEET_ID>" }
 ```
-
-With that set, `GET /api/grocery/sheet` reports where the mirror lands and
-how many entries are still waiting, and the app shows an **Open the sheet**
-link so anyone at the hub can read their own record directly.
 
 The next entry appends a row. A running API caches config until
 `reset_config_cache()`, so restart it if you set these while it's up.

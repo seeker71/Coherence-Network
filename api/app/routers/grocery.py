@@ -53,6 +53,7 @@ from app.routers.household import (
     _s,
     PlaceResponse,
 )
+from app import config_loader
 from app.services import config_service, graph_service
 from app.services.form_kernel_bridge import serve_via_kernel
 
@@ -641,8 +642,12 @@ def _sheet_id() -> str:
     lands, so it sits in the editable config rather than the keystore and
     the app can hand a person a link to their own record.
     """
-    value = config_service.get_editable_config().get("grocery_sheet_id", "")
-    return str(value or "").strip()
+    override = config_service.get_editable_config().get("grocery_sheet_id", "")
+    if str(override or "").strip():
+        return str(override).strip()
+    # Otherwise the hub's own sheet, which ships in api/config/settings.json so
+    # a fresh deploy already points at the right ledger with nothing to set up.
+    return str(config_loader.api_config("grocery", "sheet_id", "") or "").strip()
 
 
 class SheetStatus(BaseModel):
