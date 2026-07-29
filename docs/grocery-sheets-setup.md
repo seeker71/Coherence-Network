@@ -11,8 +11,17 @@ deleting that URL.
 
 ## 1. Make the sheet
 
-Create a spreadsheet. Name the first tab `Belanja` (or anything — the
-script uses the active sheet).
+Create a spreadsheet, or use one you already have. Name the first tab
+`Belanja` (or anything — the script writes to the active sheet).
+
+Its id is the long string in the URL:
+
+```
+https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit
+```
+
+Keep that id — step 4 uses it so the app can link a person straight to
+their own record.
 
 ## 2. Add the script
 
@@ -72,9 +81,22 @@ in the keystore beside the other keys, at `~/.coherence-network/keys.json`
 }
 ```
 
-Set `secret` only if you set `SECRET` in the script. The next entry appends
-a row — the config carrier re-reads, so nothing needs restarting for a first
-write, though a running API caches config until `reset_config_cache()`.
+Set `secret` only if you set `SECRET` in the script.
+
+The sheet's **id** is not a credential — it says where the ledger lands, not
+who may write — so it goes in the editable config
+(`~/.coherence-network/config.json`) instead:
+
+```json
+{ "grocery_sheet_id": "<SHEET_ID>" }
+```
+
+With that set, `GET /api/grocery/sheet` reports where the mirror lands and
+how many entries are still waiting, and the app shows an **Open the sheet**
+link so anyone at the hub can read their own record directly.
+
+The next entry appends a row. A running API caches config until
+`reset_config_cache()`, so restart it if you set these while it's up.
 
 ## What the sheet gets
 

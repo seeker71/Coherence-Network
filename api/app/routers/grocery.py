@@ -495,6 +495,40 @@ def _sheet_webhook() -> tuple[str, str]:
     )
 
 
+def _sheet_id() -> str:
+    """The spreadsheet this hub mirrors into — a plain id, not a credential.
+
+    The webhook is what grants writing; this only says *where* the ledger
+    lands, so it sits in the editable config rather than the keystore and
+    the app can hand a person a link to their own record.
+    """
+    value = config_service.get_editable_config().get("grocery_sheet_id", "")
+    return str(value or "").strip()
+
+
+class SheetStatus(BaseModel):
+    configured: bool          # is there a webhook to push through?
+    sheet_url: str | None = None   # where the hub's own copy lives
+    pending: int              # entries the sheet has not seen yet
+
+
+@router.get(
+    "/grocery/sheet",
+    response_model=SheetStatus,
+    summary="Where the mirror lands, and whether anything is waiting",
+)
+async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
+    _require_member(token)
+    sheet_id = _sheet_id()
+    return SheetStatus(
+        configured=bool(_sheet_webhook()[0]),
+        sheet_url=(
+            f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit" if sheet_id else None
+        ),
+        pending=sum(1 for n in _all_spends() if not n.get("sheet_synced")),
+    )
+
+
 def _push_to_sheet(spend: SpendResponse) -> bool:
     """Append one row to the hub's own sheet. False when there's nowhere to push.
 

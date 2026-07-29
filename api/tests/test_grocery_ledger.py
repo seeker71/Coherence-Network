@@ -164,3 +164,26 @@ def test_writing_the_ledger_needs_a_vouched_hand(client):
 
     # Seeing stays open to any registered cell here.
     assert client.get(f"/api/grocery/spend?token={wtok}").status_code == 200
+
+
+def test_the_sheet_door_reports_where_the_mirror_lands(client, monkeypatch):
+    from app.routers import grocery
+
+    # No sheet configured: the ledger still answers, it just has nowhere to
+    # point — an unconfigured mirror is a state, not an error.
+    monkeypatch.setattr(grocery, "_sheet_id", lambda: "")
+    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("", ""))
+    watcher = client.post("/api/household/members", json={"name": "Kadek"})
+    wtok = watcher.json()["token"]
+    bare = client.get(f"/api/grocery/sheet?token={wtok}")
+    assert bare.status_code == 200, bare.text
+    assert bare.json()["configured"] is False
+    assert bare.json()["sheet_url"] is None
+
+    # Configured: the id becomes a link a person can actually open.
+    monkeypatch.setattr(grocery, "_sheet_id", lambda: "SHEETID123")
+    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", ""))
+    wired = client.get(f"/api/grocery/sheet?token={wtok}")
+    assert wired.json()["configured"] is True
+    assert wired.json()["sheet_url"] == "https://docs.google.com/spreadsheets/d/SHEETID123/edit"
+    assert isinstance(wired.json()["pending"], int)

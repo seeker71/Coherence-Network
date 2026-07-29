@@ -41,6 +41,12 @@ type Spend = {
   sheet_synced: boolean;
 };
 
+type SheetStatus = {
+  configured: boolean;
+  sheet_url?: string | null;
+  pending: number;
+};
+
 type Totals = {
   on: string;
   day_total_idr: number;
@@ -98,6 +104,8 @@ const T = {
     locating: "Finding you…",
     sheet: "Sheet",
     csv: "Download CSV",
+    openSheet: "Open the sheet",
+    waiting: "waiting",
     zero: "Type an amount first",
   },
   id: {
@@ -131,6 +139,8 @@ const T = {
     locating: "Mencari lokasi…",
     sheet: "Sheet",
     csv: "Unduh CSV",
+    openSheet: "Buka sheet",
+    waiting: "menunggu",
     zero: "Isi jumlahnya dulu",
   },
 } as const;
@@ -179,6 +189,7 @@ export default function GroceryPage() {
   const [spends, setSpends] = useState<Spend[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [queued, setQueued] = useState<Draft[]>([]);
+  const [sheet, setSheet] = useState<SheetStatus | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -240,12 +251,14 @@ export default function GroceryPage() {
   const refresh = useCallback(async () => {
     if (!token) return;
     const q = `token=${encodeURIComponent(token)}`;
-    const [s, tot] = await Promise.all([
+    const [s, tot, sh] = await Promise.all([
       fetch(`/api/grocery/spend?${q}&on=${todayLocal()}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch(`/api/grocery/totals?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(`/api/grocery/sheet?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]);
     setSpends(Array.isArray(s) ? s : []);
     setTotals(tot);
+    setSheet(sh);
   }, [token]);
 
   useEffect(() => {
@@ -599,12 +612,25 @@ export default function GroceryPage() {
               ))}
             </ul>
 
-            <a
-              href={`/api/grocery/export.csv?token=${encodeURIComponent(token)}`}
-              className="mt-3 inline-block text-xs text-neutral-500 underline"
-            >
-              {t.csv}
-            </a>
+            <div className="mt-3 flex flex-wrap gap-4">
+              <a
+                href={`/api/grocery/export.csv?token=${encodeURIComponent(token)}`}
+                className="text-xs text-neutral-500 underline"
+              >
+                {t.csv}
+              </a>
+              {sheet?.sheet_url && (
+                <a
+                  href={sheet.sheet_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-neutral-500 underline"
+                >
+                  {t.openSheet}
+                  {sheet.pending > 0 ? ` · ${sheet.pending} ${t.waiting}` : ""}
+                </a>
+              )}
+            </div>
           </aside>
         </div>
       </div>
