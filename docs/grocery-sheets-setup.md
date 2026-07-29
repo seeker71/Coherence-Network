@@ -20,7 +20,7 @@ script uses the active sheet).
 
 ```javascript
 // Appends one grocery row. Called by the Coherence API on each entry.
-const SECRET = "";  // optional: set the same value as GROCERY_SHEET_TOKEN
+const SECRET = "";  // optional: same value as grocery_sheet.secret in the keystore
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
@@ -54,19 +54,27 @@ Copy the Web app URL — it looks like
 
 "Anyone" means anyone with the URL can append a row. The URL is the
 secret. If that's too loose for you, set `SECRET` in the script and
-`GROCERY_SHEET_TOKEN` in the API to the same value — then a leaked URL
-alone can't write.
+`grocery_sheet.secret` in the keystore to the same value — then a leaked
+URL alone can't write.
 
-## 4. Point the API at it
+## 4. Point the network at it
 
-On the VPS, in the API's environment:
+The URL is a credential — anyone holding it can append a row — so it lives
+in the keystore beside the other keys, at `~/.coherence-network/keys.json`
+(mode 600, never in git):
 
+```json
+{
+  "grocery_sheet": {
+    "webhook_url": "https://script.google.com/macros/s/AKfy…/exec",
+    "secret": ""
+  }
+}
 ```
-GROCERY_SHEET_WEBHOOK=https://script.google.com/macros/s/AKfy…/exec
-GROCERY_SHEET_TOKEN=            # only if you set SECRET in the script
-```
 
-Restart the API. The next entry appends a row.
+Set `secret` only if you set `SECRET` in the script. The next entry appends
+a row — the config carrier re-reads, so nothing needs restarting for a first
+write, though a running API caches config until `reset_config_cache()`.
 
 ## What the sheet gets
 

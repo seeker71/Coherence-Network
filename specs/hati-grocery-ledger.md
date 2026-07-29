@@ -109,8 +109,30 @@ implementation of the money math that could drift from the first.
 
 ## Honest Floor
 
-The amount recipe's arithmetic is verified by cases (`123.5 → 123500`,
-`0.25 → 250`, `12.05 → 12050`), but it has **not** yet been run four-way:
-the `fkwu` runtime is unbuilt where this was authored. Four-way proof for
-`endpoint_grocery_amount.fk` is the next rung, and until it lands this
-recipe rides the same floor as the household board's kernel recipes.
+`endpoint_grocery_amount.fk` **runs on the c-bootstrapped `fkwu`** — built
+from the pinned kernel's `runtime/fkwu-uni.c` with a single `cc -O2`, gated
+on the bootstrap grounds (`ground.fk` → 42, `ground-recursive.fk 10` → 55,
+`ground-numeric-list.fk` → `[1, 2.5, [3, 4]]`). Every amount case is the
+kernel's own answer, `runtime: fkwu`:
+
+| typed | fkwu |
+|---|---|
+| `123.5` | 123500 |
+| `85` | 85000 |
+| `0.25` | 250 |
+| `12.05` | 12050 |
+| `1.234` | 1234 |
+| `1000.75` | 1000750 |
+
+The full flow suite passes against that kernel — 25 tests across this
+ledger and the household board it borrows its places from.
+
+It also **crosses four-way**. Go, Rust, TypeScript, and fkwu return the
+same integer on all nine cases — `fourth arm: 9 case(s) four-way, 0
+divergent`, no unsupported op (the band uses only `add`/`sub`/`mul`/`div`/
+`lt` and recursion). Full table in
+[`commit_evidence_2026-07-29_grocery_amount_four_way.json`](../docs/system_audit/commit_evidence_2026-07-29_grocery_amount_four_way.json).
+
+The rung still above this is the **standard receipt** — this band observed
+through c-bootstrap `form-cli` on mac, windows, and android metal. Those
+rows are pending; four-way in a Linux container is a real rung below them.

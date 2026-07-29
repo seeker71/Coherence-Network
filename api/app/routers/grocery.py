@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import csv
 import io
-import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -54,7 +53,7 @@ from app.routers.household import (
     _s,
     PlaceResponse,
 )
-from app.services import graph_service
+from app.services import config_service, graph_service
 from app.services.form_kernel_bridge import serve_via_kernel
 
 router = APIRouter()
@@ -482,19 +481,32 @@ def _sheet_row(spend: SpendResponse) -> dict[str, Any]:
     }
 
 
+def _sheet_webhook() -> tuple[str, str]:
+    """The hub's sheet door, from the keystore — `(url, secret)`.
+
+    The URL *is* the credential (anyone holding it can append a row), so it
+    lives beside the other keys in ``~/.coherence-network/keys.json`` under
+    ``grocery_sheet``, read through the one config carrier. Nothing here
+    reads the environment.
+    """
+    return (
+        config_service.get_key("grocery_sheet", "webhook_url").strip(),
+        config_service.get_key("grocery_sheet", "secret").strip(),
+    )
+
+
 def _push_to_sheet(spend: SpendResponse) -> bool:
     """Append one row to the hub's own sheet. False when there's nowhere to push.
 
     The URL is an Apps Script Web App the hub deploys against their own
-    spreadsheet — no service account, no key in our keystore, and the sheet
-    stays theirs. Any failure is swallowed on purpose: the graph already
-    holds the entry, and `sheet_synced=false` is the handle for a resync.
+    spreadsheet — no service account, and the sheet stays theirs. Any failure
+    is swallowed on purpose: the graph already holds the entry, and
+    `sheet_synced=false` is the handle for a resync.
     """
-    url = os.getenv("GROCERY_SHEET_WEBHOOK", "").strip()
+    url, secret = _sheet_webhook()
     if not url:
         return False
     payload: dict[str, Any] = {"row": _sheet_row(spend), "columns": _SHEET_COLUMNS}
-    secret = os.getenv("GROCERY_SHEET_TOKEN", "").strip()
     if secret:
         payload["secret"] = secret
     try:
@@ -521,7 +533,7 @@ class ResyncResponse(BaseModel):
 )
 async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
-    configured = bool(os.getenv("GROCERY_SHEET_WEBHOOK", "").strip())
+    configured = bool(_sheet_webhook()[0])
     pending = [n for n in _all_spends() if not n.get("sheet_synced")]
     pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
     synced = 0

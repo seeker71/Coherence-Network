@@ -1,0 +1,212 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Opus 5"
+  },
+  "date": "2026-07-29",
+  "thread_branch": "claude/hati-suci-grocery-tracker-giyuld",
+  "change_intent": "runtime_feature",
+  "commit_scope": "Prove endpoint_grocery_amount.fk four-way (go, rust, ts, c-bootstrapped fkwu) and move the grocery ledger's sheet credential from environment variables onto the one config carrier.",
+  "idea_ids": [
+    "light-hub-membrane"
+  ],
+  "spec_ids": [
+    "hati-grocery-ledger"
+  ],
+  "task_ids": [
+    "hati-grocery-ledger-2026-07-29"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "change_files": [
+    "api/app/form_recipes/endpoint_grocery_amount.fk",
+    "api/app/routers/grocery.py",
+    "api/tests/test_grocery_ledger.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-07-29_grocery_amount_four_way.json",
+    "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx"
+  ],
+  "files_owned": [
+    "api/app/form_recipes/endpoint_grocery_amount.fk",
+    "api/app/routers/grocery.py",
+    "api/tests/test_grocery_ledger.py",
+    "docs/grocery-sheets-setup.md",
+    "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cc -O2 -o form/fkwu form/runtime/fkwu-uni.c",
+      "./form/fkwu --src form/bootstrap/ground.fk",
+      "./form/fkwu --src form/bootstrap/ground-recursive.fk 10",
+      "./form/fkwu --src form/bootstrap/ground-numeric-list.fk",
+      "cd api && python -m pytest tests/test_grocery_ledger.py tests/test_household_service_board.py -q"
+    ],
+    "summary": "fkwu built from the pinned kernel (87e6b00) c-bootstrap and gated on the three bootstrap grounds (42 / 55 / [1, 2.5, [3, 4]]). 25 flow tests pass against that live kernel \u2014 the grocery ledger plus the household board whose place cells it reuses."
+  },
+  "four_way_validation": {
+    "status": "pass",
+    "band": "endpoint_grocery_amount.fk \u2014 thousands to whole rupiah, integer-only",
+    "arms": {
+      "go": "form-kernel-go/bin-go",
+      "rust": "form-kernel-rust/target/release/form-kernel-rust",
+      "typescript": "form-kernel-ts/dist/main.mjs (esbuild bundle, node --stack_size=262144)",
+      "fkwu": "cc -O2 form/runtime/fkwu-uni.c, pinned kernel 87e6b00"
+    },
+    "cases": [
+      {
+        "typed": "123.5",
+        "whole": 123,
+        "frac": 5,
+        "fraclen": 1,
+        "expected_idr": 123500,
+        "go": 123500,
+        "rust": 123500,
+        "ts": 123500,
+        "fkwu": 123500
+      },
+      {
+        "typed": "85",
+        "whole": 85,
+        "frac": 0,
+        "fraclen": 0,
+        "expected_idr": 85000,
+        "go": 85000,
+        "rust": 85000,
+        "ts": 85000,
+        "fkwu": 85000
+      },
+      {
+        "typed": "0.25",
+        "whole": 0,
+        "frac": 25,
+        "fraclen": 2,
+        "expected_idr": 250,
+        "go": 250,
+        "rust": 250,
+        "ts": 250,
+        "fkwu": 250
+      },
+      {
+        "typed": "12.05",
+        "whole": 12,
+        "frac": 5,
+        "fraclen": 2,
+        "expected_idr": 12050,
+        "go": 12050,
+        "rust": 12050,
+        "ts": 12050,
+        "fkwu": 12050
+      },
+      {
+        "typed": "1.234",
+        "whole": 1,
+        "frac": 234,
+        "fraclen": 3,
+        "expected_idr": 1234,
+        "go": 1234,
+        "rust": 1234,
+        "ts": 1234,
+        "fkwu": 1234
+      },
+      {
+        "typed": "1000.75",
+        "whole": 1000,
+        "frac": 75,
+        "fraclen": 2,
+        "expected_idr": 1000750,
+        "go": 1000750,
+        "rust": 1000750,
+        "ts": 1000750,
+        "fkwu": 1000750
+      },
+      {
+        "typed": "0.5",
+        "whole": 0,
+        "frac": 5,
+        "fraclen": 1,
+        "expected_idr": 500,
+        "go": 500,
+        "rust": 500,
+        "ts": 500,
+        "fkwu": 500
+      },
+      {
+        "typed": "2",
+        "whole": 2,
+        "frac": 0,
+        "fraclen": 0,
+        "expected_idr": 2000,
+        "go": 2000,
+        "rust": 2000,
+        "ts": 2000,
+        "fkwu": 2000
+      },
+      {
+        "typed": "0.001",
+        "whole": 0,
+        "frac": 1,
+        "fraclen": 3,
+        "expected_idr": 1,
+        "go": 1,
+        "rust": 1,
+        "ts": 1,
+        "fkwu": 1
+      }
+    ],
+    "divergences": 0,
+    "summary": "fourth arm: 9 case(s) four-way, 0 divergent. No unsupported op \u2014 the band uses only add/sub/mul/div/lt and recursion.",
+    "harness_note": "A first pass reported three fkwu divergences. They were an artifact of the harness rewriting one band.fk path per case: fkwu returned the previously cached compile. Re-run with a distinct file per case, all four arms agree. Recorded because the same stale-cache shape has masked a real bug before."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "GitHub Actions on PR #3980"
+    ],
+    "summary": "The base branch (main d1a7a53) fails Thread Gates with 8 pre-existing form-cli Exec-format failures; this branch adds none."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Not deployed. app.hati.earth still needs a DNS record; the Traefik router labels are in the diff."
+  },
+  "e2e_validation": {
+    "expected_behavior_delta": "A hub manager types an amount in thousands and the ledger records exact whole rupiah computed by the Form kernel; a stored shop within ~150m fills the description in from GPS; entries mirror to a sheet the hub owns via a keystore-held webhook URL, with CSV export as the door out.",
+    "public_endpoints": [
+      "/api/grocery/spend",
+      "/api/grocery/shops/nearest",
+      "/api/grocery/totals",
+      "/api/grocery/export.csv"
+    ],
+    "status": "pass",
+    "test_flows": [
+      "resident records a spend at a pinned shop's coordinates; the shop's default_description becomes the entry's description and amount_idr is 123500 for typed '123.5'",
+      "resident records 4km from any shop; nearest returns null, a category icon plus a custom note carries the description, 0.25 records as 250 IDR",
+      "see-only member is refused a write (403) but may read the ledger (200)",
+      "zero and an unknown category are refused (422) rather than guessed",
+      "export.csv columns match the Sheets mirror columns exactly"
+    ]
+  },
+  "evidence_refs": [
+    "specs/hati-grocery-ledger.md",
+    "api/app/form_recipes/endpoint_grocery_amount.fk",
+    "https://github.com/seeker71/Coherence-Network/pull/3980"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Band is four-way and the flow suite is green against a live fkwu. Still open: app.hati.earth DNS, the hub's sheet webhook in the keystore, and the base branch's own Thread Gates failure."
+  }
+}
