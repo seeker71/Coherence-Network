@@ -247,6 +247,7 @@ class SpendCreate(BaseModel):
     lat: int | None = None                                       # or raw GPS, to resolve one
     lon: int | None = None
     spent_on: str | None = Field(default=None, max_length=10)    # ISO date; today when absent
+    paid: bool = True          # the hub's sheet marks purchases paid; settling is a separate row
 
 
 class SpendResponse(BaseModel):
@@ -260,6 +261,7 @@ class SpendResponse(BaseModel):
     place_id: str | None = None
     place_name: str | None = None
     spent_on: str
+    paid: bool = True
     by_id: str
     by_name: str
     created_at: str
@@ -286,6 +288,7 @@ def _node_to_spend(node: dict) -> SpendResponse:
         place_id=_s(node.get("place_id")),
         place_name=_s(node.get("place_name")),
         spent_on=_s(node.get("spent_on")) or "",
+        paid=bool(node.get("paid", True)),
         by_id=_s(node.get("by_id")) or "",
         by_name=_s(node.get("by_name")) or "",
         created_at=_s(node.get("created_at")) or "",
@@ -382,6 +385,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "place_id": shop.get("id") if shop else None,
         "place_name": (_s(shop.get("name")) if shop else None),
         "spent_on": spent_on,
+        "paid": bool(body.paid),
         "by_id": actor.get("id", ""),
         "by_name": actor.get("name", ""),
         "created_at": _now(),
@@ -460,13 +464,40 @@ async def totals(
 # The mirror — Google Sheets by webhook, CSV as the door out.
 # --------------------------------------------------------------------------
 
-_SHEET_COLUMNS = [
+# The hub's sheet already has a shape, and it is not ours: `When | Cost |
+# Paid | What`, purchases at the top, negative settlement rows below them,
+# and a running "remaining" balance. The mirror writes THAT, so the rows the
+# app adds sit in the same table the humans already read — not a second,
+# incompatible one beside it.
+#
+# `What` is the column that matters. In the ledger as we found it, all eight
+# purchases had it empty. Filling it is the whole point of this app.
+_SHEET_COLUMNS = ["When", "Cost", "Paid", "What"]
+
+# The door out stays lossless — everything the graph holds, not just the
+# four columns the sheet shows.
+_CSV_COLUMNS = [
     "date", "amount_typed", "amount_idr", "currency",
     "description", "category", "place", "by", "recorded_at", "id",
 ]
 
 
 def _sheet_row(spend: SpendResponse) -> dict[str, Any]:
+    """One row in the hub's own four columns.
+
+    `Cost` goes as a plain integer, never "Rp385,000" — the column carries
+    its own currency format, and text would break the sums the sheet
+    computes underneath.
+    """
+    return {
+        "When": spend.spent_on,        # ISO; the script hands the sheet a real date
+        "Cost": spend.amount_idr,      # number, so SUM and the Rp format keep working
+        "Paid": spend.paid,
+        "What": spend.description,
+    }
+
+
+def _csv_row(spend: SpendResponse) -> dict[str, Any]:
     return {
         "date": spend.spent_on,
         "amount_typed": spend.amount_typed,
@@ -589,10 +620,10 @@ async def export_csv(token: str | None = Query(default=None)) -> PlainTextRespon
     _require_member(token)
     rows = sorted(_all_spends(), key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""))
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=_SHEET_COLUMNS)
+    writer = csv.DictWriter(buffer, fieldnames=_CSV_COLUMNS)
     writer.writeheader()
     for node in rows:
-        writer.writerow(_sheet_row(_node_to_spend(node)))
+        writer.writerow(_csv_row(_node_to_spend(node)))
     return PlainTextResponse(
         buffer.getvalue(),
         media_type="text/csv",

@@ -18,7 +18,7 @@ requirements:
   - "A stored shop within ~150m of the phone's GPS fills the description in automatically"
   - "When no shop is near, category icons carry the description and a custom field overrides it"
   - "The entry date defaults to today in the hub's timezone (UTC+8), not UTC"
-  - "Entries mirror to a Google Sheet the hub owns, via a webhook URL; a dark sheet never loses an entry"
+  - "Entries mirror into the hub's existing sheet shape (When/Cost/Paid/What) via a webhook URL; a dark sheet never loses an entry"
   - "GET /api/grocery/export.csv returns the whole ledger, so leaving the app costs nothing"
   - "The surface answers on app.hati.earth"
 done_when:
@@ -26,7 +26,7 @@ done_when:
   - "A spend recorded at a pinned shop's coordinates carries that shop's default_description"
   - "A spend recorded 4km from any shop carries no place and uses the icon or note"
   - "Writing requires a household member with write access; seeing is open to any registered cell"
-  - "export.csv columns match the Sheets mirror columns exactly"
+  - "the mirror writes the hub's own When/Cost/Paid/What columns; export.csv stays the fuller ten-column record"
   - "app.hati.earth serves the ledger with no site chrome"
   - "all tests pass"
 test: "cd api && python -m pytest tests/test_grocery_ledger.py -q"
@@ -77,17 +77,31 @@ into a shoebox of receipts, which is the failure this replaces.
   An entry made at 07:30 local must file under that morning, not the day
   before, so the API and the web agree on a UTC+8 day boundary.
 
-- [ ] **R6 — The sheet is a mirror, not a cage.** Each entry POSTs a row to
-  a webhook URL the hub owns (an Apps Script bound to their own spreadsheet).
+- [ ] **R6 — The sheet is a mirror, not a cage — and it is *their* sheet.**
+  The hub's ledger already has a shape: `When | Cost | Paid | What`, with
+  purchases at the top, negative settlement rows below, and a running
+  balance. The mirror writes those four columns, matched by name, into the
+  first blank row above the settlement block — so entries join the table
+  people already read instead of forming a second one beside it. `Cost` goes
+  as a number so the sheet's own currency format and sums keep working.
   If the webhook is unset or failing, the entry still records with
   `sheet_synced=false`, and `POST /api/grocery/sheet/resync` pushes the
-  backlog. `GET /api/grocery/export.csv` is the door out, always open.
+  backlog. `GET /api/grocery/export.csv` is the door out, always open, and
+  carries the fuller ten-column record.
 
 - [ ] **R7 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
   and flushes them on the next connection.
 
 ## Design Notes
+
+**What the hub's own ledger taught us.** Reading the live sheet reshaped
+this: every one of its eight purchase rows had `What` **empty** — the amount
+recorded, the meaning lost. That column is the app's whole reason to exist,
+and it is why the description is computed rather than requested. The amounts
+there (`385`, `477.3`, `351`, `125`, `443`, `197`, `869`, `162` in thousands)
+also confirm the *ribu* typing convention against real use, and the negative
+settlement rows show a float ledger the mirror must not disturb.
 
 **Why shops are place cells.** The household board already pins places by
 GPS in micro-degrees and already computes proximity on the kernel

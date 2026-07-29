@@ -64,15 +64,36 @@ def test_description_prefers_what_was_actually_said():
     assert grocery._resolve_description(note=None, category=None, shop=None) == "Groceries"
 
 
-def test_the_csv_door_names_every_column_the_sheet_gets():
-    # The export and the Sheets mirror must not drift apart — leaving the app
-    # has to hand back exactly what staying in it recorded.
+def test_the_mirror_writes_the_hub_s_own_four_columns():
+    # The hub's sheet is `When | Cost | Paid | What`. The mirror writes THAT,
+    # so rows land in the table the humans already read. Cost goes as a
+    # number — text like "Rp477,300" would break the sheet's own sums.
+    spend = grocery.SpendResponse(
+        id="spend-1", amount_typed="477.3", amount_idr=477300,
+        description="pasar pagi — sayur & ikan", category="fish",
+        place_name="Pasar Badung", spent_on="2026-07-29",
+        by_id="m1", by_name="Wayan", created_at="2026-07-29T01:00:00Z",
+    )
+    row = grocery._sheet_row(spend)
+    assert set(row) == set(grocery._SHEET_COLUMNS) == {"When", "Cost", "Paid", "What"}
+    assert row["Cost"] == 477300 and isinstance(row["Cost"], int)
+    assert row["When"] == "2026-07-29"
+    assert row["Paid"] is True
+    # `What` is the column that was empty on every purchase in the real
+    # ledger — the app exists to arrive with it already filled.
+    assert row["What"] == "pasar pagi — sayur & ikan"
+
+
+def test_the_csv_door_stays_lossless():
+    # The sheet shows four columns; the export must still carry everything
+    # the ledger knows, or leaving the app would cost the hub its detail.
     spend = grocery.SpendResponse(
         id="spend-1", amount_typed="123.5", amount_idr=123500,
         description="morning market", category="fish", place_name="Pasar Badung",
         spent_on="2026-07-29", by_id="m1", by_name="Wayan", created_at="2026-07-29T01:00:00Z",
     )
-    assert set(grocery._sheet_row(spend)) == set(grocery._SHEET_COLUMNS)
+    assert set(grocery._csv_row(spend)) == set(grocery._CSV_COLUMNS)
+    assert len(grocery._CSV_COLUMNS) > len(grocery._SHEET_COLUMNS)
 
 
 # --------------------------------------------------------------------------

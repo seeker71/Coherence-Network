@@ -28,26 +28,53 @@ their own record.
 **Extensions → Apps Script**, replace the contents with:
 
 ```javascript
-// Appends one grocery row. Called by the Coherence API on each entry.
+// Appends one grocery row in the hub's own ledger shape: When | Cost | Paid | What.
+//
+// The sheet keeps purchases at the top, negative settlement rows below them,
+// and a running balance underneath. A plain appendRow() would drop new
+// purchases *under* "remaining" and break that story, so this fills the first
+// empty row above the settlement block instead.
 const SECRET = "";  // optional: same value as grocery_sheet.secret in the keystore
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
   if (SECRET && body.secret !== SECRET) {
-    return ContentService.createTextOutput("forbidden").setMimeType(
-      ContentService.MimeType.TEXT,
-    );
+    return ContentService.createTextOutput("forbidden");
   }
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const columns = body.columns;
+  const columns = body.columns;              // ["When", "Cost", "Paid", "What"]
+  const values = sheet.getDataRange().getValues();
+  const header = values[0].map(String);
 
-  // First write lays down the header row.
-  if (sheet.getLastRow() === 0) sheet.appendRow(columns);
+  // Find each column by NAME, so reordering or adding a column never
+  // shifts where the app writes.
+  const at = {};
+  columns.forEach((c) => { at[c] = header.indexOf(c); });
+  if (at["Cost"] < 0 || at["When"] < 0) {
+    return ContentService.createTextOutput("missing When/Cost column");
+  }
 
-  sheet.appendRow(columns.map((c) => body.row[c]));
-  return ContentService.createTextOutput("ok").setMimeType(
-    ContentService.MimeType.TEXT,
-  );
+  // The settlement block begins at the first negative Cost. Purchases go above it.
+  let limit = values.length;
+  for (let i = 1; i < values.length; i++) {
+    const cost = values[i][at["Cost"]];
+    if (typeof cost === "number" && cost < 0) { limit = i; break; }
+  }
+
+  // Reuse the first blank row above that block; otherwise open one there.
+  let target = -1;
+  for (let i = 1; i < limit; i++) {
+    if (values[i][at["When"]] === "" && values[i][at["Cost"]] === "") { target = i + 1; break; }
+  }
+  if (target < 0) { sheet.insertRowBefore(limit + 1); target = limit + 1; }
+
+  columns.forEach((c) => {
+    if (at[c] < 0) return;
+    let v = body.row[c];
+    if (c === "When" && v) v = new Date(v);   // a real date, so the column's own format applies
+    sheet.getRange(target, at[c] + 1).setValue(v);
+  });
+  return ContentService.createTextOutput("ok");
 }
 ```
 
@@ -100,20 +127,22 @@ The next entry appends a row. A running API caches config until
 
 ## What the sheet gets
 
-One row per entry, in this column order:
+The app writes the hub's own four columns, matched **by name** — not a
+second table beside them:
 
-| Column | Meaning |
-|--------|---------|
-| `date` | the day it was spent (hub timezone, UTC+8) |
-| `amount_typed` | what the manager typed — `123.5` |
-| `amount_idr` | what it means — `123500` |
-| `currency` | `IDR` |
-| `description` | the shop's default, the icon's label, or the typed note |
-| `category` | the icon key, when one was picked |
-| `place` | the shop, when GPS found one nearby |
-| `by` | who recorded it |
-| `recorded_at` | when it reached the ledger |
-| `id` | the entry's id, for reconciling |
+| Column | What lands there |
+|--------|------------------|
+| `When` | the day it was spent (hub timezone, UTC+8), as a real date |
+| `Cost` | whole rupiah as a **number** — `477300`, never the text `"Rp477,300"`, so the column's currency format and any sums keep working |
+| `Paid` | `TRUE` for a purchase; settling stays a separate row, as it already is |
+| `What` | the description — the shop's stored sentence, the icon's label, or what the manager typed |
+
+`What` is the column worth the whole app. In the ledger as we found it,
+every purchase row had it empty; the amount was recorded and the meaning
+was not. Now it arrives filled in without anyone typing it.
+
+Purchases land above the settlement rows, reusing the blank rows already
+sitting there, so the running balance underneath stays where it is.
 
 ## When the sheet is dark
 
@@ -135,6 +164,9 @@ pending, how many landed, and whether a webhook is configured at all.
 GET /api/grocery/export.csv?token=<your token>
 ```
 
-The whole ledger, same columns, as a CSV file. Also linked at the bottom
-of the app. Use it to move to any other tool, at any time, without asking
-us for anything.
+The whole ledger as a CSV file — **ten** columns, not the sheet's four:
+date, amount_typed, amount_idr, currency, description, category, place, by,
+recorded_at, id. The sheet shows what the hub reads; the export carries
+everything the ledger knows, including which shop, which category, and who
+recorded it. Also linked at the bottom of the app. Use it to move to any
+other tool, at any time, without asking us for anything.
