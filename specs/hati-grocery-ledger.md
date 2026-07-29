@@ -18,7 +18,7 @@ requirements:
   - "A stored shop within ~150m of the phone's GPS fills the description in automatically"
   - "When no shop is near, category icons carry the description and a custom field overrides it"
   - "The entry date defaults to today in the hub's timezone (UTC+8), not UTC"
-  - "Entries mirror into the hub's existing sheet shape (When/Cost/Paid/What) via a webhook URL; a dark sheet never loses an entry"
+  - "Buys and top-ups append to one signed ledger the hub owns; remaining is a single sum; a dark sheet never loses an entry"
   - "GET /api/grocery/export.csv returns the whole ledger, so leaving the app costs nothing"
   - "The surface answers on app.hati.earth"
 done_when:
@@ -26,7 +26,7 @@ done_when:
   - "A spend recorded at a pinned shop's coordinates carries that shop's default_description"
   - "A spend recorded 4km from any shop carries no place and uses the icon or note"
   - "Writing requires a household member with write access; seeing is open to any registered cell"
-  - "the mirror writes the hub's own When/Cost/Paid/What columns; export.csv stays the fuller ten-column record"
+  - "the mirror appends When/Amount/What rows; remaining is a fixed-cell formula, never a row; export.csv stays the fuller record"
   - "app.hati.earth serves the ledger with no site chrome"
   - "all tests pass"
 test: "cd api && python -m pytest tests/test_grocery_ledger.py -q"
@@ -77,19 +77,31 @@ into a shoebox of receipts, which is the failure this replaces.
   An entry made at 07:30 local must file under that morning, not the day
   before, so the API and the web agree on a UTC+8 day boundary.
 
-- [ ] **R6 — The sheet is a mirror, not a cage — and it is *their* sheet.**
-  The hub's ledger already has a shape: `When | Cost | Paid | What`, with
-  purchases at the top, negative settlement rows below, and a running
-  balance. The mirror writes those four columns, matched by name, into the
-  first blank row above the settlement block — so entries join the table
-  people already read instead of forming a second one beside it. `Cost` goes
-  as a number so the sheet's own currency format and sums keep working.
-  If the webhook is unset or failing, the entry still records with
-  `sheet_synced=false`, and `POST /api/grocery/sheet/resync` pushes the
-  backlog. `GET /api/grocery/export.csv` is the door out, always open, and
-  carries the fuller ten-column record.
+- [ ] **R6 — The sheet is a mirror, not a cage — and appending must be safe.**
+  The hub's ledger was purchases on top, negative settlements below, and a
+  `remaining` row under those, so every entry had to be squeezed in and the
+  balance kept moving. Restructured to an append-only `When | Amount | What`
+  log: one row per event, newest at the bottom, `Amount` signed (a buy
+  positive, a top-up negative), and `Remaining`/`Spent`/`Topped up` as
+  formulas in fixed cells that rows never reach. `Amount` goes as a number
+  so the currency format and the sums keep working. If the webhook is unset
+  or failing, the entry still records with `sheet_synced=false`, and
+  `POST /api/grocery/sheet/resync` pushes the backlog. `GET
+  /api/grocery/export.csv` is the door out, always open, and carries the
+  fuller ten-column record.
 
-- [ ] **R7 — Signal is not a precondition.** A market with no bars must not
+- [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
+  and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
+  "what is left to spend" is one signed sum rather than two tables to
+  reconcile by hand. The app leads with that number, because it is what a
+  manager asks before walking to the market.
+
+- [ ] **R8 — A wrong number is fixable by the person who typed it.**
+  `DELETE /grocery/spend/{id}` removes an entry for its recorder, or any
+  entry for a resident, and says whether the sheet already has the row — we
+  never reach into the hub's own document to edit what we handed over.
+
+- [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
   and flushes them on the next connection.
 

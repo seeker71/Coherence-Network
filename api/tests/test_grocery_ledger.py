@@ -64,24 +64,31 @@ def test_description_prefers_what_was_actually_said():
     assert grocery._resolve_description(note=None, category=None, shop=None) == "Groceries"
 
 
-def test_the_mirror_writes_the_hub_s_own_four_columns():
-    # The hub's sheet is `When | Cost | Paid | What`. The mirror writes THAT,
-    # so rows land in the table the humans already read. Cost goes as a
-    # number — text like "Rp477,300" would break the sheet's own sums.
-    spend = grocery.SpendResponse(
+def test_the_mirror_appends_a_signed_row():
+    # The restructured ledger is an append-only `When | Amount | What` log.
+    # Amount is signed so "remaining" is one SUM in a fixed cell rather than
+    # a row that every new entry has to be squeezed above.
+    buy = grocery.SpendResponse(
         id="spend-1", amount_typed="477.3", amount_idr=477300,
         description="pasar pagi — sayur & ikan", category="fish",
         place_name="Pasar Badung", spent_on="2026-07-29",
         by_id="m1", by_name="Wayan", created_at="2026-07-29T01:00:00Z",
     )
-    row = grocery._sheet_row(spend)
-    assert set(row) == set(grocery._SHEET_COLUMNS) == {"When", "Cost", "Paid", "What"}
-    assert row["Cost"] == 477300 and isinstance(row["Cost"], int)
+    row = grocery._sheet_row(buy)
+    assert set(row) == set(grocery._SHEET_COLUMNS) == {"When", "Amount", "What"}
+    assert row["Amount"] == 477300 and isinstance(row["Amount"], int)
     assert row["When"] == "2026-07-29"
-    assert row["Paid"] is True
     # `What` is the column that was empty on every purchase in the real
     # ledger — the app exists to arrive with it already filled.
     assert row["What"] == "pasar pagi — sayur & ikan"
+
+    # Money coming in points the other way, in the same column.
+    topup = grocery.SpendResponse(
+        id="topup-1", amount_typed="4000", amount_idr=4_000_000,
+        description="top up", spent_on="2026-07-29", kind="topup",
+        by_id="m1", by_name="Wayan", created_at="2026-07-29T01:00:00Z",
+    )
+    assert grocery._sheet_row(topup)["Amount"] == -4_000_000
 
 
 def test_the_csv_door_stays_lossless():
@@ -208,3 +215,84 @@ def test_the_sheet_door_reports_where_the_mirror_lands(client, monkeypatch):
     assert wired.json()["configured"] is True
     assert wired.json()["sheet_url"] == "https://docs.google.com/spreadsheets/d/SHEETID123/edit"
     assert isinstance(wired.json()["pending"], int)
+
+
+def test_a_wrong_number_can_be_taken_back(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Putu"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    # A fat-fingered 4770 instead of 477 must not be permanent.
+    spend = client.post("/api/grocery/spend", json={
+        "actor_token": token, "amount": "4770", "category": "vegetable",
+    })
+    assert spend.status_code == 200, spend.text
+    spend_id = spend.json()["id"]
+
+    gone = client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}")
+    assert gone.status_code == 200, gone.text
+    assert gone.json()["deleted"] == spend_id
+    # Whether the sheet already saw it is said plainly — we never edit the
+    # hub's own document behind their back.
+    assert isinstance(gone.json()["was_mirrored"], bool)
+
+    remaining = client.get(f"/api/grocery/spend?token={token}").json()
+    assert all(r["id"] != spend_id for r in remaining)
+
+    # Gone means gone.
+    assert client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}").status_code == 404
+
+
+def test_someone_else_s_entry_is_not_yours_to_delete(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Gede"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    rtok = resident.json()["token"]
+    mine = client.post("/api/grocery/spend", json={"actor_token": rtok, "amount": "12"}).json()["id"]
+
+    staff = client.post("/api/household/invites", json={
+        "inviter_token": rtok, "name": "Made", "role": "staff",
+    })
+    stok = staff.json()["token"]
+    client.get(f"/api/household/me?token={stok}")   # activate the invite
+
+    denied = client.delete(f"/api/grocery/spend/{mine}?actor_token={stok}")
+    assert denied.status_code == 403
+    # ...but a resident can fix anyone's mistake.
+    assert client.delete(f"/api/grocery/spend/{mine}?actor_token={rtok}").status_code == 200
+
+
+def test_topping_up_the_float_and_what_is_left(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Ketut"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    before = client.get(f"/api/grocery/totals?token={token}").json()["remaining_idr"]
+
+    # The hub's real shape: money in, then market runs against it.
+    top = client.post("/api/grocery/topup", json={"actor_token": token, "amount": "4000"})
+    assert top.status_code == 200, top.text
+    assert top.json()["amount_idr"] == 4_000_000
+    assert top.json()["kind"] == "topup"
+
+    client.post("/api/grocery/spend", json={"actor_token": token, "amount": "385"})
+    client.post("/api/grocery/spend", json={"actor_token": token, "amount": "477.3"})
+
+    after = client.get(f"/api/grocery/totals?token={token}").json()
+    # 4,000,000 in, 862,300 out — the number a manager asks for before shopping.
+    assert after["remaining_idr"] - before == 4_000_000 - 385_000 - 477_300
+
+    # A top-up is money moved, not groceries: it must not inflate the day's spend.
+    assert after["day_total_idr"] >= 862_300
+    day_rows = client.get(f"/api/grocery/spend?token={token}&on={grocery._today_local()}").json()
+    assert any(r["kind"] == "topup" for r in day_rows)   # still visible in the ledger
+
+
+def test_a_top_up_of_zero_is_refused(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Wayan2"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+    assert client.post("/api/grocery/topup", json={"actor_token": token, "amount": "0"}).status_code == 422

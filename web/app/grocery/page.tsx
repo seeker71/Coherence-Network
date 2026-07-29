@@ -53,7 +53,13 @@ type Totals = {
   day_count: number;
   month_total_idr: number;
   month_count: number;
+  remaining_idr: number;
 };
+
+type SendResult =
+  | { kind: "saved"; spend: Spend }
+  | { kind: "rejected" }
+  | { kind: "offline" };
 
 type Draft = {
   actor_token: string;
@@ -64,6 +70,7 @@ type Draft = {
   lat: number | null;
   lon: number | null;
   spent_on: string;
+  kind: "buy" | "topup";
 };
 
 const TOKEN_KEY = "hatiSuci.token";
@@ -107,6 +114,16 @@ const T = {
     openSheet: "Open the sheet",
     waiting: "waiting",
     zero: "Type an amount first",
+    savedOk: "Recorded",
+    modeBuy: "Spent",
+    modeTop: "Top up",
+    remaining: "Left to spend",
+    topNote: "who it came from (optional)",
+    saveTop: "Add to the float",
+    undo: "Undo",
+    refused: "That amount wasn't accepted — check it and try again.",
+    removedMirrored: "Removed here. It already reached the sheet — delete that row there too.",
+    remove: "Remove",
   },
   id: {
     title: "Belanja",
@@ -142,6 +159,16 @@ const T = {
     openSheet: "Buka sheet",
     waiting: "menunggu",
     zero: "Isi jumlahnya dulu",
+    savedOk: "Tercatat",
+    modeBuy: "Belanja",
+    modeTop: "Isi ulang",
+    remaining: "Sisa",
+    topNote: "dari siapa (opsional)",
+    saveTop: "Tambah ke kas",
+    undo: "Batalkan",
+    refused: "Jumlahnya tidak diterima — periksa lalu coba lagi.",
+    removedMirrored: "Dihapus di sini. Sudah masuk sheet — hapus barisnya di sana juga.",
+    remove: "Hapus",
   },
 } as const;
 
@@ -193,6 +220,8 @@ export default function GroceryPage() {
 
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [saved, setSaved] = useState<{ amount: number; id: string } | null>(null);
+  const [mode, setMode] = useState<"buy" | "topup">("buy");
   const [addingShop, setAddingShop] = useState(false);
   const [shopName, setShopName] = useState("");
   const [shopDesc, setShopDesc] = useState("");
@@ -294,19 +323,23 @@ export default function GroceryPage() {
   }, [token]);
 
   // ---- sending, with the queue as the safety net ---------------------------
-  const send = useCallback(async (draft: Draft): Promise<boolean> => {
+  // Three outcomes, never conflated. A rejection is NOT a save: the old code
+  // returned "don't requeue" as success, so a refused amount cleared the form
+  // and looked recorded while nothing landed.
+  const send = useCallback(async (draft: Draft): Promise<SendResult> => {
     try {
-      const res = await fetch("/api/grocery/spend", {
+      const res = await fetch(draft.kind === "topup" ? "/api/grocery/topup" : "/api/grocery/spend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
-      // A 4xx is the server saying the entry itself is wrong — requeueing it
-      // would retry the same rejection forever. Only a dead line requeues.
-      if (!res.ok && res.status < 500) return true;
-      return res.ok;
+      if (res.ok) return { kind: "saved", spend: (await res.json()) as Spend };
+      // A 4xx is the server saying this entry is wrong — retrying forever
+      // would never fix it, so it is refused, not queued.
+      if (res.status < 500) return { kind: "rejected" };
+      return { kind: "offline" };
     } catch {
-      return false;
+      return { kind: "offline" };
     }
   }, []);
 
@@ -315,8 +348,8 @@ export default function GroceryPage() {
     if (!pending.length) return;
     const left: Draft[] = [];
     for (const d of pending) {
-      const ok = await send(d);
-      if (!ok) left.push(d);
+      const r = await send(d);
+      if (r.kind === "offline") left.push(d);   // a refused draft is dropped, not retried forever
     }
     writeQueue(left);
     if (left.length < pending.length) void refresh();
@@ -346,21 +379,59 @@ export default function GroceryPage() {
       lat: shop ? null : coords?.lat ?? null,
       lon: shop ? null : coords?.lon ?? null,
       spent_on: todayLocal(),
+      kind: mode,
     };
-    const ok = await send(draft);
-    if (!ok) {
+    const result = await send(draft);
+    setBusy(false);
+    if (result.kind === "rejected") {
+      // Keep what they typed — it is the thing that needs changing.
+      setFlash(t.refused);
+      amountRef.current?.focus();
+      return;
+    }
+    if (result.kind === "offline") {
       writeQueue([...readQueue(), draft]);
       setFlash(t.offline);
     } else {
+      // Say it plainly and show the undo, so nobody taps twice wondering.
+      setSaved({ amount: result.spend.amount_idr, id: result.spend.id });
       setFlash(null);
+      void refresh();
     }
     setAmount("");
     setNote("");
     setCategory(null);
-    setBusy(false);
     amountRef.current?.focus();
-    if (ok) void refresh();
-  }, [token, amount, idr, category, note, shop, coords, send, writeQueue, readQueue, refresh, t]);
+  }, [token, amount, idr, category, note, shop, coords, mode, send, writeQueue, readQueue, refresh, t]);
+
+  // The confirmation fades on its own; the entry stays removable from the list.
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
+
+  const remove = useCallback(async (id: string) => {
+    if (!token) return;
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/grocery/spend/${encodeURIComponent(id)}?actor_token=${encodeURIComponent(token)}`,
+        { method: "DELETE" },
+      );
+      if (res.ok) {
+        const body = (await res.json()) as { was_mirrored: boolean };
+        setSaved(null);
+        // The sheet is the hub's own document — we never reach in and edit a
+        // row we already handed over, so say when one needs removing by hand.
+        setFlash(body.was_mirrored ? t.removedMirrored : null);
+        void refresh();
+      }
+    } catch {
+      /* leave it in place; the ledger is still the record */
+    }
+    setBusy(false);
+  }, [token, refresh, t]);
 
   const saveShop = useCallback(async () => {
     if (!token || !shopName.trim() || !shopDesc.trim()) return;
@@ -421,7 +492,7 @@ export default function GroceryPage() {
           </div>
           <button
             onClick={() => setLang(lang === "id" ? "en" : "id")}
-            className="rounded-lg border border-neutral-800 px-3 py-1.5 text-xs uppercase tracking-wider text-neutral-400"
+            className="min-h-[44px] rounded-lg border border-neutral-800 px-4 text-xs uppercase tracking-wider text-neutral-400"
           >
             {lang === "id" ? "EN" : "ID"}
           </button>
@@ -432,8 +503,26 @@ export default function GroceryPage() {
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
           <section className="min-w-0">
             {/* ---- the number ---- */}
+            <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-neutral-800 bg-neutral-900/40 p-1">
+              {(["buy", "topup"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setSaved(null); setFlash(null); }}
+                  aria-pressed={mode === m}
+                  className={`rounded-lg px-4 py-3 text-base transition ${
+                    mode === m
+                      ? "bg-amber-500/20 text-amber-200"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {m === "buy" ? t.modeBuy : t.modeTop}
+                </button>
+              ))}
+            </div>
+
             <label className="block text-sm text-neutral-400">
-              {t.spent} <span className="text-neutral-600">· {t.thousands}</span>
+              {mode === "buy" ? t.spent : t.modeTop}{" "}
+              <span className="text-neutral-600">· {t.thousands}</span>
             </label>
             <div className="mt-2 flex items-baseline gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-5 py-4 focus-within:border-amber-500/60">
               <span className="text-2xl text-neutral-500">Rp</span>
@@ -447,14 +536,19 @@ export default function GroceryPage() {
                 aria-label={`${t.spent} — ${t.thousands}`}
                 className="w-full bg-transparent text-5xl font-semibold tabular-nums text-neutral-50 outline-none placeholder:text-neutral-700"
               />
-              <span className="shrink-0 text-lg text-neutral-500">.000</span>
+              <span className="shrink-0 text-sm text-neutral-600">ribu</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-sm">
-              <span className="tabular-nums text-amber-400">{idr > 0 ? rupiah(idr) : t.hint}</span>
-              <span className="text-neutral-600">{todayLocal()}</span>
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              {idr > 0 ? (
+                <span className="text-2xl font-medium tabular-nums text-amber-400">{rupiah(idr)}</span>
+              ) : (
+                <span className="text-sm text-neutral-600">{t.hint}</span>
+              )}
+              <span className="shrink-0 text-sm text-neutral-600">{todayLocal()}</span>
             </div>
 
             {/* ---- where: the stored shop fills the description in ---- */}
+            {mode === "buy" && (
             <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
               {locating ? (
                 <div className="text-sm text-neutral-500">{t.locating}</div>
@@ -467,7 +561,11 @@ export default function GroceryPage() {
                     <div className="truncate text-neutral-100">{shop.name}</div>
                     <div className="truncate text-sm text-neutral-500">{shop.default_description}</div>
                   </div>
-                  <button onClick={() => setShop(null)} className="shrink-0 text-xs text-neutral-500 underline">
+                  <button
+                    onClick={() => setShop(null)}
+                    aria-label={t.noShop}
+                    className="-m-1 min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-neutral-500 hover:text-neutral-300"
+                  >
                     ✕
                   </button>
                 </div>
@@ -509,8 +607,10 @@ export default function GroceryPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ---- icons carry the description when no shop does ---- */}
+            {mode === "buy" && (
             <div className="mt-5">
               <div className="text-sm text-neutral-400">{t.whatFor}</div>
               <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -521,14 +621,14 @@ export default function GroceryPage() {
                       key={c.key}
                       onClick={() => setCategory(on ? null : c.key)}
                       aria-pressed={on}
-                      className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 transition ${
+                      className={`flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 transition ${
                         on
                           ? "border-amber-500/70 bg-amber-500/10"
                           : "border-neutral-800 bg-neutral-900/40 hover:border-neutral-700"
                       }`}
                     >
-                      <span className="text-2xl leading-none">{c.emoji}</span>
-                      <span className="text-center text-[10px] leading-tight text-neutral-400">
+                      <span className="text-3xl leading-none">{c.emoji}</span>
+                      <span className="text-center text-xs leading-tight text-neutral-300">
                         {lang === "id" ? c.id : c.en}
                       </span>
                     </button>
@@ -536,18 +636,37 @@ export default function GroceryPage() {
                 })}
               </div>
             </div>
+            )}
 
             {/* ---- and the custom field for everything else ---- */}
             <div className="mt-4">
-              <label className="block text-sm text-neutral-400">{t.custom}</label>
+              <label className="block text-sm text-neutral-400">
+                {mode === "buy" ? t.custom : t.topNote}
+              </label>
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder={t.customPh}
+                placeholder={mode === "buy" ? t.customPh : t.topNote}
                 maxLength={200}
                 className="mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 outline-none focus:border-amber-500/60"
               />
             </div>
+
+            {saved && (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3">
+                <div className="min-w-0 text-emerald-300">
+                  <span className="text-lg">✓ {t.savedOk}</span>
+                  <span className="ml-2 tabular-nums text-emerald-200">{rupiah(saved.amount)}</span>
+                </div>
+                <button
+                  onClick={() => void remove(saved.id)}
+                  disabled={busy}
+                  className="min-h-[44px] shrink-0 rounded-lg border border-emerald-500/40 px-5 text-sm text-emerald-200 disabled:opacity-40"
+                >
+                  {t.undo}
+                </button>
+              </div>
+            )}
 
             {flash && <div className="mt-3 text-sm text-amber-400">{flash}</div>}
 
@@ -556,12 +675,21 @@ export default function GroceryPage() {
               disabled={busy}
               className="mt-5 w-full rounded-2xl border border-amber-500/60 bg-amber-500/15 px-6 py-4 text-lg font-medium text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-50"
             >
-              {busy ? t.saving : `${t.save}${idr > 0 ? ` · ${rupiah(idr)}` : ""}`}
+              {busy
+                ? t.saving
+                : `${mode === "buy" ? t.save : t.saveTop}${idr > 0 ? ` · ${rupiah(idr)}` : ""}`}
             </button>
           </section>
 
           {/* ---- the ledger ---- */}
           <aside className="min-w-0">
+            <div className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-amber-600">{t.remaining}</div>
+              <div className="mt-1 truncate text-2xl font-medium tabular-nums text-amber-300">
+                {rupiah(totals?.remaining_idr ?? 0)}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-wider text-neutral-500">{t.today}</div>
@@ -607,7 +735,17 @@ export default function GroceryPage() {
                       {s.sheet_synced ? ` · ${t.sheet} ✓` : ""}
                     </div>
                   </div>
-                  <div className="shrink-0 tabular-nums text-neutral-100">{rupiah(s.amount_idr)}</div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="tabular-nums text-neutral-100">{rupiah(s.amount_idr)}</span>
+                    <button
+                      onClick={() => void remove(s.id)}
+                      disabled={busy}
+                      aria-label={`${t.remove} ${rupiah(s.amount_idr)}`}
+                      className="min-h-[44px] min-w-[44px] rounded-lg text-neutral-600 hover:text-red-400 disabled:opacity-40"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

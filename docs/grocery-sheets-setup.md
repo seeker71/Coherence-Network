@@ -23,17 +23,88 @@ https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit
 Keep that id — step 4 uses it so the app can link a person straight to
 their own record.
 
-## 2. Add the script
+## 2. Restructure the sheet, once
 
-**Extensions → Apps Script**, replace the contents with:
+The ledger as it was had purchases at the top, negative settlement rows
+underneath, and a `remaining` row below those — so every new purchase had
+to be squeezed in above the settlements, and `remaining` kept getting
+pushed around. The app can only append safely if nothing has to move.
+
+The new shape is a plain append-only log with the totals off to one side,
+where rows never reach them:
+
+```
+      A           B          C                          E            F
+ 1    When        Amount     What                       Remaining    =-SUM($B$2:$B)
+ 2    23/07/2026  385000     pasar pagi - sayur & ikan  Spent        =SUMIF($B$2:$B,">0")
+ 3    26/07/2026  -4000000   top up                     Topped up    =-SUMIF($B$2:$B,"<0")
+ 4    ...                                               Events       =COUNTA($A$2:$A)
+```
+
+- **One row per event**, newest at the bottom. Nothing is ever moved.
+- **`Amount` is signed**: a purchase is positive, a top-up negative - the
+  same convention the old settlement rows already used, so every existing
+  number keeps its meaning.
+- **`Remaining` is a formula in a fixed cell**, not a row. Appending cannot
+  disturb it. It reads *positive* when there is float left to spend, which
+  is the way round a person actually asks the question.
+- **`Paid` is gone.** With top-ups in the same log, the balance answers what
+  that column was being used to track.
+
+Run this once - **Extensions -> Apps Script**, paste, then run `restructure`
+from the toolbar. It converts the sheet in place and keeps every value:
 
 ```javascript
-// Appends one grocery row in the hub's own ledger shape: When | Cost | Paid | What.
-//
-// The sheet keeps purchases at the top, negative settlement rows below them,
-// and a running balance underneath. A plain appendRow() would drop new
-// purchases *under* "remaining" and break that story, so this fills the first
-// empty row above the settlement block instead.
+// One-time: turn the old When|Cost|Paid|What sheet into an append-only
+// When|Amount|What log with the totals in fixed cells. Safe to re-run.
+function restructure() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const values = sheet.getDataRange().getValues();
+  const header = values[0].map(String);
+  const iWhen = header.indexOf("When");
+  const iAmount = header.indexOf("Amount") >= 0 ? header.indexOf("Amount") : header.indexOf("Cost");
+  const iWhat = header.indexOf("What");
+  if (iWhen < 0 || iAmount < 0) throw new Error("need a When and a Cost/Amount column");
+
+  // Keep every row that carries a value; drop the blank filler and the old
+  // "remaining" line (its number is now a formula).
+  const kept = [];
+  for (let i = 1; i < values.length; i++) {
+    const when = values[i][iWhen];
+    const amount = values[i][iAmount];
+    const what = iWhat >= 0 ? String(values[i][iWhat] || "").trim() : "";
+    if (amount === "" || amount === null) continue;
+    if (what.toLowerCase() === "remaining") continue;         // now a formula
+    kept.push([when || "", Number(amount), what.toLowerCase() === "paid" ? "top up" : what]);
+  }
+  kept.sort((a, b) => (a[0] instanceof Date && b[0] instanceof Date) ? a[0] - b[0] : 0);
+
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 3).setValues([["When", "Amount", "What"]]).setFontWeight("bold");
+  if (kept.length) sheet.getRange(2, 1, kept.length, 3).setValues(kept);
+  sheet.getRange("B2:B").setNumberFormat('"Rp"#,##0');
+  sheet.getRange("A2:A").setNumberFormat("dd/MM/yyyy");
+
+  // The totals, in cells no append will ever reach.
+  sheet.getRange("E1:F4").setValues([
+    ["Remaining", "=-SUM($B$2:$B)"],
+    ["Spent", '=SUMIF($B$2:$B,">0")'],
+    ["Topped up", '=-SUMIF($B$2:$B,"<0")'],
+    ["Events", "=COUNTA($A$2:$A)"],
+  ]);
+  sheet.getRange("E1:E4").setFontWeight("bold");
+  sheet.getRange("F1:F4").setNumberFormat('"Rp"#,##0');
+  sheet.setFrozenRows(1);
+}
+```
+
+## 2b. Add the append script
+
+In the same Apps Script project, add this alongside `restructure`:
+
+```javascript
+// Appends one event - a purchase or a top-up - to the bottom of the log.
+// Nothing moves, so the totals in E:F stay put.
 const SECRET = "";  // optional: same value as grocery_sheet.secret in the keystore
 
 function doPost(e) {
@@ -42,38 +113,16 @@ function doPost(e) {
     return ContentService.createTextOutput("forbidden");
   }
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const columns = body.columns;              // ["When", "Cost", "Paid", "What"]
-  const values = sheet.getDataRange().getValues();
-  const header = values[0].map(String);
+  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
 
-  // Find each column by NAME, so reordering or adding a column never
-  // shifts where the app writes.
-  const at = {};
-  columns.forEach((c) => { at[c] = header.indexOf(c); });
-  if (at["Cost"] < 0 || at["When"] < 0) {
-    return ContentService.createTextOutput("missing When/Cost column");
-  }
-
-  // The settlement block begins at the first negative Cost. Purchases go above it.
-  let limit = values.length;
-  for (let i = 1; i < values.length; i++) {
-    const cost = values[i][at["Cost"]];
-    if (typeof cost === "number" && cost < 0) { limit = i; break; }
-  }
-
-  // Reuse the first blank row above that block; otherwise open one there.
-  let target = -1;
-  for (let i = 1; i < limit; i++) {
-    if (values[i][at["When"]] === "" && values[i][at["Cost"]] === "") { target = i + 1; break; }
-  }
-  if (target < 0) { sheet.insertRowBefore(limit + 1); target = limit + 1; }
-
-  columns.forEach((c) => {
-    if (at[c] < 0) return;
-    let v = body.row[c];
-    if (c === "When" && v) v = new Date(v);   // a real date, so the column's own format applies
-    sheet.getRange(target, at[c] + 1).setValue(v);
+  // Match columns by NAME, so reordering or adding one never shifts the write.
+  const row = new Array(header.length).fill("");
+  body.columns.forEach((c) => {
+    const at = header.indexOf(c);
+    if (at < 0) return;
+    row[at] = c === "When" && body.row[c] ? new Date(body.row[c]) : body.row[c];
   });
+  sheet.appendRow(row);
   return ContentService.createTextOutput("ok");
 }
 ```
@@ -127,22 +176,20 @@ The next entry appends a row. A running API caches config until
 
 ## What the sheet gets
 
-The app writes the hub's own four columns, matched **by name** — not a
-second table beside them:
+One appended row per event, matched **by column name**:
 
 | Column | What lands there |
 |--------|------------------|
-| `When` | the day it was spent (hub timezone, UTC+8), as a real date |
-| `Cost` | whole rupiah as a **number** — `477300`, never the text `"Rp477,300"`, so the column's currency format and any sums keep working |
-| `Paid` | `TRUE` for a purchase; settling stays a separate row, as it already is |
-| `What` | the description — the shop's stored sentence, the icon's label, or what the manager typed |
+| `When` | the day it happened (hub timezone, UTC+8), as a real date |
+| `Amount` | whole rupiah as a **number** - positive for a purchase, negative for a top-up. Never the text `"Rp477,300"`, so the format and the formulas keep working |
+| `What` | the description - the shop's stored sentence, the icon's label, or what the manager typed |
 
 `What` is the column worth the whole app. In the ledger as we found it,
 every purchase row had it empty; the amount was recorded and the meaning
 was not. Now it arrives filled in without anyone typing it.
 
-Purchases land above the settlement rows, reusing the blank rows already
-sitting there, so the running balance underneath stays where it is.
+Nothing else is touched. `Remaining`, `Spent`, and `Topped up` are formulas
+in fixed cells, so they stay correct no matter how many rows arrive.
 
 ## When the sheet is dark
 

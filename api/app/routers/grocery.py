@@ -59,6 +59,8 @@ from app.services.form_kernel_bridge import serve_via_kernel
 router = APIRouter()
 
 _SPEND_TYPE = "grocery_spend"
+_KIND_BUY = "buy"        # money out — a market run
+_KIND_TOPUP = "topup"    # money in — the float topped back up
 _SHOP_KIND = "shop"
 _CURRENCY = "IDR"
 
@@ -247,7 +249,6 @@ class SpendCreate(BaseModel):
     lat: int | None = None                                       # or raw GPS, to resolve one
     lon: int | None = None
     spent_on: str | None = Field(default=None, max_length=10)    # ISO date; today when absent
-    paid: bool = True          # the hub's sheet marks purchases paid; settling is a separate row
 
 
 class SpendResponse(BaseModel):
@@ -261,12 +262,18 @@ class SpendResponse(BaseModel):
     place_id: str | None = None
     place_name: str | None = None
     spent_on: str
-    paid: bool = True
+    kind: str = "buy"          # "buy" — money out; "topup" — money added to the float
     by_id: str
     by_name: str
     created_at: str
     sheet_synced: bool = False
     runtime: str = ""          # which kernel carrier computed the amount
+
+
+    @property
+    def signed_idr(self) -> int:
+        """Money out is positive, money in is negative — one column, one SUM."""
+        return -self.amount_idr if self.kind == _KIND_TOPUP else self.amount_idr
 
 
 class CategoryOut(BaseModel):
@@ -288,7 +295,7 @@ def _node_to_spend(node: dict) -> SpendResponse:
         place_id=_s(node.get("place_id")),
         place_name=_s(node.get("place_name")),
         spent_on=_s(node.get("spent_on")) or "",
-        paid=bool(node.get("paid", True)),
+        kind=_s(node.get("kind")) or _KIND_BUY,
         by_id=_s(node.get("by_id")) or "",
         by_name=_s(node.get("by_name")) or "",
         created_at=_s(node.get("created_at")) or "",
@@ -385,7 +392,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "place_id": shop.get("id") if shop else None,
         "place_name": (_s(shop.get("name")) if shop else None),
         "spent_on": spent_on,
-        "paid": bool(body.paid),
+        "kind": _KIND_BUY,
         "by_id": actor.get("id", ""),
         "by_name": actor.get("name", ""),
         "created_at": _now(),
@@ -427,6 +434,98 @@ async def list_spends(
     return [_node_to_spend(n) for n in rows[:limit]]
 
 
+class TopUpCreate(BaseModel):
+    actor_token: str = Field(min_length=1)
+    amount: str = Field(min_length=1, max_length=20)   # thousands, same as a buy
+    note: str | None = Field(default=None, max_length=200)
+    spent_on: str | None = Field(default=None, max_length=10)
+
+
+@router.post(
+    "/grocery/topup",
+    response_model=SpendResponse,
+    summary="Money added to the float — the other direction of the same ledger",
+)
+async def record_topup(body: TopUpCreate) -> SpendResponse:
+    """A top-up is the same shape as a buy, pointing the other way.
+
+    Keeping both in one cell type means "remaining" is a single sum rather
+    than two tables that have to be reconciled — the thing the hub was doing
+    by hand with negative rows.
+    """
+    actor = _require_writer(body.actor_token)
+    amount_idr, runtime = _to_rupiah(body.amount)
+    if amount_idr <= 0:
+        raise HTTPException(status_code=422, detail="a top-up of zero is not a top-up")
+
+    spent_on = (body.spent_on or "").strip() or _today_local()
+    try:
+        datetime.strptime(spent_on, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"{spent_on!r} is not a date (YYYY-MM-DD)")
+
+    note = (body.note or "").strip()
+    topup_id = f"topup-{uuid.uuid4().hex[:12]}"
+    props: dict[str, Any] = {
+        "amount_typed": (body.amount or "").strip(),
+        "amount_idr": amount_idr,
+        "currency": _CURRENCY,
+        "spend_description": note or "top up",
+        "category": None,
+        "note": note or None,
+        "place_id": None,
+        "place_name": None,
+        "spent_on": spent_on,
+        "kind": _KIND_TOPUP,
+        "by_id": actor.get("id", ""),
+        "by_name": actor.get("name", ""),
+        "created_at": _now(),
+        "runtime": runtime,
+        "sheet_synced": False,
+    }
+    graph_service.create_node(
+        id=topup_id, type=_SPEND_TYPE,
+        name=f"top up {_CURRENCY} {amount_idr:,}",
+        description=props["spend_description"], properties=props,
+    )
+    node = graph_service.get_node(topup_id) or {"id": topup_id, **props}
+    topup = _node_to_spend(node)
+    if _push_to_sheet(topup):
+        graph_service.update_node(topup_id, properties={"sheet_synced": True})
+        topup.sheet_synced = True
+    return topup
+
+
+class DeleteResponse(BaseModel):
+    deleted: str
+    was_mirrored: bool   # did the sheet already get this row?
+
+
+@router.delete(
+    "/grocery/spend/{spend_id}",
+    response_model=DeleteResponse,
+    summary="Remove an entry — a wrong number should be fixable by the person who typed it",
+)
+async def delete_spend(
+    spend_id: str,
+    actor_token: str = Query(..., description="the device token of the recorder or a resident"),
+) -> DeleteResponse:
+    actor = _require_writer(actor_token)
+    node = graph_service.get_node(spend_id)
+    if not node or node.get("type") != _SPEND_TYPE:
+        raise HTTPException(status_code=404, detail=f"entry {spend_id!r} not found")
+    # Your own mistake is yours to undo; a resident can fix anyone's.
+    if node.get("by_id") != actor.get("id") and actor.get("role") != "resident":
+        raise HTTPException(
+            status_code=403, detail="only the person who recorded it, or a resident, can remove it"
+        )
+    mirrored = bool(node.get("sheet_synced"))
+    graph_service.delete_node(spend_id)
+    # The sheet is the hub's own document; we never reach in and edit rows we
+    # already handed over. Saying so plainly is the honest half of undo.
+    return DeleteResponse(deleted=spend_id, was_mirrored=mirrored)
+
+
 class TotalsResponse(BaseModel):
     on: str
     currency: str = _CURRENCY
@@ -434,6 +533,7 @@ class TotalsResponse(BaseModel):
     day_count: int
     month_total_idr: int
     month_count: int
+    remaining_idr: int = 0     # topped up minus spent — what is left to shop with
 
 
 @router.get(
@@ -449,14 +549,19 @@ async def totals(
     day = (on or "").strip() or _today_local()
     month = day[:7]
     rows = _all_spends()
-    day_rows = [n for n in rows if _s(n.get("spent_on")) == day]
-    month_rows = [n for n in rows if (_s(n.get("spent_on")) or "").startswith(month)]
+    buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
+    day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
+    month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
+    # One sum over the whole ledger, signed — the same number the sheet's
+    # remaining cell computes, so the two can never quietly disagree.
+    remaining = -sum(_node_to_spend(n).signed_idr for n in rows)
     return TotalsResponse(
         on=day,
         day_total_idr=sum(int(n.get("amount_idr") or 0) for n in day_rows),
         day_count=len(day_rows),
         month_total_idr=sum(int(n.get("amount_idr") or 0) for n in month_rows),
         month_count=len(month_rows),
+        remaining_idr=remaining,
     )
 
 
@@ -464,15 +569,18 @@ async def totals(
 # The mirror — Google Sheets by webhook, CSV as the door out.
 # --------------------------------------------------------------------------
 
-# The hub's sheet already has a shape, and it is not ours: `When | Cost |
-# Paid | What`, purchases at the top, negative settlement rows below them,
-# and a running "remaining" balance. The mirror writes THAT, so the rows the
-# app adds sit in the same table the humans already read — not a second,
-# incompatible one beside it.
+# The hub's ledger, restructured so the app can just append: `When | Amount
+# | What`, one row per event, newest at the bottom, nothing ever moved.
+#
+# `Amount` is signed — a purchase is positive, a top-up is negative — which
+# is the convention the sheet already used for its settlement rows, so the
+# existing numbers keep their meaning. "Remaining" is no longer a row that
+# has to be pushed down; it is a formula in a fixed cell beside the header
+# (`=-SUM(...)`), so appending can never disturb it.
 #
 # `What` is the column that matters. In the ledger as we found it, all eight
 # purchases had it empty. Filling it is the whole point of this app.
-_SHEET_COLUMNS = ["When", "Cost", "Paid", "What"]
+_SHEET_COLUMNS = ["When", "Amount", "What"]
 
 # The door out stays lossless — everything the graph holds, not just the
 # four columns the sheet shows.
@@ -483,16 +591,16 @@ _CSV_COLUMNS = [
 
 
 def _sheet_row(spend: SpendResponse) -> dict[str, Any]:
-    """One row in the hub's own four columns.
+    """One appendable row: when, how much (signed), what it was.
 
-    `Cost` goes as a plain integer, never "Rp385,000" — the column carries
+    `Amount` goes as a plain integer, never "Rp385,000" — the column carries
     its own currency format, and text would break the sums the sheet
-    computes underneath.
+    computes beside it. A top-up is negative, so the remaining formula is a
+    single SUM over one column.
     """
     return {
-        "When": spend.spent_on,        # ISO; the script hands the sheet a real date
-        "Cost": spend.amount_idr,      # number, so SUM and the Rp format keep working
-        "Paid": spend.paid,
+        "When": spend.spent_on,   # ISO; the script hands the sheet a real date
+        "Amount": spend.signed_idr,
         "What": spend.description,
     }
 
