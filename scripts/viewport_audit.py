@@ -57,6 +57,7 @@ DEFAULT_PATHS = [
     "/sense/surface",  # the live world-perception surface (channels from world-perception.fk)
     "/portfolio/investments",
     "/hati-suci",   # the resident-service nervous system (first Light Hub membrane)
+    "/grocery",     # the hub's grocery ledger (app.hati.earth) — one number, one tap
 ]
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "viewport-audit"

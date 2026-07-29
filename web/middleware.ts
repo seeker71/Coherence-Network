@@ -58,6 +58,12 @@ export function middleware(req: NextRequest) {
   if (host.startsWith("suci.") && !pathname.startsWith("/suci")) {
     return NextResponse.rewrite(new URL("/suci", req.url));
   }
+  // app.hati.earth is the grocery ledger the hub's manager opens on their
+  // phone. Only the root rewrites, so /grocery keeps working on every host
+  // and the subdomain's other paths stay reachable.
+  if (host.startsWith("app.") && pathname === "/") {
+    return NextResponse.rewrite(new URL("/grocery", req.url));
+  }
 
   if (pathname.startsWith("/vision/")) {
     const id = pathname.slice("/vision/".length);

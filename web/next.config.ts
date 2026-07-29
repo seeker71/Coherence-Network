@@ -16,7 +16,12 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // geolocation=(self): our own pages may ASK for location — the hub's
+    // places are pinned by standing at them, and the grocery ledger fills
+    // its description from the shop you are at. The browser still prompts
+    // the person; this header only decides whether the API exists at all.
+    // Camera and microphone stay closed; cross-origin frames stay closed.
+    value: "camera=(), microphone=(), geolocation=(self)",
   },
   {
     key: "X-DNS-Prefetch-Control",
