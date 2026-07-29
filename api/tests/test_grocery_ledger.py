@@ -154,7 +154,7 @@ def test_zero_is_not_a_spend_and_an_unknown_category_is_refused(client):
 
 
 def test_writing_the_ledger_needs_a_vouched_hand(client):
-    watcher = client.post("/api/household/register", json={"name": "Ayu"})
+    watcher = client.post("/api/household/members", json={"name": "Ayu"})
     assert watcher.status_code in (200, 201), watcher.text
     wtok = watcher.json()["token"]
     assert watcher.json()["write_access"] is False
