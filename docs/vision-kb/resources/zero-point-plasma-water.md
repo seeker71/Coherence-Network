@@ -16,6 +16,12 @@ Lanes, never blended. This is the discipline the material demands, because the f
 
 These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form-stdlib/evidence-grounding.fk) (four-way, verdict 8191). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
 
+**Every lane tag below is computed, not typed.** The ladder's twenty-two claims live as signal tuples in [`zero-point-ladder-band.fk`](../../../form/form-stdlib/tests/zero-point-ladder-band.fk) and `eg-lane` decides each one — four-way, verdict **65535**. Change a signal and the verdict moves, so this page and the engine cannot drift apart.
+
+Running it corrected the author. The first version of this page typed **CONTESTED** across the whole plasma-water end of the ladder. The engine puts only the *water car* there — the one claim with a real history of attempted and failed replication. The mechanism, the tungsten report, the EVO reading and crater transmutation compute to **INFERENCE**: single-source and unreplicated, which is weaker than measured but is **not evidence against**. The hand-tags were harsher than the evidence, in a document about not doing that.
+
+The computed profile across all twenty-two claims — `measured 7 · theory 7 · practice 0 · inference 6 · contested 1 · mystery 1`; **14 grow tissue, 8 held below**. Note **practice = 0**: a physics ladder holds no phenomenology, which is correct and was invisible until something counted.
+
 | Lane | Means | Grows tissue? |
 |------|-------|---------------|
 | **MEASURED** | Observed, independently attested, instrument-measured. Not in dispute. | yes — cited |
@@ -121,7 +127,7 @@ The obvious objection: extracting work from a ground state at `T = 0` sounds lik
 
 King describes the paper accurately, and it matters — "thermodynamics forbids it" is not a valid dismissal. It equally does not license the leap: **"not forbidden" is not "demonstrated."** No verified net-energy extraction device exists.
 
-### Rung 8 — Chaos can self-organize: the load-bearing hinge · INFERENCE
+### Rung 8 — Chaos can self-organize: the load-bearing hinge · MEASURED conditions, INFERENCE flux
 
 The serious objection King reports being handed by physicists: the ZPE background is random noise, renormalized away, and noise cannot self-organize into anything usable. The entropy argument.
 
@@ -149,7 +155,7 @@ King's operational conclusion: *jerk the ions*. The target mode is **ion-acousti
 
 Lane discipline: the vacuum polarization is real; "therefore driving ions couples ZPE into recoverable excess" is the inference. The convergence with Moray is genuinely striking and is not evidence.
 
-### Rung 10 — Self-organized plasma structure: plasmoid, ecton, EVO · MIXED — practice, inference and contested in one rung
+### Rung 10 — Self-organized plasma structure: plasmoid, ecton, EVO · MEASURED plasmoids, INFERENCE vacuum-reading
 
 The claimed structure has three names from three lineages, and their lanes differ sharply:
 
@@ -159,7 +165,7 @@ The claimed structure has three names from three lineages, and their lanes diffe
 
 Shoulders' load-bearing mechanistic claim, and the bridge to the next rung: cratering is **not thermal**. The EVO delivers *coherent* energy that makes electron bonds let go; the glow and the heat appear *afterward*, as electrons fall back to ground state. Heat as an aftereffect rather than the cause. Everything at Rung 11 depends on this being true.
 
-### Rung 11 — Plasma water energy: the mechanism, stated plainly · CONTESTED
+### Rung 11 — Plasma water energy: the mechanism, stated plainly · INFERENCE mechanism, CONTESTED water-car
 
 This is the destination. King's chain, in order — and it is admirably specific:
 
@@ -175,9 +181,11 @@ This is the destination. King's chain, in order — and it is admirably specific
 
 The diagnostic signature he offers is the best falsifiable claim in the interview: a **Brown's gas (HHO) torch** whose flame is cool enough to pass a hand through and will not boil water, yet which **sublimates tungsten** (melting point 3422 °C) on contact with metal. A cool flame vaporizing tungsten is either an instrumentation artifact or a genuine paradigm problem. There is no comfortable third reading.
 
-**Lane, stated without hedging:** the mechanism is a hypothesis. The tungsten anomaly and the water-car reports are empirical claims with a long, mostly non-peer-reviewed history and — as King concedes — a heavy fraud background. Nothing here is replicated to mainstream standard. What the mechanism has going for it is not evidence but *structure*: it is specific, sequential, and each step names a condition that could be varied and measured. That is far better than "free energy from the vacuum," and it is what makes the experiments in the next section worth running.
+**Lane — computed, and it split this rung in two.** The *water car itself* lands in **CONTESTED**: it was tested, repeatedly, across a long history, and it did not replicate. But the **mechanism** — nanobubble, trapped charge, polar shell, plasma pinch — and the **cool-torch tungsten report** both land in **INFERENCE**: single-source and unreplicated, which is weaker than measured and is *not* the same as tested-and-failed.
 
-### Rung 12 — The adjacent tributaries · CONTESTED
+That distinction is the engine's, not mine. The first version of this page typed CONTESTED across all of it, which reads a specific unverified mechanism as though it had already been refuted. Nothing here is replicated to mainstream standard, and — as King concedes — the field carries a heavy fraud background. What the mechanism has going for it is not evidence but *structure*: it is specific, sequential, and each step names a condition that could be varied and measured. That is far better than "free energy from the vacuum," and it is what makes the experiments in the next section worth running.
+
+### Rung 12 — The adjacent tributaries · MEASURED fractoemission, INFERENCE transmutation
 
 Same claimed mechanism, other doors — worth knowing because they are where independent evidence would come from:
 
@@ -200,7 +208,7 @@ Three distinct claims hide inside the title. Separating them *is* the understand
 
 Claims 1 and 2 are the video's real substance, and they are worth taking seriously. Claim 3 is where inference took over — **narrated in the same confident voice as claims 1 and 2**. The voice-flattening is the actual failure mode here, not the physics. A reader who cannot hear the lane change inherits a false certainty; a reader who dismisses the whole thing loses two true and interesting things.
 
-### Rung 14 — The suppression frame, held at arm's length
+### Rung 14 — The suppression frame, held at arm's length · MYSTERY
 
 King's own epistemic care is worth mirroring rather than mocking. On the black-projects thesis he says plainly that he has no proof because he is not in those circles. And he attributes roughly **99% of suppression to ordinary belief** — scientists who have simply never heard of zero-point energy and reach for the entropy argument — rather than to men in black. That is his most careful moment, and it is more useful than the conspiracy reading.
 
