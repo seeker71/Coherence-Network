@@ -150,6 +150,12 @@ def _to_rupiah(typed: str) -> tuple[int, str]:
 
 class ShopResponse(PlaceResponse):
     default_description: str = ""
+    # Which starting suggestion (if any) this shop was first created from —
+    # stamped once at creation, untouched by any later rename. The web layer
+    # reads this across every device to know a suggestion has been used, so
+    # renaming "Bali Buda" away doesn't resurrect it as a ghost duplicate on
+    # a household member's *other* phone, where a per-device flag never was.
+    origin_suggestion: str | None = None
 
 
 class ShopBody(BaseModel):
@@ -158,6 +164,7 @@ class ShopBody(BaseModel):
     default_description: str = Field(min_length=1, max_length=200)
     lat: int | None = None   # micro-degrees, as the phone's GPS gives
     lon: int | None = None
+    origin_suggestion: str | None = Field(default=None, max_length=80)
 
 
 def _node_to_shop(node: dict) -> ShopResponse:
@@ -165,6 +172,7 @@ def _node_to_shop(node: dict) -> ShopResponse:
     return ShopResponse(
         **base.model_dump(),
         default_description=_s(node.get("default_description")) or base.name,
+        origin_suggestion=_s(node.get("origin_suggestion")) or None,
     )
 
 
@@ -191,12 +199,16 @@ async def list_shops(token: str | None = Query(default=None)) -> list[ShopRespon
 async def save_shop(body: ShopBody) -> ShopResponse:
     _require_writer(body.actor_token)
     shop_id = f"place-shop-{uuid.uuid4().hex[:10]}"
+    # `name` is not duplicated into properties: Node.to_dict() merges
+    # properties over the top-level columns, so a copy here would freeze
+    # the name at creation and outlive any later rename via PATCH.
     props: dict[str, Any] = {
-        "name": body.name,
         "kind": _SHOP_KIND,
         "default_description": body.default_description,
         "created_at": _now(),
     }
+    if body.origin_suggestion:
+        props["origin_suggestion"] = body.origin_suggestion
     if body.lat is not None and body.lon is not None:
         props["lat"] = int(body.lat)
         props["lon"] = int(body.lon)
@@ -209,6 +221,71 @@ async def save_shop(body: ShopBody) -> ShopResponse:
     )
     node = graph_service.get_node(shop_id) or {"id": shop_id, **props}
     return _node_to_shop(node)
+
+
+class ShopEdit(BaseModel):
+    actor_token: str = Field(min_length=1)
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    default_description: str | None = Field(default=None, min_length=1, max_length=200)
+    # Set only when the client knows the shop's PRE-rename name matched a
+    # starting suggestion — heals a shop saved before origin_suggestion
+    # existed, so a legacy rename doesn't resurrect a ghost either.
+    origin_suggestion: str | None = Field(default=None, max_length=80)
+
+
+@router.patch(
+    "/grocery/shops/{shop_id}",
+    response_model=ShopResponse,
+    summary="Rename a stored shop, or change what it fills in — never a new place",
+)
+async def edit_shop(shop_id: str, body: ShopEdit) -> ShopResponse:
+    _require_writer(body.actor_token)
+    if body.name is None and body.default_description is None:
+        raise HTTPException(status_code=400, detail="nothing to change")
+    node = graph_service.get_node(shop_id)
+    if not node or node.get("kind") != _SHOP_KIND:
+        raise HTTPException(status_code=404, detail=f"shop {shop_id!r} not found")
+    # Spends already recorded keep the description they were written with —
+    # editing a shop only changes what the NEXT visit fills in, never what a
+    # past entry says. `name` and `default_description` default to each
+    # other so the two rarely drift back apart.
+    new_name = body.name or node.get("name") or ""
+    new_desc = body.default_description or new_name
+    updates: dict[str, Any] = {"properties": {"default_description": new_desc}}
+    if body.name is not None:
+        updates["name"] = body.name
+        updates["description"] = new_desc
+        # A shop saved before this endpoint existed may carry a copy of its
+        # name inside properties too, which Node.to_dict() would otherwise
+        # let win over the column just updated above. Clearing it here heals
+        # that node the first time it is ever edited, no migration needed.
+        updates["properties"]["name"] = body.name
+    if body.origin_suggestion and not node.get("origin_suggestion"):
+        updates["properties"]["origin_suggestion"] = body.origin_suggestion
+    graph_service.update_node(shop_id, **updates)
+    node = graph_service.get_node(shop_id) or node
+    return _node_to_shop(node)
+
+
+class ShopDeleteResponse(BaseModel):
+    deleted: str
+
+
+@router.delete(
+    "/grocery/shops/{shop_id}",
+    response_model=ShopDeleteResponse,
+    summary="Forget a stored shop — past entries keep what they already said",
+)
+async def forget_shop(
+    shop_id: str,
+    actor_token: str = Query(..., description="the device token of the recorder or a resident"),
+) -> ShopDeleteResponse:
+    _require_writer(actor_token)
+    node = graph_service.get_node(shop_id)
+    if not node or node.get("kind") != _SHOP_KIND:
+        raise HTTPException(status_code=404, detail=f"shop {shop_id!r} not found")
+    graph_service.delete_node(shop_id)
+    return ShopDeleteResponse(deleted=shop_id)
 
 
 @router.get(

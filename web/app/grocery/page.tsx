@@ -25,6 +25,7 @@ type Shop = {
   lon?: number | null;
   default_description: string;
   pinned: boolean;
+  origin_suggestion?: string | null;
 };
 
 type Category = { key: string; emoji: string; en: string; id: string };
@@ -85,6 +86,14 @@ const LANG_KEY = "hatiGrocery.lang";
 // no stored places yet. They are a starting point, not a fixture: tapping one
 // stores it like any other place, and the row is whatever the household has
 // saved from then on.
+//
+// A suggestion is fulfilled — and stays gone, on every device — the moment
+// it is ever used to create a shop, stamped server-side on that shop's own
+// `origin_suggestion` and never touched by a later rename. A check against
+// only the *current* name would read "Bali Buda" as unfulfilled the instant
+// it's renamed to "Bali Buda Ubud" on Ita's phone, offering Urs a ghost
+// duplicate of the same place on his — the graph is what both devices read,
+// so that is where "already used" has to live.
 const STARTING_PLACES = ["Bali Buda", "Pasar"];
 
 type Lang = "en" | "id";
@@ -116,6 +125,12 @@ const T = {
     newPlace: "New place",
     placeName: "Name of the place",
     addNote: "Add a note",
+    managePlaces: "Edit places",
+    donePlaces: "Done",
+    renamePlace: "Rename",
+    saveRename: "Save the new name",
+    forgetPlace: "Forget this place",
+    confirmForget: "Forget it? Past entries keep what they already said.",
     locating: "Finding you…",
     sheet: "Sheet",
     csv: "Download CSV",
@@ -159,6 +174,12 @@ const T = {
     newPlace: "Tempat baru",
     placeName: "Nama tempatnya",
     addNote: "Tambah catatan",
+    managePlaces: "Ubah tempat",
+    donePlaces: "Selesai",
+    renamePlace: "Ganti nama",
+    saveRename: "Simpan nama baru",
+    forgetPlace: "Lupakan tempat ini",
+    confirmForget: "Lupakan? Catatan lama tetap seperti semula.",
     locating: "Mencari lokasi…",
     sheet: "Sheet",
     csv: "Unduh CSV",
@@ -232,6 +253,9 @@ export default function GroceryPage() {
   const [shopName, setShopName] = useState("");
   const [shops, setShops] = useState<Shop[]>([]);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [managingPlaces, setManagingPlaces] = useState(false);
+  const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
+  const [editPlaceName, setEditPlaceName] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
 
   const idr = useMemo(() => previewIdr(amount), [amount]);
@@ -241,10 +265,17 @@ export default function GroceryPage() {
   // tap away on the first day and stop being suggested once they are real.
   const places = useMemo<Shop[]>(() => {
     const held = new Set(shops.map((s) => s.name.trim().toLowerCase()));
-    const suggestions = STARTING_PLACES.filter((n) => !held.has(n.toLowerCase())).map(
-      (name) =>
-        ({ id: "", name, kind: "shop", default_description: name, pinned: false }) as Shop,
+    const fulfilled = new Set(
+      shops
+        .map((s) => (s.origin_suggestion || "").trim().toLowerCase())
+        .filter(Boolean),
     );
+    const suggestions = STARTING_PLACES
+      .filter((n) => !held.has(n.toLowerCase()) && !fulfilled.has(n.toLowerCase()))
+      .map(
+        (name) =>
+          ({ id: "", name, kind: "shop", default_description: name, pinned: false }) as Shop,
+      );
     return [...shops, ...suggestions];
   }, [shops]);
 
@@ -472,6 +503,10 @@ export default function GroceryPage() {
       return;
     }
     setBusy(true);
+    // Naming which starting suggestion this is (if any) is stamped on the
+    // shop itself, server-side, so the OTHER phone in the house reads
+    // "already used" too — not just this one.
+    const startingHit = STARTING_PLACES.find((p) => p.toLowerCase() === clean.toLowerCase());
     try {
       const res = await fetch("/api/grocery/shops", {
         method: "POST",
@@ -482,6 +517,7 @@ export default function GroceryPage() {
           default_description: clean,
           lat: coords?.lat ?? null,
           lon: coords?.lon ?? null,
+          origin_suggestion: startingHit ?? null,
         }),
       });
       if (res.ok) {
@@ -496,6 +532,63 @@ export default function GroceryPage() {
     }
     setBusy(false);
   }, [token, shops, coords]);
+
+  // Renaming changes what the NEXT visit fills in; nothing already recorded
+  // is touched, since a spend's description is written at the moment it is
+  // saved, not read live from the place each time.
+  const renamePlace = useCallback(async (id: string, name: string) => {
+    const clean = name.trim();
+    if (!token || !clean) return;
+    // A rename that moves a shop away from a starting suggestion's exact name
+    // is told to the server as origin_suggestion, so every device — not just
+    // this one — reads "already used" from the shop itself afterward. Only
+    // sent for a shop saved before that property existed (it never overwrites
+    // a value already set at creation).
+    const before = shops.find((s) => s.id === id);
+    const startingHit =
+      before && !before.origin_suggestion
+        ? STARTING_PLACES.find((p) => p.toLowerCase() === before.name.trim().toLowerCase())
+        : undefined;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/grocery/shops/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actor_token: token,
+          name: clean,
+          origin_suggestion: startingHit ?? null,
+        }),
+      });
+      if (res.ok) {
+        const updated = (await res.json()) as Shop;
+        setShops((prev) => prev.map((s) => (s.id === id ? updated : s)));
+        setShop((cur) => (cur?.id === id ? updated : cur));
+      }
+    } catch {
+      /* the rename can be tried again; nothing else depends on it landing */
+    }
+    setBusy(false);
+    setEditingPlaceId(null);
+  }, [token, shops]);
+
+  const forgetPlace = useCallback(async (id: string) => {
+    if (!token) return;
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/grocery/shops/${encodeURIComponent(id)}?actor_token=${encodeURIComponent(token)}`,
+        { method: "DELETE" },
+      );
+      if (res.ok) {
+        setShops((prev) => prev.filter((s) => s.id !== id));
+        setShop((cur) => (cur?.id === id ? null : cur));
+      }
+    } catch {
+      /* still listed; the manager can try again */
+    }
+    setBusy(false);
+  }, [token]);
 
   // ---- the door ------------------------------------------------------------
   if (!resolved) {
@@ -653,6 +746,70 @@ export default function GroceryPage() {
                   </button>
                 )}
               </div>
+
+              {/* ---- editing a place is rare; recording a buy is constant ----
+                  so managing places lives behind one small link rather than an
+                  icon on every chip, and the fast path above never changes shape. */}
+              {shops.length > 0 && (
+                <button
+                  onClick={() => setManagingPlaces((v) => !v)}
+                  className="mt-2 min-h-[44px] text-sm text-neutral-500 hover:text-neutral-300"
+                >
+                  {managingPlaces ? t.donePlaces : t.managePlaces}
+                </button>
+              )}
+              {managingPlaces && (
+                <div className="mt-1 grid gap-2 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
+                  {shops.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      {editingPlaceId === s.id ? (
+                        <>
+                          <input
+                            value={editPlaceName}
+                            onChange={(e) => setEditPlaceName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") void renamePlace(s.id, editPlaceName); }}
+                            autoFocus
+                            className="min-h-[44px] flex-1 rounded-lg border border-amber-500/50 bg-neutral-950 px-3 text-base outline-none"
+                          />
+                          <button
+                            onClick={() => void renamePlace(s.id, editPlaceName)}
+                            disabled={busy || !editPlaceName.trim()}
+                            aria-label={t.saveRename}
+                            className="min-h-[44px] min-w-[44px] rounded-lg border border-amber-500/50 bg-amber-500/10 text-amber-300 disabled:opacity-40"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => setEditingPlaceId(null)}
+                            aria-label={t.cancel}
+                            className="min-h-[44px] min-w-[44px] text-neutral-500"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setEditingPlaceId(s.id); setEditPlaceName(s.name); }}
+                            aria-label={`${t.renamePlace} ${s.name}`}
+                            className="min-h-[44px] flex-1 truncate rounded-lg px-3 text-left text-base text-neutral-200 hover:bg-neutral-800/60"
+                          >
+                            {s.name}
+                          </button>
+                          <button
+                            onClick={() => { if (window.confirm(t.confirmForget)) void forgetPlace(s.id); }}
+                            disabled={busy}
+                            aria-label={`${t.forgetPlace}: ${s.name}`}
+                            className="min-h-[44px] min-w-[44px] rounded-lg text-neutral-600 hover:text-red-400 disabled:opacity-40"
+                          >
+                            🗑
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             )}
 
