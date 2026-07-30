@@ -107,11 +107,13 @@ The strongest evidence against reading 10⁹⁴ g/cm³ as a reservoir comes from
 
 Whatever 10⁹⁴ g/cm³ names, **it demonstrably does not behave like stored energy**. Any extraction claim has to say what it is extracting *from*, given that. King's chain does not engage this, and this is its largest unaddressed gap — larger than the suppression question, because it is a measurement rather than a sociology.
 
-### Rung 7 — Is extraction even permitted? In principle, yes · MEASURED (as a theorem)
+### Rung 7 — Is extraction even permitted? In principle, yes · TEXTBOOK
 
 The obvious objection: extracting work from a ground state at `T = 0` sounds like a perpetual-motion machine. Cole & Puthoff (1993) analysed exactly this for Casimir-force schemes and concluded that it is not thermodynamically forbidden: for *reversible* processes no heat flows at `T = 0`, but *irreversible* processes can produce and move heat at `T = 0` or any `T > 0`. Their finding, in their own framing: yes, in principle, these proposals are correct.
 
-King describes this paper accurately, and it matters — it means "thermodynamics forbids it" is not a valid dismissal. It equally does not license the leap: **"not forbidden" is not "demonstrated."** No verified net-energy extraction device exists.
+**Lane, stated exactly:** this is a peer-reviewed *theoretical* analysis of whether a class of schemes is thermodynamically consistent. It reports no experiment and reproduces none. It removes an objection; it produces no energy.
+
+King describes the paper accurately, and it matters — "thermodynamics forbids it" is not a valid dismissal. It equally does not license the leap: **"not forbidden" is not "demonstrated."** No verified net-energy extraction device exists.
 
 ### Rung 8 — Chaos can self-organize: the load-bearing hinge · INFERENCE
 
@@ -127,7 +129,11 @@ His answer is **Ilya Prigogine's 1977 Nobel Prize** for dissipative structures �
 
 Two of three conditions are ordinary physics. The third is the entire claim, wearing the other two as credentials. King is candid that the orthogonal-flux model is the piece the field rejects, and he is right that Wheeler derived it rather than him — but "Wheeler derived a foam geometry" and "a usable energy flux passes orthogonally through 3-space and can be steered" are different statements. **This is the precise rung where the ladder changes lanes**, and everything from here up inherits that.
 
-He does offer one genuinely sharp supporting observation: the vacuum already self-organizes visibly, since virtual electron-positron pairs are Fermi-scale objects — 20 orders of magnitude larger than the Planck-scale fluctuations they emerge from. Spontaneous structure at vastly larger scale than the underlying grain is a real feature of the standard picture, not an invention.
+He offers one further argument in support, and it is worth stating precisely because it is rhetorically the most persuasive thing in the interview and it does not hold: that the vacuum *already* self-organizes visibly, since virtual electron-positron pairs are Fermi-scale objects some 20 orders of magnitude larger than the Planck-scale fluctuations they emerge from — so structure at vastly larger scale than the underlying grain is already standard.
+
+**This is King's inference, not a feature of the standard picture.** Virtual pairs in QED are perturbative internal states, characterised by the electron Compton wavelength; standard QED does not derive them from Planck-scale geometric fluctuations, causally or otherwise. The phrase "the fluctuations they emerge from" imports exactly the derivation that is missing. Two unconnected scale hierarchies are being read as one hierarchy with a mechanism between them.
+
+Noting it explicitly because the move is subtle and it is the same move the whole file is about: an established fact (virtual pairs exist at the Compton scale) and an unestablished bridge (they descend from quantum foam) delivered in one breath, so the bridge inherits the fact's credibility.
 
 ### Rung 9 — Push the ions, not the electrons · INFERENCE
 
