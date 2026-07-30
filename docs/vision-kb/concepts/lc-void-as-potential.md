@@ -2,7 +2,7 @@
 id: lc-void-as-potential
 hz: 174
 status: seed
-updated: 2026-05-24
+updated: 2026-07-30
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
 geometry:
   arity: 1
@@ -105,6 +105,27 @@ transformation.
   trustworthy than anything reached for during it.
 - Trust that what wants to come will come. The void has its own
   intelligence about what is ready to take shape.
+
+## The Same Claim in the Physics Register
+
+The metaphor this concept reaches for — the seething substrate of
+virtual particles — turns out to be a citation. Misner, Thorne and
+Wheeler open §44.3 of *Gravitation* with the sentence *"empty space
+is not empty. It is the seat of the most violent physics"* (p. 1202),
+and put the vacuum's field-fluctuation energy density at 10⁹⁴ g/cm³
+against a nucleus at 10¹⁴. Particles come out of that arithmetic not
+as the starting point of nature but as a first-order correction to
+the vacuum.
+
+Which is this concept's teaching in equations: the unformed ground
+is not less than what condenses out of it. It is overwhelmingly more.
+
+The ladder from there — and where it stops carrying weight — is held
+in [zero-point-plasma-water.md](../resources/zero-point-plasma-water.md).
+Worth knowing that the same textbook computes the effect at
+10⁻²⁰ at nuclear scale: the void is pregnant *and* it does not hand
+anything over on demand. That is the concept's own counsel about
+not rushing the void, stated as a measurement.
 
 ## Cross-References
 
