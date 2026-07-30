@@ -93,6 +93,11 @@ def parse_crossrefs(text: str) -> list[str]:
     return re.findall(r"lc-[\w-]+", section)
 
 
+FRONTMATTER_BLOCK_RE = re.compile(
+    r"^---[ \t]*\r?\n.*?\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL
+)
+
+
 def strip_frontmatter(text: str) -> str:
     """Return the markdown body with the YAML frontmatter block removed.
 
@@ -100,11 +105,17 @@ def strip_frontmatter(text: str) -> str:
     so anything reading headings or blockquotes out of a KB file reads the body
     this returns — never the raw text, where the first `# ` match would be a
     frontmatter comment rather than the document title.
+
+    The closing delimiter is matched as a whole line, the same way
+    `parse_frontmatter` matches it. A bare `---` substring inside a scalar or a
+    comment (`source: alpha---omega`) is therefore not a boundary — if it were,
+    the body would start mid-frontmatter and a later `# ` or `> ` line could
+    become the published title again, which is the defect this function exists
+    to close.
     """
-    if text.startswith("---"):
-        end = text.find("---", 3)
-        if end != -1:
-            return text[end + 3:].strip()
+    m = FRONTMATTER_BLOCK_RE.match(text)
+    if m:
+        return text[m.end():].strip()
     return text.strip()
 
 
