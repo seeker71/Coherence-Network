@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { CONTAINED_SURFACE_HEADER } from "./lib/contained-surface";
 import { LOCALES } from "./messages/manifest";
 
 const SUPPORTED: Set<string> = new Set(LOCALES.map((locale) => locale.code));
@@ -61,8 +62,17 @@ export function middleware(req: NextRequest) {
   // app.hati.earth is the grocery ledger the hub's manager opens on their
   // phone. Only the root rewrites, so /grocery keeps working on every host
   // and the subdomain's other paths stay reachable.
+  //
+  // A rewrite is invisible to the browser, so the client still reads its
+  // pathname as "/" — the surface is contained, and only the host says so.
+  // The header carries that knowing to the server render, which is where
+  // ChromeGate decides whether the site chrome belongs on the page.
   if (host.startsWith("app.") && pathname === "/") {
-    return NextResponse.rewrite(new URL("/grocery", req.url));
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set(CONTAINED_SURFACE_HEADER, "/grocery");
+    return NextResponse.rewrite(new URL("/grocery", req.url), {
+      request: { headers: requestHeaders },
+    });
   }
 
   if (pathname.startsWith("/vision/")) {

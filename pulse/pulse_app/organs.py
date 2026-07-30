@@ -88,6 +88,12 @@ UPSTREAM_API_SUBSTRATE_PAGE = "api_substrate_page"   # {API_BASE}/api/substrate/
 UPSTREAM_API_SUBSTRATE_FORM = "api_substrate_form"   # POST {API_BASE}/api/substrate/form
 UPSTREAM_API_SUBSTRATE_INGEST = "api_substrate_ingest"  # POST {API_BASE}/api/substrate/ingest
 
+# The ``active`` values that name a native Form carrier serving execution.
+# The FastAPI bridge reports the c-bootstrap binary as "fkwu"; the BML front
+# door (deploy/kernel-router/production-routes.fk) reports "native-kernel".
+# Either door breathing is the body's execution authority held natively.
+NATIVE_KERNEL_AUTHORITIES = frozenset({"fkwu", "native-kernel"})
+
 
 # Error boundary marker rendered by the Next.js root error.tsx
 # (web/app/error.tsx). The error page wraps its main element in
@@ -370,7 +376,17 @@ def extract_db_contention(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
-    """Native Form runtime authority after retirement of the Python evaluator."""
+    """A native Form carrier is serving execution, and Python is not.
+
+    Two doors answer ``/api/utils/kernel_status`` and both name a native
+    carrier. The FastAPI bridge reports the c-bootstrap binary as ``fkwu``; the
+    BML front door (``deploy/kernel-router/production-routes.fk``) reports
+    ``native-kernel``. The organ asserts the property both express rather than
+    one door's spelling, so whichever is deployed reads as breathing.
+
+    The teeth stay: ``unavailable`` — the honest darkness the endpoint reports —
+    a missing binary, and any Python authority all register as real silence.
+    """
     if r.status == 0:
         return OrganVerdict(False, r.error or "transport failure")
     if r.status >= 400:
@@ -380,11 +396,15 @@ def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if body.get("active") != "native-kernel":
-        return OrganVerdict(False, f"unexpected active runtime={body.get('active')!r}")
+    if body.get("active") not in NATIVE_KERNEL_AUTHORITIES:
+        return OrganVerdict(False, f"active runtime={body.get('active')!r}")
     if body.get("available") is not True:
         return OrganVerdict(False, "native Form runtime unavailable")
-    if body.get("python_authority") is not False:
+    if body.get("binary_available") is not True:
+        return OrganVerdict(False, "kernel binary absent from the container")
+    # Only the BML door carries this field; an explicit True is the one answer
+    # that names Python as the authority, and that is silence.
+    if body.get("python_authority") is True:
         return OrganVerdict(False, "Python authority unexpectedly active")
     return OrganVerdict(True)
 
@@ -554,8 +574,8 @@ ORGANS: list[Organ] = [
         name="substrate_form",
         label="Substrate Form",
         description=(
-            "GET /api/utils/kernel_status — the native Form runtime authority. "
-            "The retired Python evaluator is no longer treated as a living organ."
+            "GET /api/utils/kernel_status — the c-bootstrapped fkwu runtime "
+            "carrying execution for this container."
         ),
         upstream=UPSTREAM_API_SUBSTRATE_FORM,
         extractor=extract_substrate_form,
