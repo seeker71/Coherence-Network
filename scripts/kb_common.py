@@ -93,13 +93,47 @@ def parse_crossrefs(text: str) -> list[str]:
     return re.findall(r"lc-[\w-]+", section)
 
 
+FRONTMATTER_BLOCK_RE = re.compile(
+    r"^---[ \t]*\r?\n.*?\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL
+)
+
+
+def strip_frontmatter(text: str) -> str:
+    """Return the markdown body with the YAML frontmatter block removed.
+
+    Frontmatter may carry `#` comment lines (the geometry rationale blocks do),
+    so anything reading headings or blockquotes out of a KB file reads the body
+    this returns — never the raw text, where the first `# ` match would be a
+    frontmatter comment rather than the document title.
+
+    The closing delimiter is matched as a whole line, the same way
+    `parse_frontmatter` matches it. A bare `---` substring inside a scalar or a
+    comment (`source: alpha---omega`) is therefore not a boundary — if it were,
+    the body would start mid-frontmatter and a later `# ` or `> ` line could
+    become the published title again, which is the defect this function exists
+    to close.
+    """
+    m = FRONTMATTER_BLOCK_RE.match(text)
+    if m:
+        return text[m.end():].strip()
+    return text.strip()
+
+
+def extract_title(text: str) -> str:
+    """The document's `# ` title, read from the body so frontmatter can't win."""
+    m = re.search(r"^# (.+)$", strip_frontmatter(text), re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
+def extract_description(text: str) -> str:
+    """The document's leading `> ` blockquote, read from the body."""
+    m = re.search(r"^>\s*(.+)$", strip_frontmatter(text), re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
 def extract_story_content(text: str) -> str:
     """Extract the full markdown body after frontmatter, stripping the title line."""
-    if text.startswith("---"):
-        end = text.find("---", 3)
-        if end != -1:
-            text = text[end + 3:].strip()
-    lines = text.split("\n")
+    lines = strip_frontmatter(text).split("\n")
     if lines and lines[0].startswith("# "):
         lines = lines[1:]
     return "\n".join(lines).strip()
@@ -208,8 +242,9 @@ def parse_concept_file(filepath: Path) -> dict[str, Any]:
     text = filepath.read_text(encoding="utf-8")
     fm = parse_frontmatter(text)
     props: dict[str, Any] = {}
-    title_match = re.search(r"^# (.+)$", text, re.MULTILINE)
-    quote_match = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    body = strip_frontmatter(text)
+    title_match = re.search(r"^# (.+)$", body, re.MULTILINE)
+    quote_match = re.search(r"^>\s*(.+)$", body, re.MULTILINE)
     hz_raw = fm.get("hz", "").strip()
     hz: int | None = int(hz_raw) if hz_raw.isdigit() else None
 
