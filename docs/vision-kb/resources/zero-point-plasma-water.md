@@ -1,6 +1,6 @@
 # Zero-Point Energy to Plasma Water — A Grounded Ladder
 
-> Fifteen rungs from a single quantum oscillator to the "water car," each rung carrying its own lane: **measured**, **textbook-theoretical**, **inference**, or **contested**. Built by reading the textbook the claim rests on — Misner, Thorne & Wheeler, *Gravitation* (1973) — rather than the summaries of it. The physics at the bottom is real and stronger than most scientists know. The device at the top is not established. The interesting work is locating exactly where the ladder stops holding weight, because that location is specific and testable.
+> Fifteen rungs from a single quantum oscillator to the "water car," each rung carrying its own lane on the body's canonical evidence spectrum — **measured**, **theory**, **practice**, **inference**, **contested**, **mystery**. Built by reading the textbook the claim rests on — Misner, Thorne & Wheeler, *Gravitation* (1973) — rather than the summaries of it. The physics at the bottom is real and stronger than most scientists know. The device at the top is not established. The interesting work is locating exactly where the ladder stops holding weight, because that location is specific and testable.
 
 ## Source Snapshot
 
@@ -12,14 +12,20 @@
 
 ## How to read this file
 
-Four lanes, never blended. This is the discipline the material demands, because the failure mode here is not bad physics — it is *good physics and a hypothesis narrated in the same voice*.
+Lanes, never blended. This is the discipline the material demands, because the failure mode here is not bad physics — it is *good physics and a hypothesis narrated in the same voice*.
 
-| Lane | Means |
-|------|-------|
-| **MEASURED** | Reproduced experiment. Not in dispute. |
-| **TEXTBOOK** | Standard theory in a standard graduate text. Taken seriously by the field; not itself a measurement. |
-| **INFERENCE** | A step someone took *from* the textbook. May be reasonable, is not established. |
-| **CONTESTED** | Empirical claim without independent replication in mainstream venues, or with a heavy fraud background. |
+These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form-stdlib/evidence-grounding.fk) (four-way, verdict 8191). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
+
+| Lane | Means | Grows tissue? |
+|------|-------|---------------|
+| **MEASURED** | Observed, independently attested, instrument-measured. Not in dispute. | yes — cited |
+| **THEORY** | Follows from independently-measured accepted models; the claim itself unobserved. | yes — cited as a derivation |
+| **PRACTICE** | Observed and independently attested as practice and report, not measured. | yes — labeled phenomenology |
+| **INFERENCE** | Observed, but from a single source. A step someone took, not yet established. | no — held as potential |
+| **CONTESTED** | Tested and it did not survive: replication attempted and failed, or actively disputed. | no — held and named |
+| **MYSTERY** | No public observable kernel at all. | no — honest absence |
+
+The ordering carries the discipline. **CONTESTED sits below INFERENCE**, because a failed replication is positive evidence *against*, where an un-replicated claim is merely untested. And it sits above **MYSTERY**, because a testable kernel does exist here — it was tested.
 
 ---
 
@@ -33,7 +39,7 @@ Energy levels of a harmonic oscillator are `Eₙ = (n + ½)ℏω`. The ground st
 
 It "resonates" between locations rather than resting at one. Nothing exotic yet — this is the first week of quantum mechanics.
 
-### Rung 1 — A field is infinitely many oscillators, so the vacuum is not empty · TEXTBOOK
+### Rung 1 — A field is infinitely many oscillators, so the vacuum is not empty · THEORY
 
 Treat the electromagnetic field as an infinite collection of independent field oscillators with amplitudes `ξ₁, ξ₂, …`. In the ground state the joint amplitude is the product of Rung-0 Gaussians:
 
@@ -49,7 +55,7 @@ Second measurement, from the other direction: the **Casimir force**. Conducting 
 
 **This rung is the floor of everything above it, and King is right about it.** Zero-point energy is not fringe. It is in the equations of quantum electrodynamics by necessity, and two independent measurements confirm it acts on matter.
 
-### Rung 3 — Fluctuations grow as the region shrinks · TEXTBOOK
+### Rung 3 — Fluctuations grow as the region shrinks · THEORY
 
 For a region of size `L`, the magnetic field fluctuates by
 
@@ -57,7 +63,7 @@ For a region of size `L`, the magnetic field fluctuates by
 
 MTW state the implication (p. 1192): the smaller the region considered, the larger the field magnitudes that occur with appreciable probability. This is the hinge that makes the next rung possible. Vacuum energy is not a fixed quantity sitting in space; it is scale-dependent, and it diverges downward.
 
-### Rung 4 — Wheeler's step: apply this to geometry itself · TEXTBOOK
+### Rung 4 — Wheeler's step: apply this to geometry itself · THEORY
 
 Gravity is geometry, geometry is a field, a field fluctuates. Carrying Rung 3 into general relativity, MTW give fluctuations in the metric coefficients, their derivatives, and the curvature:
 
@@ -73,7 +79,7 @@ At `L → L*` the fluctuations reach order unity. Geometry stops being a smooth 
 
 Two grounding notes. King quotes the Planck length as "10⁻³³ cm" — correct, and it is 20 orders of magnitude below any elementary particle, as he says. And MTW themselves flag that the field found Wheeler's model unattractive for its complexity, which matches King's account of why it did not become the mainstream picture.
 
-### Rung 5 — Charge without charge — and the textbook's own veto · TEXTBOOK
+### Rung 5 — Charge without charge — and the textbook's own veto · THEORY
 
 §44.2 and Figure 44.1: in a multiply-connected space, electric charge can be described as **lines of force trapped in the topology**. A wormhole mouth, seen by an observer with poor resolving power, looks exactly like a charge — flux emerges over the whole 4π solid angle, Gauss's theorem misapplied "proves" a charge inside a boundary that is not a boundary. Lines of force nowhere end; Maxwell's equations nowhere fail. MTW note there is no other way to describe electricity without either breaking Maxwell's vacuum equations somewhere or inserting a foreign "electric jelly."
 
@@ -81,7 +87,7 @@ Two grounding notes. King quotes the Planck length as "10⁻³³ cm" — correct
 
 That single sentence is where the ladder first strains. Rungs 9–11 need real ions — quantized charges — to couple to the foam. MTW explicitly sever the topological charge of Figure 44.1 from the quantized charge of particle physics. The link King's mechanism requires is the link the textbook declines to make.
 
-### Rung 6 — The number: 10⁹⁴ g/cm³ · TEXTBOOK
+### Rung 6 — The number: 10⁹⁴ g/cm³ · THEORY
 
 §44.3 opens with the sentence the video's title is really pointing at (p. 1202): *"empty space is not empty. It is the seat of the most violent physics."*
 
@@ -89,7 +95,7 @@ Then MTW quote Wheeler (1962) directly: against nuclear density ~10¹⁴ g/cm³,
 
 **So: "we've had it all along" is literally true about this figure.** It is in the standard graduate text on general relativity, on page 1202, and has been since 1973. King quotes it faithfully and this is his strongest point.
 
-### Rung 6b — The same textbook, ten pages earlier · TEXTBOOK
+### Rung 6b — The same textbook, ten pages earlier · THEORY
 
 MTW also compute what those fluctuations amount to at scales anyone can reach (eqs. 43.34–43.35):
 
@@ -107,11 +113,11 @@ The strongest evidence against reading 10⁹⁴ g/cm³ as a reservoir comes from
 
 Whatever 10⁹⁴ g/cm³ names, **it demonstrably does not behave like stored energy**. Any extraction claim has to say what it is extracting *from*, given that. King's chain does not engage this, and this is its largest unaddressed gap — larger than the suppression question, because it is a measurement rather than a sociology.
 
-### Rung 7 — Is extraction even permitted? In principle, yes · TEXTBOOK
+### Rung 7 — Is extraction even permitted? In principle, yes · THEORY
 
 The obvious objection: extracting work from a ground state at `T = 0` sounds like a perpetual-motion machine. Cole & Puthoff (1993) analysed exactly this for Casimir-force schemes and concluded that it is not thermodynamically forbidden: for *reversible* processes no heat flows at `T = 0`, but *irreversible* processes can produce and move heat at `T = 0` or any `T > 0`. Their finding, in their own framing: yes, in principle, these proposals are correct.
 
-**Lane, stated exactly:** this is a peer-reviewed *theoretical* analysis of whether a class of schemes is thermodynamically consistent. It reports no experiment and reproduces none. It removes an objection; it produces no energy.
+**Lane — THEORY, stated exactly:** this is a peer-reviewed *theoretical* analysis of whether a class of schemes is thermodynamically consistent. It reports no experiment and reproduces none. It removes an objection; it produces no energy.
 
 King describes the paper accurately, and it matters — "thermodynamics forbids it" is not a valid dismissal. It equally does not license the leap: **"not forbidden" is not "demonstrated."** No verified net-energy extraction device exists.
 
@@ -143,7 +149,7 @@ King's operational conclusion: *jerk the ions*. The target mode is **ion-acousti
 
 Lane discipline: the vacuum polarization is real; "therefore driving ions couples ZPE into recoverable excess" is the inference. The convergence with Moray is genuinely striking and is not evidence.
 
-### Rung 10 — Self-organized plasma structure: plasmoid, ecton, EVO · MIXED
+### Rung 10 — Self-organized plasma structure: plasmoid, ecton, EVO · MIXED — practice, inference and contested in one rung
 
 The claimed structure has three names from three lineages, and their lanes differ sharply:
 

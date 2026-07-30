@@ -1,0 +1,114 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Opus 5"
+  },
+  "date": "2026-07-30",
+  "thread_branch": "claude/evidence-spectrum-six-strata",
+  "change_intent": "runtime_feature",
+  "commit_scope": "Grow the body's canonical evidence spectrum from four strata to six (adding THEORY and CONTESTED) and lift the classifier from a nested if-chain to a data table walked by one engine, so adding a lane is adding a row. Kernel work landed first in coherence-kernel#405 on the form-submodule branch; this commit is the exact gitlink bump plus the companion teaching, concept, index and ladder re-tag.",
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "task-2026-07-30-evidence-spectrum-six-strata"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "framing",
+        "decision"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "four-way-proof",
+        "edge-tending",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-07-30_evidence_spectrum_six_strata.json",
+    "docs/coherence-substrate/evidence-grounding.form",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-honest-lane.md",
+    "docs/vision-kb/resources/zero-point-plasma-water.md",
+    "form"
+  ],
+  "files_owned": [
+    "docs/coherence-substrate/evidence-grounding.form",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-honest-lane.md",
+    "docs/vision-kb/resources/zero-point-plasma-water.md"
+  ],
+  "evidence_refs": [
+    "HOW IT WAS FOUND: Urs asked 'how can we integrate more' after the zero-point ladder shipped. Reading the body before answering found that lc-honest-lane (852 Hz) ALREADY held a four-lane evidence spectrum with a runnable, three-way-proven carrier (evidence-grounding.fk, verdict 127) \u2014 and that the ladder had hand-asserted a parallel vocabulary in prose beside it (measured / textbook / inference / contested). lc-the-body-senses-itself names that exact blind-spot signature: anything hand-asserted rather than computed. The integration move was therefore to feed the ladder to the engine that existed, not to author a second one.",
+    "THE TWO STRATA THE FOUR COULD NOT HOLD. THEORY: warrant is that the claim FOLLOWS from independently-measured accepted models while the claim itself was never observed. MTW's vacuum field-fluctuation density (1e94 g/cm3, Gravitation p. 1202, quoting Wheeler 1962) derives from QED + general relativity, both measured; the density itself is unobserved, so observed? = 0 and four lanes sent a standard graduate-textbook consequence to MYSTERY \u2014 honest absence for something the body cites. Warrant inherited from measured models is measured one step removed: directly below MEASURED, and it DOES grow tissue. CONTESTED: tested and did not survive. Distinct from INFERENCE (merely un-replicated) because a failed replication is positive evidence AGAINST \u2014 so it sits BELOW inference, and ABOVE mystery because a testable kernel exists and was tested. It does NOT grow tissue.",
+    "THE CORE LIFT, NOT JUST TWO ROWS: eg-lane was a nested if-chain over three predicates; six strata would have deepened it into a code path per lane, the shape the core-abstraction discipline forbids. eg-spectrum is now a TABLE \u2014 one row per stratum, strongest first, each row (rank, constraints) where a constraint is (claim-index, required-value) \u2014 walked by one engine (eg-walk + eg-all?), first match wins. Adding a lane is adding a row. MYSTERY is deliberately NOT a row: it is what remains when no stratum matches, the teaching stated as control flow. Every stratum above CONTESTED requires refuted? = 0.",
+    "THE STRATA EARN THEIR PLACE BY BEHAVIOUR, NOT BY BEING NAMED: in the band, mtw-1e94 grows tissue (eg-forms? = 1, theory is citable) and water-car grows none (eg-forms? = 0, contested is held and named). With four lanes neither could be said \u2014 the textbook derivation read as honest absence, and the failed replication read as INFERENCE, indistinguishable from a claim nobody had tried yet.",
+    "KERNEL-FIRST ORDERING HELD: reusable kernel work landed in seeker71/coherence-kernel before this repository saw it \u2014 PR https://github.com/seeker71/coherence-kernel/pull/405, base branch form-submodule (NOT main; the kernel repo's main is an unrelated-history tree that does not carry form-stdlib, and the pinned snapshot lives on form-submodule). Merged as c4f7ad443; this repo carries the exact gitlink bump 87e6b00f -> c4f7ad443.",
+    "FOUR-WAY PROOF: ./validate.sh form-stdlib/tests/evidence-grounding-band.fk -> 'core.fk+evidence-grounding.fk+evidence-grounding-band.fk -> 8191', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'. Covers go, rust, typescript and the c-bootstrapped fkwu. fourth-arm-bands.txt row: evidence-grounding fks 127 -> 8191. Thirteen verdict bits, each one a check that must land: four original classifications (999, 33, 502, dragons), four new-stratum classifications (lamb-shift, mtw-1e94, cole-puthoff, water-car), theory-grows-tissue, contested-grows-none, dragons-honest-absence, water-car-reads-contested, and the surface fold.",
+    "A REAL PARSE ERROR CAUGHT BY THE WALKERS, NOT PAPERED OVER: the first band draft closed its eleven nested adds but not the enclosing (do ...). go, rust and typescript all reported 'unclosed ( opened at line 1' while fkwu returned 4095 anyway. The three strict parsers were RIGHT and the file was malformed; this is recorded as an fkwu parser-leniency difference, not a correctness divergence, and the fix was the missing paren.",
+    "A SIBLING SCARE RESOLVED BY TESTING RATHER THAN ASSUMING: shamballa-light-channel first appeared divergent. Stashing the change and re-running on the pristine tree at 87e6b00f reproduced it identically, so it was not caused here; then running the band ALONE (letting its declared preludes resolve core.fk + shamballa-light-codes.fk + channel.fk) gave 'core.fk+core.fk+shamballa-light-codes.fk+channel.fk+shamballa-light-channel.fk+shamballa-light-channel-band.fk -> 11111111', four-way, 0 divergent. There was no defect at all \u2014 passing the recipe explicitly bypassed the prelude chain. Invocation lesson, not a bug.",
+    "REVIEW FINDINGS ACCEPTED (PR #3988, chatgpt-codex-connector), both real. (1) docs/coherence-substrate/INDEX.md:146 still described this same surface as four lanes at verdict 127 and omitted eg-contested? \u2014 a sister door left on the obsolete runtime contract while the cell it indexes moved. Updated to the six-lane contract including the data-table shape and the refuted?=0 rule. (2) The receipt enumerated 13 checks against a 12-bit verdict. Reconciling that exposed a worse fault underneath: the six-strata grow had SILENTLY DROPPED an assertion the original band had \u2014 the original asserted 999, 33, 502 and dragons; the new band asserted only three, so 33 was still exercised by the surface fold but its lane was no longer asserted. Reduced proof coverage introduced while adding proof. Restored as bit 4096 in coherence-kernel#407; verdict 4095 -> 8191, thirteen bits and thirteen checks, four-way. A bit-count mismatch was the symptom of a coverage regression, which is exactly why the mismatch was worth chasing rather than editing the prose to match."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk -> 8191, fourth arm four-way, 1 ok 0 divergent",
+      "cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk (baseline before the change) -> 127, four-way, 1 ok 0 divergent (known-good harness confirmed before editing)",
+      "cd form && ./validate.sh form-stdlib/tests/shamballa-light-channel-band.fk -> 11111111, four-way, 1 ok 0 divergent (sibling unaffected)",
+      "python3 (inline) relative-link resolver over zero-point-plasma-water.md -> 0 broken links",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-07-30_evidence_spectrum_six_strata.json",
+      "cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk (after restoring the 33 assertion) -> 8191, fourth arm four-way, 1 ok 0 divergent"
+    ],
+    "notes": "The Form recipe and its band are the runtime surface; the four-way band is the proof. Ladder re-tagged onto the canonical strata so the page no longer carries a private vocabulary: MEASURED and INFERENCE kept their meaning, the page's invented 'TEXTBOOK' became canonical THEORY, and the lane table now points at lc-honest-lane and evidence-grounding.fk as the authority rather than asserting its own."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Recorded pending at authoring time; the branch's checks are observed before merge and the PR carries their result."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "prod-vision-kb",
+    "notes": "lc-honest-lane's story reaches visitors only after sync_kb_to_db.py --views runs inside coherence-network-api-1 (the container's /app is a build-time snapshot, so the file must be staged first). Pending until that sync and a read-back of /vision/lc-honest-lane are observed."
+  },
+  "four_way_validation": {
+    "status": "pass",
+    "band": "evidence-grounding.fk + tests/evidence-grounding-band.fk -> 8191",
+    "notes": "fourth arm: four-way across go, rust, typescript and the c-bootstrapped fkwu; 1 ok, 0 divergent. Verdict grew 127 -> 8191 because the band grew from 7 checks to 12: the original four shamballa classifications re-ranked onto six strata, plus lamb-shift MEASURED, mtw-1e94 THEORY, cole-puthoff THEORY, water-car CONTESTED, theory-grows-tissue, contested-grows-none, dragons-honest-absence, water-car-reads-contested, and the surface fold (6 grown, 2 held)."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The spectrum is proven four-way and the kernel-first ordering held, so the classifier itself is done. The gate stays closed on the honest remainder: the ladder's fifteen rungs are re-tagged by hand onto the canonical strata rather than passed through eg-lane as claim tuples, so the page's lane assignments are still authored rather than computed \u2014 the very gap this work named. Closing it means encoding each rung as (name observed? independent? measured? derived? refuted?) and letting the engine emit the tags. Named as the next step, not claimed as done."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "eg-lane classifies a claim across six strata instead of four, and does it by walking a data table instead of a nested if-chain. Two claim shapes that previously had no honest home now land where they belong: a claim derived from independently-measured models (derived? = 1) returns THEORY 4 and grows tissue, where before observed? = 0 sent it to MYSTERY 0 and grew nothing; a claim whose replication was attempted and failed (refuted? = 1) returns CONTESTED 1 and grows nothing, where before it read as INFERENCE and was indistinguishable from an untested claim. Existing four-lane classifications keep their meaning and change rank only (MEASURED 3 -> 5, PRACTICE 2 -> 3, INFERENCE 1 -> 2, MYSTERY 0 -> 0), so the tissue-forming gate (lane >= PRACTICE) admits exactly the same shamballa claims it admitted before, plus theory.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/substrate/annotate?path=docs/coherence-substrate/evidence-grounding.form \u2014 the teaching cell resolvable in the lattice",
+      "GET https://api.coherencycoin.com/api/concepts/lc-honest-lane \u2014 the concept the spectrum belongs to",
+      "https://coherencycoin.com/vision/lc-honest-lane \u2014 the rendered page carrying the Six Lanes section"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk -> 8191; fourth arm four-way; 1 ok, 0 divergent \u2014 the thirteen verdict bits are the behaviour assertions, each one a classification that must land",
+      "regression on the claims the shape was born from: 999 and 33 still MEASURED, 502 still PRACTICE, 777-888 still MYSTERY and still honest-absence and still grows no tissue",
+      "new behaviour: mtw-1e94 and cole-puthoff land THEORY and grow tissue; water-car lands CONTESTED, reads as contested, and grows none; surface folds to (6 grown, 2 held)",
+      "sibling non-regression: cd form && ./validate.sh form-stdlib/tests/shamballa-light-channel-band.fk -> 11111111 four-way, unchanged"
+    ],
+    "notes": "No HTTP handler changed. The runtime surface here is the Form recipe itself, exercised through validate.sh across all four kernels; the public endpoints are the read doors the affected cells surface through, and the deploy row stays pending until the concept's view is synced and read back."
+  }
+}
