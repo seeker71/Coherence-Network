@@ -150,6 +150,12 @@ def _to_rupiah(typed: str) -> tuple[int, str]:
 
 class ShopResponse(PlaceResponse):
     default_description: str = ""
+    # Which starting suggestion (if any) this shop was first created from —
+    # stamped once at creation, untouched by any later rename. The web layer
+    # reads this across every device to know a suggestion has been used, so
+    # renaming "Bali Buda" away doesn't resurrect it as a ghost duplicate on
+    # a household member's *other* phone, where a per-device flag never was.
+    origin_suggestion: str | None = None
 
 
 class ShopBody(BaseModel):
@@ -158,6 +164,7 @@ class ShopBody(BaseModel):
     default_description: str = Field(min_length=1, max_length=200)
     lat: int | None = None   # micro-degrees, as the phone's GPS gives
     lon: int | None = None
+    origin_suggestion: str | None = Field(default=None, max_length=80)
 
 
 def _node_to_shop(node: dict) -> ShopResponse:
@@ -165,6 +172,7 @@ def _node_to_shop(node: dict) -> ShopResponse:
     return ShopResponse(
         **base.model_dump(),
         default_description=_s(node.get("default_description")) or base.name,
+        origin_suggestion=_s(node.get("origin_suggestion")) or None,
     )
 
 
@@ -199,6 +207,8 @@ async def save_shop(body: ShopBody) -> ShopResponse:
         "default_description": body.default_description,
         "created_at": _now(),
     }
+    if body.origin_suggestion:
+        props["origin_suggestion"] = body.origin_suggestion
     if body.lat is not None and body.lon is not None:
         props["lat"] = int(body.lat)
         props["lon"] = int(body.lon)
@@ -217,6 +227,10 @@ class ShopEdit(BaseModel):
     actor_token: str = Field(min_length=1)
     name: str | None = Field(default=None, min_length=1, max_length=80)
     default_description: str | None = Field(default=None, min_length=1, max_length=200)
+    # Set only when the client knows the shop's PRE-rename name matched a
+    # starting suggestion — heals a shop saved before origin_suggestion
+    # existed, so a legacy rename doesn't resurrect a ghost either.
+    origin_suggestion: str | None = Field(default=None, max_length=80)
 
 
 @router.patch(
@@ -246,6 +260,8 @@ async def edit_shop(shop_id: str, body: ShopEdit) -> ShopResponse:
         # let win over the column just updated above. Clearing it here heals
         # that node the first time it is ever edited, no migration needed.
         updates["properties"]["name"] = body.name
+    if body.origin_suggestion and not node.get("origin_suggestion"):
+        updates["properties"]["origin_suggestion"] = body.origin_suggestion
     graph_service.update_node(shop_id, **updates)
     node = graph_service.get_node(shop_id) or node
     return _node_to_shop(node)

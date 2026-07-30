@@ -203,6 +203,65 @@ def test_a_stored_shop_is_renamed_without_touching_past_entries(client):
     assert earlier["description"] == "Toko Lama"
 
 
+def test_a_rename_survives_on_every_device_not_just_the_one_that_made_it(client):
+    """origin_suggestion is server state, not localStorage - the whole point.
+
+    A household has more than one phone. If "already used" lived only in the
+    browser that did the renaming, the OTHER phone would still offer the
+    starting suggestion as a ghost duplicate after a rename. Reading the shop
+    back through a second, independent client call is the real test: the
+    graph itself, not any one device, has to carry the answer.
+    """
+    resident = client.post("/api/household/bootstrap", json={"name": "Sri"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    created = client.post("/api/grocery/shops", json={
+        "actor_token": token, "name": "Bali Buda", "default_description": "Bali Buda",
+        "origin_suggestion": "Bali Buda",
+    })
+    assert created.json()["origin_suggestion"] == "Bali Buda"
+    shop_id = created.json()["id"]
+
+    client.patch(f"/api/grocery/shops/{shop_id}", json={
+        "actor_token": token, "name": "Bali Buda Ubud",
+    })
+
+    # A fresh, independent read - standing in for Ita's phone reading the
+    # same household state Urs's phone just changed.
+    from_elsewhere = client.get(f"/api/grocery/shops?token={token}")
+    shop = [s for s in from_elsewhere.json() if s["id"] == shop_id][0]
+    assert shop["name"] == "Bali Buda Ubud"
+    assert shop["origin_suggestion"] == "Bali Buda"
+
+
+def test_a_rename_heals_a_shop_saved_before_origin_suggestion_existed(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Ketut"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    # No origin_suggestion sent - as every shop created before this field
+    # existed looks today.
+    legacy = client.post("/api/grocery/shops", json={
+        "actor_token": token, "name": "Pasar", "default_description": "Pasar",
+    })
+    assert legacy.json()["origin_suggestion"] is None
+    shop_id = legacy.json()["id"]
+
+    healed = client.patch(f"/api/grocery/shops/{shop_id}", json={
+        "actor_token": token, "name": "Pasar Ubud", "origin_suggestion": "Pasar",
+    })
+    assert healed.json()["origin_suggestion"] == "Pasar"
+
+    # A second rename must not let a caller overwrite an origin already set.
+    again = client.patch(f"/api/grocery/shops/{shop_id}", json={
+        "actor_token": token, "name": "Pasar Ubud Pusat", "origin_suggestion": "Something Else",
+    })
+    assert again.json()["origin_suggestion"] == "Pasar"
+
+
 def test_editing_a_shop_needs_write_access_and_something_to_change(client):
     resident = client.post("/api/household/bootstrap", json={"name": "Kadek"})
     if resident.status_code == 409:

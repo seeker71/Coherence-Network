@@ -25,6 +25,7 @@ type Shop = {
   lon?: number | null;
   default_description: string;
   pinned: boolean;
+  origin_suggestion?: string | null;
 };
 
 type Category = { key: string; emoji: string; en: string; id: string };
@@ -80,18 +81,19 @@ type Draft = {
 const TOKEN_KEY = "hatiSuci.token";
 const QUEUE_KEY = "hatiGrocery.queue";
 const LANG_KEY = "hatiGrocery.lang";
-const FULFILLED_KEY = "hatiGrocery.fulfilledStarting";
 
 // The two places the hub actually shops, offered as taps on a ledger that has
 // no stored places yet. They are a starting point, not a fixture: tapping one
 // stores it like any other place, and the row is whatever the household has
 // saved from then on.
 //
-// A suggestion is marked fulfilled — and stays gone — the moment it is ever
-// used to create a shop, tracked by name at that moment rather than derived
-// live from the current shop list. A live derivation reads "Bali Buda" as
-// unfulfilled the instant someone renames it to "Bali Buda Ubud", offering a
-// ghost duplicate of a place that already exists under its new name.
+// A suggestion is fulfilled — and stays gone, on every device — the moment
+// it is ever used to create a shop, stamped server-side on that shop's own
+// `origin_suggestion` and never touched by a later rename. A check against
+// only the *current* name would read "Bali Buda" as unfulfilled the instant
+// it's renamed to "Bali Buda Ubud" on Ita's phone, offering Urs a ghost
+// duplicate of the same place on his — the graph is what both devices read,
+// so that is where "already used" has to live.
 const STARTING_PLACES = ["Bali Buda", "Pasar"];
 
 type Lang = "en" | "id";
@@ -251,7 +253,6 @@ export default function GroceryPage() {
   const [shopName, setShopName] = useState("");
   const [shops, setShops] = useState<Shop[]>([]);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [fulfilledStarting, setFulfilledStarting] = useState<string[]>([]);
   const [managingPlaces, setManagingPlaces] = useState(false);
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
   const [editPlaceName, setEditPlaceName] = useState("");
@@ -264,7 +265,11 @@ export default function GroceryPage() {
   // tap away on the first day and stop being suggested once they are real.
   const places = useMemo<Shop[]>(() => {
     const held = new Set(shops.map((s) => s.name.trim().toLowerCase()));
-    const fulfilled = new Set(fulfilledStarting.map((n) => n.toLowerCase()));
+    const fulfilled = new Set(
+      shops
+        .map((s) => (s.origin_suggestion || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
     const suggestions = STARTING_PLACES
       .filter((n) => !held.has(n.toLowerCase()) && !fulfilled.has(n.toLowerCase()))
       .map(
@@ -272,7 +277,7 @@ export default function GroceryPage() {
           ({ id: "", name, kind: "shop", default_description: name, pinned: false }) as Shop,
       );
     return [...shops, ...suggestions];
-  }, [shops, fulfilledStarting]);
+  }, [shops]);
 
   // ---- identity: the same device token the house board uses ----------------
   useEffect(() => {
@@ -288,8 +293,6 @@ export default function GroceryPage() {
       saved = localStorage.getItem(TOKEN_KEY);
       const savedLang = localStorage.getItem(LANG_KEY);
       if (savedLang === "en" || savedLang === "id") setLang(savedLang);
-      const fulfilled = JSON.parse(localStorage.getItem(FULFILLED_KEY) || "[]");
-      if (Array.isArray(fulfilled)) setFulfilledStarting(fulfilled);
     } catch {
       /* private mode — the ledger still works, it just won't remember */
     }
@@ -500,6 +503,10 @@ export default function GroceryPage() {
       return;
     }
     setBusy(true);
+    // Naming which starting suggestion this is (if any) is stamped on the
+    // shop itself, server-side, so the OTHER phone in the house reads
+    // "already used" too — not just this one.
+    const startingHit = STARTING_PLACES.find((p) => p.toLowerCase() === clean.toLowerCase());
     try {
       const res = await fetch("/api/grocery/shops", {
         method: "POST",
@@ -510,6 +517,7 @@ export default function GroceryPage() {
           default_description: clean,
           lat: coords?.lat ?? null,
           lon: coords?.lon ?? null,
+          origin_suggestion: startingHit ?? null,
         }),
       });
       if (res.ok) {
@@ -518,15 +526,6 @@ export default function GroceryPage() {
         setShop(s);
         setAddingShop(false);
         setShopName("");
-        const startingHit = STARTING_PLACES.find((p) => p.toLowerCase() === clean.toLowerCase());
-        if (startingHit) {
-          setFulfilledStarting((prev) => {
-            if (prev.includes(startingHit)) return prev;
-            const next = [...prev, startingHit];
-            try { localStorage.setItem(FULFILLED_KEY, JSON.stringify(next)); } catch { /* private mode */ }
-            return next;
-          });
-        }
       }
     } catch {
       /* the place can be saved again later; the entry never depended on it */
@@ -541,32 +540,30 @@ export default function GroceryPage() {
     const clean = name.trim();
     if (!token || !clean) return;
     // A rename that moves a shop away from a starting suggestion's exact name
-    // must mark that suggestion fulfilled here too — otherwise the live
-    // held-names check in `places` no longer matches the old string, and the
-    // suggestion reappears as a ghost duplicate of the place that just moved.
+    // is told to the server as origin_suggestion, so every device — not just
+    // this one — reads "already used" from the shop itself afterward. Only
+    // sent for a shop saved before that property existed (it never overwrites
+    // a value already set at creation).
     const before = shops.find((s) => s.id === id);
-    const startingHit = before
-      ? STARTING_PLACES.find((p) => p.toLowerCase() === before.name.trim().toLowerCase())
-      : undefined;
+    const startingHit =
+      before && !before.origin_suggestion
+        ? STARTING_PLACES.find((p) => p.toLowerCase() === before.name.trim().toLowerCase())
+        : undefined;
     setBusy(true);
     try {
       const res = await fetch(`/api/grocery/shops/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actor_token: token, name: clean }),
+        body: JSON.stringify({
+          actor_token: token,
+          name: clean,
+          origin_suggestion: startingHit ?? null,
+        }),
       });
       if (res.ok) {
         const updated = (await res.json()) as Shop;
         setShops((prev) => prev.map((s) => (s.id === id ? updated : s)));
         setShop((cur) => (cur?.id === id ? updated : cur));
-        if (startingHit) {
-          setFulfilledStarting((prev) => {
-            if (prev.includes(startingHit)) return prev;
-            const next = [...prev, startingHit];
-            try { localStorage.setItem(FULFILLED_KEY, JSON.stringify(next)); } catch { /* private mode */ }
-            return next;
-          });
-        }
       }
     } catch {
       /* the rename can be tried again; nothing else depends on it landing */
