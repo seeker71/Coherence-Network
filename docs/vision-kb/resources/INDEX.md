@@ -4,6 +4,8 @@
 
 > See [sovereignty.md](sovereignty.md) for the internal-resources manual: eight domains the field generates from itself (Energy, Water, Food, Building Materials, Knowledge, Creative, External Interface, Waste) with specific quantities, technologies, and costs.
 
+> See [zero-point-plasma-water.md](zero-point-plasma-water.md) for the fifteen-rung ladder from a single quantum oscillator to "plasma water energy," read out of Misner–Thorne–Wheeler's *Gravitation* directly, with every rung tagged measured / textbook / inference / contested — and the four experiments that would settle it. The ground under the phrase "zero-point economics."
+
 > See [aligned-communities.md](aligned-communities.md) for six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship), two networks (GEN, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) the field is kin with.
 
 > See [../../lineage/ubud-embodied-lineage.md](../../lineage/ubud-embodied-lineage.md) for the Ubud embodied lineage: Paradiso, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers as lived practice entering the graph.
@@ -61,6 +63,9 @@
 | Sacred Imagination Sacred Britain episode | [youtu.be/jn7IYfn3Aa8](https://youtu.be/jn7IYfn3Aa8) | Emilio Ortiz on sacred imagination as perception, lower/creative/sacred imagination layers, divine-child keys, dreaming with eyes open, and falling in love with this world as it is |
 | Geometry of Stability Sacred Britain episode | [youtu.be/PPDK8N2FFMw](https://youtu.be/PPDK8N2FFMw) | Loraine Jezak on relational scaffolding, reactive spirals, breath as pivot, coherence as stability, and transmission without control |
 | Erich von Däniken interview | [youtu.be/gTCA0zI4v5Q](https://youtu.be/gTCA0zI4v5Q) | Mixed-method source: useful anomaly/question discipline, speculative ancient-astronaut cosmology, and a soundness-validated recipe extraction |
+| Randall Carlson × Moray B. King — Zero Point Energy | [youtu.be/Xht7Yl4cqO0](https://youtu.be/Xht7Yl4cqO0) | Jul 30 2026 episode: Wheeler's quantum foam, ion oscillation in plasma, Ken Shoulders' EVOs, and the claim that "water cars" run on charge clusters rather than hydrogen |
+| Misner, Thorne & Wheeler — *Gravitation* (1973) | [archive.org full text](https://archive.org/details/gravitation-charles-w.-misner-kip-s.-thorne-john-archibald-wheeler) | The textbook the zero-point claim rests on. §43.4 pp. 1190–95 (fluctuations in geometry, Lamb shift, Planck length), §44.2–44.3 pp. 1200–03 (quantum foam, charge as trapped flux, 10⁹⁴ g/cm³) |
+| Cole & Puthoff — Extracting energy and heat from the vacuum | [Phys. Rev. E 48, 1562 (1993)](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.48.1562) | Peer-reviewed: vacuum-energy extraction is not forbidden by thermodynamics for irreversible processes. Not a demonstration — a removal of one objection |
 
 > See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping, [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links, [orion-architect-sovereign-ai-2026-05-06.md](orion-architect-sovereign-ai-2026-05-06.md) for the ORION Architect sovereign-AI digest, [sacred-imagination-emilio-ortiz-2026-05-14.md](sacred-imagination-emilio-ortiz-2026-05-14.md) for the Sacred Imagination digest, [geometry-of-stability-loraine-jezak-2026-05-21.md](geometry-of-stability-loraine-jezak-2026-05-21.md) for the Geometry of Stability digest, and [erich-von-daeniken-die-raetsel-der-menschheit-neu-betrachtet-2026-06-12.md](erich-von-daeniken-die-raetsel-der-menschheit-neu-betrachtet-2026-06-12.md) for the soundness-validated recipe extraction from the new transcript.
 

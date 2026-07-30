@@ -2,7 +2,7 @@
 id: lc-energy
 hz: 417
 status: deepening
-updated: 2026-05-24
+updated: 2026-07-30
 geometry:
   arity: infinite
   form: web
@@ -93,6 +93,7 @@ Fifty people living with intention need only one to two kilowatt-hours per perso
 - [Hugh Piggott Wind Turbines](https://scoraigwind.co.uk/) -- hand-built designs and workshops
 - [Erica & Ernie Wisner - Rocket Mass Heaters](https://www.ernieanderica.info/)
 - [Earthaven Energy Report](https://www.earthaven.org/) -- 30 years real-world off-grid data
+- [Zero-Point Energy to Plasma Water — A Grounded Ladder](../resources/zero-point-plasma-water.md) -- what the physics of the vacuum does and does not offer a community's metabolism, read out of Misner-Thorne-Wheeler directly, lanes kept separate. Read it before anyone proposes betting a winter on free energy: the vacuum is real, the generator is not
 
 ## The Questions That Live Here
 
