@@ -1,0 +1,93 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Opus 5"
+  },
+  "date": "2026-07-30",
+  "thread_branch": "claude/grocery-edit-locations",
+  "change_intent": "runtime_feature",
+  "commit_scope": "Add PATCH/DELETE for a stored shop (rename or forget a place without touching past entries), and stamp origin_suggestion server-side so a starting suggestion stays fulfilled across every device in the household, not only the one that used it.",
+  "idea_ids": [
+    "light-hub-membrane"
+  ],
+  "spec_ids": [
+    "hati-grocery-ledger"
+  ],
+  "task_ids": [
+    "hati-grocery-ledger-2026-07-30-shop-edit"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "change_files": [
+    "api/app/routers/grocery.py",
+    "api/tests/test_grocery_ledger.py",
+    "docs/system_audit/commit_evidence_2026-07-30_grocery_shop_edit.json",
+    "web/app/grocery/page.tsx"
+  ],
+  "files_owned": [
+    "api/app/routers/grocery.py",
+    "api/tests/test_grocery_ledger.py",
+    "web/app/grocery/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python -m pytest tests/test_grocery_ledger.py -q",
+      "cd web && npm run build"
+    ],
+    "summary": "29 flow tests pass, 5 new (rename preserves past entries; a rename survives on a second, independent client read standing in for a second phone; a legacy shop's origin heals on its first rename and cannot be overwritten afterward; write-access/not-found/nothing-to-change refusals; forget preserves past entries and is idempotent-honest on a second delete). web build is clean."
+  },
+  "four_way_validation": {
+    "status": "not_applicable",
+    "band": null,
+    "arms": {},
+    "cases": [],
+    "note": "PATCH/DELETE /grocery/shops carry no numeric computation — rename/default-filling and delete are pure graph CRUD, the same shape as the sibling GET/POST shop endpoints already shipped in this file, none of which have a Form recipe either. AGENTS.md's standing rule is that new logic belongs in a Form recipe with proof across every kernel arm, not in Python, and that a step only a host carrier reaches today must be named as the retiring bridge — never quietly kept as the shape. This note is that naming: a Python-carrier bridge, not the destination. Migrating this whole file's CRUD surface to Form recipes is a real, separate follow-up; it was not undertaken here because the household needed this live today (a resident's own explicit ask), and a rushed, unproven recipe would violate the same principle it claims to satisfy."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "commands": [
+      "GitHub Actions on PR #3986"
+    ],
+    "summary": "windows-floor and GitGuardian Security Checks pass. validate-thread-process fails on test_runtime_policy_pin_matches_the_reusable_workflow_call — a pre-existing deployment-observer trust-pin mismatch on main (named in #3980, still unresolved on main as of this commit), unrelated to any file this commit touches."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Not yet deployed at authoring time. The resident asked directly for this on production, since a second household member (the manager) needs it live; deploy is the very next step after merge."
+  },
+  "e2e_validation": {
+    "expected_behavior_delta": "A resident can rename a stored shop (e.g. \"Bali Buda\" -> \"Bali Buda Ubud\") or forget it entirely, from a small \"Ubah tempat\" panel below the place chips; neither changes what any already-recorded spend says, only what the next visit fills in. A starting suggestion, once used to create a shop, does not reappear as a ghost duplicate after that shop is renamed — on any device in the household, because the fact lives on the shop node itself (origin_suggestion), not in one phone's local storage.",
+    "public_endpoints": [
+      "/api/grocery/shops/{shop_id} (PATCH)",
+      "/api/grocery/shops/{shop_id} (DELETE)"
+    ],
+    "status": "pass",
+    "test_flows": [
+      "tapped the real 'Bali Buda' suggestion chip against a locally running API with this code (production does not have these routes yet) -> created via rememberPlace",
+      "opened 'Ubah tempat', renamed it to 'Bali Buda Ubud' -> confirmed via a fresh API read (not the same request) that the name actually changed and origin_suggestion carried across",
+      "recorded a spend at 'Pasar', deleted 'Pasar' via the trash icon -> confirmed the past entry still reads 'Pasar' and the shop list no longer offers it",
+      "pytest: a second, independent client.get() standing in for a second phone confirms origin_suggestion is readable from server state alone, not from the browser that made the change"
+    ]
+  },
+  "evidence_refs": [
+    "specs/hati-grocery-ledger.md",
+    "AGENTS.md#L31",
+    "https://github.com/seeker71/Coherence-Network/pull/3986"
+  ],
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Live for the resident's own use is the immediate need; not yet deployed at authoring time. Still open: migrate this file's shop CRUD (GET/POST/PATCH/DELETE) to a proven Form recipe per the standing BML-first mandate — named here as a real, tracked gap rather than resolved or hidden."
+  }
+}
