@@ -135,7 +135,7 @@ def test_ideas_router_form_has_native_source_index_route():
     ideas_index_text = _ideas_index_text()
 
     source_rows = [line for line in ideas_index_text.splitlines() if line.startswith("| [")]
-    assert len(source_rows) == 17
+    assert len(source_rows) == 18
 
     assert 'path: "/api/ideas/source-index"' in form_text
     assert "deploy/kernel-router/production-routes.fk::route_ideas_source_index" in form_text
@@ -152,7 +152,7 @@ def test_ideas_router_form_has_native_source_portfolio_route():
     ideas_index_text = _ideas_index_text()
 
     source_rows = [line for line in ideas_index_text.splitlines() if line.startswith("| [")]
-    assert len(source_rows) == 17
+    assert len(source_rows) == 18
 
     assert 'path: "/api/ideas/source-portfolio"' in form_text
     assert "deploy/kernel-router/production-routes.fk::route_ideas_source_portfolio" in form_text

@@ -1,0 +1,1 @@
+(do (defn pow10 (n) (if (lt n 1) 1 (mul 10 (pow10 (sub n 1))))) (defn scale_frac (frac fraclen) (if (lt fraclen 1) 0 (div (mul frac 1000) (pow10 fraclen)))) (defn rupiah (whole frac fraclen) (add (mul whole 1000) (scale_frac frac fraclen))) (let whole 0) (let frac 0) (let fraclen 0) (rupiah whole frac fraclen))

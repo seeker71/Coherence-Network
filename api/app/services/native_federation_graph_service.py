@@ -21,10 +21,47 @@ _LOCK = threading.Lock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 
 
+def _host_native_carrier(root: Path) -> Path | None:
+    """The carrier this host can actually execute, from the bootstrap receipt.
+
+    A production image ships one carrier at ``form/form-cli`` beside its
+    digest authority, and that file is the answer. A source checkout is
+    different: ``form/form-cli`` inside the pinned submodule may have been
+    built for another host, so ``scripts/ensure_form_cli_native.sh`` builds
+    the local one under ``.cache/form-cli-native/`` and records the exact
+    selection. Skipping that receipt is how a Linux runner ends up exec'ing
+    a carrier built elsewhere and getting ``Exec format error``.
+    """
+    if (root / "form" / "form-cli.sha256").is_file():
+        return root / "form" / "form-cli"
+
+    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
+    if not receipt_path.is_file():
+        return None
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if receipt.get("schema") != "selected-form-cli-carrier-v1":
+        return None
+    native_path = receipt.get("native_path")
+    if not isinstance(native_path, str) or not native_path:
+        return None
+    binary = Path(native_path)
+    if not binary.is_absolute():
+        binary = root / binary
+    binary = binary.resolve()
+    # The receipt may only ever point inside the host-native cache.
+    if not binary.is_relative_to((root / ".cache" / "form-cli-native").resolve()):
+        return None
+    return binary
+
+
 def _binary() -> Path:
-    for path in (_IMAGE_ROOT / "form" / "form-cli", _REPO_ROOT / "form" / "form-cli"):
-        if path.is_file() and os.access(path, os.X_OK):
-            return path
+    for root in (_IMAGE_ROOT, _REPO_ROOT):
+        selected = _host_native_carrier(root)
+        if selected is not None and selected.is_file() and os.access(selected, os.X_OK):
+            return selected
     raise RuntimeError("native Form federation carrier is unavailable")
 
 

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 241
+**Total files**: 245
 
 | File | Purpose |
 |---|---|
@@ -77,6 +77,7 @@
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
 | [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
+| [test_federation_carrier_selection.py](test_federation_carrier_selection.py) | Two properties of federation carrier selection that CI cannot see itself. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
 | [test_federation_peer_poll.py](test_federation_peer_poll.py) | Acceptance tests for federation_peer_poll_service — the heartbeat. |
@@ -124,6 +125,7 @@
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
 | [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
 | [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
+| [test_grocery_ledger.py](test_grocery_ledger.py) | Flow test for the grocery ledger (api/app/routers/grocery.py). |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
@@ -154,6 +156,7 @@
 | [test_mcp_remote_no_oauth.py](test_mcp_remote_no_oauth.py) | _no top-of-file purpose_ |
 | [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP compatibility exposure after Form execution moved to the native carrier. |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
+| [test_mesh_command_receiver.py](test_mesh_command_receiver.py) | _no top-of-file purpose_ |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
 | [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |
 | [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
@@ -203,6 +206,7 @@
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
+| [test_spec_quality_advisory.py](test_spec_quality_advisory.py) | _no top-of-file purpose_ |
 | [test_spec_registry_router_form.py](test_spec_registry_router_form.py) | Proof that the spec registry has a high-level Form expression. |
 | [test_specs_source_native_route.py](test_specs_source_native_route.py) | Proof that specs can be read from source through a native Form route. |
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |

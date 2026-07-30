@@ -175,7 +175,7 @@ def find_service(name: str) -> tuple[int, int, int]:
 
 
 labels = {
-    "traefik.http.routers.coherence-web-hati.rule": "Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`)",
+    "traefik.http.routers.coherence-web-hati.rule": "Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`) || Host(`app.hati.earth`)",
     "traefik.http.routers.coherence-web-hati.entrypoints": "websecure",
     "traefik.http.routers.coherence-web-hati.tls.certresolver": "letsencrypt",
     "traefik.http.routers.coherence-web-hati.service": "coherence-web-hati",
@@ -248,7 +248,7 @@ PY
   case "$result" in
     changed)
       HATI_WEB_HOSTS_CHANGED=1
-      log "Hati web hosts: added/normalized Traefik router labels for hati.earth and sense/suci subdomains"
+      log "Hati web hosts: added/normalized Traefik router labels for hati.earth and sense/suci/app subdomains"
       ;;
     unchanged)
       log "Hati web hosts: Traefik router labels already present"
