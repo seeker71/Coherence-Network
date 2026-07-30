@@ -3,18 +3,25 @@
 // of the app into the rest of the site with no way back. The app's own header
 // lives inside the page; identity is localStorage, so it carries across
 // regardless of chrome. Backend is shared; only the surface is sealed.
+//
+// A visit to /grocery is contained by its path. A visit to app.hati.earth is
+// contained by its host, and the middleware's rewrite keeps the browser's
+// pathname at "/" — so the layout reads that case from the request header and
+// passes it in.
 "use client";
 
 import { usePathname } from "next/navigation";
 
-// Routes that render as their own contained app (no marketing-site chrome).
-const CONTAINED_PREFIXES = ["/hati-suci", "/grocery"];
+import { isContainedPath } from "@/lib/contained-surface";
 
-export default function ChromeGate({ children }: { children: React.ReactNode }) {
+export default function ChromeGate({
+  contained: containedByHost = false,
+  children,
+}: {
+  contained?: boolean;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname() || "";
-  const contained = CONTAINED_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
-  );
-  if (contained) return null;
+  if (containedByHost || isContainedPath(pathname)) return null;
   return <>{children}</>;
 }

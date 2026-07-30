@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 36
+**Total files**: 37
 
 | File | Purpose |
 |---|---|
@@ -14,6 +14,7 @@
 | [attribution-ping-dedupe.ts](attribution-ping-dedupe.ts) | _no top-of-file purpose_ |
 | [attribution-target.ts](attribution-target.ts) | _no top-of-file purpose_ |
 | [automation-page-data.ts](automation-page-data.ts) | _no top-of-file purpose_ |
+| [contained-surface.ts](contained-surface.ts) | Contained surfaces — routes that render as their own self-contained app, |
 | [edge-spectrum.ts](edge-spectrum.ts) | Spectrum colors for the seven canonical edge-type families. |
 | [egress.ts](egress.ts) | _no top-of-file purpose_ |
 | [entry-paths.ts](entry-paths.ts) | _no top-of-file purpose_ |

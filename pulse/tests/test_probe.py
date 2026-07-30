@@ -449,6 +449,40 @@ async def test_substrate_form_breathes_on_the_live_kernel_status_shape():
 
 
 @pytest.mark.asyncio
+async def test_substrate_form_breathes_on_the_bml_front_door_shape():
+    """The BML front door's own contract also names a native carrier.
+
+    deploy/kernel-router/production-routes.fk serves kernel_status as
+    ``native-kernel``. Both doors are honest, so both read as breathing.
+    """
+    bml_door = {
+        "active": "native-kernel",
+        "inline_available": False,
+        "binary_available": True,
+        "available": True,
+        "python_authority": False,
+    }
+    by = await _run(_handler(substrate_form_body=bml_door))
+    sample = by["substrate_form"]
+    assert sample.ok is True, sample.detail
+
+
+@pytest.mark.asyncio
+async def test_substrate_form_flags_python_authority():
+    """A native-looking carrier that hands authority to Python is silence."""
+    handed_over = {
+        "active": "native-kernel",
+        "binary_available": True,
+        "available": True,
+        "python_authority": True,
+    }
+    by = await _run(_handler(substrate_form_body=handed_over))
+    sample = by["substrate_form"]
+    assert sample.ok is False
+    assert "Python authority" in (sample.detail or "")
+
+
+@pytest.mark.asyncio
 async def test_api_flags_strained_on_recent_5xx():
     """Real-user 5xx count surfaces as strain on the api organ."""
     body = {**HEALTHY_HEALTH, "recent_outcomes": {
