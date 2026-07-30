@@ -1,0 +1,52 @@
+{
+  "agent": { "name": "Claude Code", "version": "Opus 5" },
+  "date": "2026-07-30",
+  "thread_branch": "claude/repair-observer-pin-dangling",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Repoint PINNED_OBSERVER_WORKFLOW_SHA from a pre-squash commit that is not on main to the on-main commit the calling workflow already uses, so the deployment-observer OIDC pin and the workflow call agree again and validate-thread-process stops failing on every branch.",
+  "idea_ids": ["deployment-observation"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-07-30-observer-pin-dangling"],
+  "contributors": [
+    { "contributor_id": "claude", "contributor_type": "machine", "roles": ["diagnosis", "implementation", "validation", "receipt-authoring"] }
+  ],
+  "change_files": [
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-07-30_observer_pin_dangling.json"
+  ],
+  "files_owned": ["api/app/services/deployment_observer_service.py"],
+  "evidence_refs": [
+    "HOW IT WAS FOUND: validate-thread-process failed on an unrelated branch (#3988) at tests/test_deployment_observer_oidc.py::test_runtime_policy_pin_matches_the_reusable_workflow_call, 1 failed / 2034 passed. Checked whether it was mine: on origin/main the service constant already read 64b62db38db2c7cfd85e4f6a4d87eb20282df6a9 while .github/workflows/hostinger-auto-deploy.yml already called ...public-deployment-observer.yml@f2457c87286b6ec7668a4e17f855b18347c7c8f9. They disagree on main, so the test fails on main and on every branch cut from it.",
+    "ROOT CAUSE: 64b62db38 is the PRE-SQUASH branch commit of 'Make fkwu the production execution authority'; f2457c872 is that same work squash-merged onto main (#3961). git merge-base --is-ancestor shows f2457c872 IS on main and 64b62db38 is NOT. So the security constant pinned a commit unreachable from main. PR #3971 ('Repair deployment observer workflow pin') had already repaired the workflow side to the on-main SHA; the constant was left behind.",
+    "WHY THIS IS A REFERENCE REPAIR AND NOT A TRUST CHANGE: the trusted bytes are identical at both SHAs. sha256 of .github/workflows/public-deployment-observer.yml is eab3d92f30d62d8d7b46357d9f381e4f975976f6ad76eae0b5b3a2d92d1df004 at BOTH 64b62db38 and f2457c872. The pin moves from an unreachable commit to the reachable one carrying byte-identical content, which makes the pin strictly more auditable, not less. No workflow content, permission, or OIDC claim shape changed.",
+    "DIRECTION OF THE FIX: the constant was moved to match the workflow rather than the reverse, because the workflow's SHA is the one on main (a GitHub uses:@sha must resolve for the reusable call to run at all, and the OIDC job_workflow_ref the witness verifies is whatever the workflow actually called). Repointing the workflow at the unreachable SHA would have been the wrong direction."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_deployment_observer_oidc.py -q -> 18 passed, 7 warnings in 4.33s",
+      "shasum -a 256 of .github/workflows/public-deployment-observer.yml at 64b62db38 and f2457c872 -> identical",
+      "git merge-base --is-ancestor f2457c872 origin/main -> yes ; 64b62db38 -> no"
+    ],
+    "notes": "One-line constant change. Scoped to its own branch rather than bundled into the evidence-spectrum work, because the constant is security-relevant (it is the only workflow identity the deploy witness accepts) and deserves an isolated, legible diff."
+  },
+  "ci_validation": { "status": "pending", "commands": [], "notes": "Recorded pending at authoring; the branch's checks are observed before merge and the PR carries the result. This change is expected to turn validate-thread-process green on main and on every branch cut from it." },
+  "deploy_validation": { "status": "pending", "environment": "prod-hostinger", "notes": "The pin is read when the observer issues a deploy witness. Pending until the next push-triggered Hostinger Auto Deploy runs and the witness verifies against the repaired pin." },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The deployment-observer OIDC policy now pins the same reusable-workflow SHA that hostinger-auto-deploy.yml actually calls, so a witness issued by that workflow verifies instead of being rejected for identity mismatch. Before this, the accepted identity referenced a commit unreachable from main while the workflow called a different one. No trusted workflow content changed — the two SHAs carry byte-identical observer workflow files.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/deployment/observer/challenge — the witness challenge the pinned identity is checked against",
+      "GET https://api.coherencycoin.com/api/health — the surface the deploy witness attests"
+    ],
+    "test_flows": [
+      "cd api && python3 -m pytest tests/test_deployment_observer_oidc.py -q -> 18 passed, covering test_runtime_policy_pin_matches_the_reusable_workflow_call (previously the sole failure), test_manual_deploy_cannot_issue_a_witness_for_the_wrong_sha, and test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity",
+      "the full api suite on CI: 2034 passed / 1 failed before this change, the single failure being this pin test"
+    ],
+    "notes": "No handler logic changed; the constant the OIDC policy compares against is corrected."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The failing test is healed and the reasoning is recorded, but the receipt stays closed until a real push-triggered deploy issues a witness that verifies against the repaired pin. Until that run is observed, this is a green test rather than an observed deploy — and the distinction is the whole point of the witness."
+  }
+}
