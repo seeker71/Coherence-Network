@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import ChromeGate from "@/components/ChromeGate";
+import { CONTAINED_SURFACE_HEADER } from "@/lib/contained-surface";
 import { MessagesProvider } from "@/components/MessagesProvider";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
@@ -81,10 +82,14 @@ export default async function RootLayout({
   // click). On first visit before the middleware response is honored,
   // fall back to Accept-Language so the *very first render* already meets
   // the viewer in their language.
-  const headerLang = (await headers())
+  const requestHeaders = await headers();
+  const headerLang = requestHeaders
     .get("accept-language")
     ?.split(",")[0]
     ?.split("-")[0];
+  // app.hati.earth's root is rewritten to a contained app. The rewrite is
+  // invisible to the browser, so the host's knowing reaches the page here.
+  const containedByHost = Boolean(requestHeaders.get(CONTAINED_SURFACE_HEADER));
   const lang: LocaleCode = isSupportedLocale(cookieLang)
     ? cookieLang
     : isSupportedLocale(headerLang)
@@ -131,13 +136,13 @@ export default async function RootLayout({
           <RouteReadPing />
           <ThemeProvider>
             <ExpertModeProvider>
-              <ChromeGate><SiteHeader /></ChromeGate>
+              <ChromeGate contained={containedByHost}><SiteHeader /></ChromeGate>
               <LiveUpdatesController />
               <main id="main-content" className="pb-16 md:pb-0">
                 {children}
                 <RouteEditablePageContent />
               </main>
-              <ChromeGate>
+              <ChromeGate contained={containedByHost}>
                 <MobileBottomNav />
                 <SubstrateBadge />
               </ChromeGate>
