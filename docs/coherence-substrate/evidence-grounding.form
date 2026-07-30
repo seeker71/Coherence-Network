@@ -19,14 +19,45 @@
 ;   3. CLASSIFY the lane the answer lands in (the spectrum of evidence strength).
 ;   4. FORM the concept IN that lane — or leave honest absence. The lane is PART of the concept.
 ;
-; THE LANES  (runnable: form-stdlib/evidence-grounding.fk · proven: tests/evidence-grounding-band.fk -> 127)
-;   3 MEASURED   observed + independent + measured     -> evidence-lane concept, cited
-;   2 PRACTICE   observed + independent, not measured  -> phenomenology concept, labeled as practice
-;   1 INFERENCE  observed, but a single source         -> held as potential, not yet a concept
-;   0 MYSTERY    no public observable kernel           -> honest absence / the symbol held unclaimed
+; THE LANES  (runnable: form-stdlib/evidence-grounding.fk · proven: tests/evidence-grounding-band.fk -> 8191)
+;   5 MEASURED   observed + independent + measured     -> evidence-lane concept, cited
+;   4 THEORY     derived from measured models          -> theory-lane concept, cited as derivation
+;   3 PRACTICE   observed + independent, not measured  -> phenomenology concept, labeled as practice
+;   2 INFERENCE  observed, but a single source         -> held as potential, not yet a concept
+;   1 CONTESTED  tested and did not survive           -> held and named, never grown
+;   0 MYSTERY    no public observable kernel          -> honest absence / the symbol held unclaimed
 ;
 ;   eg-lane(claim) -> the lane ; eg-forms?(claim) -> grows tissue iff lane >= PRACTICE ;
-;   eg-honest-absence?(claim) -> mystery, claim nothing ; eg-surface(claims) -> (grown held).
+;   eg-honest-absence?(claim) -> mystery, claim nothing ; eg-contested?(claim) -> tested and failed ;
+;   eg-surface(claims) -> (grown held).
+;
+; THE SPECTRUM IS DATA, NOT BRANCHES (2026-07-30). eg-spectrum is a table — one row per stratum,
+; strongest first, each row (rank, constraints) where a constraint is (claim-index,
+; required-value) — walked by one engine (eg-walk + eg-all?), first match wins. Adding a lane is
+; adding a row; no code path forks per lane. MYSTERY is deliberately NOT a row: it is what remains
+; when no stratum matches, the teaching stated as control flow. Every stratum above CONTESTED
+; requires refuted? = 0, so a claim that failed replication cannot be credited upward however
+; well-measured it once looked.
+;
+; THE TWO STRATA THE FOUR COULD NOT HOLD (2026-07-30, from the zero-point ladder —
+; docs/vision-kb/resources/zero-point-plasma-water.md, read out of Misner-Thorne-Wheeler's
+; Gravitation, 1973):
+;   THEORY — warrant is that the claim FOLLOWS from independently-measured accepted models,
+;     while the claim itself was never observed. MTW's vacuum field-fluctuation density
+;     (1e94 g/cm3, p. 1202, quoting Wheeler 1962) derives from QED + general relativity, both
+;     measured; the density itself is unobserved. Under four lanes it has observed? = 0 and falls
+;     to MYSTERY — honest absence for a standard graduate-textbook consequence. Warrant inherited
+;     from measured models is measured one step removed: it sits directly below MEASURED and it
+;     DOES grow tissue, because such a claim is citable and the body does cite it.
+;   CONTESTED — tested and did not survive: replication attempted and failed, or actively
+;     disputed. Distinct from INFERENCE, which is merely un-replicated — a failed replication is
+;     positive evidence AGAINST, so CONTESTED sits BELOW inference, and above mystery because a
+;     testable kernel exists and was tested. It does NOT grow tissue: held and named, never grown
+;     into a concept that asserts, never quietly buried either.
+;   The strata earn their place by what they DO, not by being named: in the band, mtw-1e94 grows
+;   tissue and water-car grows none. With four lanes neither could be said — the textbook
+;   derivation read as honest absence, and the failed replication read as INFERENCE,
+;   indistinguishable from a claim nobody had tried yet.
 ;
 ; SAME GATE AS value-execution.fk, turned toward concept-formation:
 ;   value-execution credits value only when EXECUTION is proven (ran + validated + served).
