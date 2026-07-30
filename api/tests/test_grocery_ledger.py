@@ -166,6 +166,101 @@ def test_a_spend_records_with_the_shop_filling_in_the_description(client):
     assert totals.json()["day_count"] >= 2
 
 
+def test_a_stored_shop_is_renamed_without_touching_past_entries(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Wayan"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    shop = client.post("/api/grocery/shops", json={
+        "actor_token": token, "name": "Toko Lama", "default_description": "Toko Lama",
+    })
+    shop_id = shop.json()["id"]
+
+    # An entry recorded before the rename keeps what it already said.
+    before = client.post("/api/grocery/spend", json={
+        "actor_token": token, "amount": "50", "place_id": shop_id,
+    })
+    assert before.json()["description"] == "Toko Lama"
+
+    edit = client.patch(f"/api/grocery/shops/{shop_id}", json={
+        "actor_token": token, "name": "Toko Baru",
+    })
+    assert edit.status_code == 200, edit.text
+    assert edit.json()["name"] == "Toko Baru"
+    # default_description follows the new name when only name was given.
+    assert edit.json()["default_description"] == "Toko Baru"
+
+    # A later entry at the same place fills in the new name.
+    after = client.post("/api/grocery/spend", json={
+        "actor_token": token, "amount": "60", "place_id": shop_id,
+    })
+    assert after.json()["description"] == "Toko Baru"
+
+    # The earlier entry's own record is untouched.
+    same_day = client.get(f"/api/grocery/spend?token={token}&on={grocery._today_local()}")
+    earlier = [s for s in same_day.json() if s["id"] == before.json()["id"]][0]
+    assert earlier["description"] == "Toko Lama"
+
+
+def test_editing_a_shop_needs_write_access_and_something_to_change(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Kadek"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+    shop = client.post("/api/grocery/shops", json={
+        "actor_token": token, "name": "Warung", "default_description": "Warung",
+    })
+    shop_id = shop.json()["id"]
+
+    member = client.post("/api/household/members", json={"name": "Rina"})
+    read_only_token = member.json()["token"]
+    refused = client.patch(f"/api/grocery/shops/{shop_id}", json={
+        "actor_token": read_only_token, "name": "Warung Baru",
+    })
+    assert refused.status_code == 403
+
+    empty = client.patch(f"/api/grocery/shops/{shop_id}", json={"actor_token": token})
+    assert empty.status_code == 400
+
+    missing = client.patch("/api/grocery/shops/place-shop-doesnotexist", json={
+        "actor_token": token, "name": "Anything",
+    })
+    assert missing.status_code == 404
+
+
+def test_forgetting_a_shop_keeps_what_past_entries_already_said(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Made"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    shop = client.post("/api/grocery/shops", json={
+        "actor_token": token, "name": "Toko Sementara", "default_description": "Toko Sementara",
+    })
+    shop_id = shop.json()["id"]
+    spend = client.post("/api/grocery/spend", json={
+        "actor_token": token, "amount": "40", "place_id": shop_id,
+    })
+    assert spend.json()["description"] == "Toko Sementara"
+
+    gone = client.delete(f"/api/grocery/shops/{shop_id}?actor_token={token}")
+    assert gone.status_code == 200, gone.text
+    assert gone.json()["deleted"] == shop_id
+
+    # The past entry's own text is unaffected by the shop no longer existing.
+    same_day = client.get(f"/api/grocery/spend?token={token}&on={grocery._today_local()}")
+    earlier = [s for s in same_day.json() if s["id"] == spend.json()["id"]][0]
+    assert earlier["description"] == "Toko Sementara"
+
+    # It no longer appears in the stored list, and a second delete is honest
+    # about there being nothing left to forget.
+    shops = client.get(f"/api/grocery/shops?token={token}")
+    assert shop_id not in [s["id"] for s in shops.json()]
+    twice = client.delete(f"/api/grocery/shops/{shop_id}?actor_token={token}")
+    assert twice.status_code == 404
+
+
 def test_zero_is_not_a_spend_and_an_unknown_category_is_refused(client):
     resident = client.post("/api/household/bootstrap", json={"name": "Nyoman"})
     if resident.status_code == 409:
