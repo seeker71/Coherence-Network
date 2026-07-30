@@ -248,6 +248,108 @@ config (`~/.coherence-network/config.json`):
 The next entry appends a row. A running API caches config until
 `reset_config_cache()`, so restart it if you set these while it's up.
 
+## 5. Watch the float, and say something when it runs low
+
+The balance's source of truth is the graph, so the watch asks the network what
+is left rather than reading the mirror it sits in — a sheet can lag, and an
+alert that trusts a stale mirror is worse than no alert.
+
+Mail goes out through the account that owns the script, so no mail credential
+lands in the keystore or anywhere else.
+
+1. **Project Settings → Script properties** — add two:
+   - `MEMBER_TOKEN` — a household token that can read totals
+   - `ALERT_TO` — where the mail should go
+2. **Triggers → Add trigger** — `watchFloat`, time-driven, day timer.
+
+```javascript
+// ---------------------------------------------------------------------------
+// The low-float watch.
+//
+// The graph is the source of truth for the balance, so the watch asks the
+// network what is left rather than reading the mirror it is sitting in - the
+// sheet can lag, and an alert that trusts a stale mirror is worse than none.
+//
+// Set MEMBER_TOKEN and ALERT_TO in Project Settings > Script properties, then
+// add a daily time-driven trigger on watchFloat. Mail goes out through the
+// account that owns this script; no credential lands anywhere else.
+//
+// It emails on the crossing, not every day: once sent, it stays quiet until
+// the float goes back above the threshold and dips again.
+// ---------------------------------------------------------------------------
+
+const FLOAT_FLOOR_IDR = 1500000;
+const API_BASE = "https://api.coherencycoin.com";
+
+function watchFloat() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty("MEMBER_TOKEN");
+  const to = props.getProperty("ALERT_TO");
+  if (!token || !to) {
+    Logger.log("set MEMBER_TOKEN and ALERT_TO in Script properties first");
+    return;
+  }
+
+  const url = API_BASE + "/api/grocery/totals?token=" + encodeURIComponent(token);
+  const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) {
+    Logger.log("totals unavailable: HTTP " + response.getResponseCode());
+    return;   // a dark endpoint is not a low balance; stay quiet and retry tomorrow
+  }
+  const remaining = Number(JSON.parse(response.getContentText()).remaining_idr || 0);
+  const wasLow = props.getProperty("FLOAT_LOW") === "yes";
+  const isLow = remaining < FLOAT_FLOOR_IDR;
+  Logger.log("remaining " + remaining + "; low=" + isLow + "; already notified=" + wasLow);
+
+  if (isLow && !wasLow) {
+    const rp = "Rp" + remaining.toLocaleString("en-US");
+    const floor = "Rp" + FLOAT_FLOOR_IDR.toLocaleString("en-US");
+    MailApp.sendEmail({
+      to: to,
+      subject: "Hati Suci grocery float is down to " + rp,
+      body: [
+        "The grocery float has fallen below " + floor + ".",
+        "",
+        "Left to spend: " + rp,
+        "",
+        "The ledger: https://app.hati.earth/",
+        "The sheet:   " + SpreadsheetApp.getActiveSpreadsheet().getUrl(),
+        "",
+        "This is sent once per crossing - it stays quiet until the float goes",
+        "back above " + floor + " and dips again.",
+      ].join("\n"),
+    });
+    props.setProperty("FLOAT_LOW", "yes");
+    Logger.log("notified " + to);
+  } else if (!isLow && wasLow) {
+    props.deleteProperty("FLOAT_LOW");
+    Logger.log("float is back above the floor; the watch is armed again");
+  }
+}
+```
+
+It emails **on the crossing**, not every day: once sent it stays quiet until
+the float climbs back above the floor and dips again. A dark endpoint is not a
+low balance, so an unreachable API logs and waits rather than crying wolf.
+
+## 6. The manager's phone
+
+The ledger reads its identity from a `?token=` in the URL, saves it, and strips
+it from the address bar — so joining is one tap on one link, and there is no
+second login:
+
+```
+https://app.hati.earth/?token=<the invite token>
+```
+
+A resident mints that token with `POST /api/household/invites`
+(`{inviter_token, name, role}`). The `staff` role carries write access already,
+so no separate vouch is needed before the first entry.
+
+Once open, **Add to Home Screen** installs it as `Belanja`, standalone, opening
+straight onto the ledger — `web/app/grocery/layout.tsx` gives the route its own
+name and manifest so the icon is the book she keeps, not the network's feed.
+
 ## What the sheet gets
 
 One appended row per event, matched **by column name**:
