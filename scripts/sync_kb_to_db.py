@@ -29,6 +29,7 @@ import re
 from kb_common import (
     KB_DIR, DEFAULT_API, STATUS_ORDER,
     parse_concept_file, parse_frontmatter, extract_story_content, parse_crossrefs,
+    strip_frontmatter,
     api_delete, api_get, api_patch, api_post,
 )
 
@@ -239,8 +240,9 @@ def parse_view_file(filepath: Path) -> dict:
         concept_id = stem
         lang = fm.get("lang", "en")
 
-    title_m = re.search(r"^# (.+)$", text, re.MULTILINE)
-    desc_m = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    body = strip_frontmatter(text)
+    title_m = re.search(r"^# (.+)$", body, re.MULTILINE)
+    desc_m = re.search(r"^>\s*(.+)$", body, re.MULTILINE)
     title = title_m.group(1).strip() if title_m else ""
     description = desc_m.group(1).strip() if desc_m else ""
     story = extract_story_content(text) or ""
@@ -364,8 +366,9 @@ def parse_idea_view_file(filepath: Path) -> dict:
         idea_id = stem
         lang = fm.get("lang", "en")
 
-    title_m = re.search(r"^# (.+)$", text, re.MULTILINE)
-    desc_m = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    body = strip_frontmatter(text)
+    title_m = re.search(r"^# (.+)$", body, re.MULTILINE)
+    desc_m = re.search(r"^>\s*(.+)$", body, re.MULTILINE)
     title = (title_m.group(1) if title_m else "").strip()
     description = (desc_m.group(1) if desc_m else "").strip()
 

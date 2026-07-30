@@ -1,0 +1,70 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Opus 5"
+  },
+  "date": "2026-07-30",
+  "thread_branch": "claude/kb-title-from-body-9ac4",
+  "change_intent": "process_only",
+  "commit_scope": "Read KB titles and descriptions from the markdown body instead of the raw file text, so `#` comment lines inside a concept's frontmatter can no longer become the document title. Fixes a live page defect on /vision/lc-void-as-potential and the same latent defect in eight sibling concepts.",
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "task-2026-07-30-kb-title-from-body"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-07-30_kb_title_from_body.json",
+    "scripts/kb_common.py",
+    "scripts/sync_kb_to_db.py"
+  ],
+  "files_owned": [
+    "scripts/kb_common.py",
+    "scripts/sync_kb_to_db.py"
+  ],
+  "evidence_refs": [
+    "HOW IT WAS FOUND: after syncing lc-energy and lc-void-as-potential to the prod graph, the live page was opened rather than assumed. https://coherencycoin.com/vision/lc-void-as-potential rendered its h1 and document <title> as 'Primary geometry is `point` with `self-rooted` topology \u2014 the void felt' \u2014 the first line of the geometry-rationale comment block inside the file's frontmatter.",
+    "ROOT CAUSE: one shape repeated in three places. `re.search(r\"^# (.+)$\", text, re.MULTILINE)` and the matching `^>` description regex ran against the raw file text. Nine concept files carry `#` comment lines inside their frontmatter, so the first `^# ` match was a comment rather than the document title. `extract_story_content` already stripped frontmatter correctly, which is exactly why the body rendered right and only the title was wrong \u2014 the bug was invisible until a view sync pushed the title.",
+    "FIX AT THE SHARED LAYER, NOT THREE TIMES LOCALLY: kb_common gains `strip_frontmatter()` plus `extract_title()` / `extract_description()` built on it; `extract_story_content()` now reuses it; all three call sites read the body \u2014 `kb_common.parse_concept_file`, `sync_kb_to_db.parse_view_file`, and the idea-view parser. Anything reading a heading out of a KB file now reads the body by construction rather than by remembering to.",
+    "AFFECTED SET, ENUMERATED AND VERIFIED: lc-deeper-pattern, lc-open-design, lc-resonating, lc-tend-your-flame, lc-v-freedom-expression, lc-v-inclusion-diversity, lc-v-play-expansion, lc-v-shelter-organism, lc-void-as-potential. Each now resolves to its real title (e.g. 'Void as Potential \u2014 The Emptiness That Is Pregnant', 'Shelter as Living Skin'). lc-energy held as an unaffected control and is unchanged at 'Energy Metabolism' with story length 10292.",
+    "SCOPE HONESTY: only lc-void-as-potential had the bad title actually written to prod, by this session's `--views` sync. The other eight were latent \u2014 the fix prevents the same write, and their prod views are re-synced after this merge so any earlier bad write is corrected."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -c 'import sync_kb_to_db; parse_view_file over the 9 frontmatter-comment concepts' -> 9/9 resolve to the document title, 0 resolve to a frontmatter comment",
+      "python3 -c 'parse_view_file(lc-energy.md)' -> control unchanged: title 'Energy Metabolism', story_content 10292 chars",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-07-30_kb_title_from_body.json"
+    ],
+    "notes": "Tooling-only change under scripts/; no runtime path, no Form recipe, no kernel proof applies or is claimed. The regex behaviour change is confined to which text the title and description are read from \u2014 story_content bytes are unchanged, verified by the lc-energy control holding at 10292."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Recorded pending at authoring time; the branch's checks are observed before merge and the PR carries their result."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "prod-vision-kb",
+    "notes": "Correcting the already-written prod title requires re-running sync_kb_to_db.py --views inside coherence-network-api-1 for the affected concepts after this merge, then re-reading the live /vision page title. Pending until that run and that page read are observed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The defect is root-caused rather than patched at the symptom, fixed once at the shared layer all three readers already import, and the full affected set is enumerated and verified with an unaffected control. The gate stays closed because the two observations that would close it are still outstanding at authoring time: the branch's CI result, and the prod re-sync plus a read-back of the live /vision page title that showed the defect in the first place. Neither is claimed before it is seen."
+  }
+}
