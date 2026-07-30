@@ -2,9 +2,13 @@
 //
 // The manager stands in the market and types what they spent, in thousands
 // (the *ribu* habit): 123.5 is Rp 123.500. Everything else is already
-// filled in — today's date, and a description that comes from the shop
-// they're standing at when GPS finds one, from a category icon when it
-// doesn't, or from the custom field when they want to say it themselves.
+// filled in — today's date, and a description that comes from the place
+// they tapped, from a category icon when no place is named, or from a note
+// when they want to say it themselves.
+//
+// Every stored place is a chip, always one tap away. GPS only pre-selects the
+// chip when it recognises where the phone is standing, so a manager indoors or
+// with location switched off records just as fast.
 //
 // Entries that can't reach the API (a market with no signal) queue in
 // localStorage and flush on the next breath, so a walk out of coverage
@@ -77,6 +81,12 @@ const TOKEN_KEY = "hatiSuci.token";
 const QUEUE_KEY = "hatiGrocery.queue";
 const LANG_KEY = "hatiGrocery.lang";
 
+// The two places the hub actually shops, offered as taps on a ledger that has
+// no stored places yet. They are a starting point, not a fixture: tapping one
+// stores it like any other place, and the row is whatever the household has
+// saved from then on.
+const STARTING_PLACES = ["Bali Buda", "Pasar"];
+
 type Lang = "en" | "id";
 
 const T = {
@@ -85,8 +95,6 @@ const T = {
     spent: "Spent",
     thousands: "in thousands",
     hint: "123.5 = Rp 123.500",
-    at: "At",
-    near: "you're here",
     whatFor: "What for",
     custom: "Or type it",
     customPh: "anything the icons don't say",
@@ -102,12 +110,12 @@ const T = {
     identify: "Open your Hati Suci link on this phone first.",
     identifyBody:
       "This ledger uses the same door as the house board. Tap your invite link, then come back here.",
-    noShop: "No shop nearby",
-    saveShop: "Remember this shop",
-    shopName: "Shop name",
-    shopDesc: "Default description",
     add: "Save shop",
     cancel: "Cancel",
+    where: "Where",
+    newPlace: "New place",
+    placeName: "Name of the place",
+    addNote: "Add a note",
     locating: "Finding you…",
     sheet: "Sheet",
     csv: "Download CSV",
@@ -130,8 +138,6 @@ const T = {
     spent: "Belanja",
     thousands: "dalam ribuan",
     hint: "123,5 = Rp 123.500",
-    at: "Di",
-    near: "Anda di sini",
     whatFor: "Untuk apa",
     custom: "Atau tulis sendiri",
     customPh: "yang tidak ada di ikon",
@@ -147,12 +153,12 @@ const T = {
     identify: "Buka tautan Hati Suci Anda di HP ini dulu.",
     identifyBody:
       "Buku belanja ini memakai pintu yang sama dengan papan rumah. Ketuk tautan undangan Anda, lalu kembali ke sini.",
-    noShop: "Tidak ada toko di dekat sini",
-    saveShop: "Simpan toko ini",
-    shopName: "Nama toko",
-    shopDesc: "Deskripsi bawaan",
     add: "Simpan toko",
     cancel: "Batal",
+    where: "Di mana",
+    newPlace: "Tempat baru",
+    placeName: "Nama tempatnya",
+    addNote: "Tambah catatan",
     locating: "Mencari lokasi…",
     sheet: "Sheet",
     csv: "Unduh CSV",
@@ -224,10 +230,23 @@ export default function GroceryPage() {
   const [mode, setMode] = useState<"buy" | "topup">("buy");
   const [addingShop, setAddingShop] = useState(false);
   const [shopName, setShopName] = useState("");
-  const [shopDesc, setShopDesc] = useState("");
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [noteOpen, setNoteOpen] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
 
   const idr = useMemo(() => previewIdr(amount), [amount]);
+
+  // The places to offer: everything the household has stored, plus any starting
+  // place it has not stored yet, so the two the hub actually shops at are one
+  // tap away on the first day and stop being suggested once they are real.
+  const places = useMemo<Shop[]>(() => {
+    const held = new Set(shops.map((s) => s.name.trim().toLowerCase()));
+    const suggestions = STARTING_PLACES.filter((n) => !held.has(n.toLowerCase())).map(
+      (name) =>
+        ({ id: "", name, kind: "shop", default_description: name, pinned: false }) as Shop,
+    );
+    return [...shops, ...suggestions];
+  }, [shops]);
 
   // ---- identity: the same device token the house board uses ----------------
   useEffect(() => {
@@ -280,14 +299,16 @@ export default function GroceryPage() {
   const refresh = useCallback(async () => {
     if (!token) return;
     const q = `token=${encodeURIComponent(token)}`;
-    const [s, tot, sh] = await Promise.all([
+    const [s, tot, sh, places] = await Promise.all([
       fetch(`/api/grocery/spend?${q}&on=${todayLocal()}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
       fetch(`/api/grocery/totals?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch(`/api/grocery/sheet?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(`/api/grocery/shops?${q}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
     ]);
     setSpends(Array.isArray(s) ? s : []);
     setTotals(tot);
     setSheet(sh);
+    setShops(Array.isArray(places) ? places : []);
   }, [token]);
 
   useEffect(() => {
@@ -433,8 +454,23 @@ export default function GroceryPage() {
     setBusy(false);
   }, [token, refresh, t]);
 
-  const saveShop = useCallback(async () => {
-    if (!token || !shopName.trim() || !shopDesc.trim()) return;
+  // A place is its name. The description the ledger writes starts as that name,
+  // which is what a person would have typed anyway, so remembering somewhere new
+  // is one word and one tap instead of a two-field form.
+  //
+  // Coordinates ride along when the phone happens to know them, so the places
+  // saved while standing somewhere start recognising it later — but a place
+  // saved from the kitchen is just as real, and GPS is never asked for.
+  const rememberPlace = useCallback(async (name: string) => {
+    const clean = name.trim();
+    if (!token || !clean) return;
+    const already = shops.find((s) => s.name.toLowerCase() === clean.toLowerCase());
+    if (already) {
+      setShop(already);
+      setAddingShop(false);
+      setShopName("");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/grocery/shops", {
@@ -442,24 +478,24 @@ export default function GroceryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           actor_token: token,
-          name: shopName.trim(),
-          default_description: shopDesc.trim(),
+          name: clean,
+          default_description: clean,
           lat: coords?.lat ?? null,
           lon: coords?.lon ?? null,
         }),
       });
       if (res.ok) {
         const s = (await res.json()) as Shop;
+        setShops((prev) => [...prev, s]);
         setShop(s);
         setAddingShop(false);
         setShopName("");
-        setShopDesc("");
       }
     } catch {
-      /* the shop can be saved again later; the entry never depended on it */
+      /* the place can be saved again later; the entry never depended on it */
     }
     setBusy(false);
-  }, [token, shopName, shopDesc, coords]);
+  }, [token, shops, coords]);
 
   // ---- the door ------------------------------------------------------------
   if (!resolved) {
@@ -509,7 +545,7 @@ export default function GroceryPage() {
                   key={m}
                   onClick={() => { setMode(m); setSaved(null); setFlash(null); }}
                   aria-pressed={mode === m}
-                  className={`rounded-lg px-4 py-3 text-base transition ${
+                  className={`rounded-lg px-4 py-2 text-sm transition ${
                     mode === m
                       ? "bg-amber-500/20 text-amber-200"
                       : "text-neutral-500 hover:text-neutral-300"
@@ -520,11 +556,9 @@ export default function GroceryPage() {
               ))}
             </div>
 
-            <label className="block text-sm text-neutral-400">
-              {mode === "buy" ? t.spent : t.modeTop}{" "}
-              <span className="text-neutral-600">· {t.thousands}</span>
-            </label>
-            <div className="mt-2 flex items-baseline gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-5 py-4 focus-within:border-amber-500/60">
+            {/* The field itself says "Rp … ribu", so a label above it repeats
+                the only thing on screen and costs a phone a line of height. */}
+            <div className="flex items-baseline gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-5 py-4 focus-within:border-amber-500/60">
               <span className="text-2xl text-neutral-500">Rp</span>
               <input
                 ref={amountRef}
@@ -547,70 +581,85 @@ export default function GroceryPage() {
               <span className="shrink-0 text-sm text-neutral-600">{todayLocal()}</span>
             </div>
 
-            {/* ---- where: the stored shop fills the description in ---- */}
+            {/* ---- where: tap the place, or name a new one ----
+                Every stored place is a chip, always reachable. GPS only
+                pre-selects the chip when it happens to recognise where the
+                phone is standing — a manager indoors, or with location off,
+                still taps the place in one move. */}
             {mode === "buy" && (
-            <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
-              {locating ? (
-                <div className="text-sm text-neutral-500">{t.locating}</div>
-              ) : shop ? (
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-wider text-emerald-500">
-                      {t.at} · {t.near}
-                    </div>
-                    <div className="truncate text-neutral-100">{shop.name}</div>
-                    <div className="truncate text-sm text-neutral-500">{shop.default_description}</div>
-                  </div>
-                  <button
-                    onClick={() => setShop(null)}
-                    aria-label={t.noShop}
-                    className="-m-1 min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-neutral-500 hover:text-neutral-300"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : addingShop ? (
-                <div className="grid gap-2">
-                  <input
-                    value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
-                    placeholder={t.shopName}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-amber-500/60"
-                  />
-                  <input
-                    value={shopDesc}
-                    onChange={(e) => setShopDesc(e.target.value)}
-                    placeholder={t.shopDesc}
-                    className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-amber-500/60"
-                  />
-                  <div className="flex gap-2">
+            <div className="mt-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="text-sm text-neutral-400">{t.where}</div>
+                {locating && <div className="text-xs text-neutral-600">{t.locating}</div>}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {places.map((p) => {
+                  const on = shop?.id === p.id;
+                  const stored = "id" in p && Boolean(p.id);
+                  return (
                     <button
-                      onClick={() => void saveShop()}
-                      disabled={busy || !shopName.trim() || !shopDesc.trim()}
-                      className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-300 disabled:opacity-40"
+                      key={p.id || p.name}
+                      onClick={() => {
+                        if (on) { setShop(null); return; }
+                        if (stored) { setShop(p as Shop); return; }
+                        void rememberPlace(p.name);
+                      }}
+                      aria-pressed={on}
+                      disabled={busy}
+                      className={`min-h-[44px] rounded-full border px-4 text-base transition disabled:opacity-40 ${
+                        on
+                          ? "border-amber-500/70 bg-amber-500/15 text-amber-200"
+                          : stored
+                          ? "border-neutral-800 bg-neutral-900/40 text-neutral-300 hover:border-neutral-700"
+                          : "border-dashed border-neutral-700 text-neutral-500 hover:text-neutral-300"
+                      }`}
                     >
-                      {t.add}
+                      {p.name}
                     </button>
-                    <button onClick={() => setAddingShop(false)} className="px-3 py-1.5 text-sm text-neutral-500">
-                      {t.cancel}
+                  );
+                })}
+                {addingShop ? (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <input
+                      value={shopName}
+                      onChange={(e) => setShopName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") void rememberPlace(shopName); }}
+                      placeholder={t.placeName}
+                      autoFocus
+                      className="min-h-[44px] w-40 rounded-full border border-amber-500/50 bg-neutral-950 px-4 text-base outline-none"
+                    />
+                    <button
+                      onClick={() => void rememberPlace(shopName)}
+                      disabled={busy || !shopName.trim()}
+                      aria-label={t.add}
+                      className="min-h-[44px] rounded-full border border-amber-500/50 bg-amber-500/10 px-4 text-amber-300 disabled:opacity-40"
+                    >
+                      ✓
                     </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-neutral-500">{t.noShop}</span>
-                  {coords && (
-                    <button onClick={() => setAddingShop(true)} className="shrink-0 text-xs text-amber-400 underline">
-                      {t.saveShop}
+                    <button
+                      onClick={() => { setAddingShop(false); setShopName(""); }}
+                      aria-label={t.cancel}
+                      className="min-h-[44px] min-w-[44px] rounded-full text-neutral-500"
+                    >
+                      ✕
                     </button>
-                  )}
-                </div>
-              )}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setAddingShop(true)}
+                    className="min-h-[44px] rounded-full border border-dashed border-neutral-700 px-4 text-base text-neutral-500 hover:text-neutral-300"
+                  >
+                    + {t.newPlace}
+                  </button>
+                )}
+              </div>
             </div>
             )}
 
-            {/* ---- icons carry the description when no shop does ---- */}
-            {mode === "buy" && (
+            {/* ---- icons carry the description when no place does ----
+                A chosen place has already said what the entry was, so the grid
+                stands down rather than asking the same question twice. */}
+            {mode === "buy" && !shop && categories.length > 0 && (
             <div className="mt-5">
               <div className="text-sm text-neutral-400">{t.whatFor}</div>
               <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -638,18 +687,32 @@ export default function GroceryPage() {
             </div>
             )}
 
-            {/* ---- and the custom field for everything else ---- */}
+            {/* ---- and a note, for the times none of the above says it ----
+                Folded away by default: most entries are a number and a place,
+                and an empty field on screen reads as a question to answer. */}
             <div className="mt-4">
-              <label className="block text-sm text-neutral-400">
-                {mode === "buy" ? t.custom : t.topNote}
-              </label>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={mode === "buy" ? t.customPh : t.topNote}
-                maxLength={200}
-                className="mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 outline-none focus:border-amber-500/60"
-              />
+              {noteOpen || note || mode === "topup" ? (
+                <>
+                  <label className="block text-sm text-neutral-400">
+                    {mode === "buy" ? t.custom : t.topNote}
+                  </label>
+                  <input
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder={mode === "buy" ? t.customPh : t.topNote}
+                    maxLength={200}
+                    autoFocus={noteOpen && !note}
+                    className="mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 outline-none focus:border-amber-500/60"
+                  />
+                </>
+              ) : (
+                <button
+                  onClick={() => setNoteOpen(true)}
+                  className="min-h-[44px] text-sm text-neutral-500 hover:text-neutral-300"
+                >
+                  + {t.addNote}
+                </button>
+              )}
             </div>
 
             {saved && (
@@ -670,15 +733,26 @@ export default function GroceryPage() {
 
             {flash && <div className="mt-3 text-sm text-amber-400">{flash}</div>}
 
-            <button
-              onClick={() => void record()}
-              disabled={busy}
-              className="mt-5 w-full rounded-2xl border border-amber-500/60 bg-amber-500/15 px-6 py-4 text-lg font-medium text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-50"
+            {/* Recording stays within thumb's reach.
+                On a phone the number keyboard opens over the lower half of the
+                screen, and a button in the flow ends up behind it — so the
+                manager would have to dismiss the keyboard to save what she just
+                typed. Pinned to the bottom, it rides above the keyboard, and
+                the safe-area inset keeps it clear of the home bar. */}
+            <div
+              className="sticky bottom-0 z-10 -mx-4 mt-5 border-t border-neutral-800/80 bg-neutral-950/95 px-4 pt-3 backdrop-blur sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pt-0 sm:backdrop-blur-none"
+              style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
             >
-              {busy
-                ? t.saving
-                : `${mode === "buy" ? t.save : t.saveTop}${idr > 0 ? ` · ${rupiah(idr)}` : ""}`}
-            </button>
+              <button
+                onClick={() => void record()}
+                disabled={busy}
+                className="w-full rounded-2xl border border-amber-500/60 bg-amber-500/15 px-6 py-4 text-lg font-medium text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-50"
+              >
+                {busy
+                  ? t.saving
+                  : `${mode === "buy" ? t.save : t.saveTop}${idr > 0 ? ` · ${rupiah(idr)}` : ""}`}
+              </button>
+            </div>
           </section>
 
           {/* ---- the ledger ---- */}

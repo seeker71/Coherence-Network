@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 406
+**Total files**: 405
 
 | File | Purpose |
 |---|---|
@@ -318,7 +318,6 @@
 | [schedule_attunement.py](schedule_attunement.py) | Re-attune every presence so newly added concepts get picked up. |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | Seed the commit evidence API from local git history. |
 | [seed_db.py](seed_db.py) | Seed data/coherence.db from spec markdown files, commit evidence JSON, and inline idea data. |
-| [seed_grocery_ledger.py](seed_grocery_ledger.py) | Carry the hub's existing grocery float into the graph, so the ledger opens on a true number. |
 | [seed_schema_to_db.py](seed_schema_to_db.py) | One-time migration: load ontology schema (relationship types + axes) into DB. |
 | [self_translate_demo.sh](self_translate_demo.sh) | self_translate_demo.sh — emit, compile, and run the self-contained binary that |
 | [self_translate_universal_demo.sh](self_translate_universal_demo.sh) | self_translate_universal_demo.sh — emit a NUMERIC-ONLY core binary (zero |
