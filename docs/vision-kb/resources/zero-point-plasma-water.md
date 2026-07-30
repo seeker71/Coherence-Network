@@ -14,7 +14,7 @@
 
 Lanes, never blended. This is the discipline the material demands, because the failure mode here is not bad physics — it is *good physics and a hypothesis narrated in the same voice*.
 
-These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form-stdlib/evidence-grounding.fk) (four-way, verdict 4095). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
+These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form-stdlib/evidence-grounding.fk) (four-way, verdict 8191). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
 
 | Lane | Means | Grows tissue? |
 |------|-------|---------------|

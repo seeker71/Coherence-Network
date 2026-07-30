@@ -19,7 +19,7 @@
 ;   3. CLASSIFY the lane the answer lands in (the spectrum of evidence strength).
 ;   4. FORM the concept IN that lane — or leave honest absence. The lane is PART of the concept.
 ;
-; THE LANES  (runnable: form-stdlib/evidence-grounding.fk · proven: tests/evidence-grounding-band.fk -> 4095)
+; THE LANES  (runnable: form-stdlib/evidence-grounding.fk · proven: tests/evidence-grounding-band.fk -> 8191)
 ;   5 MEASURED   observed + independent + measured     -> evidence-lane concept, cited
 ;   4 THEORY     derived from measured models          -> theory-lane concept, cited as derivation
 ;   3 PRACTICE   observed + independent, not measured  -> phenomenology concept, labeled as practice
