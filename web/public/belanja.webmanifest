@@ -1,0 +1,23 @@
+{
+  "name": "Hati · Belanja",
+  "short_name": "Belanja",
+  "description": "Buku belanja Hati Suci — satu angka, satu ketuk.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/?app=belanja",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "portrait",
+  "theme_color": "#0c0a09",
+  "background_color": "#0c0a09",
+  "lang": "id",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

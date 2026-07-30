@@ -575,9 +575,13 @@ async def totals(
 #
 # `Amount` is signed — a purchase is positive, a top-up is negative — which
 # is the convention the sheet already used for its settlement rows, so the
-# existing numbers keep their meaning. "Remaining" is no longer a row that
-# has to be pushed down; it is a formula in a fixed cell beside the header
-# (`=-SUM(...)`), so appending can never disturb it.
+# existing numbers keep their meaning. The balance sits on top, above the
+# header, as a formula in a fixed cell (`=-SUM(...)`), where a person looks
+# first and where appending can never disturb it.
+#
+# The column names are the whole contract: the sheet's own script finds its
+# header row by name and matches these columns to it, so the balance block
+# above the log can change shape without breaking the write.
 #
 # `What` is the column that matters. In the ledger as we found it, all eight
 # purchases had it empty. Filling it is the whole point of this app.

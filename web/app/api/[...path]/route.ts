@@ -22,6 +22,14 @@ const HOP_BY_HOP_HEADERS = new Set([
   "upgrade",
   "host",
   "content-length",
+  // fetch() hands back a body it has already decompressed, so passing the
+  // upstream's content-encoding on describes the bytes wrongly and the browser
+  // fails to decode a response it received intact — as a silent throw inside
+  // the caller's catch, which reads as "the write didn't happen" when it did.
+  // The internal API sends no encoding, so this only bites when the upstream
+  // compresses (a public endpoint behind a CDN), which is exactly what a
+  // local build pointed at production is.
+  "content-encoding",
 ]);
 
 const CONTRIBUTOR_KEY_COOKIE = "coh_contributor_key";
