@@ -93,7 +93,7 @@ const RUPIAH = '"Rp"#,##0';
 // One-time: reshape the ledger, keeping every value. Safe to re-run.
 function restructure() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheets()[0];
+  const sheet = ss.getActiveSheet();
   const values = sheet.getDataRange().getValues();
   const hrow = headerRowOf(sheet);
   const header = values[hrow - 1].map(function (h) { return String(h).trim(); });
@@ -127,6 +127,12 @@ function restructure() {
   }
 
   sheet.clear();
+  // clear() empties content and formatting but leaves data validation rules
+  // standing — a checkbox rule inherited from an old column would otherwise
+  // survive the rewrite and render every new description as an invalid value.
+  // clearDataValidations() is a Range method, not a Sheet one, so it is
+  // targeted at the sheet's full extent explicitly.
+  sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
 
   // The balance, on top.
   sheet.getRange("A1:B3").setValues([
@@ -184,7 +190,7 @@ function doPost(e) {
   if (SECRET && body.secret !== SECRET) {
     return ContentService.createTextOutput("forbidden");
   }
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const hrow = headerRowOf(sheet);
   const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
 
