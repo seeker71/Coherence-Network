@@ -370,7 +370,13 @@ def extract_db_contention(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
-    """Native Form runtime authority after retirement of the Python evaluator."""
+    """The c-bootstrapped fkwu runtime is the container's execution authority.
+
+    ``/api/utils/kernel_status`` names that carrier: ``active`` reads ``fkwu``
+    when the c-bootstrap binary is serving, and ``unavailable`` when it cannot.
+    Sibling walkers are differential proof rather than serving carriers, so any
+    other authority — and any missing binary — is silence.
+    """
     if r.status == 0:
         return OrganVerdict(False, r.error or "transport failure")
     if r.status >= 400:
@@ -380,12 +386,12 @@ def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if body.get("active") != "native-kernel":
-        return OrganVerdict(False, f"unexpected active runtime={body.get('active')!r}")
+    if body.get("active") != "fkwu":
+        return OrganVerdict(False, f"active runtime={body.get('active')!r}")
     if body.get("available") is not True:
-        return OrganVerdict(False, "native Form runtime unavailable")
-    if body.get("python_authority") is not False:
-        return OrganVerdict(False, "Python authority unexpectedly active")
+        return OrganVerdict(False, "c-bootstrapped fkwu runtime unavailable")
+    if body.get("binary_available") is not True:
+        return OrganVerdict(False, "fkwu binary absent from the container")
     return OrganVerdict(True)
 
 
@@ -554,8 +560,8 @@ ORGANS: list[Organ] = [
         name="substrate_form",
         label="Substrate Form",
         description=(
-            "GET /api/utils/kernel_status — the native Form runtime authority. "
-            "The retired Python evaluator is no longer treated as a living organ."
+            "GET /api/utils/kernel_status — the c-bootstrapped fkwu runtime "
+            "carrying execution for this container."
         ),
         upstream=UPSTREAM_API_SUBSTRATE_FORM,
         extractor=extract_substrate_form,

@@ -82,9 +82,10 @@ BROKEN_SUBSTRATE_PAGE = {
 }
 
 HEALTHY_SUBSTRATE_FORM = {
-    "active": "native-kernel",
+    "active": "fkwu",
+    "binary_available": True,
     "available": True,
-    "python_authority": False,
+    "binary_path": "/app/form/fkwu",
 }
 
 HEALTHY_SUBSTRATE_INGEST = {
@@ -423,6 +424,28 @@ async def test_substrate_form_flags_unexpected_runtime():
     sample = by["substrate_form"]
     assert sample.ok is False
     assert "active runtime='python'" in (sample.detail or "")
+
+
+@pytest.mark.asyncio
+async def test_substrate_form_flags_unavailable_carrier():
+    """``active: unavailable`` is the honest silence the endpoint reports."""
+    dark = {"active": "unavailable", "binary_available": False, "available": False}
+    by = await _run(_handler(substrate_form_body=dark))
+    sample = by["substrate_form"]
+    assert sample.ok is False
+    assert "active runtime='unavailable'" in (sample.detail or "")
+
+
+@pytest.mark.asyncio
+async def test_substrate_form_breathes_on_the_live_kernel_status_shape():
+    """The shape /api/utils/kernel_status actually returns reads as breathing.
+
+    A witness that asserts a contract the body has moved past reports silence
+    where there is none, so this pins the organ to the served response.
+    """
+    by = await _run(_handler())
+    sample = by["substrate_form"]
+    assert sample.ok is True, sample.detail
 
 
 @pytest.mark.asyncio
