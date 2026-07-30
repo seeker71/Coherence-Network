@@ -1,0 +1,99 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Opus 5"
+  },
+  "date": "2026-07-30",
+  "thread_branch": "claude/ladder-lanes-computed",
+  "change_intent": "runtime_feature",
+  "commit_scope": "Close the gap the previous receipt left open: the zero-point ladder's lane tags were hand-typed beside a classifier already proven four-way. The ladder's twenty-two claims are now signal tuples in a Form band and eg-lane computes every lane, four-way at 65535. The page carries the computed output, which corrected the author in five places.",
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "page-claims-computed-by-band"
+  ],
+  "task_ids": [
+    "task-2026-07-30-ladder-lanes-computed"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "correction",
+        "framing"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "four-way-proof",
+        "edge-tending",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-07-30_ladder_lanes_computed.json",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/resources/zero-point-plasma-water.md",
+    "form",
+    "specs/page-claims-computed-by-band.md"
+  ],
+  "files_owned": [
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/resources/zero-point-plasma-water.md",
+    "specs/page-claims-computed-by-band.md"
+  ],
+  "evidence_refs": [
+    "WHY: Urs named that the work had been done WITH python and bash rather than THROUGH the body. The sharpest instance: the ladder carried hand-typed lane tags beside evidence-grounding.fk, a classifier already proven four-way. An epistemic ladder whose own lanes are asserted rather than run is precisely the failure the lane discipline exists to catch \u2014 an author grading their own claim. The previous receipt named this in its phase_gate and left it; this closes it.",
+    "COMPUTED, NOT TYPED: form-stdlib/tests/zero-point-ladder-band.fk holds the ladder's 22 claims as (name observed? independent? measured? derived? refuted?) tuples; eg-lane decides each lane. ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk -> 'core.fk+evidence-grounding.fk+zero-point-ladder-band.fk -> 65535', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'. Manifest row: zero-point-ladder fks 65535. Change a signal and the verdict moves, so the page and the engine cannot drift apart.",
+    "THE ENGINE CORRECTED THE AUTHOR, TWICE IN THE HARSH DIRECTION: the page had typed CONTESTED across the whole plasma-water end of the ladder. Only water-car computes to CONTESTED \u2014 the one claim with a real history of attempted and failed replication. water-shell-mechanism, brown-gas-tungsten, evo-vacuum-object and crater-transmutation all compute to INFERENCE: single-source and unreplicated, weaker than measured but NOT evidence against. Typing CONTESTED read a specific unverified mechanism as already-refuted, inside a document about not doing that.",
+    "IT ALSO SPLIT TWO FLATTENED RUNGS: Prigogine's conditions compute MEASURED while the orthogonal flux resting on them computes INFERENCE (Rung 8 had been tagged INFERENCE wholesale); plasmoids and Mesyats' ectons compute MEASURED while the EVO-as-vacuum-object reading computes INFERENCE (Rung 10 had been tagged 'MIXED'). Rung 14's suppression thesis computes MYSTERY and had carried no lane at all.",
+    "AN INVISIBLE FACT MADE VISIBLE BY COUNTING: practice = 0 across all twenty-two claims. The ladder holds no phenomenology whatsoever, which is what a physics ladder should look like and was not observable while the lanes were prose. Profile (measured theory practice inference contested mystery) = 7 7 0 6 1 1; surface = 14 grow tissue, 8 held below.",
+    "FOURTH-ARM CONSTRAINT ONE, MEASURED NOT ASSUMED \u2014 PRELUDE DEPTH: the fourth arm resolves a three-file chain (core + module + band). At four files the earliest module is dropped. With core+evidence-grounding+zero-point-ladder+band, fkwu returned the claim table INTACT (len 22, 6 fields, nth values correct) while every eg-lane call returned 0, including on a claim built inline in the band file. An isolation band pinned this: bits for len/nth passed, bits for eg-lane failed, giving fourth=22 against 31 on the walkers. A three-file band calling eg-lane on inline claims returns 5/4/1 correctly, four-way. So the claim table lives in the band, one module deep.",
+    "FOURTH-ARM CONSTRAINT TWO \u2014 NO LIST CONSTRUCTION: fourth-shim.fk carries no cons and no empty (grepped: shim=0, core=0 as defns), so any walk that CONSTRUCTS a list returns nothing on the fourth arm while the three walkers return it. Vocabulary is held to exactly what evidence-grounding.fk uses and proves \u2014 add / eq / ge / head / if / len / list / nth / tail \u2014 and nothing builds a list except a list literal, the shape eg-surface already proves. Both constraints were built around over the minimal proven core rather than patched in a walker, per the capability rule.",
+    "A FALSE LEAD RECORDED RATHER THAN HIDDEN: the first hypothesis was that core's higher-order `map` failed on fkwu. A probe returning a LIST could not test it, because the fourth arm's verdict channel is numeric \u2014 the walkers returned [22, 22, 5, 5] while fkwu returned the scalar 849. Replacing map with explicit cons-recursion did not move the band off 8192 either. Only the numeric isolation band located the real cause. The lesson kept: a probe whose return type the channel cannot carry proves nothing.",
+    "KERNEL-FIRST ORDERING HELD: seeker71/coherence-kernel#408 on the form-submodule branch, merged as 655b8b3d2; this repo carries the exact gitlink bump cffb71d87 -> 655b8b3d2.",
+    "REVIEW FINDINGS ACCEPTED (PR #3990, chatgpt-codex-connector), three P1s, all correct. (1) The receipt cited kb-substrate-sync-discipline, which explicitly leaves resources UNMODELED and lists neither this page nor the form gitlink \u2014 so the change had no governing spec. Written: specs/page-claims-computed-by-band.md, naming the reusable shape (claims as band tuples, eg-lane decides, page carries output) with these exact files in source. (2) e2e_validation said pass while only local bands had run and deploy was pending \u2014 corrected to pending. (3) THE SHARPEST: the receipt and the page both claimed page and engine 'cannot drift apart', but no parser compares the Markdown labels to the band. The band asserts its own tuples, so it catches a changed signal or classifier rule; it cannot catch a page hand-edited to disagree. The guarantee was not implemented. Both the page and the spec now say the transcription is manual and name the missing check as an open edge. Claiming a guarantee I had not built is the same overclaim as typing a lane I had not computed \u2014 the identical error, one level up, caught in the commit that was fixing the first one."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk -> 65535; fourth arm 1 band four-way; 1 ok, 0 divergent",
+      "cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk -> 8191, four-way, unchanged (the classifier the ladder calls)",
+      "isolation band (registered temporarily in fourth-arm-bands.txt, then removed): walkers 31 / fourth 22 at four files; three-file chain agrees at 7"
+    ],
+    "notes": "The runtime surface is the Form band; the four-way run is the proof. Doc changes carry the computed output rather than authored tags: five rung headings, the lane table, and the Rung 11 lane paragraph."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Recorded pending at authoring; the branch's checks are observed before merge and the PR carries the result."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "prod-vision-kb",
+    "notes": "The ladder is a resources/ cell, repo-and-agent-facing rather than a /vision route, so no concept view sync is required. It remains outside the prod lattice on the standing btree ceiling (a composed recipe row needs 10968 bytes against Postgres's 8191-byte index maximum) \u2014 named, unfixed, and not made worse here."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "eg-lane now has a registered four-way band over a real 22-claim corpus rather than only the four shamballa codes plus four synthetic new-stratum claims. Every lane tag on the zero-point page is the band's output: asking the body for the ladder's profile returns 7 7 0 6 1 1 and a 14/8 surface, and a change to any claim signal moves verdict 65535 and fails the band. Before this, the page's lanes were prose and nothing could contradict them.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/substrate/annotate?path=docs/vision-kb/resources/zero-point-plasma-water.md \u2014 the page whose tags are now computed",
+      "GET https://api.coherencycoin.com/api/concepts/lc-honest-lane \u2014 the spectrum the band calls"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk -> 65535; sixteen verdict bits, each a computed lane or aggregate that must land",
+      "regression: cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk -> 8191 four-way, the classifier unchanged by its new caller"
+    ],
+    "notes": "Marked PENDING, not pass. The listed flows exercise local Form bands across four kernels; no call was made against the listed public endpoints, and deploy_validation is pending. Recording an unobserved public flow as passed would let any reader of e2e_validation.status see a success that did not happen \u2014 the same overclaim this whole change exists to remove. It flips to pass when the endpoints are actually called and asserted."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The gap the previous receipt left open is closed in substance: the page's lanes are the band's output, proven four-way, and the engine's disagreement with the author was accepted and shipped rather than argued down. The gate stays shut on the two observations still outstanding at authoring time \u2014 the branch's CI result, and a deploy read-back. Neither is claimed before it is seen. Two things also remain open and named elsewhere: the ladder still cannot enter the prod lattice on the btree ceiling, and the four experiments the page closes on are unrun by anyone here."
+  }
+}
