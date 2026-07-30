@@ -1,8 +1,8 @@
 # Ideas Index
 
-> 17 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
+> 18 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
 
-## All Ideas (17)
+## All Ideas (18)
 
 | Idea | Pillar | Stage | Specs | Key capability |
 |------|--------|-------|-------|----------------|
@@ -17,6 +17,7 @@
 | [Improvement as Contribution](improvement-as-contribution.md) | economics | spec | 1 | Provider versioning, fork registry, usage-driven CC |
 | [User Surfaces](user-surfaces.md) | surfaces | impl | 6 | Web pages, dashboard, homepage, navigation |
 | [Developer Experience](developer-experience.md) | surfaces | impl | 1 | Quick start, self-discovery, spec reflection |
+| [Light Hub Membrane](light-hub-membrane.md) | surfaces | impl | 1 | Service board, light identity, places, grocery ledger |
 | [Federation and Nodes](federation-and-nodes.md) | network | impl | 1 | Multi-node sync, identity, OpenClaw bridge |
 | [Identity and Onboarding](identity-and-onboarding.md) | network | spec | 2 | TOFU identity, 37 providers, investment UX |
 | [Contributor Experience](contributor-experience.md) | network | spec | 1 | Orientation, profiles, messaging, recognition |

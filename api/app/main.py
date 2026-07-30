@@ -864,10 +864,12 @@ from app.routers import practice as practice_router
 from app.routers import sensings as sensings_router
 from app.routers import offerings as offerings_router
 from app.routers import household as household_router
+from app.routers import grocery as grocery_router
 app.include_router(practice_router.router, prefix="/api", tags=["practice"])
 app.include_router(sensings_router.router, prefix="/api", tags=["sensings"])
 app.include_router(offerings_router.router, prefix="/api", tags=["offerings"])
 app.include_router(household_router.router, prefix="/api", tags=["household"])
+app.include_router(grocery_router.router, prefix="/api", tags=["grocery"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(field_stories.router, prefix="/api", tags=["field-stories"])

@@ -379,7 +379,7 @@
 | [validate_locale_surfaces.py](validate_locale_surfaces.py) | Validate locale surfaces for default-locale parity and translation-mode drift. |
 | [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | _no top-of-file purpose_ |
 | [validate_spec_prefix_canonicalization.py](validate_spec_prefix_canonicalization.py) | Validate canonical mapping for duplicated spec numeric prefixes. |
-| [validate_spec_quality.py](validate_spec_quality.py) | Validate spec quality so implementation does not need manual follow-up gap fixes. |
+| [validate_spec_quality.py](validate_spec_quality.py) | Observe spec quality without confusing a diagnostic with sovereign consent. |
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
