@@ -264,8 +264,12 @@
 ;         in ~7.8 s, metal_ffn_audit bit-parity); fourth-kernel-physical-lanes.form names the missing rung
 ;         exactly: one native accelerator DISPATCH RECEIPT per lane (macOS Metal, MLX, Android GPU/NNAPI).
 ;     WHAT THE BODY DOES NOT YET HOLD (the new recipes, ordered — each four-way at honest scale first):
-;       M-a. MoE GATING — router softmax → top-k expert select (the top-16-of-896 shape) as a recipe at
-;            honest d=4/E=8 scale; composes sampling.fk's softmax/top-k (D₁₀) with expert dispatch.
+;       M-a. ✓ DONE (2026-08-04, same day it was named) — moe-gate.fk + moe-gate-band.fk: router matvec
+;            (tb-matvec bits) → smp-softmax gates → smp-topk-mask k=2-of-E=8 → sparse expert mix, verdict
+;            511 FOUR-WAY (Go=Rust=TS=fkwu, 1 ok 0 divergent). The poison claim pins the MoE teaching:
+;            six unpicked experts at 1e9 weights leave the output bit-identical — moe-mix SKIPS a
+;            zero-gate expert, compute scales with k not E. Top-2 renorm is the logistic of the logit
+;            gap (σ(1)=0.731059/0.268941, hand-checked). Kernel commit 3214a051c.
 ;       M-b. EXPERT-STREAM CACHE — LRU + prefetch as a recipe over read_file_slice windows: expert id →
 ;            content-addressed byte window → dequant → matvec; eviction by recency; the memory dial is a
 ;            cfg VALUE (pinned depth), never a build variant.
