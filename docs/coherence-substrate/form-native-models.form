@@ -243,6 +243,44 @@
 ;        full-real claim gate carries one blocked requirement until the lane runs llama3.2:3b end to end.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
+;   ── NORTH STAR — FRONTIER-SCALE MoE ON THE MEMORY DIAL (named 2026-08-04; oracle: kimi-k3-in-c) ──
+;     ORACLE (teacher, never master — lowering-conviction discipline): FareedKhan-dev/kimi-k3-in-c
+;     (github.com/FareedKhan-dev/kimi-k3-in-c) runs the 2.78-TRILLION-parameter Kimi K3 MoE on ONE CPU in
+;     8.24 GB peak RSS — portable C99, no BLAS, no framework, no GPU. The shape: 4-bit (MXFP4) routed
+;     experts (1.45 TB of the 1.56 TB checkpoint NEVER resident) streamed per token from disk through an
+;     LRU expert cache + prefetch; bf16 trunk packed into one 109 GB file for sequential reads; top-16-of-896
+;     gating; MLA + KDA attention bounding KV growth; a MEMORY DIAL (pinned-depth cfg) where the SAME model
+;     is byte-identical at 8 GB and at 224 GB (reports ~32 tok/s at the laptop preset — their numbers,
+;     validated byte-exact vs the PyTorch reference). The teaching: frontier-scale inference is a SMALL
+;     portable engine (~176 KB) + a memory dial — and "byte-identical at every budget" is our four-way
+;     discipline spoken in C.
+;     WHAT ALREADY RUNS HERE (the Form floor is most of this ladder):
+;       · the STREAMING PRIMITIVE — read_file_slice over content-addressed one-row tensor manifests (D₆/D₇)
+;         IS expert streaming's core: a named byte window read on demand, hashed in fkwu, never all-resident.
+;       · 4-BIT DEQUANT — q4k/q6k-dequant + f16-decode four-way on real llama3.2:3b bytes (C, D₄′).
+;       · NATIVE CPU COMPUTE — form-asm matvec/ss-sqrt/rsqrt/horner/poly-pool bytes over ll-buffer (A–A⁗),
+;         no rustc, no clang.
+;       · GPU/METAL — the MSL emit lane is PROVEN (gap 7's jte-mlp-train-msl: 60,080 native GPU SGD steps
+;         in ~7.8 s, metal_ffn_audit bit-parity); fourth-kernel-physical-lanes.form names the missing rung
+;         exactly: one native accelerator DISPATCH RECEIPT per lane (macOS Metal, MLX, Android GPU/NNAPI).
+;     WHAT THE BODY DOES NOT YET HOLD (the new recipes, ordered — each four-way at honest scale first):
+;       M-a. MoE GATING — router softmax → top-k expert select (the top-16-of-896 shape) as a recipe at
+;            honest d=4/E=8 scale; composes sampling.fk's softmax/top-k (D₁₀) with expert dispatch.
+;       M-b. EXPERT-STREAM CACHE — LRU + prefetch as a recipe over read_file_slice windows: expert id →
+;            content-addressed byte window → dequant → matvec; eviction by recency; the memory dial is a
+;            cfg VALUE (pinned depth), never a build variant.
+;       M-c. MXFP4 DEQUANT — the microscaling 4-bit block format beside q4k/q6k, same perturbation-check
+;            discipline (one byte flip moves the verdict).
+;       M-d. MLA ATTENTION — multi-latent KV consolidation beside GQA (lgqa-block-causal); KDA's bounded
+;            KV growth as the cache recipe's stated contract.
+;       M-e. ACCELERATOR DISPATCH RECEIPT — the SAME gating/expert-matvec recipes emitted through the
+;            Metal/MLX lane with one witnessed native dispatch (closes fourth-kernel-physical-lanes' named
+;            gap). The recipe that proves four-way is the recipe that emits the kernel — CPU asm bytes and
+;            MSL are two LOWERINGS of one engine, never parallel paths.
+;     THE CLAIM WHEN THE LADDER CLOSES: a frontier-scale MoE runs on the body — architecture AND weights as
+;     content-addressed recipe data, memory-bounded by the dial, byte-identical at every budget, CPU-native
+;     via form-asm bytes AND GPU-native via the same recipes' Metal/MLX emit — with the C oracle held as the
+;     latency/accuracy teacher, never the runtime.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
 ;     TRANSLATE through the language-neutral pivot, and text → audio (TTS) — so ANY input voice in ANY tongue
 ;     becomes ANY output voice in ANY tongue, where every stage's architecture AND weights are content-addressed
