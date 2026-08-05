@@ -63,11 +63,11 @@ NATIVE_CARRIER_RECEIPT = (
     else Path(ROOT) / ".cache" / "form-cli-native" / "selected.json"
 )
 NATIVE_SOURCE_DIGEST_FILE = (
-    Path(ROOT) / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+    Path(ROOT) / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
 )
 
 SOURCES = [
-    ("recipe",    "form/form-stdlib/*.fk"),
+    ("recipe",    "form/form/form-stdlib/*.fk"),
     ("spec",      "specs/*.md"),
     ("concept",   "docs/vision-kb/concepts/*.md"),
     ("substrate", "docs/coherence-substrate/*.form"),
@@ -564,9 +564,9 @@ def _native_source_stamp() -> str:
     """Bind the cache to the committed native table/stamp inputs."""
     digest = hashlib.sha256(b"native-rag-carrier-v1\n")
     for relative in (
-        "form/form-stdlib/bootstrap/form-cli.source.sha256",
-        "form/form-stdlib/bootstrap/form-cli.stamp",
-        "form/form-stdlib/bootstrap/form-cli-table.txt",
+        "form/form/form-stdlib/bootstrap/form-cli.source.sha256",
+        "form/form/form-stdlib/bootstrap/form-cli.stamp",
+        "form/form/form-stdlib/bootstrap/form-cli-table.txt",
     ):
         path = Path(ROOT) / relative
         digest.update(relative.encode("utf-8"))

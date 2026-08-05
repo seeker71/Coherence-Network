@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run Form validation workloads as parallel shards.
 
-The shard runner preserves ``form/validate.sh`` execution semantics by invoking
+The shard runner preserves ``form/form/validate.sh`` execution semantics by invoking
 that script for each workload. Python only mirrors validate.sh's default
 workload enumeration and schedules the resulting explicit workloads.
 """
@@ -92,10 +92,10 @@ def _enumerate_default_workloads() -> list[Workload]:
 
 
 KERNEL_SEMANTIC_PREFIXES = (
-    "form/form-kernel-go/",
-    "form/form-kernel-rust/",
-    "form/form-kernel-ts/",
-    "form/validate.sh",
+    "form/form/form-kernel-go/",
+    "form/form/form-kernel-rust/",
+    "form/form/form-kernel-ts/",
+    "form/form/validate.sh",
     "scripts/form_validate_shards.py",
 )
 
@@ -128,7 +128,9 @@ def _select_changed(workloads: list[Workload], ref: str) -> list[Workload] | Non
         for p in changed
     ):
         return None
-    form_changed = {p.removeprefix("form/") for p in changed if p.startswith("form/")}
+    form_changed = {
+        p.removeprefix("form/form/") for p in changed if p.startswith("form/form/")
+    }
     if not form_changed:
         return []
     selected = []
@@ -233,7 +235,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     default_jobs = min(4, os.cpu_count() or 1)
     parser = argparse.ArgumentParser(
         description=(
-            "Run the same default workloads as form/validate.sh, sharded across "
+            "Run the same default workloads as form/form/validate.sh, sharded across "
             "parallel validate.sh invocations."
         )
     )

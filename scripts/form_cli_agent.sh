@@ -9,8 +9,8 @@
 # Usage: form_cli_agent.sh "<task>"   (env: LOCAL=coder REMOTE="claude -p" MAX=6)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
-[[ -x "$GO" ]] || (cd "$ROOT/form/form-kernel-go" && go build -o bin-go .)
+GO="$ROOT/form/form/form-kernel-go/bin-go"; STD="$ROOT/form/form/form-stdlib"
+[[ -x "$GO" ]] || (cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go .)
 LOCAL="${LOCAL:-coder}"; REMOTE="${REMOTE:-claude -p}"; MAX="${MAX:-6}"
 TASK="$*"
 [[ -n "$TASK" ]] || { echo "usage: form-cli do \"<task>\"" >&2; exit 2; }

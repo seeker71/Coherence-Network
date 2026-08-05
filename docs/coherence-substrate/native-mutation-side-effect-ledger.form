@@ -58,11 +58,11 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python creates and updates idea records through idea persistence helpers.",
             [
-                "form/form-stdlib/application-graph-node-port.fk::agn-create-node",
-                "form/form-stdlib/application-graph-node-port.fk::agn-update-node"
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-create-node",
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-update-node"
             ],
             [
-                "form/scripts/application-graph-live-db-test.sh",
+                "form/form/scripts/application-graph-live-db-test.sh",
                 "api/tests/test_application_graph_live_db_trial.py",
                 "api/tests/test_application_graph_response_projection.py"
             ],
@@ -81,12 +81,12 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python creates, updates, and deletes spec graph nodes through graph_service.",
             [
-                "form/form-stdlib/application-graph-node-port.fk::agn-create-node",
-                "form/form-stdlib/application-graph-node-port.fk::agn-update-node",
-                "form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-create-node",
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-update-node",
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
             ],
             [
-                "form/scripts/application-graph-live-db-test.sh",
+                "form/form/scripts/application-graph-live-db-test.sh",
                 "api/tests/test_application_graph_live_db_trial.py",
                 "api/tests/test_specs_source_native_route.py"
             ],
@@ -104,12 +104,12 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python repairs the reciprocal parent-child relation when parent_idea_id changes.",
             [
-                "form/form-stdlib/native-mutation-side-effects.fk::nms-repair-parent-edge",
-                "form/form-stdlib/native-mutation-route-side-effects.fk::nmrs-run-idea-create-with-side-effects"
+                "form/form/form-stdlib/native-mutation-side-effects.fk::nms-repair-parent-edge",
+                "form/form/form-stdlib/native-mutation-route-side-effects.fk::nmrs-run-idea-create-with-side-effects"
             ],
             [
-                "form/scripts/native-mutation-side-effects-test.sh",
-                "form/scripts/native-mutation-route-side-effects-test.sh",
+                "form/form/scripts/native-mutation-side-effects-test.sh",
+                "form/form/scripts/native-mutation-route-side-effects-test.sh",
                 "api/tests/test_native_mutation_route_side_effect_binding.py"
             ],
             "keep as Python parity",
@@ -125,10 +125,10 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python deletes connected graph_edges when a spec node is deleted.",
             [
-                "form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
+                "form/form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
             ],
             [
-                "form/scripts/application-graph-live-db-test.sh",
+                "form/form/scripts/application-graph-live-db-test.sh",
                 "api/tests/test_application_graph_live_db_trial.py"
             ],
             "keep as Python parity",
@@ -145,10 +145,10 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python invalidates read caches after mutable writes.",
             [
-                "form/form-stdlib/native-mutation-side-effects.fk::nms-record-cache-invalidation"
+                "form/form/form-stdlib/native-mutation-side-effects.fk::nms-record-cache-invalidation"
             ],
             [
-                "form/scripts/native-mutation-side-effects-test.sh",
+                "form/form/scripts/native-mutation-side-effects-test.sh",
                 "api/tests/test_native_mutation_side_effects_form.py"
             ],
             "keep as parity receipt until native cache surfaces exist",
@@ -163,10 +163,10 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python successful key verification refreshes contributor_api_keys.last_used_at.",
             [
-                "form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key"
+                "form/form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key"
             ],
             [
-                "form/scripts/native-mutation-side-effects-test.sh",
+                "form/form/scripts/native-mutation-side-effects-test.sh",
                 "api/tests/test_native_mutation_side_effects_form.py"
             ],
             "keep as Python parity when a contributor key hash is present",
@@ -181,10 +181,10 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "No Python domain behavior writes this receipt.",
             [
-                "form/form-stdlib/native-mutation-side-effects.fk::nms-record-rollback-receipt"
+                "form/form/form-stdlib/native-mutation-side-effects.fk::nms-record-rollback-receipt"
             ],
             [
-                "form/scripts/native-mutation-side-effects-test.sh",
+                "form/form/scripts/native-mutation-side-effects-test.sh",
                 "api/tests/test_native_mutation_side_effects_form.py"
             ],
             "keep as transitional gate safety; do not cite as domain parity",
@@ -199,12 +199,12 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "No Python domain behavior writes this receipt.",
             [
-                "form/form-stdlib/native-mutation-public-gate.fk::nmpg-record-public-gate-rollback-receipt",
+                "form/form/form-stdlib/native-mutation-public-gate.fk::nmpg-record-public-gate-rollback-receipt",
                 "deploy/kernel-router/production-routes.fk::route_ideas_create_native_public_gate",
                 "deploy/kernel-router/production-routes.fk::route_specs_update_native_public_gate"
             ],
             [
-                "form/scripts/native-mutation-public-gate-test.sh",
+                "form/form/scripts/native-mutation-public-gate-test.sh",
                 "deploy/kernel-router/mutation_public_gate_harness.py",
                 "api/tests/test_native_mutation_public_gate.py"
             ],
@@ -222,13 +222,13 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "Python writes AuditEntryType.VALUATION_CHANGE rows for idea value/status changes with SYSTEM sender/receiver, metadata, previous_hash, and hash.",
             [
-                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
-                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-batch-valuation-change",
-                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
-                "form/form-stdlib/native-mutation-public-gate.fk::nmpg-run-idea-update-public-gate"
+                "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
+                "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-batch-valuation-change",
+                "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
+                "form/form/form-stdlib/native-mutation-public-gate.fk::nmpg-run-idea-update-public-gate"
             ],
             [
-                "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+                "form/form/scripts/native-idea-valuation-audit-ledger-test.sh",
                 "api/tests/test_native_idea_valuation_audit_ledger.py",
                 "api/tests/test_native_mutation_public_gate.py"
             ],

@@ -2,15 +2,15 @@
 idea_id: idea-realization-engine
 status: draft
 source:
-  - file: form/form-stdlib/bml.fk
+  - file: form/form/form-stdlib/bml.fk
     symbols: []
-  - file: form/form-stdlib/bml-source.fk
+  - file: form/form/form-stdlib/bml-source.fk
     symbols: []
-  - file: form/form-stdlib/grammars/bml.fk
+  - file: form/form/form-stdlib/grammars/bml.fk
     symbols: []
-  - file: form/form-stdlib/name-check.fk
+  - file: form/form/form-stdlib/name-check.fk
     symbols: []
-  - file: form/form-stdlib/tests/bml-generics-band.fk
+  - file: form/form/form-stdlib/tests/bml-generics-band.fk
     symbols: []
   - file: specs/form-intrinsic-casting.md
     symbols: []
@@ -27,11 +27,11 @@ requirements:
   - "Ill-typed BML source reports compile-time diagnostics (unknown method for operator on type, arity mismatch, argument-type mismatch, return-type mismatch) through the check door, three-way identical — never a runtime crash."
   - "No silent coercion: BML coercion-attribute methods register as dialect coercion rows per form-intrinsic-casting R5; the checker validates or inserts explicit CAST recipes where a declared coercion applies, and reports a diagnostic where none does."
   - "BML.lang.Boolean stays a distinct type at the type lane (instanceof, logical and relational operators type as Boolean per the thesis) while the value lane carries the 0/1 states — the eq-shape settlement: value unified, type visible."
-  - "Both lanes prove three-way via form/validate.sh: a typed-fndef band (typed signatures survive lowering and read back via .children) and a type-check band (a well-typed program passes clean; a deliberately mistyped program names its diagnostic identically in Go, Rust, TypeScript)."
+  - "Both lanes prove three-way via form/form/validate.sh: a typed-fndef band (typed signatures survive lowering and read back via .children) and a type-check band (a well-typed program passes clean; a deliberately mistyped program names its diagnostic identically in Go, Rust, TypeScript)."
 done_when:
-  - 'file_exists("form/form-stdlib/tests/bml-typed-fndef-band.fk")'
-  - 'file_exists("form/form-stdlib/tests/bml-type-check-band.fk")'
-  - "Both bands pass three-way (Go, Rust, TypeScript agree) under form/validate.sh."
+  - 'file_exists("form/form/form-stdlib/tests/bml-typed-fndef-band.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/bml-type-check-band.fk")'
+  - "Both bands pass three-way (Go, Rust, TypeScript agree) under form/form/validate.sh."
   - "A mistyped .bml source (operator with no matching method on the base type) reports a compile diagnostic, not a runtime crash, identically in all three kernels."
   - "bml.fk method/param emits carry typerefs; the typed slots are readable from Form via .children."
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk form-stdlib/bml.fk form-stdlib/tests/bml-typed-fndef-band.fk"
@@ -91,17 +91,17 @@ rests on the same content-addressed ground as everything else.
   declared coercion bridges a mismatch.
 - [ ] **R6 — proof bands.** `bml-typed-fndef-band.fk` (signatures survive
   and read back) and `bml-type-check-band.fk` (clean pass + named
-  diagnostic) pass three-way under `form/validate.sh`.
+  diagnostic) pass three-way under `form/form/validate.sh`.
 
 ## Research Inputs
 
-- `2026-06-11` — `form/form-stdlib/bml.fk` rules 39–56: every signature
+- `2026-06-11` — `form/form/form-stdlib/bml.fk` rules 39–56: every signature
   rule parses typerefs and erases them at emit; `param` emits name only.
 - `docs/field/urs/artifacts/master-thesis-2000/backtracking-model-languages.txt`
   — operator-as-method-call semantics; constant kinds; "the definition of
   the resolved name defines the type"; no default coercions, coercion as
   method attribute; `instanceof` types as `BML.lang.Boolean`.
-- `form/form-stdlib/tests/bml-generics-band.fk` — type applications
+- `form/form/form-stdlib/tests/bml-generics-band.fk` — type applications
   already parse into faithful structure ("generics expressed, not
   erased"); the same machinery carries signature typerefs.
 - `docs/coherence-substrate/name-resolution-as-recipe.form` — the
@@ -113,17 +113,17 @@ rests on the same content-addressed ground as everything else.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/bml.fk` — signature rules splice typerefs into typed FNDEF slots.
-- `form/form-stdlib/form-ontology.json` — typed-FNDEF arm registration if a new inst is needed.
-- `form/form-stdlib/bml-type-check.fk` — the type-resolution walk and diagnostic cells (new).
-- `form/form-stdlib/tests/bml-typed-fndef-band.fk` — signatures survive lowering (new).
-- `form/form-stdlib/tests/bml-type-check-band.fk` — clean pass + named diagnostics (new).
-- `form/form-kernel-go/main.go`, `form/form-kernel-rust/src/main.rs`, `form/form-kernel-ts/src/kernel.ts` — walker FNDEF arm accepts the typed child shape (skip type children at value-walk).
+- `form/form/form-stdlib/bml.fk` — signature rules splice typerefs into typed FNDEF slots.
+- `form/form/form-stdlib/form-ontology.json` — typed-FNDEF arm registration if a new inst is needed.
+- `form/form/form-stdlib/bml-type-check.fk` — the type-resolution walk and diagnostic cells (new).
+- `form/form/form-stdlib/tests/bml-typed-fndef-band.fk` — signatures survive lowering (new).
+- `form/form/form-stdlib/tests/bml-type-check-band.fk` — clean pass + named diagnostics (new).
+- `form/form/form-kernel-go/main.go`, `form/form/form-kernel-rust/src/main.rs`, `form/form/form-kernel-ts/src/kernel.ts` — walker FNDEF arm accepts the typed child shape (skip type children at value-walk).
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/bml-typed-fndef-band.fk` — a BML method `Integer Add(Integer a, Integer b) { ... }` lowers to a typed FNDEF whose `.children` expose return typeref and `(name, typeref)` params; the value walk still executes the body identically three-way.
-- `form/form-stdlib/tests/bml-type-check-band.fk` — a well-typed program reports zero diagnostics; `"text" * 5` with no declared `*` method on String reports unknown-method-for-type; a return whose expression type mismatches the declared return reports return-type-mismatch; all diagnostics three-way identical.
+- `form/form/form-stdlib/tests/bml-typed-fndef-band.fk` — a BML method `Integer Add(Integer a, Integer b) { ... }` lowers to a typed FNDEF whose `.children` expose return typeref and `(name, typeref)` params; the value walk still executes the body identically three-way.
+- `form/form/form-stdlib/tests/bml-type-check-band.fk` — a well-typed program reports zero diagnostics; `"text" * 5` with no declared `*` method on String reports unknown-method-for-type; a return whose expression type mismatches the declared return reports return-type-mismatch; all diagnostics three-way identical.
 
 ## Risks and Assumptions
 

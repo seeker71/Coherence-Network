@@ -40,10 +40,10 @@
 # Usage: form_cli_transformer_train_wide.sh [corpus] [epochs] [cap] [eval-corpus]   (env: FORM_LR)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 CORPUS="${1:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
 EPOCHS="${2:-400}"; CAP="${3:-800}"; EVAL_CORPUS="${4:-}"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null  # offline: build from module cache, never the network
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null  # offline: build from module cache, never the network
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
 echo "── train the WIDE (4→4→4) Form-native transformer on the real oracle corpus (logic is four-way Form) ──"

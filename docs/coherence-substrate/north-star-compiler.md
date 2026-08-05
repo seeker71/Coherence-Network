@@ -3,8 +3,8 @@
 The north star — a small, generic, streaming, cursor-based recipe-emitter whose
 content-addressing makes exploring parse branches an order of magnitude cheaper than a
 copying parser — **is already the live BML compile path.** It is not a future rewrite.
-`g-parse`, the `Match` engine in [`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk)
-over [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk)'s pure-functional cursor, sits
+`g-parse`, the `Match` engine in [`bmf-grammar.fk`](../../form/form/form-stdlib/bmf-grammar.fk)
+over [`bmf-core.fk`](../../form/form/form-stdlib/bmf-core.fk)'s pure-functional cursor, sits
 **inside the compile FLOOR**: `fsc-compile-section-recipe` parses every high-level
 section through it (`g-parse(bml-grammar)`), and it is proven three-way by the
 `bmf-core` / `bmf-grammar` / `bmf-langs` / `literals` bands.
@@ -39,8 +39,8 @@ which is not building the engine, but *releasing the old tissue it made redundan
 
   That *is* the order of magnitude: branching is pointer-sharing, not state-copying.
 - **It is a sibling of the two walks already in the body.**
-  [`name-check.fk`](../../form/form-stdlib/name-check.fk) (the resolution walk) and
-  [`reachability.fk`](../../form/form-stdlib/reachability.fk) (the closure walk) share
+  [`name-check.fk`](../../form/form/form-stdlib/name-check.fk) (the resolution walk) and
+  [`reachability.fk`](../../form/form/form-stdlib/reachability.fk) (the closure walk) share
   the same node-dispatch shape; the compile emitter is the third — accumulating recipes
   instead of diagnostics or a reached set.
 
@@ -75,7 +75,7 @@ actively-tended shared ground. So, per construct the old path still owns:
    type-first — the gate from #2581 names the resulting unbound symbol. Each such surface
    variant is one bag of cursor rules added to the grammar.
 2. **Prove parity** — the newly-covered construct's output is byte-identical to the
-   current path's, three-way (Go/Rust/TS) via `form/validate.sh`.
+   current path's, three-way (Go/Rust/TS) via `form/form/validate.sh`.
 3. **Release the old tissue** the cursor engine now subsumes — re-running the floor audit
    to confirm a candidate dropped to genuinely unreached, with a per-candidate
    indirect-ref check before composting.

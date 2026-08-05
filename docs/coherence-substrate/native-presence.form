@@ -3,11 +3,11 @@
 (native-presence
   (lineage
     (rests-on bootstrap-host.fk form-pe-coff.form form-to-asm.form cell-sync-transport.form hati-os-targets.form)
-    (brain form/form-stdlib/presence-loop.fk)
-    (lowering form/form-stdlib/form-pe-coff-affine.fk)
-    (body form/native/presence/form_presence_host.c)
-    (proof form/form-stdlib/tests/presence-loop-band.fk -> 1023)
-    (proof form/form-stdlib/tests/form-pe-coff-affine-band.fk -> 127)
+    (brain form/form/form-stdlib/presence-loop.fk)
+    (lowering form/form/form-stdlib/form-pe-coff-affine.fk)
+    (body form/form/native/presence/form_presence_host.c)
+    (proof form/form/form-stdlib/tests/presence-loop-band.fk -> 1023)
+    (proof form/form/form-stdlib/tests/form-pe-coff-affine-band.fk -> 127)
     (live-proof scripts/presence_cycle.ps1 -> status pass))
 
   (purpose

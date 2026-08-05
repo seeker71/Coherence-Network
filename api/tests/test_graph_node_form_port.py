@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PORT_PATH = ROOT / "form" / "form-stdlib" / "graph-node-port.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "graph-node-port-band.fk"
+PORT_PATH = ROOT / "form" / "form" / "form-stdlib" / "graph-node-port.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "graph-node-port-band.fk"
 GRAPH_SERVICE_PATH = ROOT / "api" / "app" / "services" / "graph_service.py"
 
 

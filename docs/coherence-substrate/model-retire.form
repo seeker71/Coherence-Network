@@ -75,7 +75,7 @@
 ; integer tallies it answers deterministically and identically across the
 ; Go, Rust, and TypeScript kernels.
 ;
-; PROOF: form/validate.sh over
+; PROOF: form/form/validate.sh over
 ;   form-stdlib/core.fk  form-stdlib/model-retire.fk
 ;   form-stdlib/tests/model-retire-band.fk
 ; → verdict 63 (six bits), 1 ok, 0 divergent — the three kernels agree on

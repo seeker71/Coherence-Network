@@ -22,7 +22,7 @@ import time
 import urllib.request
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-FORM = os.path.join(REPO, "form")
+FORM = os.path.join(REPO, "form", "form")
 KERNEL = os.path.join(FORM, "form-kernel-rust", "target", "release", "form-kernel-rust")
 # sense-liveness.fk uses only kernel builtins, so the raw kernel loads it directly
 # (core.fk is BML-dialect and needs validate's source-compiler — not loaded here).

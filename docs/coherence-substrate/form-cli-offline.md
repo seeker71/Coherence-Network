@@ -78,11 +78,11 @@ The catalog tallies `open / offline-closable / stage-before-flight` and reads
 **flight-ready** iff nothing needs the network first — the membrane's
 air-gap-clean notion at body scale. A membrane crossing tagged `gap=1`
 corresponds to a catalog item. Recipe:
-[`form-cli-gaps.fk`](../../form/form-stdlib/form-cli-gaps.fk) — proven four-way
+[`form-cli-gaps.fk`](../../form/form/form-stdlib/form-cli-gaps.fk) — proven four-way
 (`form-cli-gaps-band` → 4095). Measured on the body today: 27 open, 26
 offline-closable, 1 stage-before-flight (`remote-llm`).
 
-Recipe: [`form-cli-membrane.fk`](../../form/form-stdlib/form-cli-membrane.fk) —
+Recipe: [`form-cli-membrane.fk`](../../form/form/form-stdlib/form-cli-membrane.fk) —
 proven four-way (`form-cli-membrane-band`, verdict 1023, go/rust/ts/fkwu).
 
 ## Grounded local answer + optional teachers
@@ -122,12 +122,12 @@ The loop ([`scripts/form_cli_close_gap.sh`](../../scripts/form_cli_close_gap.sh)
 the coder drafts the recipe in the Form `.fk` dialect → the kernel **validates**
 it against the assertion → the crossing is **ledgered** through the membrane
 recipe (`surface=local-teacher`, `gap=1`, `receipt-valid=1`). A validated draft
-lands in `form/form-stdlib/drafts/` (gitignored); promote it by writing an
+lands in `form/form/form-stdlib/drafts/` (gitignored); promote it by writing an
 assertion band and adding it to the manifest to make it four-way. Measured
 offline: `(defn tri (n) (div (mul n (add n 1)) 2))` and a recursive list-sum,
 each drafted in seconds and kernel-validated.
 
-The general agent runner ([`form-native-run.fk`](../../form/form-stdlib/form-native-run.fk),
+The general agent runner ([`form-native-run.fk`](../../form/form/form-stdlib/form-native-run.fk),
 driven by [`scripts/form_native_run.sh`](../../scripts/form_native_run.sh)) is
 the same shape for open-ended tasks — pure Form on the kernel, oracle call + tool
 dispatch + recursion, host effects through the kernel's host-io builtins, every
@@ -143,9 +143,9 @@ and content-address it:
 scripts/form_cli_slice.sh answer "(list (list 1 40 0 0) (list 1 2 0 0) (list 3 0 1 0))" 2 42
 ```
 
-The Form recipes ([`form-lower.fk`](../../form/form-stdlib/form-lower.fk) +
-[`form-macho.fk`](../../form/form-stdlib/form-macho.fk) on macOS,
-[`form-elf-exec.fk`](../../form/form-stdlib/form-elf-exec.fk) on Linux/Android)
+The Form recipes ([`form-lower.fk`](../../form/form/form-stdlib/form-lower.fk) +
+[`form-macho.fk`](../../form/form/form-stdlib/form-macho.fk) on macOS,
+[`form-elf-exec.fk`](../../form/form/form-stdlib/form-elf-exec.fk) on Linux/Android)
 lower an op-tagged tree to arm64 bytes, wrap it in a Mach-O / ELF object; `ld`
 links it; the binary **runs and its exit code is the program's value** — zero
 clang. The binary's sha256 is its content address — the stable identity the
@@ -168,10 +168,10 @@ spec** is a **second oracle** (independent of clang, it grounds an encoding in t
 documented bitfields — e.g. the two's-complement branch fold). Neither oracle is
 the lane; the four-way band is the truth and stands without either.
 
-The encoder itself is a **table** ([`form-asm.fk`](../../form/form-stdlib/form-asm.fk)):
+The encoder itself is a **table** ([`form-asm.fk`](../../form/form/form-stdlib/form-asm.fk)):
 one generic packer `fa-asm` over per-instruction `(base, multipliers)` data rows, so
 a new instruction is a row, not new code (`form-asm-table fks 7`, the ARM/LLVM
-encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/form-stdlib/form-macho.fk))
+encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/form/form-stdlib/form-macho.fk))
 carries real unix commands end to end, **zero clang**: the syscall / byte-I/O set
 (`svc`, 64-bit `movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow
 (`cmp`, the EOF branch, the backward loop branch), and the branchless transform
@@ -207,7 +207,7 @@ widens beyond — a named bound, not pretended.)
 `rot13` added **no new encoder** — its two-range rotation is `sub`/`add`/`cmp`/`csel`
 data rows — so the earlier **C-emit byte-filter lane composted**: every common filter
 now runs on Form's own bytes, clang only ever a check. (The whole-program C-emit lane,
-[`hati-os-native-cli-emit.fk`](../../form/form-stdlib/hati-os-native-cli-emit.fk),
+[`hati-os-native-cli-emit.fk`](../../form/form/form-stdlib/hati-os-native-cli-emit.fk),
 remains for programs not yet asm-lowered.)
 
 These began as happy-path recipes from memory — toys. The real behavior surface is
@@ -235,7 +235,7 @@ Each line is a `form-cli-sample.fk` cell (four-way, `form-cli-sample-band` →
 1023): task, oracle-id, reasoning, ordered tool-steps (each a membrane crossing),
 answer, outcome. A turn with no remote-oracle step is **offline-reproducible** —
 the native models replay it air-gapped. Corpus lives in
-[`form/form-samples/agent-turns/`](../../form/form-samples/agent-turns/) — a
+[`form/form/form-samples/agent-turns/`](../../form/form/form-samples/agent-turns/) — a
 committed `seed.jsonl` of real exemplars, a gitignored `corpus.jsonl` that
 accumulates.
 

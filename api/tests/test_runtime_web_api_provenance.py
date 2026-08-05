@@ -15,7 +15,7 @@ from app.services import idea_service, runtime_service
 
 
 ROOT = Path(__file__).resolve().parents[2]
-BML_ROUTES = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
+BML_ROUTES = ROOT / "form" / "form" / "apps" / "coherence-network" / "api.bml"
 NATIVE_ROUTE_GOAL_LOOP_SPEC = importlib.util.spec_from_file_location(
     "native_route_goal_loop",
     ROOT / "scripts" / "native_route_goal_loop.py",

@@ -2,7 +2,7 @@
 ; API → Form-kernel readiness measurement.
 ;
 ; This file is loaded ONCE by `form-kernel-rust serve --port P --routes <this>`.
-; The serve mode (form/form-kernel-rust/src/main.rs cli_serve) reads the
+; The serve mode (form/form/form-kernel-rust/src/main.rs cli_serve) reads the
 ; top-level `routes` binding into a long-lived Kernel + Arena, then dispatches
 ; each HTTP/1.0 GET to the matching handler closure with a fresh child frame.
 ; NO per-request process spawn, NO per-request source-compile — the apples-to-

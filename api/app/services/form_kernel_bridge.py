@@ -6,7 +6,7 @@ Rust, and TypeScript are differential oracles for primitives and native
 assumptions; none is selectable as a production execution carrier.
 
 Shared kernel recipes remain beside their Python twins under
-form/form-kernel-ts/seedbank/python-adapter/examples/ and are verified by
+form/form/form-kernel-ts/seedbank/python-adapter/examples/ and are verified by
 parity_suite.sh. Coherence Network-owned endpoint recipes live with the API
 under api/app/form_recipes/. A bare recipe name resolves to the app home first,
 then to the shared coherence-kernel seedbank.
@@ -161,7 +161,7 @@ def run_kernel(
 # Higher-level helpers — make transmutation easy enough to be a habit.
 #
 # Shared recipe templates live as .fk files alongside their Python twins under
-# form/form-kernel-ts/seedbank/python-adapter/examples/. Network-owned endpoint
+# form/form/form-kernel-ts/seedbank/python-adapter/examples/. Network-owned endpoint
 # recipes live under api/app/form_recipes/. The shape is always a top-level
 # (do ...) form whose trailing (let NAME ...) bindings carry the inputs,
 # followed by the final expression that produces the result. We inject inputs
@@ -179,6 +179,7 @@ def run_kernel(
 # path is therefore an explicit file-backed candidate, not environment config.
 _SEEDBANK_EXAMPLES_DEFAULT = (
     Path(__file__).resolve().parent.parent.parent.parent
+    / "form"
     / "form"
     / "form-kernel-ts"
     / "seedbank"

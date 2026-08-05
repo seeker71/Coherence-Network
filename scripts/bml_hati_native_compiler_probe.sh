@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 GO="$FORM/form-kernel-go/bin-go"
 CLANG="${CLANG:-clang}"
 

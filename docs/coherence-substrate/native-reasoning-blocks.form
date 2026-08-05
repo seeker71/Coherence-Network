@@ -17,7 +17,7 @@
 ;   GUESSES whether a claim follows and narrates a plausible-sounding reason, these SEARCH for the
 ;   actual proof, exactly, and RETURN it attributed — explainable and calibrated, not performed.
 ;
-; THE LIBRARY (each: pure recipe + tests/<name>-band.fk verdict + a row in form/fourth-arm-bands.txt):
+; THE LIBRARY (each: pure recipe + tests/<name>-band.fk verdict + a row in form/form/fourth-arm-bands.txt):
 ;
 ;   reasoning
 ;     forward-chaining.fk   modus ponens to fixpoint — derive everything axioms force; refuse what they
@@ -100,7 +100,7 @@
 ;
 ; THE PROOF DISCIPLINE (non-negotiable, per CLAUDE.md):
 ;   write <name>.fk and tests/<name>-band.fk (bit-flag claims summed to a verdict) -> register <name>
-;   in form/fourth-arm-bands.txt. CHOOSE THE EMITTER: fkc = no string pool (integer-only bands); fks =
+;   in form/form/fourth-arm-bands.txt. CHOOSE THE EMITTER: fkc = no string pool (integer-only bands); fks =
 ;   string pool — REQUIRED for any band carrying string OR FLOAT literals (a float literal lowers to a
 ;   string-pool entry the walker strtod's). -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk
 ;   (must read "fourth arm: ... four-way", 0 divergent) -> ./validate.sh --binary ... (native, bit-
@@ -124,4 +124,4 @@
 ;     CHOICE (exactness), not because reals were blocked.
 ;
 ; Kin: lc-cognitive-sovereignty (the why), form-first-reasoning.form (the routing gate), the recipes
-; named above and their bands. The verdicts here are the floor; form/fourth-arm-bands.txt is canonical.
+; named above and their bands. The verdicts here are the floor; form/form/fourth-arm-bands.txt is canonical.

@@ -39,7 +39,7 @@ This node sits with:
 - `lc-perception-as-interface`
 - `lc-field-model-form`
 - `docs/coherence-substrate/coherent-probe.form`
-- `form/form-stdlib/grammars/form-constants.fk`
+- `form/form/form-stdlib/grammars/form-constants.fk`
 - `docs/coherence-substrate/trace-symbol-spaces.form`
 
 Field Model Form gives the operator a current executable language: FieldCell, FieldDelta, FieldRecipe, receipt, residual, and reverse path.

@@ -27,7 +27,7 @@
     (proven-by   form-stdlib/tests/install-leaf-band.fk)  # -> 9, three-way (Go/Rust/TS)
     (carrier     form-kernel-go jit_install           # plugin.Open lane, RUNS today
                  form-kernel-rust jit_install)        # libloading lane, RUNS today
-    (witnessed-by form/scripts/jit-install-leaf-test.sh)) # -> 10 + 10, live .so installs on both
+    (witnessed-by form/form/scripts/jit-install-leaf-test.sh)) # -> 10 + 10, live .so installs on both
 
   # ── The composition — three axioms, no new machinery ─────────────────
   (composition
@@ -85,7 +85,7 @@
     (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap: ts)
     (introspection installed_leaf?)                   # 1 only for leaves the surface grew at runtime
     (observe       observe/go/jit/install install-refused installed-dispatch installed-guard-miss)
-    (witness       form/scripts/jit-install-leaf-test.sh -> 10))
+    (witness       form/form/scripts/jit-install-leaf-test.sh -> 10))
 
   # ── The second native carrier (Rust kernel, RUNS today) ───────────────
   # Same offer/refusal semantics, only the dlopen mechanics per-host:
@@ -104,7 +104,7 @@
     (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap: ts)
     (introspection installed_leaf? jit-stats)         # jit-stats reports "installed" rows: body NodeID + installed name
     (mechanics     rustc-cdylib libloading installed-leaves-table-at-fncall-dispatch)
-    (witness       form/scripts/jit-install-leaf-test.sh -> 10))
+    (witness       form/form/scripts/jit-install-leaf-test.sh -> 10))
 
   # ── Open carrier — named, not built speculatively ─────────────────────
   # The PROTOCOL is proven on all three kernels by the band; the native
@@ -135,4 +135,4 @@
 #   # the native carriers, live (jit a function, install it under a new
 #   # name, call it BY NAME, parity vs the recipe walk, refusals honest;
 #   # one section per carrier, each toolchain-gated):
-#   ./form/scripts/jit-install-leaf-test.sh         # go -> 10, rust -> 10
+#   ./form/form/scripts/jit-install-leaf-test.sh         # go -> 10, rust -> 10

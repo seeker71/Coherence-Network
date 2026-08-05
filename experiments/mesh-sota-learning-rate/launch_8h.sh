@@ -28,8 +28,8 @@ exec .venv/bin/python run_8h_accumulation.py \
     --corpus-root "$CORPUS" \
     --corpus-data-root "$CORPUS" \
     --speakers "$SPEAKERS" \
-    --kernel ../../form/form-kernel-go/bin-go \
-    --nearest-shape ../../form/form-stdlib/nearest-shape.fk \
+    --kernel ../../form/form/form-kernel-go/bin-go \
+    --nearest-shape ../../form/form/form-stdlib/nearest-shape.fk \
     --whisper-model "$WHISPER" \
     --receipt-script ../../scripts/real_mesh_training_emitters.sh \
     --out learning_curve.jsonl \

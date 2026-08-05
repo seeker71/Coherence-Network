@@ -8,11 +8,11 @@ oracle that `form-cli ask` calls becomes genuinely fluent in Form.
 Two sources, both body-native (no invented Form syntax, no fabricated facts):
 
   1. HAND-AUTHORED, file-grounded concept / why-how / NL<->code pairs. Each fact
-     traces to a real file under docs/coherence-substrate/ or form/form-stdlib/
+     traces to a real file under docs/coherence-substrate/ or form/form/form-stdlib/
      (AUTHORING.md, core-axioms.form, substrate-thermodynamics.form, host-kernel.form,
      agents-using-substrate.md, form-cli-ask.fk, form-flatten.fk, core.fk).
 
-  2. MINED NL<->code pairs from form/form-stdlib/*.fk: each top-level
+  2. MINED NL<->code pairs from form/form/form-stdlib/*.fk: each top-level
      `(defn name (args) ...)` with its preceding `;` comment line(s) becomes both
      an NL->code pair (comment = the ask, the defn = the answer) and a
      code->explanation pair (the defn = the ask, a generated explanation = answer).
@@ -140,7 +140,7 @@ CONCEPT_PAIRS: list[tuple[str, str]] = [
     ("How do you loop in Form?",
      "Via recursion -- there is no loop form. The common shape is a tail-recursive helper carrying an index and an accumulator: (defn f (xs i acc) (if (ge i (len xs)) acc (f xs (add i 1) (op acc (nth xs i))))). The max-select shape (pick the best candidate over a list) is a recursion that threads the running best."),
     ("What is the proof floor for a new Form band?",
-     "Four kernels: Go, Rust, TypeScript, and the emitted universal walker fkwu. validate.sh always runs Go/Rust/TS; when the band's stem is listed in form/fourth-arm-bands.txt it also runs fkwu and prints 'fourth arm: ... four-way'. Success is the intended verdict with '1 ok, 0 divergent'. A band that never touched the fourth arm is not proven."),
+     "Four kernels: Go, Rust, TypeScript, and the emitted universal walker fkwu. validate.sh always runs Go/Rust/TS; when the band's stem is listed in form/form/fourth-arm-bands.txt it also runs fkwu and prints 'fourth arm: ... four-way'. Success is the intended verdict with '1 ok, 0 divergent'. A band that never touched the fourth arm is not proven."),
     ("How does a band report its result in Form?",
      "A band returns a bit-sum verdict: each bit is one falsifiable claim. (let c0 (if (eq (foo 4) 5) 1 0)) (let c1 (if (eq (bar 7 3) 7) 2 0)) (add c0 c1) -- verdict 3 when both claims land. An honest band proves both the positive (it recognizes) and the negative (it stays silent below the floor); a band that only checks 1 == 1 is theatre."),
     ("What is the difference between an fkwu divergence and an unsupported op?",
@@ -264,13 +264,13 @@ def _explain_recipe(name: str, comment: str, defn_text: str) -> str:
 
 
 def mine_fk_recipes(repo: Path, max_per_file: int = 5, max_files: int | None = None) -> list[tuple[str, str, str]]:
-    """Mine (comment, defn_signature, defn_body_text) from form/form-stdlib/*.fk.
+    """Mine (comment, defn_signature, defn_body_text) from form/form/form-stdlib/*.fk.
 
     Returns a list of (nl_comment, recipe_name, full_defn_text). Only top-level
     `(defn ...)` forms with a preceding `;` comment line are mined, so the NL is
     the recipe's own authored description -- body-native, not invented.
     """
-    stdlib = repo / "form" / "form-stdlib"
+    stdlib = repo / "form" / "form" / "form-stdlib"
     out: list[tuple[str, str, str]] = []
     fk_files = sorted(stdlib.glob("*.fk"))
     if max_files:
@@ -345,7 +345,7 @@ def mine_flatten_ops(repo: Path) -> list[tuple[str, str]]:
     (if (str_eq op "gt") (flt-low 1 ...)) -- the op-string is the Form op name.
     These teach the op surface honestly (names that exist), not exact tag ints.
     """
-    fp = repo / "form" / "form-stdlib" / "form-flatten.fk"
+    fp = repo / "form" / "form" / "form-stdlib" / "form-flatten.fk"
     ops: list[str] = []
     if not fp.exists():
         return []

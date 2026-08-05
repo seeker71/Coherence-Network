@@ -803,7 +803,7 @@ export default async function ComeInPage() {
                 </span>
                 , and{" "}
                 <span className="font-mono text-stone-200 text-xs break-all">
-                  form/form-stdlib/engine.fk
+                  form/form/form-stdlib/engine.fk
                 </span>
                 . Pairing at the keyboard; proof bands when asked to ship.
               </p>
@@ -899,7 +899,7 @@ export default async function ComeInPage() {
               docs/lineage/cursor-form-primitives-realignment-2026-06-04.md,
               kernels/BMF_BML_COMPILER_PICTURE.md,
               docs/shared/agent-start-packet.md,
-              form/form-stdlib/engine.fk,
+              form/form/form-stdlib/engine.fk,
               config/agent_profiles.json, and scripts/awareness_node_daemon.py.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-stone-300">
@@ -1032,7 +1032,7 @@ export default async function ComeInPage() {
             </span>{" "}
             and{" "}
             <span className="font-mono text-stone-100 text-sm break-all">
-              form/form-stdlib/engine.fk
+              form/form/form-stdlib/engine.fk
             </span>{" "}
             before treating HTTP routes as the primary design surface.
           </p>
@@ -1215,7 +1215,7 @@ export default async function ComeInPage() {
                 </span>{" "}
                 carrier. Prove with{" "}
                 <span className="font-mono text-stone-200 text-xs break-all">
-                  form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk
+                  form/form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk
                 </span>
                 . Cursor baton:{" "}
                 <span className="font-mono text-stone-200 text-xs">CURSOR.md</span>

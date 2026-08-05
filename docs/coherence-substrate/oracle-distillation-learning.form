@@ -3,8 +3,8 @@
 (oracle-distillation-learning
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk form-freq-check.fk)
-    (recipe form/form-stdlib/oracle-distillation-learning.fk)
-    (proof form/form-stdlib/tests/oracle-distillation-learning-band.fk -> 4095 four-way))
+    (recipe form/form/form-stdlib/oracle-distillation-learning.fk)
+    (proof form/form/form-stdlib/tests/oracle-distillation-learning-band.fk -> 4095 four-way))
 
   (purpose
     "Move attention from speculative carrier work to actual learning gaps."

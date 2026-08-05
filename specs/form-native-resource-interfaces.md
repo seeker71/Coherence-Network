@@ -2,13 +2,13 @@
 idea_id: idea-realization-engine
 status: active
 source:
-  - file: form/form-stdlib/form-native-resource-interfaces.fk
+  - file: form/form/form-stdlib/form-native-resource-interfaces.fk
     symbols: [fnri-classes, fnri-resolve, fnri-knowledge-cells, fnri-runtime]
-  - file: form/form-stdlib/resource-port.fk
+  - file: form/form/form-stdlib/resource-port.fk
     symbols: [afferent-pixel, port, act, sense]
-  - file: form/form-stdlib/hati-os-targets.fk
+  - file: form/form/form-stdlib/hati-os-targets.fk
     symbols: [hos-implementations, hos-impl-for]
-  - file: form/form-stdlib/bml-native-interface-package-import.fk
+  - file: form/form/form-stdlib/bml-native-interface-package-import.fk
     symbols: [bnii-interface]
 requirements:
   - "Eight resource classes expose `bnii-interface` rows linked to `resource-port` shapes via port slugs (ten protocols including `host:file` and `http:request`)"
@@ -46,16 +46,16 @@ Agents and cells need **class-based** host resource interfaces — port shapes, 
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/form-native-resource-interfaces.fk` — class catalog, dispatch rows, knowledge index, resolve API.
-- `form/form-stdlib/tests/form-native-resource-interfaces-band.fk` — proof band (verdict 32767).
-- `form/form-stdlib/resource-port.fk` — `afferent-pixel` port shape.
+- `form/form/form-stdlib/form-native-resource-interfaces.fk` — class catalog, dispatch rows, knowledge index, resolve API.
+- `form/form/form-stdlib/tests/form-native-resource-interfaces-band.fk` — proof band (verdict 32767).
+- `form/form/form-stdlib/resource-port.fk` — `afferent-pixel` port shape.
 - `docs/coherence-substrate/hati-os-targets.form` — lineage + honest fkwu gap.
 - `docs/coherence-substrate/host-kernel.form` — native-interfaces lineage edge.
 - `specs/form-native-resource-interfaces.md` — this spec.
 
 ## Acceptance Criteria
 
-- `cd form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **32767** with four-way agreement (band under `form/form-stdlib/tests/`).
+- `cd form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **32767** with four-way agreement (band under `form/form/form-stdlib/tests/`).
 - `fnri-runtime` = `"fkwu"` and `fnri-no-go-emission?` = 1 in the band proof.
 - All ten `fnri-dispatch-for` rows resolve; process carrier = `filesystem`; http carrier = `http-socket`.
 
@@ -70,9 +70,9 @@ cd form && ./validate.sh … form-cli-band.fk   # 4095 incl. fnri witness + rece
 bash scripts/verify_fnri_windows_standalone.sh
 bash scripts/verify_fnri_android_receipt.sh
 # In a writable coherence-kernel checkout, never in this pinned consumer:
-./form/scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
+./form/form/scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
 cd form && ./build-form-cli.sh
-printf 'fnri witness\n' | form/form-cli   # → 32767
+printf 'fnri witness\n' | form/form/form-cli   # → 32767
 ```
 
 ## Out of Scope
@@ -85,12 +85,12 @@ Stand-in proof bands (`fnri-audio-standin`, `fnri-video-standin`, `fnri-gpu-stan
 
 ## Risks
 
-- A stale fkwu pre-flattened table can erase this prelude chain; canonical `form/scripts/regen_t_flat.sh` executes the regenerated Adler table and requires verdict `5` before publishing it.
+- A stale fkwu pre-flattened table can erase this prelude chain; canonical `form/form/scripts/regen_t_flat.sh` executes the regenerated Adler table and requires verdict `5` before publishing it.
 - Dispatch rows name `filesystem`, `host-kernel`, or `http-socket` carriers aligned with form-fs and host-kernel-carrier.
 
 ## Known Gaps
 
-- **Closed on mac (honest floor)**: catalog **32767**, dispatch **1023**, host-io **15**, metal stand-ins **15** each, **form-cli-band 4095** (fnri witness + know + receipt) — all four-way; runtime via `form/form-cli` binary; receipts via `verify_fnri_*` scripts (thin `form-cli-run.sh` carriers only).
+- **Closed on mac (honest floor)**: catalog **32767**, dispatch **1023**, host-io **15**, metal stand-ins **15** each, **form-cli-band 4095** (fnri witness + know + receipt) — all four-way; runtime via `form/form/form-cli` binary; receipts via `verify_fnri_*` scripts (thin `form-cli-run.sh` carriers only).
 - **Follow-up task `fnri-native-device-witnesses`**: add native device witnesses (CoreAudio capture, ScreenCaptureKit frame, Metal/CUDA dispatch) with per-platform traces — stand-ins remain explicitly filesystem/host-kernel wiring, not metal proof.
 
 ## North star

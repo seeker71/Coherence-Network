@@ -2,9 +2,9 @@
 idea_id: knowledge-and-resonance
 status: active
 source:
-  - file: form/form-stdlib/phone-presence.fk
+  - file: form/form/form-stdlib/phone-presence.fk
     symbols: [pp-platform-supported?, pp-form-native?, pp-phone?, pp-call-mode, pp-surface-mode, pp-memory-ready?, pp-receipt]
-  - file: form/form-stdlib/tests/phone-presence-band.fk
+  - file: form/form/form-stdlib/tests/phone-presence-band.fk
     symbols: [phone-presence-band]
   - file: docs/coherence-substrate/phone-presence.form
     symbols: [phone-presence]
@@ -50,9 +50,9 @@ platform an honest receipt that later native carriers can satisfy.
 
 ## Files
 
-- `form/form-stdlib/phone-presence.fk` - platform receipt and call mode recipe.
-- `form/form-stdlib/tests/phone-presence-band.fk` - four-way proof band.
-- `form/fourth-arm-bands.txt` - fkwu proof registration.
+- `form/form/form-stdlib/phone-presence.fk` - platform receipt and call mode recipe.
+- `form/form/form-stdlib/tests/phone-presence-band.fk` - four-way proof band.
+- `form/form/fourth-arm-bands.txt` - fkwu proof registration.
 - `docs/coherence-substrate/phone-presence.form` - human teaching and platform
   truth.
 - `docs/coherence-substrate/INDEX.md` - substrate teaching index.
@@ -62,7 +62,7 @@ platform an honest receipt that later native carriers can satisfy.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/phone-presence-band.fk` returns `4095` through the
+- `form/form/form-stdlib/tests/phone-presence-band.fk` returns `4095` through the
   Form validation command.
 - Manual validation: `/sense` shows an iPhone presence card and routes iPhone
   visitors to `/sense/surface`.

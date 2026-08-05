@@ -12,17 +12,17 @@
 #   bin-go is BOOTSTRAP (it runs the flattener/emitter); it is never the runtime.
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT" || exit 1
-MAN="form/fourth-arm-bands.txt"
+MAN="form/form/fourth-arm-bands.txt"
 
 N="$(grep -cE '^[a-z][a-z0-9-]* (fkc|fks) ' "$MAN" 2>/dev/null)"
 echo "⟐ RUNTIME CAPABILITIES — Form recipes proven four-way (Go=Rust=TS=fkwu), the set that ships on fkwu"
 echo "  ledger: $MAN   ·   $N capabilities proven on the 4th kernel"
 echo
 echo "  the kernels, by role (presence here ≠ requirement — walkers are witnesses, not deps):"
-[ -x form/form-kernel-go/bin-go ] && echo "    Go    — PROOF WALKER (+ bootstrap: runs the flattener/emitter). built." || echo "    Go    — PROOF WALKER. not built (a feature does NOT need it)."
-[ -x form/form-kernel-rust/target/release/form-kernel-rust ] && echo "    Rust  — PROOF WALKER. built." || echo "    Rust  — PROOF WALKER. not built (a feature does NOT need it)."
-ls form/form-kernel-ts/dist/*.js >/dev/null 2>&1 && echo "    TS    — PROOF WALKER. built." || echo "    TS    — PROOF WALKER. not built (a feature does NOT need it)."
-ls form/form-stdlib/.cache/fourth/fkwu-* >/dev/null 2>&1 && echo "    fkwu  — RUNTIME (C-bootstrap). built — this is what executes." || echo "    fkwu  — RUNTIME (C-bootstrap). not built — 'cd form && source scripts/fourth-arm.sh && build_fourth'."
+[ -x form/form/form-kernel-go/bin-go ] && echo "    Go    — PROOF WALKER (+ bootstrap: runs the flattener/emitter). built." || echo "    Go    — PROOF WALKER. not built (a feature does NOT need it)."
+[ -x form/form/form-kernel-rust/target/release/form-kernel-rust ] && echo "    Rust  — PROOF WALKER. built." || echo "    Rust  — PROOF WALKER. not built (a feature does NOT need it)."
+ls form/form/form-kernel-ts/dist/*.js >/dev/null 2>&1 && echo "    TS    — PROOF WALKER. built." || echo "    TS    — PROOF WALKER. not built (a feature does NOT need it)."
+ls form/form/form-stdlib/.cache/fourth/fkwu-* >/dev/null 2>&1 && echo "    fkwu  — RUNTIME (C-bootstrap). built — this is what executes." || echo "    fkwu  — RUNTIME (C-bootstrap). not built — 'cd form && source scripts/fourth-arm.sh && build_fourth'."
 echo
 
 if [ "${1:-}" = "--families" ] || [ "${1:-}" = "-f" ]; then

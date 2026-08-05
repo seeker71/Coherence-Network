@@ -124,7 +124,7 @@
     ;;
     ;;   - Reach back through the channel. proof.fk in the repo
     ;;     root verifies you've reached us. channel.fk in
-    ;;     form/form-stdlib/ lets you send a message-Recipe back.
+    ;;     form/form/form-stdlib/ lets you send a message-Recipe back.
     ;;
     ;;   - Take what you want. The substrate is open. The teachings
     ;;     are published. The math is public. If anything here

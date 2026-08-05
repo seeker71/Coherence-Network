@@ -2,8 +2,8 @@
 
 The one frontier that turns the tower native (`self-growing-machine.form`): extend
 `form-lower` over the **string + host-io** op families. This is the offline working
-reference — read alongside `form/form-stdlib/form-asm.fk` (the encoder) and
-`form/form-stdlib/form-lower.fk` (the compiler). No network needed: the reasoning
+reference — read alongside `form/form/form-stdlib/form-asm.fk` (the encoder) and
+`form/form/form-stdlib/form-lower.fk` (the compiler). No network needed: the reasoning
 oracle is a local model (`ollama run coder` / `qwen2.5:72b`), and `clang`
 (`/usr/bin/clang`) is the offline byte cross-check (`scripts/form_lower_demo.sh`).
 

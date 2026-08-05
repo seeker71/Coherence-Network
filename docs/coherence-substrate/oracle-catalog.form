@@ -2,8 +2,8 @@
 
 (oracle-catalog
   (lineage
-    (recipe form/form-stdlib/oracle-catalog.fk)
-    (proof form/form-stdlib/tests/oracle-catalog-band.fk -> 16383 four-way))
+    (recipe form/form/form-stdlib/oracle-catalog.fk)
+    (proof form/form/form-stdlib/tests/oracle-catalog-band.fk -> 16383 four-way))
 
   (purpose
     "Name outside evidence sources as explicit native rows so learning loops can sample them, compare them, and retire them per lane once Form-native candidates have earned the route."

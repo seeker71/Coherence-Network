@@ -4,9 +4,9 @@ idea_id: federation-and-nodes
 status: active
 decision: approved-2026-06-23-open-relay-consent-only
 source:
-  - file: form/form-stdlib/field-relay.fk
+  - file: form/form/form-stdlib/field-relay.fk
     symbols: [fr-route, fr-consent-ok?, fr-deliver?, fr-envelope, fr-env-to, fr-env-from, fr-env-kind, fr-registry-has?]
-  - file: form/form-stdlib/tests/field-relay-band.fk
+  - file: form/form/form-stdlib/tests/field-relay-band.fk
   - file: docs/coherence-substrate/agent-coordination-membrane.form
   - file: docs/coherence-substrate/channel-interface-consent.form
   - file: docs/vision-kb/concepts/lc-private-channel-via-substrate.md
@@ -112,12 +112,12 @@ will be specced as their own contract when that breath is taken.
 
 ## Requirements
 
-- [x] **R1 — content-blind decision recipe.** `form/form-stdlib/field-relay.fk` defines `fr-route` over
+- [x] **R1 — content-blind decision recipe.** `form/form/form-stdlib/field-relay.fk` defines `fr-route` over
   (registry, envelope, interfaces) → one of `deliver | queue | deny | drop`, reading only
   `fr-env-from` / `fr-env-to` / `fr-env-kind`. The body field is opaque and never inspected.
 - [x] **R2 — consent gate.** `fr-consent-ok?` checks the envelope's signal-kind against the recipient's
   offered interface (`channel-interface-consent.form`); a kind not offered yields `deny`.
-- [x] **R3 — four-way proof.** `form/form-stdlib/tests/field-relay-band.fk` proves the decision across
+- [x] **R3 — four-way proof.** `form/form/form-stdlib/tests/field-relay-band.fk` proves the decision across
   Go/Rust/TS/fkwu (registered in `fourth-arm-bands.txt`), including the body-blindness cell (two
   envelopes equal in metadata, different in body, route identically).
 - [x] **R4 — dial-out relay transport.** A minimal WS endpoint (`api/app/routers/field_relay.py`, bootstrap
@@ -130,9 +130,9 @@ will be specced as their own contract when that breath is taken.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/field-relay.fk` — new: the content-blind routing + consent decision recipe.
-- `form/form-stdlib/tests/field-relay-band.fk` — new: four-way proof band (incl. body-blindness).
-- `form/fourth-arm-bands.txt` — modify: register the `field-relay` row.
+- `form/form/form-stdlib/field-relay.fk` — new: the content-blind routing + consent decision recipe.
+- `form/form/form-stdlib/tests/field-relay-band.fk` — new: four-way proof band (incl. body-blindness).
+- `form/form/fourth-arm-bands.txt` — modify: register the `field-relay` row.
 - `api/app/routers/field_relay.py` — new: the WS dial-out relay transport (bootstrap carrier over `fr-route`).
 - `specs/field-relay-always-open-connection.md` — this contract.
 
@@ -187,7 +187,7 @@ holding*, not about keeping anyone out.
 - **Device dial-out clients (breath 4) — identity carrier built; body encryption + per-platform builds remain as follow-up tasks.**
   The dial-out client is proven end-to-end against the live relay (`scripts/field_relay_client.py`: ed25519 keys,
   NodeID = sha256(pubkey), sign/verify, TOFU pin; the trust verdict runs on the proven `fiv-verdict` via the
-  fkwu kernel, `form/form-stdlib/field-identity-decide.fk`). First-use-pin → trusted, impersonator rejected
+  fkwu kernel, `form/form/form-stdlib/field-identity-decide.fk`). First-use-pin → trusted, impersonator rejected
   (REJECT_NODEID_MISMATCH), and an offline cell drains its consent-ok backlog via `fq-drain` on reconnect — 6/6
   e2e (evidence `commit_evidence_2026-06-23_field_relay_breath4_e2e.json`). The open tasks: end-to-end body
   encryption on these keys, and per-platform device builds of the client.

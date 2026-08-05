@@ -21,8 +21,8 @@ third-party witness evidence.
 
   (lineage
     (derives-from core-axioms.form host-kernel.form evidence-grounding.form value-execution-as-recipe.form)
-    (runnable form/form-stdlib/lifecycle-fitness-receipt.fk)
-    (proof form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk)
+    (runnable form/form/form-stdlib/lifecycle-fitness-receipt.fk)
+    (proof form/form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk)
     (claim-shape hypothesis-generated-then-proof-gated))
 
   (lifecycle-contract
@@ -103,7 +103,7 @@ third-party witness evidence.
 
 # SHIPPED
 #
-# `form/form-stdlib/lifecycle-fitness-receipt.fk` carries the receipt and
-# refusal policy. `form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk`
+# `form/form/form-stdlib/lifecycle-fitness-receipt.fk` carries the receipt and
+# refusal policy. `form/form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk`
 # proves ten claims three-way: machine lifecycle, ingestible nutrition, robot
 # molecular benefit, condition-scoped substance benefit, and six refusal lanes.

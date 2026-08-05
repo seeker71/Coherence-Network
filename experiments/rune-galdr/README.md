@@ -13,10 +13,10 @@ signatures here are trained on public galdr (SOURCES.md), not on their private c
 
 The **body is Form**, proven four-way (Go/Rust/TS/fkwu):
 
-- [`form-stdlib/nordic-runes.fk`](../../form/form-stdlib/nordic-runes.fk) — the 24 runes
+- [`form-stdlib/nordic-runes.fk`](../../form/form/form-stdlib/nordic-runes.fk) — the 24 runes
   as cells: glyph, name, phoneme, ætt (1–3), keyword, and a 6-band peak-normalized
   spectral **shape** over [0–200, 200–500, 500–1k, 1k–2k, 2k–4k, 4k–8k] Hz.
-- [`form-stdlib/rune-frequency.fk`](../../form/form-stdlib/rune-frequency.fk) — the
+- [`form-stdlib/rune-frequency.fk`](../../form/form/form-stdlib/rune-frequency.fk) — the
   flow match: `rf-match` (spectrum → rune), `rf-glyph`, `rf-aett`, `rf-confidence`, and
   `rf-spectrum-at` (rune → spectrum). L1 over the contour, so loud/soft doesn't matter.
 - Bands: `tests/nordic-runes-band.fk`, `tests/rune-frequency-band.fk` → verdict 255,
@@ -92,7 +92,7 @@ recognizer pairs the best **local** speaker oracle with a Form decision:
 
 - **Oracle** — `ecapa_embed.py` runs **ECAPA-TDNN** (SpeechBrain `spkrec-ecapa-voxceleb`,
   CPU, in the torch venv): a voice → 192-d L2-normalized embedding, quantized to ints.
-- **Body** — [`form-stdlib/speaker-embed.fk`](../../form/form-stdlib/speaker-embed.fk):
+- **Body** — [`form-stdlib/speaker-embed.fk`](../../form/form/form-stdlib/speaker-embed.fk):
   cosine = integer dot of the embeddings; nearest speaker = max dot; a **floor + runner-up
   margin** returns `unknown` instead of forcing a guess. PASS-4WAY (verdict 255).
 - **Carriers** — `enroll-embed.sh` (public clip → Demucs → ECAPA → private roster) and

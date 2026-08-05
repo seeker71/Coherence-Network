@@ -4,9 +4,9 @@ status: done
 source:
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-record-valuation-change, nival-record-batch-valuation-change, nival-run-idea-update-with-valuation-audit]
-  - file: form/scripts/native-idea-valuation-audit-ledger-test.sh
+  - file: form/form/scripts/native-idea-valuation-audit-ledger-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_side_effect_ledger.py
     symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip, test_route_forms_and_specs_link_the_ledger_boundary]
@@ -86,7 +86,7 @@ safety, missing parity, or not carried.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
   Form-native keep/delete ledger.
 - `api/tests/test_native_mutation_side_effect_ledger.py` - focused ledger proof.
-- `form/form-stdlib/native-idea-valuation-audit-ledger.fk` - native
+- `form/form/form-stdlib/native-idea-valuation-audit-ledger.fk` - native
   audit-ledger parity carrier.
 - `api/tests/test_native_idea_valuation_audit_ledger.py` - proof that audit
   parity is carried and the ledger reflects it.

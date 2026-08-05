@@ -34,9 +34,9 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
-BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+BIN = REPO_ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 PRODUCTION_ROUTES = HERE / "production-routes.fk"
-STDLIB = REPO_ROOT / "form" / "form-stdlib"
+STDLIB = REPO_ROOT / "form" / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
 PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
 IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"

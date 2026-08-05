@@ -2,7 +2,7 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/apps/coherence-network/api.bml
+  - file: form/form/apps/coherence-network/api.bml
     symbols: [api_substrate_kernel_image_proposals, SubstrateKernelImageProposalRoute]
   - file: deploy/kernel-router/docker-compose.kernel-router.yml
     symbols: [kernel-router-bml-front-door]
@@ -16,9 +16,9 @@ source:
     symbols: [test_kernel_image_proposal_accepts_canonical_core_preview, test_kernel_image_proposal_apply_intent_is_preview_only, test_kernel_image_proposal_rejects_unproven_source_with_trace]
   - file: api/tests/test_runtime_web_api_provenance.py
     symbols: [test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml]
-  - file: form/form-stdlib/kernel-image-proposal.fk
+  - file: form/form/form-stdlib/kernel-image-proposal.fk
     symbols: [kip-candidate-image-json, kip-trust-envelope-json, kip-proposal-json, kip-test]
-  - file: form/form-stdlib/tests/kernel-image-proposal-band.fk
+  - file: form/form/form-stdlib/tests/kernel-image-proposal-band.fk
     symbols: []
 requirements:
   - "POST /api/substrate/kernel-image/proposals accepts BML source and returns a read-only kernel image proposal preview."
@@ -28,8 +28,8 @@ requirements:
   - "The front-door route catalog carries the same public endpoint as BML-native handler authority with Python marked as non-authoritative."
   - "Public production ingress routes this preview-only POST path to the BML front-door kernel service and deploy verification proves the native router header."
 done_when:
-  - 'file_declares("form/apps/coherence-network/api.bml", "SubstrateKernelImageProposalRoute")'
-  - 'file_exists("form/form-stdlib/kernel-image-proposal.fk")'
+  - 'file_declares("form/form/apps/coherence-network/api.bml", "SubstrateKernelImageProposalRoute")'
+  - 'file_exists("form/form/form-stdlib/kernel-image-proposal.fk")'
   - 'pytest_passes("api/tests/test_substrate_kernel_image_proposals.py")'
   - 'pytest_passes("api/tests/test_runtime_web_api_provenance.py")'
   - 'form_validate_passes("form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk")'
@@ -65,9 +65,9 @@ image would be, what proof passed or failed, and why no live mutation occurred.
   `mutation.allowed=false` and `mutation.performed=false`.
 - [ ] **R5**: Unproven source returns `proposal_status="rejected-preview"` with
   failed proof steps and no candidate image.
-- [ ] **R6**: `form/form-stdlib/kernel-image-proposal.fk` names the same
+- [ ] **R6**: `form/form/form-stdlib/kernel-image-proposal.fk` names the same
   preview-only trust membrane and sibling kernels agree on its proof band.
-- [ ] **R7**: `form/apps/coherence-network/api.bml` declares
+- [ ] **R7**: `form/form/apps/coherence-network/api.bml` declares
   `SubstrateKernelImageProposalRoute` and returns `native_observation` with
   `handler="api_substrate_kernel_image_proposals"` and
   `python_authority=false`.
@@ -120,7 +120,7 @@ authority.
 
 ## Files to Create/Modify
 
-- `form/apps/coherence-network/api.bml` - public BML route authority and native handler.
+- `form/form/apps/coherence-network/api.bml` - public BML route authority and native handler.
 - `deploy/kernel-router/docker-compose.kernel-router.yml` - public path-specific BML ingress.
 - `Dockerfile.kernel-router` - packages the BML front-door catalog in the router image.
 - `deploy/hostinger/auto-deploy.sh` - starts and locally proves the BML front-door service.
@@ -129,8 +129,8 @@ authority.
 - `api/app/routers/substrate.py` - compatibility preview route and response models.
 - `api/tests/test_substrate_kernel_image_proposals.py` - compatibility API contract proof.
 - `api/tests/test_runtime_web_api_provenance.py` - native route provenance proof.
-- `form/form-stdlib/kernel-image-proposal.fk` - Form trust membrane.
-- `form/form-stdlib/tests/kernel-image-proposal-band.fk` - sibling-kernel proof.
+- `form/form/form-stdlib/kernel-image-proposal.fk` - Form trust membrane.
+- `form/form/form-stdlib/tests/kernel-image-proposal-band.fk` - sibling-kernel proof.
 - `specs/kernel-image-proposal-public-interface.md` - this contract.
 - `specs/INDEX.md` - regenerated spec index.
 
@@ -140,7 +140,7 @@ authority.
 - `api/tests/test_substrate_kernel_image_proposals.py::test_kernel_image_proposal_apply_intent_is_preview_only`
 - `api/tests/test_substrate_kernel_image_proposals.py::test_kernel_image_proposal_rejects_unproven_source_with_trace`
 - `api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml`
-- `form/form-stdlib/tests/kernel-image-proposal-band.fk` returns `11111`.
+- `form/form/form-stdlib/tests/kernel-image-proposal-band.fk` returns `11111`.
 
 ## Verification
 

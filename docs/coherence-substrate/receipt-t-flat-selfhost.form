@@ -10,7 +10,7 @@
 ;   android:  pending
 ; honest-floor:     T_flat maintainer bootstrap still uses bin-go once (fks table); fkwu-only full driver regen bus-errors
 ;
-; observed trace (toolchain-free PATH, form/form-cli + form-stdlib/bootstrap/fkwu-darwin-arm64):
+; observed trace (toolchain-free PATH, form/form/form-cli + form-stdlib/bootstrap/fkwu-darwin-arm64):
 ;   ping -> pong
 ;   verify -> coherent ... native on fkwu
 ;   fnri standard-receipt -> docs/coherence-substrate/standard-receipt.form

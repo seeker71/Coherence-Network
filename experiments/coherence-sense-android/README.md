@@ -38,7 +38,7 @@ the senses are held until then.
   field; the Mac *witnesses* it (counts frames, holds the latest, shares it back). A **thin carrier**
   with no recognition logic — the simplest loop, for when you just want to see the two breathe together.
 - **v0.1 — `coherence-sense-eval.py` (legacy Mac eval):** *predicting · learning · recognizing.* The body — the
-  Form recipes proven three-way under `form/form-stdlib` — runs **per-frame on a local kernel**. Each accel
+  Form recipes proven three-way under `form/form/form-stdlib` — runs **per-frame on a local kernel**. Each accel
   frame, the carrier writes a driver `.fk`, runs `signal-derivative` (still/moving) + `sequence-predictor`
   (the next state), and the dashboard shows the **real recognition**,
   the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). It also
@@ -123,7 +123,7 @@ the highest-trust installer available on that host.
    # or the bare witness (no kernel needed, runs anywhere):
    python3 mac-witness-server.py            # 0.0.0.0:8800
    ```
-   (The Android APK packages native form-cli with `../../form/build-android-form-cli.sh`; the
+   (The Android APK packages native form-cli with `../../form/form/build-android-form-cli.sh`; the
    app posts `native_host_instance` receipts while the witness receives and displays the field.)
 2. Open the app. It listens for the Mac's `_hati-witness._tcp` service and fills the witness lane
    automatically. Leave the mesh API as `https://api.coherencycoin.com/api` and tap **Start sharing**.
@@ -180,9 +180,9 @@ the individual host and speech organ decisions remain Form recipes:
 
 | organ | carrier (I/O only) | Form body (every decision) |
 |-------|--------------------|----------------------------|
-| host lifecycle | native `form-cli native-host ...` | [`native-host-instance.fk`](../../form/form-stdlib/native-host-instance.fk) — listen/share/transcribe/surprise/learn/next-action |
-| host readings  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
-| speech readings| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
+| host lifecycle | native `form-cli native-host ...` | [`native-host-instance.fk`](../../form/form/form-stdlib/native-host-instance.fk) — listen/share/transcribe/surprise/learn/next-action |
+| host readings  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
+| speech readings| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
 
 - **host** reads cpu/ram/disk/network-rates/gpu/thermal/battery (sysctl/vm_stat/ioreg/pmset/
   netstat), Form decides which organs are live and the mesh metrics, `form-cli native-host`
@@ -225,8 +225,8 @@ the live-vision organ lands. Mesh POSTs carry a non-default `User-Agent` (Cloudf
 **Honest floor:** VAD + STT are solid. Speaker grouping resolution is bounded by the carrier's
 pitch reading (lowpassed zero-crossing rate — stable enough to separate distinct voices, coarse
 within a band); finer, verified speaker identity awaits kernel-native feature extraction, the
-missing tissue named in [`speech-kernel-channel.fk`](../../form/form-stdlib/speech-kernel-channel.fk).
-Windows is the next twin (`form/form-stdlib/hati-os-targets.fk`: WASAPI + Windows.Graphics.Capture
+missing tissue named in [`speech-kernel-channel.fk`](../../form/form/form-stdlib/speech-kernel-channel.fk).
+Windows is the next twin (`form/form/form-stdlib/hati-os-targets.fk`: WASAPI + Windows.Graphics.Capture
 + CIM), running the *same* Form bodies, once a host is reachable.
 
 ### Keep the Android + Mac learning receipt proven
@@ -307,7 +307,7 @@ that floor is met.
 
 Every emitted `real-mesh-training-window.json` now also carries
 `world_model_live_cycle`, a runtime projection of
-`form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle`. That projection
+`form/form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle`. That projection
 names the witness source, active mic/camera/GPU sense summaries, capability
 liveness, heldout count, local model-process eval sense, native teacher status,
 world-growth status, and exact block reasons. A stale phone, missing model

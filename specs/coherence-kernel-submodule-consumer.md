@@ -18,7 +18,7 @@ requirements:
   - "Coherence Network consumes coherence-kernel as an exact gitlink at the existing form/ path."
   - "Kernel deltas are reconciled upstream while Network-owned endpoint recipes remain with the API."
   - "CI, deploy, clone, and autonomous-worktree paths initialize the recursive submodule before use."
-  - "Existing form/form-stdlib and form/form-kernel-* consumer paths remain valid."
+  - "Existing form/form/form-stdlib and form/form-kernel-* consumer paths remain valid."
   - "Kernel bootstrap regeneration is authored inside coherence-kernel; the consumer has no script that writes committed form/ artifacts."
 done_when:
   - "A recursive clone populates form/ at the superproject's pinned gitlink SHA."
@@ -52,8 +52,8 @@ task worktrees operate on an empty gitlink.
   `fam-tanh` band and astro recipe upstream, move the ten live Network endpoint
   recipes to `api/app/form_recipes/`, and preserve the intentional retirement of
   `form-gen.fk`.
-- [x] **R3**: Keep existing paths such as `form/form-stdlib/` and
-  `form/form-kernel-rust/` valid so Dockerfiles, scripts, and runtime callers do
+- [x] **R3**: Keep existing paths such as `form/form/form-stdlib/` and
+  `form/form/form-kernel-rust/` valid so Dockerfiles, scripts, and runtime callers do
   not gain a second topology.
 - [x] **R4**: Initialize recursive submodules in GitHub Actions, Hostinger deploy,
   Windows worker startup, documented clone/worktree entry, prompt entry, and
@@ -61,7 +61,7 @@ task worktrees operate on an empty gitlink.
 - [x] **R5**: Resolve bare app-owned recipes from `api/app/form_recipes/` before
   falling through to shared recipes in the coherence-kernel seedbank.
 - [x] **R6**: Keep every maintainer carrier that writes committed kernel
-  bootstrap artifacts inside `form/scripts/`; the consumer root retains only
+  bootstrap artifacts inside `form/form/scripts/`; the consumer root retains only
   read/build/run carriers for the reviewed gitlink.
 
 ## Research Inputs
@@ -82,7 +82,7 @@ task worktrees operate on an empty gitlink.
 - `api/scripts/local_runner.py` — task-worktree submodule initialization.
 - `api/scripts/agent_runner.py` and `api/scripts/commit_progress.py` — recursive checkout hydration and material-edit commit guards.
 - `scripts/prepare_form_submodule.py` — lossless one-time tree-to-gitlink transition and exact-pin cleanliness verification.
-- `scripts/regen_{fkwu_bootstrap,t_flat,form_cli_bootstrap,standard_lane_binaries}.sh` — retired consumer copies; their executable replacements live in canonical `form/scripts/`.
+- `scripts/regen_{fkwu_bootstrap,t_flat,form_cli_bootstrap,standard_lane_binaries}.sh` — retired consumer copies; their executable replacements live in canonical `form/form/scripts/`.
 - `scripts/gen_bp_table.py` and `scripts/scan_form_blueprints.py` — read-only consumer boundary for kernel-owned Blueprint tables.
 - `api/tests/test_kernel_submodule_contract.py` — gitlink, pin, topology, and ownership proof.
 - `.github/workflows/*.yml` — recursive submodule checkout and exact gitlink path triggers.
@@ -97,7 +97,7 @@ task worktrees operate on an empty gitlink.
 - `api/tests/test_edge_cases_regression.py` worktree-focused tests.
 - `scripts/test_hostinger_deploy_form_paths.sh` deployment bootstrap contract.
 - Manual validation: fresh `git clone --recurse-submodules` resolves
-  `form/validate.sh` and `form/form-stdlib/core.fk` at the pinned gitlink.
+  `form/form/validate.sh` and `form/form/form-stdlib/core.fk` at the pinned gitlink.
 
 ## Verification
 

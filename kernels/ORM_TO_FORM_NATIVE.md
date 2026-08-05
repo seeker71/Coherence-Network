@@ -38,10 +38,10 @@ reads. The only cells that differ are the autoincrement PK
 physical type (`TEXT` vs `VARCHAR`). A third dialect is a new literal, not new
 code.
 
-## What's proven (`form/form-stdlib/db-schema.fk`, band 11111 three-way)
+## What's proven (`form/form/form-stdlib/db-schema.fk`, band 11111 three-way)
 
 The real substrate tables, defined as Form blueprints in
-[`db-schema-band.fk`](../form/form-stdlib/tests/db-schema-band.fk), project to:
+[`db-schema-band.fk`](../form/form/form-stdlib/tests/db-schema-band.fk), project to:
 
 - `create-ddl nodes SQLITE` / `... POSTGRES` → the correct `CREATE TABLE` for
   each dialect from **one** blueprint.

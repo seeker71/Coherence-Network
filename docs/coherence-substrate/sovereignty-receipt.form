@@ -19,8 +19,8 @@
     (kin form-first-router.fk form-cli-membrane.fk oracle-distillation-learning.form
          champion-challenger.form borrowed-oracle-dividend.form form-native-models.form
          lc-cognitive-sovereignty)
-    (proof form/form-stdlib/sovereignty-receipt.fk
-           form/form-stdlib/tests/sovereignty-receipt-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (proof form/form/form-stdlib/sovereignty-receipt.fk
+           form/form/form-stdlib/tests/sovereignty-receipt-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
     (named-with urs sema))
 
   ; what every response returns
@@ -54,7 +54,7 @@
 
   ; where to pay attention — attention-signal.fk ranks the measured per-lane gap (four-way 255)
   (attention
-    (recipe form/form-stdlib/attention-signal.fk)
+    (recipe form/form/form-stdlib/attention-signal.fk)
     (rule "tier 2 ATTEND = high volume AND far from native; tier 1 last-mile = high volume but near-native;"
           "tier 0 rest = low volume. Pay attention where closing the gap matters most.")
     (now-2026-06-21 "ATTEND: Read/Edit/Write tool-prediction (~65%, high volume). LAST MILE: Bash 97%,"

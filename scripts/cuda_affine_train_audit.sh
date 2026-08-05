@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # cuda_affine_train_audit.sh — GPU witness for the Form CUDA affine-layer TRAINING-STEP emitter
-# (jte-affine-train-cuda in form/form-stdlib/jit-tensor-emit.fk): one SGD step of y = W·x + b, one
+# (jte-affine-train-cuda in form/form/form-stdlib/jit-tensor-emit.fk): one SGD step of y = W·x + b, one
 # GPU thread per output row i. bin-go prints the Form-emitted __global__ CUDA, CuPy/NVRTC compiles it
 # with --fmad=false, and BIT-EXACT parity against a CPU reference in the recipe's own op order gates
 # the run — every updated W word, every updated b word, and every per-row loss word must match.
@@ -19,7 +19,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 ROWS="${1:-128}"; COLS="${2:-128}"; ITERS="${3:-20}"
 
 GO_BIN="$FORMDIR/form-kernel-go/bin-go.exe"

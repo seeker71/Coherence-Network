@@ -22,8 +22,8 @@
 ;   windows - native host plus tel/default-app carrier.
 ;   web     - PWA/browser door plus tel links and shared relationship memory.
 ;
-; The proof floor is `form/form-stdlib/phone-presence.fk` and
-; `form/form-stdlib/tests/phone-presence-band.fk` -> 4095, registered for fkwu
+; The proof floor is `form/form/form-stdlib/phone-presence.fk` and
+; `form/form/form-stdlib/tests/phone-presence-band.fk` -> 4095, registered for fkwu
 ; four-way validation. This proves the platform routing and trusted-call receipt;
 ; OS launchers, App Store packaging, Play Store packaging, CallKit, Android
 ; intents, contacts, and carrier audio remain host surfaces that must each leave

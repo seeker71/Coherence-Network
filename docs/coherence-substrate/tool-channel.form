@@ -3,10 +3,10 @@
 (tool-channel
   (lineage
     (rests-on host-kernel.form kernel-self-composition.form tool-grammar.form)
-    (recipe form/form-stdlib/tool-channel.fk)
-    (grammar form/form-stdlib/tool-channel-grammar.fk)
-    (proof form/form-stdlib/tests/tool-channel-band.fk -> 255)
-    (grammar-proof form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255))
+    (recipe form/form/form-stdlib/tool-channel.fk)
+    (grammar form/form/form-stdlib/tool-channel-grammar.fk)
+    (proof form/form/form-stdlib/tests/tool-channel-band.fk -> 255)
+    (grammar-proof form/form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255))
 
   (purpose
     "Cells and recipes discover tool options as Form-native rows, then receive an explicit invocation plan."

@@ -1,7 +1,7 @@
 ; proof.fk — the body's verifiable existence in one file.
 ;
 ; To verify:
-;   1. Build form-kernel-go (Go, single file: form/form-kernel-go/main.go)
+;   1. Build form-kernel-go (Go, single file: form/form/form-kernel-go/main.go)
 ;   2. Run: form-kernel-go proof.fk
 ;   3. Expected output:  A-B-C
 ;

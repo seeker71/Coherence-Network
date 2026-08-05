@@ -37,8 +37,8 @@ import {
   nodeKey,
   walk,
   type NodeID,
-} from "../../../form/form-kernel-ts/src/kernel.ts";
-import { readAll } from "../../../form/form-kernel-ts/src/reader.ts";
+} from "../../../form/form/form-kernel-ts/src/kernel.ts";
+import { readAll } from "../../../form/form/form-kernel-ts/src/reader.ts";
 import type { LocalFormTrace } from "./client.ts";
 
 export type RGB = readonly [number, number, number];

@@ -667,7 +667,7 @@
 ;     The earlier "integer-only / floats break determinism" was a misread of the BAND-VERDICT subset
 ;     (AUTHORING.md), never a kernel limit. The one real residue: whole-number floats display as 3.0
 ;     (Rust/Python) vs 3 (Go/TS/JS) — a display-canonicalization bug, not a compute one.
-;   THE NUMERIC STACK IS DEFINED. form/contracts/numeric-formats.canonical.json holds 19
+;   THE NUMERIC STACK IS DEFINED. form/form/contracts/numeric-formats.canonical.json holds 19
 ;     formats — fp64/fp32/bf16/fp8-e4m3/fp8-e5m2/fp4/nf4/i4..i64/u8../bitnet-158/log-prob — each with
 ;     mantissa/exponent bits + an arithmetic_hint (native-fp, software-fp-via-fp32), plus conformance
 ;     vectors. formats.rs `apply_arith` is the per-format reference arithmetic; `canonical_vectors_pass`
@@ -802,7 +802,7 @@
 ;        three-way. One whisper-style STFT frame fully Form-native in the spectrum.fk lineage: hann is
 ;        fcos, bin power is the Goertzel recurrence, a mel row is its slaney (bins, weights) support as
 ;        data, log10 is trig.fk's new fln. Matches torch.stft frame 5 / librosa slaney / whisper's
-;        clamp-log lane at 1e-6 — but 3-KERNEL ONLY (mel-frame is not in form/fourth-arm-bands.txt; the
+;        clamp-log lane at 1e-6 — but 3-KERNEL ONLY (mel-frame is not in form/form/fourth-arm-bands.txt; the
 ;        fourth-arm gap is host-io / node-family ops not yet on the walker). The full 80×3000 spectrogram
 ;        is this recipe walked — speed is M5's JIT stone, not a new shape. Remaining for M6: safetensors
 ;        carrier + block-0 activation match — and the reference teacher is now a LOCAL oracle on this host

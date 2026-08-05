@@ -18,7 +18,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 MESH="${HATI_MESH:-https://api.coherencycoin.com/api}"
 MODEL="${WHISPER_MODEL:-$HOME/whisper-models/ggml-large-v3-turbo.bin}"
 WINDOW="${HATI_WINDOW:-3}"
@@ -32,7 +32,7 @@ else ORGAN_ID="hati-organ-mic-$(uuidgen | tr 'A-Z' 'a-z' | tr -d - | cut -c1-20)
 HOST="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
 
 KERNEL="$FORM/form-kernel-rust/target/release/form-kernel-rust"
-if [[ ! -x "$KERNEL" ]]; then KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"; fi
+if [[ ! -x "$KERNEL" ]]; then KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"; fi
 [[ -x "$KERNEL" ]] || { echo "FAIL no Form kernel — run: (cd $FORM && ./validate.sh form-stdlib/core.fk form-stdlib/speech-organ.fk form-stdlib/tests/speech-organ-band.fk)"; exit 1; }
 FORMCLI="$FORM/form-cli"
 if [[ ! -x "$FORMCLI" && -x "$FORM/.cache/form-cli-native-host" ]]; then

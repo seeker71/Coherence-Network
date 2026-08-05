@@ -116,14 +116,14 @@
     },
     "typescript": {
       "status": "implemented",
-      "entrypoint": "form/form-kernel-ts/src/conformance.ts",
+      "entrypoint": "form/form/form-kernel-ts/src/conformance.ts",
       "proof": "api/tests/test_kernel_conformance_harness.py",
       "harness": "scripts/verify_kernel_conformance.py --kernel typescript",
       "runner": [
         "npx",
         "--yes",
         "tsx",
-        "form/form-kernel-ts/src/conformance.ts",
+        "form/form/form-kernel-ts/src/conformance.ts",
         "{vector}"
       ]
     }

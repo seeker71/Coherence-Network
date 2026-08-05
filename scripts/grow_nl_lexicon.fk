@@ -10,7 +10,7 @@
 (do
     (let en-text (read_file "web/messages/en.json"))
     (let id-text (read_file "web/messages/id.json"))
-    (write_file_text "form/form-stdlib/nl-lexicon-data.fk"
+    (write_file_text "form/form/form-stdlib/nl-lexicon-data.fk"
         (jlg-emit-cell (grow-rows en-text id-text 40)))
-    (print "grew form/form-stdlib/nl-lexicon-data.fk from web/messages/{en,id}.json")
+    (print "grew form/form/form-stdlib/nl-lexicon-data.fk from web/messages/{en,id}.json")
     0)

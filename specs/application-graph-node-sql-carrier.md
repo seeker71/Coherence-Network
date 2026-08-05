@@ -2,9 +2,9 @@
 idea_id: data-infrastructure
 status: done
 source:
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node-sql, agn-update-node-sql, agn-delete-node-sql, agn-create-node, agn-update-node, agn-delete-node, agn-application-graph-sql-test]
-  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
   - file: api/app/services/graph_service.py
     symbols: [_record_revision, create_node, update_node, delete_node]
@@ -23,8 +23,8 @@ requirements:
   - "Delete SQL clears connected graph_edges before deleting the graph_nodes row."
   - "Ideas and specs name application graph table semantics as proven while keeping all-traffic public front-door flips out of scope; bounded mutable method/path routes graduate only after preview, live DB execution, and production default proof."
 done_when:
-  - 'file_contains("form/form-stdlib/application-graph-node-port.fk", "defn agn-create-node-sql")'
-  - 'file_contains("form/form-stdlib/tests/application-graph-node-port-band.fk", "Band verdict: 1111")'
+  - 'file_contains("form/form/form-stdlib/application-graph-node-port.fk", "defn agn-create-node-sql")'
+  - 'file_contains("form/form/form-stdlib/tests/application-graph-node-port-band.fk", "Band verdict: 1111")'
   - 'pytest_passes("api/tests/test_application_graph_node_port_form.py")'
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk && cd ../api && python3 -m pytest -q tests/test_application_graph_node_port_form.py"
 constraints:
@@ -69,16 +69,16 @@ and response projection; this carrier remains the SQL source for those rows.
 - `api/app/services/graph_service.py` - live create/update/delete semantics.
 - `api/app/models/graph.py` - table names, columns, revision fields, and edge
   cleanup target.
-- `form/form-stdlib/storage-port-db.fk` - existing Postgres-native binding
+- `form/form/form-stdlib/storage-port-db.fk` - existing Postgres-native binding
   pattern.
 - `2026-06-08` - User direction: keep moving mutable surfaces toward Form
   native without waiting at bounded checkpoints.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/application-graph-node-port.fk` - application table SQL
+- `form/form/form-stdlib/application-graph-node-port.fk` - application table SQL
   carrier and `pg_exec` binding functions.
-- `form/form-stdlib/tests/application-graph-node-port-band.fk` - executable
+- `form/form/form-stdlib/tests/application-graph-node-port-band.fk` - executable
   carrier proof.
 - `api/tests/test_application_graph_node_port_form.py` - repository proof tying
   Form, Python graph service, ORM tables, and route forms.
@@ -88,7 +88,7 @@ and response projection; this carrier remains the SQL source for those rows.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/application-graph-node-port-band.fk`
+- `form/form/form-stdlib/tests/application-graph-node-port-band.fk`
 - `api/tests/test_application_graph_node_port_form.py::test_application_graph_port_names_live_table_contract`
 - `api/tests/test_application_graph_node_port_form.py::test_application_graph_band_executes`
 - `api/tests/test_application_graph_node_port_form.py::test_application_graph_sql_carries_revision_and_edge_cleanup_semantics`

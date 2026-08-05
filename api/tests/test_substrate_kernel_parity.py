@@ -15,7 +15,7 @@ The HTTP wire-up itself (`http_get(url)` against a live FastAPI server)
 is exercised indirectly: we hand the kernel the JSON body the endpoint
 would return, so the substrate-and-server stay decoupled from the
 parity assertion. The live-HTTP path runs the same natives — see
-form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_lattice_stats_live.fk.
+form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_lattice_stats_live.fk.
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ from app.services.substrate.substrate_strings import SubstrateStringORM
 
 KERNEL_BIN = (
     Path(__file__).resolve().parents[2]
-    / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+    / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 )
 
 

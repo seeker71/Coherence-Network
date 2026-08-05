@@ -3,11 +3,11 @@
 (gpu-mesh-sense
   (lineage
     (rests-on world-model-live-sense.fk world-model-growth.fk witness-state-receipt.form hati-mesh.form obs-verify.fk)
-    (recipe form/form-stdlib/gpu-mesh-sense.fk)
-    (proof form/form-stdlib/tests/gpu-mesh-sense-band.fk -> 511)
-    (grow-proof form/form-stdlib/tests/gpu-mesh-grow-band.fk -> 255)
+    (recipe form/form/form-stdlib/gpu-mesh-sense.fk)
+    (proof form/form/form-stdlib/tests/gpu-mesh-sense-band.fk -> 511)
+    (grow-proof form/form/form-stdlib/tests/gpu-mesh-grow-band.fk -> 255)
     (carrier scripts/gpu_mesh_sense_emit.sh)
-    (organs form/native/metal/conv2d.metal form/native/vulkan/matvec_vk.c form/native/cuda/template_conv2d.ptx))
+    (organs form/form/native/metal/conv2d.metal form/form/native/vulkan/matvec_vk.c form/form/native/cuda/template_conv2d.ptx))
 
   (purpose
     "A GPU lane's bit-exact PROOF verdict — backend, device, kernel, parity N/N, max-abs ULP — becomes a wmg-sense row, the SAME shape world-model-live-sense.fk feeds the learner from active samples, capability receipts, and model evals."

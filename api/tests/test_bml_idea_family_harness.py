@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS_PATH = ROOT / "deploy" / "kernel-router" / "bml_idea_family_harness.py"
-KERNEL_BIN = ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+KERNEL_BIN = ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 
 
 def _load_harness():

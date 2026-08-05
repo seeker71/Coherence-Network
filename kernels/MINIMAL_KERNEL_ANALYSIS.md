@@ -83,7 +83,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 | `ed25519_verify` | Ed25519 verification | **Added in this branch — should be Form recipe** |
 
 The former BMF rule-application native has been composted. BMF object rules now
-execute through `form/form-stdlib/engine.fk`; future acceleration should compile
+execute through `form/form/form-stdlib/engine.fk`; future acceleration should compile
 to generic Form-native cursor/step machinery rather than a BMF-named kernel
 primitive.
 

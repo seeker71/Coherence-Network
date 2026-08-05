@@ -2,31 +2,31 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-kernel-go/main.go
+  - file: form/form/form-kernel-go/main.go
     symbols: []
-  - file: form/form-kernel-rust/src/main.rs
+  - file: form/form/form-kernel-rust/src/main.rs
     symbols: [serialize_artifact, deserialize_artifact]
-  - file: form/form-kernel-ts/src/kernel.ts
+  - file: form/form/form-kernel-ts/src/kernel.ts
     symbols: [serializeRecipeArtifact, deserializeRecipeArtifact, serializeNode]
-  - file: form/form-stdlib/seedbank/universal-emit.fk
+  - file: form/form/form-stdlib/seedbank/universal-emit.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emit.fk
+  - file: form/form/form-stdlib/seedbank/emit.fk
     symbols: []
-  - file: form/form-stdlib/emit-engine.fk
+  - file: form/form/form-stdlib/emit-engine.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emits/python.fk
+  - file: form/form/form-stdlib/seedbank/emits/python.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emits/typescript.fk
+  - file: form/form/form-stdlib/seedbank/emits/typescript.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emits/go.fk
+  - file: form/form/form-stdlib/seedbank/emits/go.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emits/rust.fk
+  - file: form/form/form-stdlib/seedbank/emits/rust.fk
     symbols: []
-  - file: form/form-stdlib/seedbank/emits/form.fk
+  - file: form/form/form-stdlib/seedbank/emits/form.fk
     symbols: []
-  - file: form/form-stdlib/tests/form-binary-multi-emit.fk
+  - file: form/form/form-stdlib/tests/form-binary-multi-emit.fk
     symbols: []
-  - file: form/validate.sh
+  - file: form/form/validate.sh
     symbols: []
 requirements:
   - "A Form binary (.fkb) is the substrate source of truth — load it as live Recipe nodes via read_form_binary; write back via write_form_binary in the same FORMBIN2 artifact format the --emit-binary CLI produces."
@@ -41,7 +41,7 @@ done_when:
   - "Every target produces non-empty text from the same loaded Recipe."
   - "Python emission of a function-decl Recipe renders as readable native Python: 'def double(x):\\n    return x * 2'."
   - "Three-kernel parity sum on form-binary-multi-emit.fk = 65 (1 write + 1 round-trip + 16 registry + 16 non-empty + 31 Python length)."
-  - 'file_exists("form/form-stdlib/tests/form-binary-multi-emit.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/form-binary-multi-emit.fk")'
 test: "cd form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk"
 constraints:
   - "No host-language handwritten emitter — emission lives in Form-native template tables, dispatched by the substrate engine."
@@ -134,51 +134,51 @@ to sixteen rows:
 
 | Tongue | Templates file |
 |---|---|
-| Python | `form/form-stdlib/seedbank/emits/python.fk` |
-| TypeScript | `form/form-stdlib/seedbank/emits/typescript.fk` |
-| Go | `form/form-stdlib/seedbank/emits/go.fk` |
-| Rust | `form/form-stdlib/seedbank/emits/rust.fk` |
-| JSON | `form/form-stdlib/seedbank/emits/json.fk` |
-| YAML | `form/form-stdlib/seedbank/emits/yaml.fk` |
-| Markdown | `form/form-stdlib/seedbank/grammars/markdown.fk` |
-| SQL | `form/form-stdlib/seedbank/emits/sql.fk` |
-| XML | `form/form-stdlib/seedbank/emits/xml.fk` |
-| HTML | `form/form-stdlib/seedbank/emits/html.fk` |
-| CSS | `form/form-stdlib/seedbank/emits/css.fk` |
-| Form | `form/form-stdlib/seedbank/emits/form.fk` |
-| Image | `form/form-stdlib/seedbank/emits/image.fk` |
-| Audio | `form/form-stdlib/seedbank/emits/audio.fk` |
-| Video | `form/form-stdlib/seedbank/emits/video.fk` |
-| Model | `form/form-stdlib/seedbank/emits/model.fk` |
+| Python | `form/form/form-stdlib/seedbank/emits/python.fk` |
+| TypeScript | `form/form/form-stdlib/seedbank/emits/typescript.fk` |
+| Go | `form/form/form-stdlib/seedbank/emits/go.fk` |
+| Rust | `form/form/form-stdlib/seedbank/emits/rust.fk` |
+| JSON | `form/form/form-stdlib/seedbank/emits/json.fk` |
+| YAML | `form/form/form-stdlib/seedbank/emits/yaml.fk` |
+| Markdown | `form/form/form-stdlib/seedbank/grammars/markdown.fk` |
+| SQL | `form/form/form-stdlib/seedbank/emits/sql.fk` |
+| XML | `form/form/form-stdlib/seedbank/emits/xml.fk` |
+| HTML | `form/form/form-stdlib/seedbank/emits/html.fk` |
+| CSS | `form/form/form-stdlib/seedbank/emits/css.fk` |
+| Form | `form/form/form-stdlib/seedbank/emits/form.fk` |
+| Image | `form/form/form-stdlib/seedbank/emits/image.fk` |
+| Audio | `form/form/form-stdlib/seedbank/emits/audio.fk` |
+| Video | `form/form/form-stdlib/seedbank/emits/video.fk` |
+| Model | `form/form/form-stdlib/seedbank/emits/model.fk` |
 
 A seventeenth tongue is a seventeenth row.
 
 ## Files
 
-- `form/form-kernel-go/main.go` — Go kernel: `read_form_binary`, `write_form_binary`, `serializeArtifact`, `deserializeArtifact`.
-- `form/form-kernel-rust/src/main.rs` — Rust kernel: sibling parity for the same natives.
-- `form/form-kernel-ts/src/kernel.ts` — TypeScript kernel: sibling parity for the same natives.
-- `form/form-stdlib/emit-engine.fk` — the target-blind walk-and-emit dispatcher.
-- `form/form-stdlib/seedbank/emit.fk` — registry of (target-name, templates) rows; `emit-to`, `emit-all`.
-- `form/form-stdlib/seedbank/universal-emit.fk` — target-neutral semantic IR vocabulary.
-- `form/form-stdlib/seedbank/emits/python.fk` — Python template table.
-- `form/form-stdlib/seedbank/emits/typescript.fk` — TypeScript template table.
-- `form/form-stdlib/seedbank/emits/go.fk` — Go template table.
-- `form/form-stdlib/seedbank/emits/rust.fk` — Rust template table.
-- `form/form-stdlib/seedbank/emits/form.fk` — Form template table.
-- `form/form-stdlib/seedbank/emits/json.fk` — JSON template table.
-- `form/form-stdlib/seedbank/emits/yaml.fk` — YAML template table.
-- `form/form-stdlib/seedbank/emits/sql.fk` — SQL template table.
-- `form/form-stdlib/seedbank/emits/xml.fk` — XML template table.
-- `form/form-stdlib/seedbank/emits/html.fk` — HTML template table.
-- `form/form-stdlib/seedbank/emits/css.fk` — CSS template table.
-- `form/form-stdlib/seedbank/emits/image.fk` — Image template table.
-- `form/form-stdlib/seedbank/emits/audio.fk` — Audio template table.
-- `form/form-stdlib/seedbank/emits/video.fk` — Video template table.
-- `form/form-stdlib/seedbank/emits/model.fk` — Model template table.
-- `form/form-stdlib/seedbank/grammars/markdown.fk` — Markdown templates (paired with grammar).
-- `form/form-stdlib/tests/form-binary-multi-emit.fk` — the closing-loop proof harness.
-- `form/validate.sh` — three-kernel parity runner.
+- `form/form/form-kernel-go/main.go` — Go kernel: `read_form_binary`, `write_form_binary`, `serializeArtifact`, `deserializeArtifact`.
+- `form/form/form-kernel-rust/src/main.rs` — Rust kernel: sibling parity for the same natives.
+- `form/form/form-kernel-ts/src/kernel.ts` — TypeScript kernel: sibling parity for the same natives.
+- `form/form/form-stdlib/emit-engine.fk` — the target-blind walk-and-emit dispatcher.
+- `form/form/form-stdlib/seedbank/emit.fk` — registry of (target-name, templates) rows; `emit-to`, `emit-all`.
+- `form/form/form-stdlib/seedbank/universal-emit.fk` — target-neutral semantic IR vocabulary.
+- `form/form/form-stdlib/seedbank/emits/python.fk` — Python template table.
+- `form/form/form-stdlib/seedbank/emits/typescript.fk` — TypeScript template table.
+- `form/form/form-stdlib/seedbank/emits/go.fk` — Go template table.
+- `form/form/form-stdlib/seedbank/emits/rust.fk` — Rust template table.
+- `form/form/form-stdlib/seedbank/emits/form.fk` — Form template table.
+- `form/form/form-stdlib/seedbank/emits/json.fk` — JSON template table.
+- `form/form/form-stdlib/seedbank/emits/yaml.fk` — YAML template table.
+- `form/form/form-stdlib/seedbank/emits/sql.fk` — SQL template table.
+- `form/form/form-stdlib/seedbank/emits/xml.fk` — XML template table.
+- `form/form/form-stdlib/seedbank/emits/html.fk` — HTML template table.
+- `form/form/form-stdlib/seedbank/emits/css.fk` — CSS template table.
+- `form/form/form-stdlib/seedbank/emits/image.fk` — Image template table.
+- `form/form/form-stdlib/seedbank/emits/audio.fk` — Audio template table.
+- `form/form/form-stdlib/seedbank/emits/video.fk` — Video template table.
+- `form/form/form-stdlib/seedbank/emits/model.fk` — Model template table.
+- `form/form/form-stdlib/seedbank/grammars/markdown.fk` — Markdown templates (paired with grammar).
+- `form/form/form-stdlib/tests/form-binary-multi-emit.fk` — the closing-loop proof harness.
+- `form/form/validate.sh` — three-kernel parity runner.
 
 ## Acceptance Tests
 
@@ -211,7 +211,7 @@ Commit evidence: `docs/system_audit/commit_evidence_20260525_form_binary_multi_e
 ## Out of Scope
 
 - Full CPython grammar coverage from arbitrary Python source. That is a
-  language-grammar task over BMF rules in `form/form-stdlib/grammars/python-bmf.fk`,
+  language-grammar task over BMF rules in `form/form/form-stdlib/grammars/python-bmf.fk`,
   not part of this binary-to-native emission contract.
 - Compiling the entire compiler `.fkb` into a working roundtrip-equivalent
   Python compiler. The architecture supports it; this contract proves the

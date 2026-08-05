@@ -17,7 +17,7 @@
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-FORM_ROOT="$REPO_ROOT/form"
+FORM_ROOT="$REPO_ROOT/form/form"
 FORM_GO="$FORM_ROOT/form-kernel-go/bin-go"
 FORM_SHELL_PRELUDES=(
     "$FORM_ROOT/form-stdlib/form-ontology-loader.fk"

@@ -9,7 +9,7 @@
 # advance; a blocker stops the loop and names itself. 0 remote oracle calls.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"
+STD="$ROOT/form/form/form-stdlib"
 CN="$HOME/.coherence-network/close-next"; mkdir -p "$CN"
 CLOSED="$CN/closed.txt"; touch "$CLOSED"
 LOADED="$CN/loaded.txt"; touch "$LOADED"   # proven recipe basenames, accumulating native

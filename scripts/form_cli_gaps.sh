@@ -16,9 +16,9 @@
 #        scripts/form_cli_gaps.sh --stage    # only the stage-before-flight items
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 ONLY_STAGE=0; [[ "${1:-}" == "--stage" ]] && ONLY_STAGE=1
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 # ── gather lane 1: open ideas (idea slugs no spec references) ────────────────
 ideas_tmp="$(mktemp)"; specideas_tmp="$(mktemp)"; trap 'rm -f "$ideas_tmp" "$specideas_tmp"' EXIT

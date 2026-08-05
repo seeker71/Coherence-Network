@@ -11,7 +11,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 ASK_SMART_PATH = ROOT / "scripts" / "form_cli_ask_smart.py"
-GO_KERNEL = ROOT / "form" / "form-kernel-go" / "bin-go"
+GO_KERNEL = ROOT / "form" / "form" / "form-kernel-go" / "bin-go"
 
 _spec = importlib.util.spec_from_file_location("form_cli_ask_smart", ASK_SMART_PATH)
 assert _spec and _spec.loader

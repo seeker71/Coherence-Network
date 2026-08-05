@@ -24,16 +24,16 @@ _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 def _host_native_carrier(root: Path) -> Path | None:
     """The carrier this host can actually execute, from the bootstrap receipt.
 
-    A production image ships one carrier at ``form/form-cli`` beside its
+    A production image ships one carrier at ``form/form/form-cli`` beside its
     digest authority, and that file is the answer. A source checkout is
-    different: ``form/form-cli`` inside the pinned submodule may have been
+    different: ``form/form/form-cli`` inside the pinned submodule may have been
     built for another host, so ``scripts/ensure_form_cli_native.sh`` builds
     the local one under ``.cache/form-cli-native/`` and records the exact
     selection. Skipping that receipt is how a Linux runner ends up exec'ing
     a carrier built elsewhere and getting ``Exec format error``.
     """
     if (root / "form" / "form-cli.sha256").is_file():
-        return root / "form" / "form-cli"
+        return root / "form" / "form" / "form-cli"
 
     receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
     if not receipt_path.is_file():

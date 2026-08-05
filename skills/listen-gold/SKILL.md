@@ -20,8 +20,8 @@ label the freq-check model learns from — the **gold** lane. This skill's only 
 to make sure a gold reading **does not evaporate** at session end.
 
 **Carrier-last.** The shape is the body, already four-way proven
-([`training-catalog.fk`](../../form/form-stdlib/training-catalog.fk) → `tc-gold-named`,
-decision in [`mesh-dispatch.fk`](../../form/form-stdlib/mesh-dispatch.fk)). This skill
+([`training-catalog.fk`](../../form/form/form-stdlib/training-catalog.fk) → `tc-gold-named`,
+decision in [`mesh-dispatch.fk`](../../form/form/form-stdlib/mesh-dispatch.fk)). This skill
 holds **no recording logic** — it opens the door and gets out of the way.
 
 ## When to record

@@ -11,7 +11,7 @@
 #      device). arc4random -> rand() is the same alias build_fourth uses on its Windows lane.
 #   3. push ONLY that static binary + each band's pre-flattened table to the phone (/data/local/tmp).
 #   4. run `fkwu <table> 0 | head -1` on-device — the exact invocation validate.sh uses — and assert the
-#      verdict equals the manifest's four-way verdict (form/fourth-arm-bands.txt) AND the Mac fkwu's.
+#      verdict equals the manifest's four-way verdict (form/form/fourth-arm-bands.txt) AND the Mac fkwu's.
 #
 # A pass means: the body's recipes compute the SAME proven verdicts on the phone as in the four-way suite,
 # executed by a kernel grown from a C seed and carrying no foreign toolchain on the device. Carrier only —
@@ -28,7 +28,7 @@ BANDS=("$@"); [ "${#BANDS[@]}" -ge 1 ] || BANDS=(room-address vision-percept spe
 skip() { echo "SKIP: $1"; exit 0; }
 
 # ── build host: Go kernel (the emitter) ──
-export GO_BIN="$ROOT/form/form-kernel-go/bin-go"; export TMPDIR="${TMPDIR:-/tmp}"
+export GO_BIN="$ROOT/form/form/form-kernel-go/bin-go"; export TMPDIR="${TMPDIR:-/tmp}"
 if [ ! -x "$GO_BIN" ]; then
     command -v go >/dev/null 2>&1 || skip "no Go kernel and no 'go' to build the emitter (uni.c comes from fkc-emit-universal)"
     ( cd form-kernel-go && go build -o bin-go . ) >/dev/null 2>&1 || skip "Go kernel build failed"

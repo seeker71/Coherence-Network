@@ -9,14 +9,14 @@ need a look at why they're registered but never involved.
 What it does, honestly scoped to what's measurable today
 --------------------------------------------------------
 The kernel's ``trace`` subcommand
-(`form/form-kernel-rust/src/main.rs` :: ``cli_trace`` / ``Trace``) emits, per
+(`form/form/form-kernel-rust/src/main.rs` :: ``cli_trace`` / ``Trace``) emits, per
 run, the arm-dispatch counts (FNCALL, BLOCK, MATH, METHOD, …), the Form
 functions called, and the host-natives fired. The kernel's ``native_blueprint``
 native resolves each native name to its Form-category Blueprint NodeID
 (e.g. ``abs`` → ``@1.2.27.1``). This report:
 
   1. Runs each **kernel-served recipe** (the transmuted-endpoint ``.fk`` shapes
-     in `form/form-kernel-ts/seedbank/python-adapter/examples/`) through
+     in `form/form/form-kernel-ts/seedbank/python-adapter/examples/`) through
      ``trace`` — recipes as DATA, one walk each, no special-casing.
   2. AGGREGATES the arm / function / native counts across all recipes into a
      single ranked view: which Blueprints (arm categories), which Recipes
@@ -346,10 +346,10 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
 ]
 
 _EXAMPLES_DIR = (
-    ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "examples"
+    ROOT / "form" / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "examples"
 )
 _KERNEL_BIN = (
-    ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+    ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 )
 
 
@@ -1320,7 +1320,7 @@ def learn_redundant_dimensions(rows: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 _COMPRESSION_FOLD_GRAMMAR = (
-    ROOT / "form" / "form-stdlib" / "grammars" / "compression-fold.fk"
+    ROOT / "form" / "form" / "form-stdlib" / "grammars" / "compression-fold.fk"
 )
 
 
@@ -1997,7 +1997,7 @@ def main(argv: list[str] | None = None) -> int:
     if not kernel_available():
         msg = (
             f"kernel binary not found at {kernel_bin()} — "
-            "build it (cargo build --release in form/form-kernel-rust) to trace."
+            "build it (cargo build --release in form/form/form-kernel-rust) to trace."
         )
         if args.json:
             print(json.dumps({"error": msg, "reached": 0}, indent=2))

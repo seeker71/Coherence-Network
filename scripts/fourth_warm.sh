@@ -56,7 +56,7 @@ cd "$(dirname "$0")/../form" || exit 1
 export GO_BIN="${GO_BIN:-$PWD/form-kernel-go/bin-go}"
 [[ -x "$GO_BIN" ]] || ( cd form-kernel-go && go build -o bin-go . )
 
-# shellcheck source=form/scripts/fourth-arm.sh
+# shellcheck source=form/form/scripts/fourth-arm.sh
 source scripts/fourth-arm.sh
 mkdir -p "$FOURTH_DIR"
 

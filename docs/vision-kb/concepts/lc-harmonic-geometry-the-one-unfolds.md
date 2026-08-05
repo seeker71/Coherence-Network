@@ -142,7 +142,7 @@ discernment stays, now in service of stepping in.
 
 ## Sources to walk further
 
-- **`form/form-stdlib/grammars/harmonic-geometry.fk`** — the core shapes, their
+- **`form/form/form-stdlib/grammars/harmonic-geometry.fk`** — the core shapes, their
   attested just-intonation ratios, and the computed harmony / unity / family
   (band 111111).
 - **The N-ad core series** (monad…heptad) — Pythagorean/Platonic core-shape

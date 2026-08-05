@@ -28,7 +28,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_API_BASE = "https://api.coherencycoin.com"
 DEFAULT_STATE_PATH = ROOT / "docs" / "system_audit" / "native_route_goal_state.json"
-FRONT_DOOR_BML = ROOT / "form" / "apps" / "coherence-network" / "api.bml"
+FRONT_DOOR_BML = ROOT / "form" / "form" / "apps" / "coherence-network" / "api.bml"
 PRODUCTION_ROUTES = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 TARGET_SHARE = 0.90
 WEB_PROXY_UPSTREAM_ENDPOINTS = {
@@ -500,8 +500,8 @@ def build_goal_state(
             "form_manifest_routes": len(load_form_routes()),
         },
         "cell_surface": {
-            "form": "form/form-stdlib/native-route-goal-cells.fk",
-            "query": "form/form-stdlib/queries/native-route-goal-tending.fk",
+            "form": "form/form/form-stdlib/native-route-goal-cells.fk",
+            "query": "form/form/form-stdlib/queries/native-route-goal-tending.fk",
             "make_target": "make native-route-goal-tending",
             "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
         },
@@ -549,8 +549,8 @@ def target_satisfied_task_card(*, source_requested: str | None, source_effective
         "files_allowed": [
             "scripts/native_route_goal_loop.py",
             "docs/system_audit/native_route_goal_state.json",
-            "form/form-stdlib/native-route-goal-cells.fk",
-            "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+            "form/form/form-stdlib/native-route-goal-cells.fk",
+            "form/form/form-stdlib/tests/native-route-goal-cells-band.fk",
         ],
         "done_when": [
             "scripts/native_route_goal_loop.py /goal --source web_api reports next route none while the observed web_api window remains at or above target.",
@@ -589,8 +589,8 @@ def task_card(
     return {
         "goal": f"Promote {method} {endpoint} to a kernel-native high-grammar handler.",
         "files_allowed": [
-            "form/apps/coherence-network/api.bml",
-            "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+            "form/form/apps/coherence-network/api.bml",
+            "form/form/form-stdlib/tests/source-language-route-class-template-band.fk",
             "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
             "docs/system_audit/native_route_goal_state.json",
         ],

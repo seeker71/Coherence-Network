@@ -4,13 +4,13 @@ idea_id: bmf-bml-compiler-self-host
 status: active
 decision: approved-2026-06-20-proceed
 source:
-  - file: form/form-stdlib/source-compiler.fk
+  - file: form/form/form-stdlib/source-compiler.fk
     symbols: [fsc-compile-section-recipe, fsc-compile-form-bml-section-recipe, fsc-compile-form-bml-def-recipe, fsc-rec-fndef, fsc-rec-form-call]
-  - file: form/form-stdlib/bmf-grammar.fk
+  - file: form/form/form-stdlib/bmf-grammar.fk
     symbols: [g-parse]
-  - file: form/form-stdlib/bmf-core.fk
+  - file: form/form/form-stdlib/bmf-core.fk
     symbols: [cp-in-class?]
-  - file: form/form-stdlib/core.fk
+  - file: form/form/form-stdlib/core.fk
   - file: kernels/BMF_BML_COMPILER_PICTURE.md
   - file: docs/coherence-substrate/north-star-compiler.md
 requirements:
@@ -43,28 +43,28 @@ The north star (`kernels/BMF_BML_COMPILER_PICTURE.md` "Bootstrap Boundary"; `doc
 
 ## Requirements
 
-- [x] **R1**: A `form.bml`-surface grammar (`form/form-stdlib/grammars/form-bml.fk`) expressed as grammar-as-data parses `def name(params) = expr;` — including `//` comments and `?`/`-`/`!` in identifiers — driven by the existing `g-parse` cursor. The extra name chars come from one additive char class `bmlname` (alnum + `-`/`?`/`!`) in `bmf-core.fk` (digit/alpha/alnum/ws unchanged) — placed there, not as a late-bound override, so the fourth-arm flattener binds `gm-run`'s `cp-in-class?` to the class-aware definition.
-- [x] **R2**: A lowerer (`form/form-stdlib/form-bml-lower.fk`) maps the parsed cursor nodes for a `def` to the SAME recipe `fsc-compile-form-bml-def-recipe` emits, by reusing `fsc-rec-fndef`/`fsc-rec-if3`/`fsc-rec-form-call`/`fsc-rec-ident`/`fsc-rec-call` — so `node_eq` holds by content-addressing. Covers call-form primitives + user calls, idents, int literals, `if…then…else`, and `empty`. `let`, `match`, top-level `==`, multi-line `{ … }` bodies are later breaths.
-- [x] **R3**: The cursor proof stands on its own bands. A whole-surface band `form/form-stdlib/tests/form-bml-cursor-full-band.fk` lowers the full form.bml surface through the cursor, verdict **67** three-way (Go/Rust/TS); the per-construct cursor proof crosses the fourth arm in `form-bml-cursor-parse` (123) and `form-bml-cursor-lower` (113). (Breath-1's `node_eq(cursor, line)` parity band is composted — the cursor's four-way standing is the proof surface, not a comparison to the line compiler.)
-- [x] **R4**: A cursor-only band `form/form-stdlib/tests/form-bml-cursor-parse-band.fk` proves the form.bml grammar parses the fixture identically on all four kernels including fkwu — verdict **123** (summed AST node counts), registered in `fourth-arm-bands.txt`, `PASS-4WAY`.
+- [x] **R1**: A `form.bml`-surface grammar (`form/form/form-stdlib/grammars/form-bml.fk`) expressed as grammar-as-data parses `def name(params) = expr;` — including `//` comments and `?`/`-`/`!` in identifiers — driven by the existing `g-parse` cursor. The extra name chars come from one additive char class `bmlname` (alnum + `-`/`?`/`!`) in `bmf-core.fk` (digit/alpha/alnum/ws unchanged) — placed there, not as a late-bound override, so the fourth-arm flattener binds `gm-run`'s `cp-in-class?` to the class-aware definition.
+- [x] **R2**: A lowerer (`form/form/form-stdlib/form-bml-lower.fk`) maps the parsed cursor nodes for a `def` to the SAME recipe `fsc-compile-form-bml-def-recipe` emits, by reusing `fsc-rec-fndef`/`fsc-rec-if3`/`fsc-rec-form-call`/`fsc-rec-ident`/`fsc-rec-call` — so `node_eq` holds by content-addressing. Covers call-form primitives + user calls, idents, int literals, `if…then…else`, and `empty`. `let`, `match`, top-level `==`, multi-line `{ … }` bodies are later breaths.
+- [x] **R3**: The cursor proof stands on its own bands. A whole-surface band `form/form/form-stdlib/tests/form-bml-cursor-full-band.fk` lowers the full form.bml surface through the cursor, verdict **67** three-way (Go/Rust/TS); the per-construct cursor proof crosses the fourth arm in `form-bml-cursor-parse` (123) and `form-bml-cursor-lower` (113). (Breath-1's `node_eq(cursor, line)` parity band is composted — the cursor's four-way standing is the proof surface, not a comparison to the line compiler.)
+- [x] **R4**: A cursor-only band `form/form/form-stdlib/tests/form-bml-cursor-parse-band.fk` proves the form.bml grammar parses the fixture identically on all four kernels including fkwu — verdict **123** (summed AST node counts), registered in `fourth-arm-bands.txt`, `PASS-4WAY`.
 - [x] **R5**: `fsc-compile-section-recipe` routing is unchanged by default: `form.bml` still lowers through `fsc-compile-form-bml-section-recipe`. No flag flip in this breath.
-- [x] **R6**: The emitted fkwu walker is built with 64 MiB stack reserve (`form/scripts/fourth-arm.sh`) so the recursive cursor-grammar lane runs on the fourth arm on Windows without a `0xC00000FD` stack overflow (1 MiB default overflowed even `bmf-grammar`; CI's 8 MiB was never affected). `bmf-core`/`bmf-grammar` still `PASS-4WAY`.
+- [x] **R6**: The emitted fkwu walker is built with 64 MiB stack reserve (`form/form/scripts/fourth-arm.sh`) so the recursive cursor-grammar lane runs on the fourth arm on Windows without a `0xC00000FD` stack overflow (1 MiB default overflowed even `bmf-grammar`; CI's 8 MiB was never affected). `bmf-core`/`bmf-grammar` still `PASS-4WAY`.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/grammars/form-bml.fk` — new: the `form.bml` cursor grammar.
-- `form/form-stdlib/form-bml-lower.fk` — new: lowerer from cursor nodes to the line compiler's recipe shape.
-- `form/form-stdlib/bmf-core.fk` — modify: add the additive `bmlname` char class to `cp-in-class?`.
-- `form/form-stdlib/tests/form-bml-cursor-parse-band.fk` — new: cursor-only parse-signature band → 123 (four-way).
-- `form/form-stdlib/tests/form-bml-cursor-lower-band.fk` — new: cursor lowering band → 113 (four-way).
-- `form/form-stdlib/tests/form-bml-cursor-full-band.fk` — new: whole-surface cursor proof → 67 (three-way).
-- `form/scripts/fourth-arm.sh` — modify: reserve 64 MiB stack for the emitted fkwu binary (Windows cursor lane).
-- `form/fourth-arm-bands.txt` — modify: register the `form-bml-cursor-parse` row.
+- `form/form/form-stdlib/grammars/form-bml.fk` — new: the `form.bml` cursor grammar.
+- `form/form/form-stdlib/form-bml-lower.fk` — new: lowerer from cursor nodes to the line compiler's recipe shape.
+- `form/form/form-stdlib/bmf-core.fk` — modify: add the additive `bmlname` char class to `cp-in-class?`.
+- `form/form/form-stdlib/tests/form-bml-cursor-parse-band.fk` — new: cursor-only parse-signature band → 123 (four-way).
+- `form/form/form-stdlib/tests/form-bml-cursor-lower-band.fk` — new: cursor lowering band → 113 (four-way).
+- `form/form/form-stdlib/tests/form-bml-cursor-full-band.fk` — new: whole-surface cursor proof → 67 (three-way).
+- `form/form/scripts/fourth-arm.sh` — modify: reserve 64 MiB stack for the emitted fkwu binary (Windows cursor lane).
+- `form/form/fourth-arm-bands.txt` — modify: register the `form-bml-cursor-parse` row.
 - `specs/lift-form-bml-onto-bmf-cursor.md` — this contract.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/form-bml-cursor-full-band.fk` passing three-way (Go/Rust/TS) via `form/validate.sh` with `1 ok, 0 divergent` → 67.
+- `form/form/form-stdlib/tests/form-bml-cursor-full-band.fk` passing three-way (Go/Rust/TS) via `form/form/validate.sh` with `1 ok, 0 divergent` → 67.
 - `scripts/fourth-arm-gate.sh form-bml-cursor-parse` → `PASS-4WAY`.
 - Manual validation: run the `test` command in the frontmatter from a worktree rebased to `origin/main` with `form/` present.
 

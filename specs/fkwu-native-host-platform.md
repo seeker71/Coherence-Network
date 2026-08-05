@@ -4,19 +4,19 @@ status: active
 source:
   - file: docs/coherence-substrate/fkwu-native-host-platform.form
     symbols: [fkwu-native-host-platform]
-  - file: form/form-stdlib/bml/form-fs.bml
+  - file: form/form/form-stdlib/bml/form-fs.bml
     symbols: [IFormFilesystem, FormFilesystem, Path, FileStat]
-  - file: form/form-stdlib/form-fs.fk
+  - file: form/form/form-stdlib/form-fs.fk
     symbols: [fs-read-text, fs-write-text, fs-path-join, fs-stdlib-test]
-  - file: form/form-stdlib/bml/fkwu-platform-host.bml
+  - file: form/form/form-stdlib/bml/fkwu-platform-host.bml
     symbols: [HostPlatformRegistry, IPlatformHostCarrier]
-  - file: form/form-stdlib/bml/host-kernel-interface.bml
+  - file: form/form/form-stdlib/bml/host-kernel-interface.bml
     symbols: [HostKernelInterface, HostResourceObservable]
-  - file: form/form-stdlib/fkwu-platform-host-carrier.fk
+  - file: form/form/form-stdlib/fkwu-platform-host-carrier.fk
     symbols: [host-platform-detect, host-platform-carrier]
-  - file: form/form-stdlib/host-io-fs-fkwu-emit.fk
+  - file: form/form/form-stdlib/host-io-fs-fkwu-emit.fk
     symbols: [hifse-decl-text, hifse-arms-text]
-  - file: form/form-stdlib/form-flatten.fk
+  - file: form/form/form-stdlib/form-flatten.fk
     symbols: [flt-native-registry]
   - file: docs/coherence-substrate/standard-receipt.form
     symbols: [standard-receipt]
@@ -59,18 +59,18 @@ Ship the universal kernel (fkwu) as the **only** host resource runtime on the st
 ## Files to Create/Modify
 
 - `docs/coherence-substrate/fkwu-native-host-platform.form` — architecture cell
-- `form/form-stdlib/bml/fkwu-platform-host.bml` — platform carrier contracts
-- `form/form-stdlib/bml/form-fs.bml` — filesystem BML interface
-- `form/form-stdlib/form-fs.fk` — Form filesystem recipes
-- `form/form-stdlib/host-io-fs-fkwu-emit.fk` — fkwu C arms for fs natives
-- `form/form-stdlib/fkwu-platform-host-carrier.fk` — runtime dispatch
-- `form/form-stdlib/tests/form-fs-band.fk` — four-way proof band
+- `form/form/form-stdlib/bml/fkwu-platform-host.bml` — platform carrier contracts
+- `form/form/form-stdlib/bml/form-fs.bml` — filesystem BML interface
+- `form/form/form-stdlib/form-fs.fk` — Form filesystem recipes
+- `form/form/form-stdlib/host-io-fs-fkwu-emit.fk` — fkwu C arms for fs natives
+- `form/form/form-stdlib/fkwu-platform-host-carrier.fk` — runtime dispatch
+- `form/form/form-stdlib/tests/form-fs-band.fk` — four-way proof band
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/form-fs-band.fk` — verdict 16383 four-way
-- `form/form-stdlib/tests/host-kernel-gaps-close-band.fk` — gap natives without segfault
-- `form/form-stdlib/tests/fkwu-platform-host-band.fk` — platform carrier shape
+- `form/form/form-stdlib/tests/form-fs-band.fk` — verdict 16383 four-way
+- `form/form/form-stdlib/tests/host-kernel-gaps-close-band.fk` — gap natives without segfault
+- `form/form/form-stdlib/tests/fkwu-platform-host-band.fk` — platform carrier shape
 
 ## Verification
 
@@ -95,7 +95,7 @@ python3 scripts/validate_commit_evidence.py \
 ## Known Gaps
 
 - **Follow-up:** Standard receipt platform rows (`mac`, `windows`, `android`) remain `pending` for host-metal bands (Phase 3).
-- **Follow-up:** T_flat maintainer regen uses bin-go (`form/scripts/regen_t_flat.sh`, fks table); fkwu-only full driver regen still bus-errors (Phase 2 arena lift).
+- **Follow-up:** T_flat maintainer regen uses bin-go (`form/form/scripts/regen_t_flat.sh`, fks table); fkwu-only full driver regen still bus-errors (Phase 2 arena lift).
 - **Follow-up:** SSE and thread pool natives lack dedicated flatten tags — task to add manifest rows when carriers land.
 
 ## Resource map (implement new features here)
@@ -126,5 +126,5 @@ python3 scripts/validate_commit_evidence.py \
 - `docs/coherence-substrate/standard-receipt.form`
 - `docs/coherence-substrate/host-kernel.form`
 - `docs/coherence-substrate/form-to-asm.form`
-- `form/form-stdlib/bml/host-kernel-interface.bml`
+- `form/form/form-stdlib/bml/host-kernel-interface.bml`
 - `specs/kernel-image-proposal-public-interface.md`

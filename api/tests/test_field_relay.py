@@ -1,6 +1,6 @@
 """Field relay WS endpoint — open join, consent-gated, content-blind (breath 1 transport).
 
-Mirrors the four-way-proven fr-route decision (form/form-stdlib/field-relay.fk, verdict 127):
+Mirrors the four-way-proven fr-route decision (form/form/form-stdlib/field-relay.fk, verdict 127):
 DELIVER / QUEUE / DENY / DROP, plus the body-blindness law.
 """
 

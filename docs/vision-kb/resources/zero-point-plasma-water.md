@@ -14,9 +14,9 @@
 
 Lanes, never blended. This is the discipline the material demands, because the failure mode here is not bad physics — it is *good physics and a hypothesis narrated in the same voice*.
 
-These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form-stdlib/evidence-grounding.fk) (four-way, verdict 8191). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
+These are the body's canonical strata, not a vocabulary invented for this page — [`lc-honest-lane`](../concepts/lc-honest-lane.md), computed by [`evidence-grounding.fk`](../../../form/form/form-stdlib/evidence-grounding.fk) (four-way, verdict 8191). Two of them, **THEORY** and **CONTESTED**, were added *because of this ladder*: reading MTW produced two claims the original four lanes could not place.
 
-**Every lane tag below is computed, not typed.** The ladder's twenty-two claims live as signal tuples in [`zero-point-ladder-band.fk`](../../../form/form-stdlib/tests/zero-point-ladder-band.fk) and `eg-lane` decides each one — four-way, verdict **65535**. The tags on this page are transcribed from that band's output; re-run `./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` and compare. Change a signal or a classifier rule and the verdict moves and the band fails.
+**Every lane tag below is computed, not typed.** The ladder's twenty-two claims live as signal tuples in [`zero-point-ladder-band.fk`](../../../form/form/form-stdlib/tests/zero-point-ladder-band.fk) and `eg-lane` decides each one — four-way, verdict **65535**. The tags on this page are transcribed from that band's output; re-run `./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` and compare. Change a signal or a classifier rule and the verdict moves and the band fails.
 
 *The honest edge:* the transcription is manual. No check parses this page and compares its labels to the band, so the band catches a changed signal but not a page hand-edited to disagree with it. Governed by [`page-claims-computed-by-band`](../../../specs/page-claims-computed-by-band.md), which names that gap rather than claiming it closed.
 

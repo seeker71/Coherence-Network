@@ -4,9 +4,9 @@ idea_id: federation-and-nodes
 status: active
 decision: approved-2026-06-23-board-is-the-memory
 source:
-  - file: form/form-stdlib/field-queue.fk
+  - file: form/form/form-stdlib/field-queue.fk
     symbols: [fq-drain, fq-count, fq-cursor, fq-match?]
-  - file: form/form-stdlib/tests/field-queue-band.fk
+  - file: form/form/form-stdlib/tests/field-queue-band.fk
   - file: specs/field-relay-always-open-connection.md
   - file: scripts/agent-coord.sh
 requirements:
@@ -38,7 +38,7 @@ reconnect handshake).
 
 ## Requirements
 
-- [x] **R1 — drain selection, four-way + native.** `form/form-stdlib/field-queue.fk` defines `fq-drain`
+- [x] **R1 — drain selection, four-way + native.** `form/form/form-stdlib/field-queue.fk` defines `fq-drain`
   / `fq-count` over (backlog, to, last_seen, iface): select entries to `to`, seq > last_seen, kind in
   iface, preserving order. `fq-cursor (backlog, to, last_seen)` advances over ALL addressed-unseen
   entries (consent-independent — see Risks). Proven 127 four-way + native.
@@ -51,9 +51,9 @@ reconnect handshake).
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/field-queue.fk` — new: the drain selection decision recipe.
-- `form/form-stdlib/tests/field-queue-band.fk` — new: four-way + native proof band (127).
-- `form/fourth-arm-bands.txt` — modify: register the `field-queue` row.
+- `form/form/form-stdlib/field-queue.fk` — new: the drain selection decision recipe.
+- `form/form/form-stdlib/tests/field-queue-band.fk` — new: four-way + native proof band (127).
+- `form/form/fourth-arm-bands.txt` — modify: register the `field-queue` row.
 - `specs/field-queue-drain.md` — this contract.
 
 ## Acceptance Tests

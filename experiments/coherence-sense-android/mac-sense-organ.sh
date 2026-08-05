@@ -13,7 +13,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 MESH="${HATI_MESH:-https://api.coherencycoin.com/api}"
 INTERVAL="${HATI_INTERVAL:-5}"
 UA="coherence-sense-mac/0.2"
@@ -27,10 +27,10 @@ else ORGAN_ID="hati-organ-macos-$(uuidgen | tr 'A-Z' 'a-z' | tr -d - | cut -c1-2
 # About > Name, e.g. "Urs's MacBook Pro"), so the roster reads in the steward's words.
 HOST="$(scutil --get ComputerName 2>/dev/null || scutil --get LocalHostName 2>/dev/null || hostname -s)"
 
-# --- the Form body's kernel (built by form/validate.sh) ---
+# --- the Form body's kernel (built by form/form/validate.sh) ---
 KERNEL="$FORM/form-kernel-rust/target/release/form-kernel-rust"
 if [[ ! -x "$KERNEL" ]]; then
-    KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"
+    KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"
 fi
 [[ -x "$KERNEL" ]] || { echo "FAIL no Form kernel — run: (cd $FORM && ./validate.sh form-stdlib/core.fk form-stdlib/host-sense-organ.fk form-stdlib/tests/host-sense-organ-band.fk)"; exit 1; }
 FORMCLI="$FORM/form-cli"

@@ -94,7 +94,7 @@ The body can teach its own senses without leaving home. One speaker plays a soun
 - [`docs/coherence-substrate/shared-sensing.form`](../../coherence-substrate/shared-sensing.form) — many bodies, one field: how Form-native classifiers travel between kin (Mac ↔ Android), content-addressed and consent-honored.
 - [`docs/coherence-substrate/form-native-models.form`](../../coherence-substrate/form-native-models.form) — the proven model lineage (the numerics that let a sense *be* a recipe), and the honest note that a parametric quantized-int model — not a nearest-shape memorizer — is the real lane to a small native predictor.
 - [`docs/coherence-substrate/jit-oracle-learning.form`](../../coherence-substrate/jit-oracle-learning.form) — the choice contract: parity-first, measured-choice, exploration, mesh-validation.
-- [`form/form-stdlib/mel-frame.fk`](../../../form/form-stdlib/mel-frame.fk) — the one piece of the ear walking Form-native today.
+- [`form/form/form-stdlib/mel-frame.fk`](../../../form/form/form-stdlib/mel-frame.fk) — the one piece of the ear walking Form-native today.
 
 ## The Questions That Live Here
 

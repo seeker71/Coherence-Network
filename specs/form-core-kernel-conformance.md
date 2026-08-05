@@ -10,7 +10,7 @@ source:
     symbols: []
   - file: seedbank/form-question-kernels/go/question_kernel.go
     symbols: []
-  - file: form/form-kernel-ts/src/conformance.ts
+  - file: form/form/form-kernel-ts/src/conformance.ts
     symbols: []
   - file: api/tests/test_kernel_conformance_harness.py
     symbols: [test_python_kernel_passes_core_builtin_vector(), test_rust_go_and_typescript_kernels_pass_core_builtin_vector()]
@@ -60,7 +60,7 @@ The question-effect vector proved that Rust, Go, and TypeScript can match the ho
 ## Research Inputs
 
 - `2026-05-20` - `docs/coherence-substrate/kernel-conformance/agent-question-effects.json` - existing vector shape and runner declarations.
-- `2026-05-20` - `seedbank/form-question-kernels/rust/src/main.rs`, `seedbank/form-question-kernels/go/question_kernel.go`, and `form/form-kernel-ts/src/conformance.ts` - narrow executable kernels already present for question effects.
+- `2026-05-20` - `seedbank/form-question-kernels/rust/src/main.rs`, `seedbank/form-question-kernels/go/question_kernel.go`, and `form/form/form-kernel-ts/src/conformance.ts` - narrow executable kernels already present for question effects.
 - `2026-05-20` - `api/app/services/substrate/form_runtime.py` - Python runtime is the source of truth for the built-in behavior.
 
 ## Vector Contract
@@ -78,7 +78,7 @@ python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/k
 - `docs/coherence-substrate/kernel-conformance/form-core-builtins.json` - shared core built-ins vector.
 - `seedbank/form-question-kernels/rust/src/main.rs` - widen the Rust runner to parse generic literal values and core built-ins.
 - `seedbank/form-question-kernels/go/question_kernel.go` - widen the Go runner to parse generic literal values and core built-ins.
-- `form/form-kernel-ts/src/conformance.ts` - widen the TypeScript runner to parse generic literal values and core built-ins.
+- `form/form/form-kernel-ts/src/conformance.ts` - widen the TypeScript runner to parse generic literal values and core built-ins.
 - `api/tests/test_kernel_conformance_harness.py` - assert Python/Rust/Go/TypeScript pass the core vector.
 - `docs/coherence-substrate/kernel-conformance/README.md` - document both vectors.
 - `docs/coherence-substrate/form-language.md` - state the widened but bounded conformance surface.
@@ -125,7 +125,7 @@ files_allowed:
   - docs/coherence-substrate/form-language.md
   - seedbank/form-question-kernels/rust/src/main.rs
   - seedbank/form-question-kernels/go/question_kernel.go
-  - form/form-kernel-ts/src/conformance.ts
+  - form/form/form-kernel-ts/src/conformance.ts
   - api/tests/test_kernel_conformance_harness.py
   - specs/form-core-kernel-conformance.md
 done_when:

@@ -3,10 +3,10 @@
 (android-mesh-learning
   (lineage
     (rests-on hati-mesh.form channel-loopback.form co-learning-stream.form colearning-retire.form llm-feature-channel-floor.form oracle-catalog.form)
-    (recipe form/form-stdlib/android-mesh-learning.fk)
-    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 131071)
+    (recipe form/form/form-stdlib/android-mesh-learning.fk)
+    (proof form/form/form-stdlib/tests/android-mesh-learning-band.fk -> 131071)
     (witness-receipt witness-state-receipt.form)
-    (physical-receipt form/form-stdlib/android-mesh-learning.fk))
+    (physical-receipt form/form/form-stdlib/android-mesh-learning.fk))
 
   (purpose
     "Use the connected Android phone and the Mac as always-on learning organs."
@@ -64,7 +64,7 @@
     (android-app "adb shell am start -n com.coherence.sense/.MainActivity")
     (receipt-loop "Form-native receipt cells validate capability/liveness rows; host process/device carrier is the remaining IO gap")
     (oracle-emission-loop "Form-native witness-state receipt validates pass/blocked emission cycles; live HTTP sampling carrier remains host IO")
-    (form-native-receipt "form/form-stdlib/witness-state-receipt.fk")
+    (form-native-receipt "form/form/form-stdlib/witness-state-receipt.fk")
     (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 
   (next-physical-gaps

@@ -46,7 +46,7 @@ The distinction the whole teaching rests on:
 - **Execution must match.** `(_get instance "field")` returns `7` on every
   kernel or one of them is wrong. When the *values* disagree, that is a
   genuine bug — a real silence in the body's agreement with itself, and it
-  gets healed. `form/validate.sh` is precise about this: it checks that the
+  gets healed. `form/form/validate.sh` is precise about this: it checks that the
   kernels "agree on every value," never that they agree on how.
 - **Implementation may differ, and the difference is a win.** *How* a
   kernel reaches that `7` — the data structure, the dispatch order, the
@@ -135,7 +135,7 @@ wrench when an actual value disagrees.
 
 ## Sources to walk further
 
-- **[`form/validate.sh`](../../../form/validate.sh)** — the three-way gate
+- **[`form/form/validate.sh`](../../../form/form/validate.sh)** — the three-way gate
   in code. Its own comment names the contract: the kernels "keep each other
   honest"; "any divergence is a bug in one of them." It compares *values*
   across Rust/Go/TS, never internal structure. The teaching is already

@@ -28,15 +28,15 @@ source:
     symbols: [FormNativeLookupSignal, FormNativeRouteReceipt, FormNativeLookupRunner]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift
     symbols: [HostResourceInterface, FoundationHostResourceInterface, HostPlatformCarrier, FormHostBoundaryReceipt]
-  - file: form/form-stdlib/satsang-guidance-event.fk
+  - file: form/form/form-stdlib/satsang-guidance-event.fk
     symbols: [sge-target-known?, sge-turn-mode?, sge-all-transcripts?, sge-ready?, sge-receipt]
-  - file: form/form-stdlib/satsang-host-boundary.fk
+  - file: form/form/form-stdlib/satsang-host-boundary.fk
     symbols: [shb-app-runtime-allowed?, shb-runtime-forbidden?, shb-resource-kind?, shb-platform-target?, shb-boundary-ok?, shb-receipt]
-  - file: form/form-stdlib/satsang-listen-route.fk
+  - file: form/form/form-stdlib/satsang-listen-route.fk
     symbols: [slr-decision, slr-remote-oracle?, slr-live-capture-receipt?, slr-side-channel-transcribe?, slr-receipt]
-  - file: form/form-stdlib/satsang-room-memory.fk
+  - file: form/form/form-stdlib/satsang-room-memory.fk
     symbols: [srm-mic-exclusive-carrier?, srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
-  - file: form/form-stdlib/satsang-health-memory.fk
+  - file: form/form/form-stdlib/satsang-health-memory.fk
     symbols: [shm-import-boundary?, shm-source-carrier?, shm-metric-kind?, shm-source-filter?, shm-trust-ok?, shm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
@@ -172,16 +172,16 @@ memory.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift` - generic host resource interface, detected resource doors, resolved platform carriers, and host-boundary receipt.
 - `experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift` - package tests.
 - `scripts/build_satsang_mac_app.sh` - `.app` bundle builder.
-- `form/form-stdlib/satsang-guidance-event.fk` - Form protocol.
-- `form/form-stdlib/tests/satsang-guidance-event-band.fk` - Form proof.
-- `form/form-stdlib/satsang-host-boundary.fk` - generic host ABI, detected resource-door, and forbidden runtime protocol.
-- `form/form-stdlib/tests/satsang-host-boundary-band.fk` - generic host ABI and detected resource-door proof.
-- `form/form-stdlib/satsang-listen-route.fk` - remote-last listen/transcribe route protocol.
-- `form/form-stdlib/tests/satsang-listen-route-band.fk` - remote-last route proof.
-- `form/form-stdlib/satsang-room-memory.fk` - explicit local trusted room-memory protocol.
-- `form/form-stdlib/tests/satsang-room-memory-band.fk` - trusted room-memory proof.
-- `form/form-stdlib/satsang-health-memory.fk` - explicit local trusted health-memory protocol.
-- `form/form-stdlib/tests/satsang-health-memory-band.fk` - trusted health-memory proof.
+- `form/form/form-stdlib/satsang-guidance-event.fk` - Form protocol.
+- `form/form/form-stdlib/tests/satsang-guidance-event-band.fk` - Form proof.
+- `form/form/form-stdlib/satsang-host-boundary.fk` - generic host ABI, detected resource-door, and forbidden runtime protocol.
+- `form/form/form-stdlib/tests/satsang-host-boundary-band.fk` - generic host ABI and detected resource-door proof.
+- `form/form/form-stdlib/satsang-listen-route.fk` - remote-last listen/transcribe route protocol.
+- `form/form/form-stdlib/tests/satsang-listen-route-band.fk` - remote-last route proof.
+- `form/form/form-stdlib/satsang-room-memory.fk` - explicit local trusted room-memory protocol.
+- `form/form/form-stdlib/tests/satsang-room-memory-band.fk` - trusted room-memory proof.
+- `form/form/form-stdlib/satsang-health-memory.fk` - explicit local trusted health-memory protocol.
+- `form/form/form-stdlib/tests/satsang-health-memory-band.fk` - trusted health-memory proof.
 - `docs/coherence-substrate/satsang-guidance-event.form` - teaching.
 - `docs/coherence-substrate/satsang-room-memory.form` - room-memory teaching.
 - `docs/coherence-substrate/satsang-health-memory.form` - health-memory teaching.
@@ -255,7 +255,7 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   side channel can attach to the already-open live capture stream.
 - The listener can only transcribe audio that reaches the selected macOS input
   device; system speaker playback may not loop back into the microphone.
-- The local Form/RAG lookup depends on a repo-local `form/form-cli` binary or a
+- The local Form/RAG lookup depends on a repo-local `form/form/form-cli` binary or a
   user-local `~/.local/bin/form-cli`. If neither exists, the request records
   that local lookup was unavailable before requesting remote oracle handling.
 - Trusted room memory is local file-backed memory. It recognizes recurring

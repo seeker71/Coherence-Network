@@ -6,19 +6,19 @@ source:
     symbols: [standard-receipt, c-bootstrap, toolchain-free, platforms]
   - file: docs/coherence-substrate/host-kernel.form
     symbols: [resource-as-offered-cell, organs-and-ports, host-resource-access]
-  - file: form/form-stdlib/resource-port.fk
+  - file: form/form/form-stdlib/resource-port.fk
     symbols: [port, act, sense, mk-resource]
-  - file: form/form-stdlib/tool-channel.fk
+  - file: form/form/form-stdlib/tool-channel.fk
     symbols: [tc-protocols, tc-tools]
-  - file: form/form-stdlib/hati-os-kernel-emit.fk
+  - file: form/form/form-stdlib/hati-os-kernel-emit.fk
     symbols: [fk_walk, fkc-flat, fkc-table-file, fks-table-file]
-  - file: form/form-stdlib/form-flatten.fk
+  - file: form/form/form-stdlib/form-flatten.fk
     symbols: [flt-ops]
-  - file: form/form-stdlib/fourth-flatten-driver.fk
+  - file: form/form/form-stdlib/fourth-flatten-driver.fk
     symbols: [ffd-one, ffd-loop]
-  - file: form/form-stdlib/rag-heal.fk
+  - file: form/form/form-stdlib/rag-heal.fk
     symbols: [rh-build, rh-heal, rh-dir-cells]
-  - file: form/form-stdlib/form-cli-main.fk
+  - file: form/form/form-stdlib/form-cli-main.fk
     symbols: [form-cli ask path]
 requirements:
   - "NO Go emission in the agent/runtime loop — fkwu is built from the C bootstrap (form-asm → macho/pe-coff/elf), tables are flattened by fkwu walking T_flat, bands run on fkwu only for the sovereignty receipt path"
@@ -39,7 +39,7 @@ constraints:
   - "Go/Rust/TS walkers remain proof siblings only — they never gate shipping or the sovereignty receipt path"
   - "Platform carriers may use host OS APIs (dirent, FindFirstFile, AAssetManager, etc.) inside fkwu emitted C — that is allowed per host-resource-access; the BODY stays Form-native"
   - "No parallel Python/bash resource layer — retiring bridges are named, not extended"
-  - "Local RAG corpus includes docs/coherence-substrate/*.form, specs/fkwu-native-host-resources.md, form/form-stdlib/host-resource-*.fk — indexed by rag-heal, not a separate store"
+  - "Local RAG corpus includes docs/coherence-substrate/*.form, specs/fkwu-native-host-resources.md, form/form/form-stdlib/host-resource-*.fk — indexed by rag-heal, not a separate store"
 ---
 
 > **Parent idea**: [agent-cli](../ideas/agent-cli.md)
@@ -103,14 +103,14 @@ Parallel: rag-heal → local index → form-cli ask (grounded retrieval)
 
 ## Files to create/modify
 
-- `form/form-stdlib/host-resource-interface.fk` (or `grammars/host-resource.bml`) — generic interfaces
-- `form/form-stdlib/host-resource-mac.fk` — mac implementations
-- `form/form-stdlib/host-resource-windows.fk` — windows implementations
-- `form/form-stdlib/host-resource-android.fk` — android implementations
-- `form/form-stdlib/hati-os-kernel-emit.fk` — platform dispatch arms; split table serializers (R2)
-- `form/form-stdlib/form-flatten.fk` — op table stays canonical
-- `form/form-stdlib/tests/host-resource-*-band.fk` — per-interface/per-platform witness bands
-- `form/form-stdlib/rag-heal.fk` — corpus paths for sovereignty docs
+- `form/form/form-stdlib/host-resource-interface.fk` (or `grammars/host-resource.bml`) — generic interfaces
+- `form/form/form-stdlib/host-resource-mac.fk` — mac implementations
+- `form/form/form-stdlib/host-resource-windows.fk` — windows implementations
+- `form/form/form-stdlib/host-resource-android.fk` — android implementations
+- `form/form/form-stdlib/hati-os-kernel-emit.fk` — platform dispatch arms; split table serializers (R2)
+- `form/form/form-stdlib/form-flatten.fk` — op table stays canonical
+- `form/form/form-stdlib/tests/host-resource-*-band.fk` — per-interface/per-platform witness bands
+- `form/form/form-stdlib/rag-heal.fk` — corpus paths for sovereignty docs
 - `docs/coherence-substrate/standard-receipt.form` — link this spec when rows turn observed
 - `docs/system_audit/commit_evidence_*_fkwu_native_host_resources.json` — receipt traces
 
@@ -133,7 +133,7 @@ Parallel: rag-heal → local index → form-cli ask (grounded retrieval)
 
 - A fresh agent on mac can run `form-cli ask "what is the standard receipt?"` and receive a **grounded** hit from the local index — no Python, no remote LLM.
 - The sovereignty receipt path (`build fkwu → flatten band → run`) completes with **zero Go** in the command trace.
-- `HostFilesystem` (and siblings) exist as BML interfaces with mac/windows/android impl files; `form/form-stdlib/tests/host-resource-fs-mac-band.fk` crosses four-way on mac via fkwu.
+- `HostFilesystem` (and siblings) exist as BML interfaces with mac/windows/android impl files; `form/form/form-stdlib/tests/host-resource-fs-mac-band.fk` crosses four-way on mac via fkwu.
 
 ## Verification
 

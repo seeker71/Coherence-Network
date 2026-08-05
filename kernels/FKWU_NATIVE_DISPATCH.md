@@ -15,7 +15,7 @@ the storage-port carrier the body already carries.
 
 ## The one abstraction: the carrier is the boundary
 
-[`storage-port.fk`](../form/form-stdlib/storage-port.fk) already names the answer:
+[`storage-port.fk`](../form/form/form-stdlib/storage-port.fk) already names the answer:
 **"a Port = a capability-contract (the operation shape) bound to a carrier."** A
 carrier is a record that *carries its bounded operation set as function values*
 (`mk-carrier name init put get has`); the port pulls the op from the carrier and
@@ -25,19 +25,19 @@ only call the ops the carrier it was handed exposes.
 
 Three facts make this load-bearing, each already four-way:
 
-- **Capability-contract** — [`storage-port.fk`](../form/form-stdlib/storage-port.fk)
+- **Capability-contract** — [`storage-port.fk`](../form/form/form-stdlib/storage-port.fk)
   is explicit that the carrier *is* the capability. The bounded vtable is the
   carrier record's `{init,put,get,has}`. A band holding a `db` carrier reaches
   exactly those ops on it — never `volatile_cell_*`, never `jit_*`, never another
   carrier.
-- **Substitutability** — [`substrate-core.fk`](../form/form-stdlib/substrate-core.fk)
+- **Substitutability** — [`substrate-core.fk`](../form/form/form-stdlib/substrate-core.fk)
   runs over memory, file, and Postgres carriers *unchanged*; the memory carrier
   is functional (deterministic), the pg carrier is the live floor. The band is
   identical; only the carrier value differs. This is the proof discipline,
   already crossing four-way (`substrate-core` in
-  [`fourth-arm-bands.txt`](../form/fourth-arm-bands.txt) via first-class indirect
+  [`fourth-arm-bands.txt`](../form/form/fourth-arm-bands.txt) via first-class indirect
   carrier dispatch).
-- **Value serialization exists** — [`persistence.fk`](../form/form-stdlib/persistence.fk)
+- **Value serialization exists** — [`persistence.fk`](../form/form/form-stdlib/persistence.fk)
   round-trips a Recipe tree to bytes and back through `write_form_binary` /
   `read_form_binary`, the kernel's durable-persistence format. The marshalling ABI
   is not invented; it is the format the kernel already persists the lattice with.
@@ -54,13 +54,13 @@ resolves one of two ways:
 
 1. **Form mirror rows** — pure ops (arithmetic, list, string stones, record
    fallbacks) are ordinary `defn` rows from
-   [`fourth-shim.fk`](../form/form-stdlib/fourth-shim.fk), prepended to every band.
+   [`fourth-shim.fk`](../form/form/form-stdlib/fourth-shim.fk), prepended to every band.
    fkwu walks them as a normal CALL. Deterministic, four-way by construction.
 2. **Emitted-C walker tags** — primitives are hard-coded tags in
-   [`hati-os-kernel-emit.fk`](../form/form-stdlib/hati-os-kernel-emit.fk). Tags
+   [`hati-os-kernel-emit.fk`](../form/form/form-stdlib/hati-os-kernel-emit.fk). Tags
    55–63 **already do real file I/O** (`open`/`read`/`write`) inlined as syscalls,
    with socket `extern`s present. The flatten encoding
-   ([`form-flatten.fk`](../form/form-stdlib/form-flatten.fk) `flt-ops`) makes a
+   ([`form-flatten.fk`](../form/form/form-stdlib/form-flatten.fk) `flt-ops`) makes a
    native call and a user call indistinguishable by tag.
 
 Those file-I/O tags are deliberately **fenced out of the four-way manifest** —
@@ -150,22 +150,22 @@ durable shape is **Go owns the front door + fkwu as accelerator** — Go keeps t
 listener, the pg handle table, headers, and context; fkwu walks the pure slices
 (offload) and, later, whole handler bands over host-bound carriers. "Route all
 *coverable* requests to the fourth kernel" means: every handler whose pure heart
-is in [`fourth-arm-bands.txt`](../form/fourth-arm-bands.txt), with its I/O boundary
+is in [`fourth-arm-bands.txt`](../form/form/fourth-arm-bands.txt), with its I/O boundary
 carried by the storage-port carrier — functional for proof, live for serve.
 
 ## Build order
 
 The input ABI is **bytes in `fk_src`**, read by the offloaded program with
-`fk-buf` (tag 17 — "the BMF cursor's eye", [`hati-os-kernel.fk`](../form/form-stdlib/hati-os-kernel.fk)).
+`fk-buf` (tag 17 — "the BMF cursor's eye", [`hati-os-kernel.fk`](../form/form/form-stdlib/hati-os-kernel.fk)).
 fk_src is the transient byte organ the server main already stages a socket
 request into; a serialized request+rows bundle rides the same buffer. Text
-parsed in-recipe via [`form-parse.fk`](../form/form-stdlib/form-parse.fk) (already
+parsed in-recipe via [`form-parse.fk`](../form/form/form-stdlib/form-parse.fk) (already
 in fkwu's chain) is the first ABI — *not* the durable `write_form_binary` format,
 which would need a new fkwu read arm and its own round-trip proof. (Grok review,
 2026-06-14.)
 
 1. **Carrier→fkwu loop + input channel — landed.**
-   - **1a:** `FkwuEval` ([`form/form-kernel-go/fkwu_bridge.go`](../form/form-kernel-go/fkwu_bridge.go))
+   - **1a:** `FkwuEval` ([`form/form/form-kernel-go/fkwu_bridge.go`](../form/form/form-kernel-go/fkwu_bridge.go))
      hands fkwu a pre-flattened table + scalar input; `TestFkwuOffloadBridge`
      proves it bit-for-bit against the in-process walker on the four-way
      `content-address` band.
@@ -180,7 +180,7 @@ which would need a new fkwu read arm and its own round-trip proof. (Grok review,
    long-lived fkwu process and measures the true round-trip. (Grok: subprocess on
    a hot route is theater.)
 3. **Input-carrying four-way proof harness — the honest gate.** An input-dependent
-   program cannot be proven four-way today: `form/validate.sh` invokes
+   program cannot be proven four-way today: `form/form/validate.sh` invokes
    `fkwu <table> 0` with no bundle, and `fk-buf`/tag-17 reads a settable buffer
    only on fkwu. The gate: give Go/Rust/TS the same settable-input read, and feed
    `validate.sh` the *identical* bundle to all four legs, comparing the result.
@@ -203,5 +203,5 @@ latency goal first and needs no host call.)
 First route targets: a pure-compute `/api/utils/*` handler proves the loop with no
 I/O; `/api/ideas` is the first DB-backed route — offload first (step 1), whole-band
 host-bound carrier later (steps 3–5). Routing policy falls out of
-[`fourth-arm-bands.txt`](../form/fourth-arm-bands.txt): handler band in the manifest
+[`fourth-arm-bands.txt`](../form/form/fourth-arm-bands.txt): handler band in the manifest
 → fkwu; else → Go (its existing JIT, no new features); else → Python fan-out.

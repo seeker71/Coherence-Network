@@ -20,7 +20,7 @@
       (write-receipt ?hidden-state ?selected-icon ?observer)
       (write-residual ?hidden-truth-not-shown))
     (proof-function fmf-hoffman-proof)
-    (proof-file "form/form-stdlib/field-model-form.fk")
+    (proof-file "form/form/form-stdlib/field-model-form.fk")
     (playground "web/lib/form-kernel/field-model-form.ts")
     (claim-boundary
       "The executable proof models observer-costed interface choice; it does not assert the ontology of conscious realism."))
@@ -39,7 +39,7 @@
       (receipt ?observer ?disturbance-cost))
     (proof-function fmf-bioelectric-proof)
     (proof-function fmf-intercell-proof)
-    (proof-file "form/form-stdlib/field-model-form.fk")
+    (proof-file "form/form/form-stdlib/field-model-form.fk")
     (claim-boundary
       "The proof executes voltage-pattern and receptor-threshold grammar only; anatomical prediction remains domain-validation work."))
 
@@ -55,7 +55,7 @@
       (write-residual ?meaning-not-carried)
       (write-receipt ?mapping ?observer))
     (proof-function fmf-grant-proof)
-    (proof-file "form/form-stdlib/field-model-form.fk")
+    (proof-file "form/form/form-stdlib/field-model-form.fk")
     (claim-boundary
       "The proof demonstrates repeatable cross-domain key mapping; it deliberately does not certify broader physics or biology claims."))
 
@@ -71,6 +71,6 @@
       (project-to-linear-trace ?sample)
       (write-residual ?unsampled-rules))
     (proof-function fmf-wolfram-proof)
-    (proof-file "form/form-stdlib/field-model-form.fk")
+    (proof-file "form/form/form-stdlib/field-model-form.fk")
     (claim-boundary
       "The proof models bounded observation of a larger rule space; it does not claim a physical theory has been validated.")))

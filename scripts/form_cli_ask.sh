@@ -17,7 +17,7 @@
 #   falls back to the intrinsic grounded-hit score.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 GO_ABS="$FORM/form-kernel-go/bin-go"
 [[ -x "$GO_ABS" ]] || (cd "$FORM/form-kernel-go" && go build -o bin-go .)
 GO="$GO_ABS"; STD="$FORM/form-stdlib"

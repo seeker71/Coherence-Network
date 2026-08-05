@@ -18,7 +18,7 @@
 
 ---
 
-## `form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` (1,044 LOC)
+## `form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` (1,044 LOC)
 
 **Date:** 2026-05-27 · **Status:** *residue in shape, coupled to parser*
 
@@ -84,7 +84,7 @@ its parser is.
 
 ---
 
-## `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` (342 LOC)
+## `form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` (342 LOC)
 
 **Date:** 2026-05-27 · **Status:** *triple-bound residue — test → parser → emitter*
 
@@ -97,7 +97,7 @@ emitter.
 
 ### What `python-bmf.fk` + the test bands already replace
 
-Eighteen Form-native test bands live in `form/form-stdlib/tests/`:
+Eighteen Form-native test bands live in `form/form/form-stdlib/tests/`:
 
 - `python-bmf-arithmetic-band.fk` · `python-bmf-attr-band.fk` · `python-bmf-class-band.fk`
 - `python-bmf-comprehension-band.fk` · `python-bmf-coverage.fk` · `python-bmf-decorator-band.fk`

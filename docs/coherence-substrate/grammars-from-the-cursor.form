@@ -4,7 +4,7 @@
 > languages: BML, Python, Go, Rust, C#, and Java each expressed as a small bag of
 > **(pattern ⇒ template)** rules over the cursor — no parse stack, no per-language
 > emit code — all generating the **same universal Form nodes** directly. Proven by
-> [`form/form-stdlib/tests/bmf-langs-band.fk`](../../form/form-stdlib/tests/bmf-langs-band.fk)
+> [`form/form/form-stdlib/tests/bmf-langs-band.fk`](../../form/form/form-stdlib/tests/bmf-langs-band.fk)
 > → `300`, `1 ok, 0 divergent` across Go/Rust/TS.
 
 ## The one move
@@ -100,7 +100,7 @@ coordinates, zero divergence across three kernels.
 - **The cursor reads any surface** — file, string, socket, cell, channel — and is
   whitespace-aware, so the grammars stay clean (no `ws` litter between tokens).
 - **Patterns are data** (`lit` / `cls` / `run` / `seq` / `alt` / `opt` / `cap` in
-  [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk)); a language is rule-data, not code.
+  [`bmf-core.fk`](../../form/form/form-stdlib/bmf-core.fk)); a language is rule-data, not code.
 - **Templates emit universal shapes** via `(bp "fndef")`, `(bp "if-then")`, … so
   content-addressing collapses equivalent constructs to one NodeID with no sameAs
   table and no normalize pass.
@@ -108,30 +108,30 @@ coordinates, zero divergence across three kernels.
 ## The recursive engine — shipped, and full grammars on it
 
 The two primitives the fixed-arity slice sidestepped are now in
-[`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk): a **grammar** of named
+[`bmf-grammar.fk`](../../form/form/form-stdlib/bmf-grammar.fk): a **grammar** of named
 rules with `ref` + recursion, general `rep` / `sep` repetition that captures a
 **list of sub-rule nodes**, and templates that `splice` one node or `splice*` a
 list. With it, the grammars above are no longer a sketch — they parse real source
 into universal trees, cross-kernel:
 
-- the **engine** itself — [`bmf-grammar-band.fk`](../../form/form-stdlib/tests/bmf-grammar-band.fk)
+- the **engine** itself — [`bmf-grammar-band.fk`](../../form/form/form-stdlib/tests/bmf-grammar-band.fk)
   `→ 300`: recursion, operator precedence, parenthesized nesting, separator-lists.
-- **full BML** ([`bml.fk`](../../form/form-stdlib/bml.fk)) —
-  [`bml-band.fk`](../../form/form-stdlib/tests/bml-band.fk) `→ 300`: class › section ›
+- **full BML** ([`bml.fk`](../../form/form/form-stdlib/bml.fk)) —
+  [`bml-band.fk`](../../form/form/form-stdlib/tests/bml-band.fk) `→ 300`: class › section ›
   method › statements (`let` / `if` / `return` / expr) › expressions (binary
   precedence, calls) parse a real BML class into universal nodes.
-- **Go + Java + BML converge at depth** ([`go.fk`](../../form/form-stdlib/go.fk),
-  [`java.fk`](../../form/form-stdlib/java.fk)) —
-  [`lang-convergence-band.fk`](../../form/form-stdlib/tests/lang-convergence-band.fk)
+- **Go + Java + BML converge at depth** ([`go.fk`](../../form/form/form-stdlib/go.fk),
+  [`java.fk`](../../form/form/form-stdlib/java.fk)) —
+  [`lang-convergence-band.fk`](../../form/form/form-stdlib/tests/lang-convergence-band.fk)
   `→ 300`: the same method in three surfaces (Go `func`+name-type+`if a {`, Java
   type-name+`if (a) {`, BML type-name+`if a {`) emits one identical `~fndef` tree.
 
 The statement + expression rules live once in
-[`lang-common.fk`](../../form/form-stdlib/lang-common.fk); each language supplies
+[`lang-common.fk`](../../form/form/form-stdlib/lang-common.fk); each language supplies
 only the few rules where its surface genuinely differs (method, param, if). That is
 the core-abstraction-first shape: one engine, one shared core, languages as the thin
 diff. **BML templates + generics are in** — generic types are type-applications
 (`Name<A,B>` → `~fncall`, nested), and template classes + generic methods capture
-their type parameters: [`bml-generics-band.fk`](../../form/form-stdlib/tests/bml-generics-band.fk)
+their type parameters: [`bml-generics-band.fk`](../../form/form/form-stdlib/tests/bml-generics-band.fk)
 `→ 300`. Remaining surface (Python / Rust / C# full grammars, the full statement
 set, class-as-`B_Class`) is more rule-data, not more engine.

@@ -742,7 +742,7 @@ services_to_rebuild() {
       web/*)           need_web=1 ;;
       pulse/*)         need_pulse=1 ;;
       form)                     need_api=1 ;;
-      form/form-stdlib/*)      need_api=1 ;;
+      form/form/form-stdlib/*)      need_api=1 ;;
       # scripts/ is mounted as content but also copied into the api image
       # at build time for the substrate ingester. Rebuild api when they change.
       scripts/*.py)    need_api=1 ;;
@@ -1007,22 +1007,22 @@ sync_field_docs() {
 sync_field_docs
 
 sync_form_stdlib() {
-  if [[ ! -d "$REPO_DIR/form/form-stdlib" ]]; then
-    log "form stdlib: no form/form-stdlib directory found (skipped)"
+  if [[ ! -d "$REPO_DIR/form/form/form-stdlib" ]]; then
+    log "form stdlib: no form/form/form-stdlib directory found (skipped)"
     return 0
   fi
 
   local changed
   changed="$(changed_paths_between "$DIFF_BASE" "$TARGET_SHA" 2>/dev/null || true)"
-  if ! grep -Eq '^(form$|form/form-stdlib/)' <<< "$changed"; then
+  if ! grep -Eq '^(form$|form/form/form-stdlib/)' <<< "$changed"; then
     log "form stdlib: no changes"
     return 0
   fi
 
-  log "form stdlib: syncing form/form-stdlib to api:/app/form/form-stdlib"
+  log "form stdlib: syncing form/form/form-stdlib to api:/app/form/form-stdlib"
   docker compose exec -T api sh -lc 'mkdir -p /app/form && rm -rf /app/form/form-stdlib' \
     2>&1 | tee -a "$LOG_FILE" || true
-  docker compose cp "$REPO_DIR/form/form-stdlib" api:/app/form/form-stdlib \
+  docker compose cp "$REPO_DIR/form/form/form-stdlib" api:/app/form/form-stdlib \
     2>&1 | tee -a "$LOG_FILE"
 }
 
@@ -1164,14 +1164,14 @@ run_substrate_ingest() {
 
   # Ingestable tissue: the .md content domains PLUS the substrate's own
   # shape-files (docs/coherence-substrate/*.form) and stdlib recipes
-  # (form/form-stdlib/**/*.fk). The latter two land as ARTIFACT cells so
+  # (form/form/form-stdlib/**/*.fk). The latter two land as ARTIFACT cells so
   # form-first attribution can resolve their NodeIDs from the live lattice
   # instead of from memory. They reach the substrate only through
   # ingest-paths (the `ingest`/`ingest --all` commands skip non-.md), so
   # the per-file loop below dispatches every path through ingest-paths.
   local changed
   changed="$(printf '%s\n' "$all_changed" \
-              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form-stdlib/.*\.fk$' \
+              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form/form-stdlib/.*\.fk$' \
               | while IFS= read -r path; do
                   [[ -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
                 done \
@@ -1209,7 +1209,7 @@ run_substrate_ingest() {
   ended="$(date +%s)"
   elapsed=$((ended - started))
   if [[ "$rc" -eq 0 ]] && grep -Eq \
-      '^(specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md|form/form-stdlib/.*\.fk)$' \
+      '^(specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md|form/form/form-stdlib/.*\.fk)$' \
       <<< "$changed"; then
     run_with_timeout "${SUBSTRATE_RAG_HEAL_TIMEOUT_SECONDS:-300}" \
       docker compose exec -T api sh -lc \

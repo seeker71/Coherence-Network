@@ -145,7 +145,7 @@ backprop; it is its precondition.
 
 ## Sources to walk further
 
-- **`form/form-stdlib/grammars/backprop-lens.fk`** — the term-by-term mapping and
+- **`form/form/form-stdlib/grammars/backprop-lens.fk`** — the term-by-term mapping and
   the proof that the operations agree: gradient = reverse edge, loss-driven
   update entered-from-the-output, canon-relative credit-assignment, vanishing
   gradient = absorbed push, momentum = the coherent escape (band 111111,

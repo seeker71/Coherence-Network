@@ -92,7 +92,7 @@
     (same-by-content what-one-kernel-proves-another-runs-by-node-id))     # validate.sh = cross-kernel equivalence
 
   # ── Boot — the kernel comes up by composing itself from the axioms ───
-  # RUNS: form/form-stdlib/boot.fk + tests/boot-band.fk (verdict 9, three-way) —
+  # RUNS: form/form/form-stdlib/boot.fk + tests/boot-band.fk (verdict 9, three-way) —
   # a .fkb image loads, the booted body's first act is to register a reachable
   # channel, one offer through it MINTS a strictly larger image (the boot
   # artifact never mutates), and the minted image boots.
@@ -156,6 +156,6 @@
 #     form-stdlib/persistence.fk form-stdlib/cell-registry.fk \
 #     form-stdlib/boot.fk form-stdlib/tests/boot-band.fk
 #   # The offered channels (cell<->cell):
-#   cd form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
+#   cd form/form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
 #   # After ingest:
 #   coh substrate form "?equivalent @recipe(kernel-self-composition)"

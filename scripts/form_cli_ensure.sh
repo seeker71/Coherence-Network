@@ -13,9 +13,9 @@
 # Usage: form_cli_ensure.sh [--install]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
+GO="$ROOT/form/form/form-kernel-go/bin-go"; STD="$ROOT/form/form/form-stdlib"
 DO_INSTALL=0; [ "${1:-}" = "--install" ] && DO_INSTALL=1
-[ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[ -x "$GO" ] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 # the form-cli's required oracles — lane / invocation / install command
 LANES="local-llm embed reason"

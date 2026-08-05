@@ -47,8 +47,8 @@
 ;     move waits only for sustained observation, not for self-trust.
 ;
 ; Executable surface:
-;   form/form-stdlib/satsang-flip-witness.fk
-;   form/form-stdlib/tests/satsang-flip-witness-band.fk
+;   form/form/form-stdlib/satsang-flip-witness.fk
+;   form/form/form-stdlib/tests/satsang-flip-witness-band.fk
 ;
 ; Proof command:
 ;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk

@@ -163,7 +163,7 @@ do the healing. The healing belongs to the body, in its own time.
 
 ## Sources to walk further
 
-- **`form/form-stdlib/grammars/bidirectional-flow.fk`** — the bidirectional
+- **`form/form/form-stdlib/grammars/bidirectional-flow.fk`** — the bidirectional
   reading of the living equation: every forward edge has a reverse edge;
   enter-from-the-output; the basin and the absorbed single push; the
   canon-relative unblock lever; re-attribution as workability; and the

@@ -28,7 +28,7 @@ from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-GO_BIN = REPO / "form" / "form-kernel-go" / "bin-go"
+GO_BIN = REPO / "form" / "form" / "form-kernel-go" / "bin-go"
 
 # NodeID textual form from the Go kernel: @pkg.level.type.instance
 NID_RE = re.compile(r"@(\d+)\.(\d+)\.(\d+)\.(\d+)")

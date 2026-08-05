@@ -2,7 +2,7 @@
 
 The fourth kernel `fkwu` (the emitted universal walker) does not read `.fk`
 source. It reads a **pre-flattened integer node-table** — one per band — cached
-under `form/form-stdlib/.cache/fourth/t-<stem>-<hash>.txt`. This guide is the
+under `form/form/form-stdlib/.cache/fourth/t-<stem>-<hash>.txt`. This guide is the
 human map of those tables: what they are, how to look inside one, and how to
 use them. The byte-exact authority stays the emitter source
 ([`form-flatten.fk`](form-flatten.fk), [`hati-os-kernel-emit.fk`](hati-os-kernel-emit.fk));
@@ -104,8 +104,8 @@ Read the **source it was flattened from**, never the integers:
 
 ```bash
 # the stem names the band; its header names the full source chain
-head -1 form/form-stdlib/tests/<stem>-band.fk      # ; preludes: core … <port>
-grep '^<stem> ' form/fourth-arm-bands.txt           # emitter (fkc/fks) + expected verdict
+head -1 form/form/form-stdlib/tests/<stem>-band.fk      # ; preludes: core … <port>
+grep '^<stem> ' form/form/fourth-arm-bands.txt           # emitter (fkc/fks) + expected verdict
 ```
 
 - what it **means** → the `.fk` sources in that `; preludes:` chain.

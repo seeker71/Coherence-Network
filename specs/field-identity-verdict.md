@@ -4,12 +4,12 @@ idea_id: federation-and-nodes
 status: active
 decision: approved-2026-06-23-identity-at-the-edges
 source:
-  - file: form/form-stdlib/field-identity.fk
+  - file: form/form/form-stdlib/field-identity.fk
     symbols: [fiv-verdict, fiv-accept?, fiv-should-pin?, fiv-impersonation?]
-  - file: form/form-stdlib/tests/field-identity-band.fk
+  - file: form/form/form-stdlib/tests/field-identity-band.fk
   - file: specs/field-relay-always-open-connection.md
   - file: docs/coherence-substrate/channel-interface-consent.form
-  - file: form/form-stdlib/sha256.fk
+  - file: form/form/form-stdlib/sha256.fk
 requirements:
   - "A four-way-proven identity-verdict recipe decides trust over crypto RESULTS (signature-ok, NodeID-match, delegation-ok, pin-state) — the decision is Form, the crypto is a carrier, exactly the fr-route pattern"
   - "The verdict distinguishes TRUSTED, FIRST_USE_PIN (TOFU), UNVERIFIED (unsigned, routed-not-trusted), and three rejects: pin-conflict, NodeID-mismatch, bad-delegation"
@@ -45,7 +45,7 @@ the field can finally tell people apart by their keys, with no central registry 
 
 ## Requirements
 
-- [x] **R1 — the verdict recipe, four-way + native.** `form/form-stdlib/field-identity.fk` defines
+- [x] **R1 — the verdict recipe, four-way + native.** `form/form/form-stdlib/field-identity.fk` defines
   `fiv-verdict(nodeid_match, sig_ok, deleg_ok, pin_state)` → one of 1 TRUSTED · 2 FIRST_USE_PIN ·
   3 UNVERIFIED · 4 REJECT_PIN_CONFLICT · 5 REJECT_NODEID_MISMATCH · 6 REJECT_DELEGATION, plus
   `fiv-accept?` / `fiv-should-pin?` / `fiv-impersonation?`. Proven 511 four-way + native binary.
@@ -60,9 +60,9 @@ the field can finally tell people apart by their keys, with no central registry 
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/field-identity.fk` — new: the identity-verdict decision recipe.
-- `form/form-stdlib/tests/field-identity-band.fk` — new: four-way + native proof band (511).
-- `form/fourth-arm-bands.txt` — modify: register the `field-identity` row.
+- `form/form/form-stdlib/field-identity.fk` — new: the identity-verdict decision recipe.
+- `form/form/form-stdlib/tests/field-identity-band.fk` — new: four-way + native proof band (511).
+- `form/form/fourth-arm-bands.txt` — modify: register the `field-identity` row.
 - `specs/field-identity-verdict.md` — this contract.
 
 ## Acceptance Tests

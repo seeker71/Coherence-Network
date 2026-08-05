@@ -19,8 +19,8 @@
   (lineage
     (kin federated-exchange-learning.form membership-as-recognition.form oracle-distillation-learning.form
          form-cli-membrane.fk lc-cognitive-sovereignty living-vision.form)
-    (proof form/form-stdlib/borrowed-oracle-dividend.fk
-           form/form-stdlib/tests/borrowed-oracle-dividend-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (proof form/form/form-stdlib/borrowed-oracle-dividend.fk
+           form/form/form-stdlib/tests/borrowed-oracle-dividend-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
     (named-with urs sema))
 
   ; the dividend — what the body gains when a contributor's own agent reasons over it
@@ -31,7 +31,7 @@
 
   ; the gate — borrowed-oracle-dividend.fk
   (gate
-    (recipe form/form-stdlib/borrowed-oracle-dividend.fk)
+    (recipe form/form/form-stdlib/borrowed-oracle-dividend.fk)
     (our-oracle-cost (zero when self-funded) (one when we-paid))
     (trainable?      (sample AND aligned))                 ; freq gate decides worth-training-on
     (learning-gain   (= trainable?))                       ; NO member term — that absence IS the proof

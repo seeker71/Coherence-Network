@@ -15,9 +15,9 @@ stay in parity by construction.
 
 Emits one source file per kernel (committed upstream; regenerate there when
 either JSON changes):
-  form/form-kernel-go/bp_table.go      — var bpTable map[string][4]uint32
-  form/form-kernel-rust/src/bp_table.rs — pub static BP_ENTRIES: &[(&str,[u32;4])]
-  form/form-kernel-ts/src/bp_table.ts   — export const BP_TABLE: Record<string,[…]>
+  form/form/form-kernel-go/bp_table.go      — var bpTable map[string][4]uint32
+  form/form/form-kernel-rust/src/bp_table.rs — pub static BP_ENTRIES: &[(&str,[u32;4])]
+  form/form/form-kernel-ts/src/bp_table.ts   — export const BP_TABLE: Record<string,[…]>
 
 A name maps to one coordinate; the kernel-owned categories/primitives win over
 the registry on the rare name collision. Canonical names and historical aliases
@@ -33,12 +33,12 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-STDLIB = ROOT / "form" / "form-stdlib"
+STDLIB = ROOT / "form" / "form" / "form-stdlib"
 ONTOLOGY = STDLIB / "form-ontology.json"
 REGISTRY = STDLIB / "blueprint-registry.json"
-GO = ROOT / "form" / "form-kernel-go" / "bp_table.go"
-RS = ROOT / "form" / "form-kernel-rust" / "src" / "bp_table.rs"
-TS = ROOT / "form" / "form-kernel-ts" / "src" / "bp_table.ts"
+GO = ROOT / "form" / "form" / "form-kernel-go" / "bp_table.go"
+RS = ROOT / "form" / "form" / "form-kernel-rust" / "src" / "bp_table.rs"
+TS = ROOT / "form" / "form" / "form-kernel-ts" / "src" / "bp_table.ts"
 
 
 def _form_is_superproject_gitlink() -> bool:

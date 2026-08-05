@@ -2,7 +2,7 @@
 # satsang_voice.py — a live, fully-local voice door into the satsang circle.
 #
 # This is a CARRIER, authored last. The BODY is the satsang circle
-# (form/form-stdlib/satsang.fk) and its law: any question welcome, the circle
+# (form/form/form-stdlib/satsang.fk) and its law: any question welcome, the circle
 # witnesses, silence is whole, an offering is offered — never imposed. This
 # script only HEARS the room and SHOWS what the body offers back. The offering
 # *shapes* (observation / emerging question / inner insight / offering) come from

@@ -6,10 +6,10 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ROUTE_BINDING_PATH = ROOT / "form" / "form-stdlib" / "native-mutation-route-side-effects.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "native-mutation-route-side-effects-band.fk"
-INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-mutation-route-side-effects-live.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "native-mutation-route-side-effects-test.sh"
+ROUTE_BINDING_PATH = ROOT / "form" / "form" / "form-stdlib" / "native-mutation-route-side-effects.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "native-mutation-route-side-effects-band.fk"
+INTEGRATION_PATH = ROOT / "form" / "form" / "form-stdlib" / "integration" / "native-mutation-route-side-effects-live.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "native-mutation-route-side-effects-test.sh"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
 AB_HARNESS_PATH = ROOT / "deploy" / "kernel-router" / "mutation_ab_observation_harness.py"
@@ -47,7 +47,7 @@ def test_route_side_effect_binding_band_executes_across_sibling_kernels():
             "form-stdlib/native-mutation-route-side-effects.fk",
             "form-stdlib/tests/native-mutation-route-side-effects-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -100,7 +100,7 @@ def test_ab_gate_next_evidence_is_deployed_canary_after_public_gate():
 
 def test_route_forms_name_route_side_effect_binding_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/scripts/native-mutation-route-side-effects-test.sh" in text
+        assert "form/form/scripts/native-mutation-route-side-effects-test.sh" in text
         assert "native route side-effect binding proven" in text
         assert "application graph mutation and side-effect execution in one Form-native route runner" in text
         assert "implicit native invitation" in text

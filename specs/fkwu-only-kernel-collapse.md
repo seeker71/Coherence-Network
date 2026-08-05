@@ -4,7 +4,7 @@ status: active
 source:
   - file: form/runtime/fkwu-uni.c
     symbols: []
-  - file: form/form-stdlib/primitive-registry.fk
+  - file: form/form/form-stdlib/primitive-registry.fk
     symbols: [prim, prim-name]
   - file: scripts/fkwu_run.sh
     symbols: []
@@ -17,7 +17,7 @@ requirements:
   - "New host-io and kernel surface lands in Form stdlib + registry first; sibling kernels frozen"
   - "Production proof executes fkwu; sibling runs are explicitly labeled primitive conformance checks"
 done_when:
-  - "Phase 0 gate: validate_fkwu_native_surface.py passes in CI on every form/validate.sh run"
+  - "Phase 0 gate: validate_fkwu_native_surface.py passes in CI on every form/form/validate.sh run"
   - "Phase 1: native-op-manifest is source for flt-ops rows (generated or single .fk manifest); zero manual flt-ops edits for new natives"
   - "Phase 2: fkwu BUILD uses form-asm (macho/pe/elf), not clang; table flatten runs on fkwu, not Go bin-go"
   - "Phase 3: form-cli built from c-bootstrap fkwu; scripts/form_fs_fkwu_receipt.sh class of receipts pass on mac/windows/android"
@@ -43,7 +43,7 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 
 ## Requirements
 
-- [ ] **R1 — Gate on every validate:** `validate_fkwu_native_surface.py` runs at start of `form/validate.sh` and fails on tag drift or missing `fkc-flat` coverage.
+- [ ] **R1 — Gate on every validate:** `validate_fkwu_native_surface.py` runs at start of `form/form/validate.sh` and fails on tag drift or missing `fkc-flat` coverage.
 - [ ] **R2 — Manifest is source of truth:** `native-op-manifest.fk` drives `flt-ops` via generator; no hand-edited per-op tags without manifest row.
 - [x] **R3 — Sibling boundary:** Go/Rust/TS participate only in primitive/native-assumption conformance; production execution and observation require `fkwu`.
 - [ ] **R4 — Receipt honesty:** Standard receipt rows stay `pending` until c-bootstrap fkwu + form-cli traces exist on mac/windows/android.
@@ -64,8 +64,8 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 
 **Goal:** Stop the bleeding; catch tag/flatten/walker drift before it ships.
 
-- [x] `form/scripts/validate_fkwu_native_surface.py` — tag uniqueness, `fkc-arm-slots` bound, unary/tri natives have `fkc-flat` coverage
-- [x] Run gate at start of `form/validate.sh`
+- [x] `form/form/scripts/validate_fkwu_native_surface.py` — tag uniqueness, `fkc-arm-slots` bound, unary/tri natives have `fkc-flat` coverage
+- [x] Run gate at start of `form/form/validate.sh`
 - [x] Document frozen sibling policy in agent guides (`docs/shared/agent-start-packet.md` pointer)
 
 **Exit:** Gate green on main; form-fs and existing fourth-arm bands still four-way.
@@ -74,7 +74,7 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 
 **Goal:** Replace hand-edited `flt-ops` with a **single manifest** derived from `primitive-registry.fk`.
 
-- [x] `form/form-stdlib/native-op-manifest.fk` — `(name arity dispatch-class pool-index|tag)` 
+- [x] `form/form/form-stdlib/native-op-manifest.fk` — `(name arity dispatch-class pool-index|tag)` 
 - [x] Generator: manifest → `flt-ops` slice + fkwu pool metadata (script or Form recipe)
 - [ ] Extend gate: every lane-1 host-io primitive in registry has manifest row + fkwu coverage
 - [ ] **Arity-class dispatch** design: tags for UNARY/BINARY/TRI/QUAD host pool, not per-primitive opcodes (target end of Phase 1)
@@ -131,20 +131,20 @@ bootstrap bytes (form-asm, once)
 
 ## Files to Create/Modify
 
-- `form/scripts/validate_fkwu_native_surface.py` — Phase 0 gate
-- `form/scripts/gen_flt_ops_from_manifest.py` — manifest → flt-ops generator
-- `form/scripts/sync_native_op_manifest.py` — drift check between manifest and flt-ops
-- `form/form-stdlib/native-op-manifest.fk` — canonical native catalog
-- `form/form-stdlib/form-fs.fk` — first host-io band proving tags 200/202
-- `form/scripts/fourth-arm.sh` — emit chain + Go flatten fallback
-- `form/validate.sh` — invoke gates before band runs
+- `form/form/scripts/validate_fkwu_native_surface.py` — Phase 0 gate
+- `form/form/scripts/gen_flt_ops_from_manifest.py` — manifest → flt-ops generator
+- `form/form/scripts/sync_native_op_manifest.py` — drift check between manifest and flt-ops
+- `form/form/form-stdlib/native-op-manifest.fk` — canonical native catalog
+- `form/form/form-stdlib/form-fs.fk` — first host-io band proving tags 200/202
+- `form/form/scripts/fourth-arm.sh` — emit chain + Go flatten fallback
+- `form/form/validate.sh` — invoke gates before band runs
 - `specs/fkwu-only-kernel-collapse.md` — this plan
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/form-fs-band.fk` — four-way 16383 on fkwu with fs_is_dir + source_inventory
-- `form/scripts/validate_fkwu_native_surface.py` — exits 0 with 107 manifest rows
-- `form/scripts/gen_flt_ops_from_manifest.py` — exits 0 aligned with manifest
+- `form/form/form-stdlib/tests/form-fs-band.fk` — four-way 16383 on fkwu with fs_is_dir + source_inventory
+- `form/form/scripts/validate_fkwu_native_surface.py` — exits 0 with 107 manifest rows
+- `form/form/scripts/gen_flt_ops_from_manifest.py` — exits 0 aligned with manifest
 
 ## Verification
 
@@ -165,21 +165,21 @@ cd form && python3 scripts/validate_fkwu_native_surface.py \
 
 ## Risks and Assumptions
 
-- **Assumption:** bin-go remains available for maintainer regen (`form/scripts/regen_fkwu_bootstrap.sh`) until Phase 2.
-- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by `form/scripts/regen_t_flat.sh` (fks bootstrap + executable Adler verdict smoke) and Go fallback when T_flat is absent.
+- **Assumption:** bin-go remains available for maintainer regen (`form/form/scripts/regen_fkwu_bootstrap.sh`) until Phase 2.
+- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by `form/form/scripts/regen_t_flat.sh` (fks bootstrap + executable Adler verdict smoke) and Go fallback when T_flat is absent.
 
 ## Known Gaps
 
-- **Follow-up:** T_flat maintainer regen still uses bin-go once (`form/scripts/regen_t_flat.sh`); fkwu-only regen bus-errors on full driver flatten (arena lift — Phase 2).
+- **Follow-up:** T_flat maintainer regen still uses bin-go once (`form/form/scripts/regen_t_flat.sh`); fkwu-only regen bus-errors on full driver flatten (arena lift — Phase 2).
 - **Follow-up:** Arity-class dispatch replacing per-op tags (end of Phase 1).
-- **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `form/scripts/regen_fkwu_bootstrap.sh`.
+- **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `form/form/scripts/regen_fkwu_bootstrap.sh`.
 
 ## Research inputs
 
 - `docs/coherence-substrate/standard-receipt.form` — receipt bar
 - `docs/coherence-substrate/primitive-registry.form` — native discipline
 - `docs/coherence-substrate/kernel-self-composition.form` — self-replace theorem (retire jit.go citations)
-- `form/fourth-arm-bands.txt` — current fkwu proof floor
+- `form/form/fourth-arm-bands.txt` — current fkwu proof floor
 - `scripts/form_fs_fkwu_receipt.sh` — toolchain-free RUN pattern
 
 ## See also

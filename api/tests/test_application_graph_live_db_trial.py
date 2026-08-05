@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "application-graph-live-db.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "application-graph-live-db-test.sh"
+INTEGRATION_PATH = ROOT / "form" / "form" / "form-stdlib" / "integration" / "application-graph-live-db.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "application-graph-live-db-test.sh"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
 
@@ -55,7 +55,7 @@ def test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing():
 
 def test_route_forms_name_live_db_trial_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/scripts/application-graph-live-db-test.sh" in text
+        assert "form/form/scripts/application-graph-live-db-test.sh" in text
         assert "live DB execution trial" in text
         assert "supports the bounded mutable public flip" in text
         assert "does not perform the all-traffic front-door flip" in text

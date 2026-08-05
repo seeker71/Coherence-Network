@@ -136,7 +136,7 @@ def test_kernel_router_dockerfile_changes_are_runtime_evidence() -> None:
 
 def test_form_validate_requires_fourth_arm_or_gap_evidence() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
         "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
@@ -171,7 +171,7 @@ def test_form_gitlink_is_runtime_and_form_evidence_without_matching_similar_name
 
 def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
         "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
@@ -185,7 +185,7 @@ def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
 
 def test_form_validate_accepts_fourth_arm_proof() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
         "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"

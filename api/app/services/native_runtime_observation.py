@@ -35,7 +35,7 @@ class NativeRuntimeObservationError(RuntimeError):
 
 def _root() -> Path:
     api_root = Path(__file__).resolve().parents[2]
-    if (api_root / "form" / "form-cli").is_file():
+    if (api_root / "form" / "form" / "form-cli").is_file():
         return api_root
     return api_root.parent
 
@@ -85,6 +85,7 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
     committed = (
         root
         / "form"
+        / "form"
         / "form-stdlib"
         / "bootstrap"
         / f"form-cli-{system}-{machine}"
@@ -99,13 +100,13 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
 def _selected_form_cli_binary(root: Path) -> Path:
     """Return the host-native carrier selected by the bootstrap proof.
 
-    Production images place their built carrier at ``form/form-cli`` beside
+    Production images place their built carrier at ``form/form/form-cli`` beside
     its digest authority.  Source checkouts instead keep host-specific
     carriers outside the pinned submodule and record the exact selection in a
     receipt.  Reading that receipt is essential on Linux/Windows runners,
-    where the convenience ``form/form-cli`` file may target another host.
+    where the convenience ``form/form/form-cli`` file may target another host.
     """
-    image_binary = root / "form" / "form-cli"
+    image_binary = root / "form" / "form" / "form-cli"
     if (root / "form" / "form-cli.sha256").is_file():
         return image_binary
 
@@ -145,7 +146,7 @@ def _selected_form_cli_binary(root: Path) -> Path:
     if _sha256_file(binary) != binary_sha:
         raise NativeRuntimeObservationError("selected form-cli carrier digest mismatch")
     source_digest_file = (
-        root / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
     )
     if source_digest_file.read_text(encoding="ascii").strip() != source_sha:
         raise NativeRuntimeObservationError("selected form-cli source digest mismatch")
@@ -181,10 +182,11 @@ def _observe_form_cli(
     root: Path, *, challenge_input: str | None = None
 ) -> dict[str, Any]:
     binary = _selected_form_cli_binary(root)
-    table = root / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
-    stamp_file = root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp"
+    table = root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
+    stamp_file = root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp"
     source_digest_file = (
         root
+        / "form"
         / "form"
         / "form-stdlib"
         / "bootstrap"
@@ -309,16 +311,17 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
 
 def _artifact_fingerprint(root: Path) -> str:
     paths = [
-        root / "form" / "form-cli",
+        root / "form" / "form" / "form-cli",
         root / "form" / "form-cli.sha256",
         root / ".cache" / "form-cli-native" / "selected.json",
-        root / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp",
+        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp",
         root
+        / "form"
         / "form"
         / "form-stdlib"
         / "bootstrap"
         / "form-cli.source.sha256",
-        root / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt",
+        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt",
         root / "bin" / "form-cli",
         root / "bin" / "form-cli.sha256",
     ]

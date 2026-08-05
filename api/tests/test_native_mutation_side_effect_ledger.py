@@ -48,30 +48,30 @@ def test_python_parity_entries_cite_python_sources_and_form_carriers():
             "python_parity_effect",
             "api/app/routers/ideas.py::create_idea",
             "api/app/services/idea_hierarchy.py::set_parent_idea",
-            "form/form-stdlib/native-mutation-side-effects.fk::nms-repair-parent-edge",
+            "form/form/form-stdlib/native-mutation-side-effects.fk::nms-repair-parent-edge",
         ),
         "spec-delete-edge-cleanup": (
             "python_parity_effect",
             "api/app/services/graph_service.py::delete_node",
-            "form/form-stdlib/application-graph-node-port.fk::agn-delete-node",
+            "form/form/form-stdlib/application-graph-node-port.fk::agn-delete-node",
         ),
         "cache-invalidation-receipt": (
             "python_parity_effect",
             "api/app/services/idea_service.py::_invalidate_ideas_cache",
             "api/app/services/spec_registry_service.py::_invalidate_spec_cache",
-            "form/form-stdlib/native-mutation-side-effects.fk::nms-record-cache-invalidation",
+            "form/form/form-stdlib/native-mutation-side-effects.fk::nms-record-cache-invalidation",
         ),
         "contributor-key-audit": (
             "python_parity_effect",
             "api/app/services/contributor_key_store.py::verify",
-            "form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key",
+            "form/form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key",
         ),
         "idea-valuation-audit-ledger": (
             "python_parity_effect",
             "api/app/services/idea_write_ops.py::update_idea",
             "api/app/services/idea_write_ops.py::update_ideas_batch",
             "api/app/services/audit_ledger_service.py::append_entry",
-            "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
+            "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
         ),
     }
 
@@ -103,8 +103,8 @@ def test_audit_ledger_parity_is_carried_before_ordinary_flip():
         "api/app/services/idea_write_ops.py::update_idea",
         "api/app/services/idea_write_ops.py::update_ideas_batch",
         "api/app/services/audit_ledger_service.py::append_entry",
-        "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
-        "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+        "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
+        "form/form/scripts/native-idea-valuation-audit-ledger-test.sh",
         "idea valuation audit-ledger parity is carried Form-native",
     ):
         assert required in entry or required in text

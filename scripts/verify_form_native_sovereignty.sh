@@ -12,7 +12,7 @@
 # Exit 0 = receipt observed on this host. Exit 1 = failure with stderr detail.
 set -euo pipefail
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 CLI="$FORM/form-cli"
 fail() { echo "FAIL: $1" >&2; exit 1; }
 note() { echo "  $1" >&2; }

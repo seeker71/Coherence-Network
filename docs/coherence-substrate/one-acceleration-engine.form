@@ -104,11 +104,11 @@
 ;   root-caused (host-compiler FMA on the non-bit-identical float plugin, adopted
 ;   mid-fold) and tracked HERE to its specific fix: M0 above (fkwu's float self-JIT —
 ;   the bit-identical native that makes the bespoke plugin unnecessary). The band stays
-;   out of form/fourth-arm-bands.txt until that lands — owned, named, not silently
+;   out of form/form/fourth-arm-bands.txt until that lands — owned, named, not silently
 ;   omitted. The FORM_JIT_HOT knob (jit.go) lets a workload run the deterministic walk meanwhile.
 ;
 ; KIN: jit-tensor-emit.fk (the emitter-as-recipe, bit-identical by construction) ·
-;   form/form-kernel-go/fkwu_bridge_test.go (the in-process offload bridge, proven) ·
+;   form/form/form-kernel-go/fkwu_bridge_test.go (the in-process offload bridge, proven) ·
 ;   hati-os-kernel-emit.fk (fkwu's C emitted by Form) · hati-os-native-cli-emit.fk
 ;   (emit→clang→exec) · form-native-models.form (the JIT-realization-gap note: the
 ;   in-process Go plugin dispatch never realized a speedup either — the emit-compile-exec

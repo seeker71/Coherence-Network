@@ -2,15 +2,15 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-audit-ledger-ddl-sql, nival-valuation-change-insert-sql, nival-record-valuation-change, nival-record-batch-valuation-change, nival-run-idea-update-with-valuation-audit, nival-audit-ledger-test]
-  - file: form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk
+  - file: form/form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk
     symbols: []
-  - file: form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk
+  - file: form/form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk
     symbols: []
-  - file: form/scripts/native-idea-valuation-audit-ledger-test.sh
+  - file: form/form/scripts/native-idea-valuation-audit-ledger-test.sh
     symbols: []
-  - file: form/form-stdlib/native-mutation-public-gate.fk
+  - file: form/form/form-stdlib/native-mutation-public-gate.fk
     symbols: [nmpg-run-idea-update-public-gate]
   - file: api/tests/test_native_idea_valuation_audit_ledger.py
     symbols: [test_audit_ledger_form_names_python_parity_and_hash_chain, test_audit_ledger_band_executes_across_sibling_kernels, test_audit_ledger_live_script_runs_or_skips_when_pg_missing, test_audit_ledger_live_integration_verifies_hash_chain_and_route_binding, test_ledger_and_route_forms_mark_audit_parity_carried]
@@ -27,10 +27,10 @@ requirements:
   - "The public-gate Form layer exposes an idea update runner over the audit-ledger carrier."
   - "The side-effect ledger moves idea-valuation-audit-ledger from missing parity to Python parity effect."
 done_when:
-  - 'file_exists("form/form-stdlib/native-idea-valuation-audit-ledger.fk")'
-  - 'file_exists("form/scripts/native-idea-valuation-audit-ledger-test.sh")'
+  - 'file_exists("form/form/form-stdlib/native-idea-valuation-audit-ledger.fk")'
+  - 'file_exists("form/form/scripts/native-idea-valuation-audit-ledger-test.sh")'
   - 'pytest_passes("api/tests/test_native_idea_valuation_audit_ledger.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk && cd .. && form/scripts/native-idea-valuation-audit-ledger-test.sh && cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk && cd .. && form/form/scripts/native-idea-valuation-audit-ledger-test.sh && cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -83,15 +83,15 @@ service code.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/native-idea-valuation-audit-ledger.fk` - audit-ledger SQL
+- `form/form/form-stdlib/native-idea-valuation-audit-ledger.fk` - audit-ledger SQL
   carrier and route-runner wrapper.
-- `form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk` -
+- `form/form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk` -
   sibling-kernel proof.
-- `form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk` -
+- `form/form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk` -
   live Postgres readback proof.
-- `form/scripts/native-idea-valuation-audit-ledger-test.sh` - throwaway
+- `form/form/scripts/native-idea-valuation-audit-ledger-test.sh` - throwaway
   Postgres harness.
-- `form/form-stdlib/native-mutation-public-gate.fk` - idea update public-gate
+- `form/form/form-stdlib/native-mutation-public-gate.fk` - idea update public-gate
   runner over audit-ledger parity.
 - `api/tests/test_native_idea_valuation_audit_ledger.py` - repository proof.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
@@ -107,13 +107,13 @@ service code.
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_audit_ledger_live_script_runs_or_skips_when_pg_missing`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_audit_ledger_live_integration_verifies_hash_chain_and_route_binding`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
-- Manual validation: `form/scripts/native-idea-valuation-audit-ledger-test.sh`
+- Manual validation: `form/form/scripts/native-idea-valuation-audit-ledger-test.sh`
 
 ## Verification
 
 ```bash
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk
-cd .. && form/scripts/native-idea-valuation-audit-ledger-test.sh
+cd .. && form/form/scripts/native-idea-valuation-audit-ledger-test.sh
 cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-idea-valuation-audit-ledger.md
 ```

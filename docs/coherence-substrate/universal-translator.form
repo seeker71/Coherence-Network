@@ -352,8 +352,8 @@ defn translate_c_major_triad_walk =
 #
 # The runnable Form receipt is:
 #
-#   form/form-stdlib/meaning-translation-receipt.fk
-#   form/form-stdlib/tests/meaning-translation-receipt-band.fk
+#   form/form/form-stdlib/meaning-translation-receipt.fk
+#   form/form/form-stdlib/tests/meaning-translation-receipt-band.fk
 #
 # This narrows "any software to any language with guaranteed meaning" into an
 # inspectable kernel contract:

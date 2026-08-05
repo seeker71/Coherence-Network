@@ -91,7 +91,7 @@ verification is mode-aware.
 
 ## The minimum demonstration
 
-`form/form-samples/cross-modal/13-divergence-as-doorway/doorway-open.fk`:
+`form/form/form-samples/cross-modal/13-divergence-as-doorway/doorway-open.fk`:
 
 A Form recipe that reads `/proc/self/stat` and sums its bytes mod
 1000. Each kernel process has its own PID, startup time, memory

@@ -13,7 +13,7 @@ Companion docs: [`PYTHON_PIPELINE_STATUS.md`](PYTHON_PIPELINE_STATUS.md),
 [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md),
 [`PHASE_A_FIRING_QUESTIONS.md`](PHASE_A_FIRING_QUESTIONS.md),
 [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md),
-[`form/kernel-roadmap.md`](../form/kernel-roadmap.md),
+[`form/form/kernel-roadmap.md`](../form/form/kernel-roadmap.md),
 [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md),
 [`lc-grammar-is-the-universal-recipe`](../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md),
 [`lc-form-kernel-runtime-visualizer`](../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md),
@@ -40,7 +40,7 @@ the stale roadmap.
   over the shared identity — opened in #2124 with the seed concept
   [`lc-same-shape-different-articulation`](../docs/vision-kb/concepts/lc-same-shape-different-articulation.md) (#2123).
 - **JSON-as-recipe in default gate** — *LANDED (#2105)*, closing
-  cross-modal forward-map walk #5 ([`form/form-samples/cross-modal/NEXT_BREATHS.md`](../form/form-samples/cross-modal/NEXT_BREATHS.md)).
+  cross-modal forward-map walk #5 ([`form/form/form-samples/cross-modal/NEXT_BREATHS.md`](../form/form/form-samples/cross-modal/NEXT_BREATHS.md)).
   `./validate.sh` now exercises the grammar-driven JSON parser
   three-way on every run.
 - **Audio-as-recipe** — *LANDED (#2108)*, closing cross-modal forward-map walk #1.
@@ -153,9 +153,9 @@ aligned is the body's own attestation that the ice is overweight.
 
 The body carries:
 
-- `form/form-stdlib/emits/python-native.fk` (593 LOC) — the destination shape
-- `form/form-stdlib/seedbank/emits/python.fk` (composted/preserved) — the older shape
-- `form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` (1,044 LOC) — the bootstrap TS path
+- `form/form/form-stdlib/emits/python-native.fk` (593 LOC) — the destination shape
+- `form/form/form-stdlib/seedbank/emits/python.fk` (composted/preserved) — the older shape
+- `form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` (1,044 LOC) — the bootstrap TS path
 - `kernels/python_bmf/sdk.py` (306 LOC) + composted `emit_python.py` history
 
 The seedbank discipline names these as honest preservation, not duplication —
@@ -296,7 +296,7 @@ it's available in three kernels today. Every grammar in
 
 ### 4.6 The seedbank discipline
 
-`form/form-stdlib/seedbank/README.md` names what preservation looks like
+`form/form/form-stdlib/seedbank/README.md` names what preservation looks like
 honestly: nothing here is active, nothing here is abandoned, each file has
 a *next living form* named. This is composting-with-care made operational.
 Replicate this discipline wherever the body holds "we will return to this

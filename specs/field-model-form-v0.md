@@ -5,25 +5,25 @@ source:
   - file: docs/coherence-substrate/field-model-form.form
   - file: docs/coherence-substrate/field-domain-grammars.form
   - file: docs/coherence-substrate/field-lineage-grammars.form
-  - file: form/form-stdlib/field-model-form.fk
+  - file: form/form/form-stdlib/field-model-form.fk
     symbols: [fmf-proof-score, fmf-quantum-rain-proof, fmf-hoffman-proof, fmf-bioelectric-proof, fmf-grant-proof, fmf-wolfram-proof]
-  - file: form/form-stdlib/tests/field-model-form-band.fk
+  - file: form/form/form-stdlib/tests/field-model-form-band.fk
     symbols: [field-model-form-band]
-  - file: form/form-stdlib/field-model-form-runtime.fk
+  - file: form/form/form-stdlib/field-model-form-runtime.fk
     symbols: [fmfrt-public-runtime-proof-score, fmfrt-field-step, fmfrt-intervene, fmfrt-reverse-receipt, fmfrt-lift-sequence, fmfrt-project-sequence]
-  - file: form/form-stdlib/tests/field-model-form-runtime-band.fk
+  - file: form/form/form-stdlib/tests/field-model-form-runtime-band.fk
     symbols: [field-model-form-runtime-band]
-  - file: form/form-stdlib/field-auto-research.fk
+  - file: form/form/form-stdlib/field-auto-research.fk
     symbols: [fmar-public-auto-research-proof-score, fmar-public-perturbation-proof-score, fmar-run-dna-motif-research, fmar-run-dna-perturbation-research, fmar-dna-motif-research-io, fmar-dna-perturbation-research-io, fmar-residual-to-question]
-  - file: form/form-stdlib/tests/field-auto-research-band.fk
+  - file: form/form/form-stdlib/tests/field-auto-research-band.fk
     symbols: [field-auto-research-band]
-  - file: form/form-stdlib/tests/field-auto-research-perturbation-band.fk
+  - file: form/form/form-stdlib/tests/field-auto-research-perturbation-band.fk
     symbols: [field-auto-research-perturbation-band]
-  - file: form/form-kernel-ts/src/kernel.ts
+  - file: form/form/form-kernel-ts/src/kernel.ts
     symbols: [RBasic.FIELD, RBasic.DELTA, RBasic.RECEIPT, RBasic.RESIDUAL]
-  - file: form/form-kernel-ts/src/field.ts
+  - file: form/form/form-kernel-ts/src/field.ts
     symbols: [makeFieldBlueprint(), makeFieldCell(), makeFieldRule(), fieldStep(), intervene(), reverseReceipt()]
-  - file: form/form-kernel-ts/src/field.test.ts
+  - file: form/form/form-kernel-ts/src/field.test.ts
     symbols: [DNA/RNA sequence field, chemistry graph field, bioelectric cell graph, cell signaling graph, plant communication field, electric field graph, conversation attention graph]
   - file: web/lib/form-kernel/field-model-form.ts
     symbols: [FIELD_MODEL_FORM_DEMO_SOURCE]
@@ -37,7 +37,7 @@ requirements:
   - "FMF has executable proof for all FMF primitive constructors across sibling kernels plus a canonical BML-authored runtime proof and TypeScript/browser adapter proofs."
   - "Auto research compiles questions, sources, evidence, residuals, and next questions into FMF field execution with transparent receipts."
 done_when:
-  - "cd form/form-kernel-ts && npx tsx src/field.test.ts passes"
+  - "cd form/form/form-kernel-ts && npx tsx src/field.test.ts passes"
   - "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk returns 93"
   - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
   - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
@@ -46,7 +46,7 @@ done_when:
   - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
   - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
   - "cd web && npm test -- form-kernel-field-runtime.test.ts passes"
-  - "cd form/form-kernel-ts && npm run check passes"
+  - "cd form/form/form-kernel-ts && npm run check passes"
   - "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md passes"
 test: "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk"
 constraints:
@@ -65,7 +65,7 @@ Field Model Form extends the Form substrate from stream execution into field exe
 
 - [x] **R1**: FMF declares `FieldBlueprint`, `FieldRecipe`, and `FieldCell` in `docs/coherence-substrate/field-model-form.form`, preserving the existing Blueprint/Recipe/Cell trinity while adding carrier, topology, fiber, boundary, units, observer, cost, residual, evidence, and consent.
 - [x] **R2**: FMF execution uses bounded logical simultaneity: every step freezes a snapshot, matches rules against that snapshot, prices candidates, chooses by observer policy, emits deltas, resolves conflicts, commits atomically, and writes a receipt plus residual.
-- [x] **R3**: The TypeScript kernel surface reserves RBasic slots for the FMF primitives and implements a vertical slice in `form/form-kernel-ts/src/field.ts`.
+- [x] **R3**: The TypeScript kernel surface reserves RBasic slots for the FMF primitives and implements a vertical slice in `form/form/form-kernel-ts/src/field.ts`.
 - [x] **R4**: Domain grammars exist for DNA/RNA, chemistry, bioelectricity, cell signaling, plant communication, electricity/magnetism, interspecies/conversation, and quantum-rain surfaces in `docs/coherence-substrate/field-domain-grammars.form`.
 - [x] **R5**: Executable proof uses actual referenced data where practical: NCBI RefSeq HBB CDS prefix for DNA/RNA and PubChem CID 2244 aspirin SMILES/formula for chemistry.
 - [x] **R6**: Bidirectional proof includes at least one exact lift/project round trip and one intervention/reverse receipt round trip.
@@ -123,22 +123,22 @@ FieldRule:
 - `docs/coherence-substrate/field-domain-grammars.form` — domain-specific FMF grammars and examples.
 - `docs/coherence-substrate/field-lineage-grammars.form` — named lineage lenses with evidence labels and claim boundaries.
 - `docs/coherence-substrate/INDEX.md` — substrate map edge for the new FMF tissue.
-- `form/form-kernel-ts/src/kernel.ts` — FMF RBasic primitive slots.
+- `form/form/form-kernel-ts/src/kernel.ts` — FMF RBasic primitive slots.
 - `api/app/services/substrate/category.py` — matching FMF RBasic vocabulary.
-- `form/form-kernel-go/main.go` — FMF RBasic constants, trace names, and native constructors.
-- `form/form-kernel-rust/src/main.rs` — FMF RBasic constants, trace names, and native constructors.
-- `form/form-kernel-ts/src/field.ts` — executable FMF vertical slice.
-- `form/form-kernel-ts/src/field.test.ts` — cross-domain proof.
-- `form/form-stdlib/field-model-form.fk` — cross-kernel FMF proof library.
-- `form/form-stdlib/tests/field-model-form-band.fk` — sibling-kernel FMF band proof.
-- `form/form-stdlib/field-model-form-runtime.fk` — canonical BML-authored FMF runtime: fieldStep, intervention, reverse receipt, lift/project, conflict residuals, and observer-costed rule choice.
-- `form/form-stdlib/tests/field-model-form-runtime-band.fk` — sibling-kernel BML runtime band proof returning `63`.
-- `form/form-stdlib/tests/field-model-form-runtime-lift-band.fk` — focused lift/project proof.
-- `form/form-stdlib/tests/field-model-form-runtime-intervene-band.fk` — focused intervention proof.
-- `form/form-stdlib/tests/field-model-form-runtime-conflict-band.fk` — focused conflict residual proof.
-- `form/form-stdlib/field-auto-research.fk` — Form-native auto-research layer over FMF: question, source, evidence, residual, answer, and residual-to-question execution.
-- `form/form-stdlib/tests/field-auto-research-band.fk` — sibling-kernel auto-research proof returning `127`.
-- `form/form-stdlib/tests/field-auto-research-perturbation-band.fk` — sibling-kernel observation-to-perturbation proof returning `255`.
+- `form/form/form-kernel-go/main.go` — FMF RBasic constants, trace names, and native constructors.
+- `form/form/form-kernel-rust/src/main.rs` — FMF RBasic constants, trace names, and native constructors.
+- `form/form/form-kernel-ts/src/field.ts` — executable FMF vertical slice.
+- `form/form/form-kernel-ts/src/field.test.ts` — cross-domain proof.
+- `form/form/form-stdlib/field-model-form.fk` — cross-kernel FMF proof library.
+- `form/form/form-stdlib/tests/field-model-form-band.fk` — sibling-kernel FMF band proof.
+- `form/form/form-stdlib/field-model-form-runtime.fk` — canonical BML-authored FMF runtime: fieldStep, intervention, reverse receipt, lift/project, conflict residuals, and observer-costed rule choice.
+- `form/form/form-stdlib/tests/field-model-form-runtime-band.fk` — sibling-kernel BML runtime band proof returning `63`.
+- `form/form/form-stdlib/tests/field-model-form-runtime-lift-band.fk` — focused lift/project proof.
+- `form/form/form-stdlib/tests/field-model-form-runtime-intervene-band.fk` — focused intervention proof.
+- `form/form/form-stdlib/tests/field-model-form-runtime-conflict-band.fk` — focused conflict residual proof.
+- `form/form/form-stdlib/field-auto-research.fk` — Form-native auto-research layer over FMF: question, source, evidence, residual, answer, and residual-to-question execution.
+- `form/form/form-stdlib/tests/field-auto-research-band.fk` — sibling-kernel auto-research proof returning `127`.
+- `form/form/form-stdlib/tests/field-auto-research-perturbation-band.fk` — sibling-kernel observation-to-perturbation proof returning `255`.
 - `web/lib/form-kernel/field-model-form.ts` — public playground proof source.
 - `web/lib/form-kernel/field-runtime.ts` — browser-local executable FMF field-step runtime.
 - `web/lib/form-kernel/client.ts` — curated local-kernel example registry.
@@ -147,7 +147,7 @@ FieldRule:
 
 ## Acceptance Tests
 
-- `cd form/form-kernel-ts && npx tsx src/field.test.ts`
+- `cd form/form/form-kernel-ts && npx tsx src/field.test.ts`
 - `cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
 - `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
@@ -156,16 +156,16 @@ FieldRule:
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
 - `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
 - `cd web && npm test -- form-kernel-field-runtime.test.ts`
-- `cd form/form-kernel-ts && npm run check`
+- `cd form/form/form-kernel-ts && npm run check`
 - `python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md`
 - `PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh`
 
 ## Verification
 
 ```bash
-cd form/form-kernel-ts && npm install
-cd form/form-kernel-ts && npm run check
-cd form/form-kernel-ts && npx tsx src/field.test.ts
+cd form/form/form-kernel-ts && npm install
+cd form/form/form-kernel-ts && npm run check
+cd form/form/form-kernel-ts && npx tsx src/field.test.ts
 cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
 cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk

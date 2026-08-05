@@ -3,12 +3,12 @@
 (learned-model-service
   (lineage
     (rests-on native-presence.form http-server.fk affine-train.fk channel.fk cell-sync-transport.form)
-    (model-handler form/form-stdlib/model-service.fk)
-    (middleware form/form-stdlib/http-layer.fk)
-    (assembly form/form-stdlib/presence-service.fk)
-    (proof-core form/form-stdlib/tests/model-serve-core-band.fk -> 15 four-way)
-    (proof-service form/form-stdlib/tests/model-service-band.fk -> 255 three-way)
-    (proof-wire form/form-stdlib/tests/presence-service-band.fk -> 127 three-way)
+    (model-handler form/form/form-stdlib/model-service.fk)
+    (middleware form/form/form-stdlib/http-layer.fk)
+    (assembly form/form/form-stdlib/presence-service.fk)
+    (proof-core form/form/form-stdlib/tests/model-serve-core-band.fk -> 15 four-way)
+    (proof-service form/form/form-stdlib/tests/model-service-band.fk -> 255 three-way)
+    (proof-wire form/form/form-stdlib/tests/presence-service-band.fk -> 127 three-way)
     (federation scripts/federation_service.ps1 -> status pass))
 
   (purpose

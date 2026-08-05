@@ -15,7 +15,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 RS_BIN="$FORMDIR/form-kernel-rust/target/release/form-kernel-rust"
 TS_MAIN="$FORMDIR/form-kernel-ts/src/main.ts"

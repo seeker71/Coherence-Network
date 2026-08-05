@@ -20,7 +20,7 @@ near-zero cost; only a genuine miss earns the remote reasoning.
 
 This skill is the invokable form of [`form-first-reasoning.form`](../../docs/coherence-substrate/form-first-reasoning.form).
 Its **decision** is a four-way-proven recipe
-([`form-first-router.fk`](../../form/form-stdlib/form-first-router.fk) → 511 on
+([`form-first-router.fk`](../../form/form/form-stdlib/form-first-router.fk) → 511 on
 Go/Rust/TS/fkwu); the lookup that fills `grounded` is a thin, swappable carrier.
 
 ## The loop, per thought
@@ -58,9 +58,9 @@ Go/Rust/TS/fkwu); the lookup that fills `grounded` is a thin, swappable carrier.
    scripts/native_thought_receipt.sh escalated frontier   -         "<the thought>"    # rented
    ```
    **This runs on the form-native lane.** The logic is Form
-   ([`native-thought-receipt.fk`](../../form/form-stdlib/native-thought-receipt.fk)):
+   ([`native-thought-receipt.fk`](../../form/form/form-stdlib/native-thought-receipt.fk)):
    it decides honesty with the proven gate
-   ([`sovereignty-receipt.fk`](../../form/form-stdlib/sovereignty-receipt.fk) → 255
+   ([`sovereignty-receipt.fk`](../../form/form/form-stdlib/sovereignty-receipt.fk) → 255
    four-way), JSON-escapes in Form, and appends via host-io (`file_append_bytes`).
    It is flattened and **executed by fkwu — the 4th kernel emitted from Form and
    compiled native from C, no Go/Rust/Python in the runtime path**
@@ -108,5 +108,5 @@ grounding alone (no body-holdable kind) never earns a relay either.
 
 - [`form-cli`](../form-cli/SKILL.md) — the local-first organism this door routes through.
 - [`form-first-reasoning.form`](../../docs/coherence-substrate/form-first-reasoning.form) — the teaching.
-- [`form-first-router.fk`](../../form/form-stdlib/form-first-router.fk) — the decision, four-way at 511.
+- [`form-first-router.fk`](../../form/form/form-stdlib/form-first-router.fk) — the decision, four-way at 511.
 - [`lc-cognitive-sovereignty`](../../docs/vision-kb/concepts/lc-cognitive-sovereignty.md) — the why.

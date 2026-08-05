@@ -12,7 +12,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-FORM="$HERE/form"
+FORM="$HERE/form/form"
 BIN="$FORM/form-kernel-go/bin-go"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

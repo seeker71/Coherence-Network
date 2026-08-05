@@ -23,7 +23,7 @@ on:
       - 'bin/form-cli'
       - 'bin/form-cli.sha256'
       - 'form'
-      - 'form/form-stdlib/**'
+      - 'form/form/form-stdlib/**'
       - 'kernels/python_bmf/**'
   schedule:
     # Refresh the full independent observation well inside its 24-hour TTL.

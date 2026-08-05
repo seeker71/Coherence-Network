@@ -2,15 +2,15 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/native-mutation-side-effects.fk
+  - file: form/form/form-stdlib/native-mutation-side-effects.fk
     symbols: [nms-receipts-ddl-sql, nms-record-cache-invalidation, nms-repair-parent-edge, nms-audit-contributor-key, nms-record-rollback-receipt, nms-side-effects-sql-test]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/tests/native-mutation-side-effects-band.fk
+  - file: form/form/form-stdlib/tests/native-mutation-side-effects-band.fk
     symbols: []
-  - file: form/form-stdlib/integration/native-mutation-side-effects-live.fk
+  - file: form/form/form-stdlib/integration/native-mutation-side-effects-live.fk
     symbols: []
-  - file: form/scripts/native-mutation-side-effects-test.sh
+  - file: form/form/scripts/native-mutation-side-effects-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_side_effects_form.py
     symbols: [test_native_side_effects_band_executes_across_sibling_kernels, test_native_side_effects_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_side_effect_execution_carrier_after_bounded_flip]
@@ -29,11 +29,11 @@ requirements:
   - "Route docs and the A/B observation gate name route binding as a separate follow-up boundary."
   - "The side-effect ledger separates Python parity effects from reversible gate receipts so side-effect proof does not justify side effects."
 done_when:
-  - 'file_exists("form/form-stdlib/native-mutation-side-effects.fk")'
+  - 'file_exists("form/form/form-stdlib/native-mutation-side-effects.fk")'
   - 'file_exists("docs/coherence-substrate/native-mutation-side-effect-ledger.form")'
-  - 'file_exists("form/scripts/native-mutation-side-effects-test.sh")'
+  - 'file_exists("form/form/scripts/native-mutation-side-effects-test.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_side_effects_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk && cd .. && form/scripts/native-mutation-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk && cd .. && form/form/scripts/native-mutation-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -87,13 +87,13 @@ classified as Python parity or reversible gate safety.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/native-mutation-side-effects.fk` - durable side-effect SQL
+- `form/form/form-stdlib/native-mutation-side-effects.fk` - durable side-effect SQL
   builders and `pg_exec` wrappers.
-- `form/form-stdlib/tests/native-mutation-side-effects-band.fk` - sibling-kernel
+- `form/form/form-stdlib/tests/native-mutation-side-effects-band.fk` - sibling-kernel
   SQL-shape proof.
-- `form/form-stdlib/integration/native-mutation-side-effects-live.fk` - live
+- `form/form/form-stdlib/integration/native-mutation-side-effects-live.fk` - live
   Postgres readback integration.
-- `form/scripts/native-mutation-side-effects-test.sh` - throwaway Postgres
+- `form/form/scripts/native-mutation-side-effects-test.sh` - throwaway Postgres
   harness.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
   source-classified keep/delete ledger for mutable side effects.
@@ -115,13 +115,13 @@ classified as Python parity or reversible gate safety.
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_ledger_declares_anti_circular_decision_rule`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_recommends_live_db_trial_after_full_confidence`
-- Manual validation: `form/scripts/native-mutation-side-effects-test.sh`
+- Manual validation: `form/form/scripts/native-mutation-side-effects-test.sh`
 
 ## Verification
 
 ```bash
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk
-cd .. && form/scripts/native-mutation-side-effects-test.sh
+cd .. && form/form/scripts/native-mutation-side-effects-test.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md
 ```

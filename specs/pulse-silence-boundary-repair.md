@@ -2,22 +2,22 @@
 idea_id: pipeline-reliability
 status: done
 source:
-  - file: form/form-stdlib/sovereign-boundary-protocol.fk
+  - file: form/form/form-stdlib/sovereign-boundary-protocol.fk
     symbols: [sbp-evidence, sbp-choice, sbp-can-re-enter?, sbp-boundary-receipt]
-  - file: form/form-stdlib/pulse-boundary-repair.fk
+  - file: form/form/form-stdlib/pulse-boundary-repair.fk
     symbols: [pbr-evidence, pbr-generic-choice, pbr-boundary-receipt, pbr-decision-valid?]
-  - file: form/form-stdlib/tests/sovereign-boundary-protocol-band.fk
+  - file: form/form/form-stdlib/tests/sovereign-boundary-protocol-band.fk
     symbols: [sovereign-boundary-protocol-band-score]
-  - file: form/form-stdlib/tests/pulse-boundary-repair-band.fk
+  - file: form/form/form-stdlib/tests/pulse-boundary-repair-band.fk
     symbols: [pulse-boundary-repair-band-score]
-  - file: form/form-stdlib/source-compiler.fk
+  - file: form/form/form-stdlib/source-compiler.fk
     symbols: [fsc-compiler-error, fsc-compile-form-bml-def-recipe, fsc-compile-form-bml-let-recipe]
-  - file: form/form-kernel-go/main.go
-  - file: form/form-kernel-rust/src/main.rs
-  - file: form/form-kernel-ts/src/kernel.ts
-  - file: form/form-kernel-ts/src/main.ts
-  - file: form/form-kernel-go/server.go
-  - file: form/form-kernel-go/server_test.go
+  - file: form/form/form-kernel-go/main.go
+  - file: form/form/form-kernel-rust/src/main.rs
+  - file: form/form/form-kernel-ts/src/kernel.ts
+  - file: form/form/form-kernel-ts/src/main.ts
+  - file: form/form/form-kernel-go/server.go
+  - file: form/form/form-kernel-go/server_test.go
   - file: pulse/pulse_app/analysis.py
     symbols: [BoundaryRepairReceipt, reconcile_all_silences, reconcile_silences, overall_status_with_open_silences]
   - file: pulse/pulse_app/storage.py
@@ -94,17 +94,17 @@ The generic Form receipt records:
 
 ## Files Modified
 
-- `form/form-stdlib/sovereign-boundary-protocol.fk` — names the reusable allow / stop / witness / re-enter protocol.
-- `form/form-stdlib/pulse-boundary-repair.fk` — maps pulse silence evidence into the generic boundary protocol.
-- `form/form-stdlib/tests/sovereign-boundary-protocol-band.fk` — proves the generic protocol across source and binary kernels.
-- `form/form-stdlib/tests/pulse-boundary-repair-band.fk` — proves pulse is a specialization of the generic protocol.
-- `form/form-stdlib/source-compiler.fk` — reports malformed BML definition and let cuts with source lines.
-- `form/form-kernel-go/main.go` — bounds-checks string access and writes source-bearing crash traces for recovered CLI panics.
-- `form/form-kernel-rust/src/main.rs` — bounds-checks string access and writes source-bearing crash traces from the panic hook.
-- `form/form-kernel-ts/src/kernel.ts` — bounds-checks string access and exposes `form_error` for compiler diagnostics.
-- `form/form-kernel-ts/src/main.ts` — writes source-bearing crash traces from the CLI catch path.
-- `form/form-kernel-go/server.go` — aligns source-compile preludes and converts source-compiler panics to returned errors.
-- `form/form-kernel-go/server_test.go` — proves malformed BML is inspectable through `source_compile_last_error`.
+- `form/form/form-stdlib/sovereign-boundary-protocol.fk` — names the reusable allow / stop / witness / re-enter protocol.
+- `form/form/form-stdlib/pulse-boundary-repair.fk` — maps pulse silence evidence into the generic boundary protocol.
+- `form/form/form-stdlib/tests/sovereign-boundary-protocol-band.fk` — proves the generic protocol across source and binary kernels.
+- `form/form/form-stdlib/tests/pulse-boundary-repair-band.fk` — proves pulse is a specialization of the generic protocol.
+- `form/form/form-stdlib/source-compiler.fk` — reports malformed BML definition and let cuts with source lines.
+- `form/form/form-kernel-go/main.go` — bounds-checks string access and writes source-bearing crash traces for recovered CLI panics.
+- `form/form/form-kernel-rust/src/main.rs` — bounds-checks string access and writes source-bearing crash traces from the panic hook.
+- `form/form/form-kernel-ts/src/kernel.ts` — bounds-checks string access and exposes `form_error` for compiler diagnostics.
+- `form/form/form-kernel-ts/src/main.ts` — writes source-bearing crash traces from the CLI catch path.
+- `form/form/form-kernel-go/server.go` — aligns source-compile preludes and converts source-compiler panics to returned errors.
+- `form/form/form-kernel-go/server_test.go` — proves malformed BML is inspectable through `source_compile_last_error`.
 - `pulse/pulse_app/analysis.py` — adds the deployed repair receipt, all-organ reconciliation, and contradiction guard.
 - `pulse/pulse_app/storage.py` — lets `Store.close_silence()` preserve a closure note.
 - `pulse/pulse_app/main.py` — reconciles all open silences before `/pulse/now` reads them.
@@ -126,9 +126,9 @@ The generic Form receipt records:
 cd pulse && python3 -m pytest -q
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk
 cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk
-cd form/form-kernel-go && go test ./...
-cd form/form-kernel-rust && cargo test --quiet
-cd form/form-kernel-ts && npm run check
+cd form/form/form-kernel-go && go test ./...
+cd form/form/form-kernel-rust && cargo test --quiet
+cd form/form/form-kernel-ts && npm run check
 ```
 
 Expected result:

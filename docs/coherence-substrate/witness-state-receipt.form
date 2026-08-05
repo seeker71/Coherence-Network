@@ -3,9 +3,9 @@
 (witness-state-receipt
   (lineage
     (rests-on android-mesh-learning.form llm-feature-channel-floor.form)
-    (recipe form/form-stdlib/witness-state-receipt.fk)
-    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 67108863)
-    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 67108863))
+    (recipe form/form/form-stdlib/witness-state-receipt.fk)
+    (proof form/form/form-stdlib/tests/witness-state-receipt-band.fk -> 67108863)
+    (fourth-arm form/form/fourth-arm-bands.txt -> witness-state-receipt fks 67108863))
 
   (purpose
     "Turn live Mac witness /state counters into deterministic Form-native receipt rows."

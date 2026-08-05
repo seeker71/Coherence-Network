@@ -102,9 +102,9 @@ offering made from what is already here.
 ## Run on the Body
 
 The transcript has a Form run-face:
-[`world-changing-body-run.fk`](../../../form/form-stdlib/world-changing-body-run.fk).
+[`world-changing-body-run.fk`](../../../form/form/form-stdlib/world-changing-body-run.fk).
 It specializes the shared
-[`teaching-run-on-body.fk`](../../../form/form-stdlib/teaching-run-on-body.fk)
+[`teaching-run-on-body.fk`](../../../form/form/form-stdlib/teaching-run-on-body.fk)
 dispatcher. The floor is the transcript's observed markers; the north
 star is a common teaching-to-body path where many transmissions share
 one run grammar.

@@ -25,7 +25,7 @@ core toward more elegant, flexible, adaptable, sovereign runtime tissue.
 platform, with the standard receipt in
 `docs/coherence-substrate/standard-receipt.form` as the graduation bar.
 Phased collapse plan: [`specs/fkwu-only-kernel-collapse.md`](../specs/fkwu-only-kernel-collapse.md)
-(Phase 0 gate: `form/scripts/validate_fkwu_native_surface.py`).
+(Phase 0 gate: `form/form/scripts/validate_fkwu_native_surface.py`).
 
 ## In-Scope Work
 

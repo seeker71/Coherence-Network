@@ -1,7 +1,7 @@
 // Browser-local Field Model Form runtime.
 //
 // This mirrors the canonical BML runtime in
-// form/form-stdlib/field-model-form-runtime.fk while binding to the
+// form/form/form-stdlib/field-model-form-runtime.fk while binding to the
 // browser-vendored kernel used by /substrate/form.
 
 import {
@@ -10,7 +10,7 @@ import {
   RBasic,
   nodeKey,
   type NodeID,
-} from "../../../form/form-kernel-ts/src/kernel.ts";
+} from "../../../form/form/form-kernel-ts/src/kernel.ts";
 
 export const FIELD_RUNTIME_PUBLIC_MARKER = "field-model-form-browser-runtime-proof:4";
 

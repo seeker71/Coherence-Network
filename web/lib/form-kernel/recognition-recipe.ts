@@ -1,13 +1,13 @@
 // recognition-recipe.ts — the recognize sense, run in-browser on the TS Form kernel.
 //
-// SOURCE OF TRUTH: form/form-stdlib/nearest-shape.fk + form/form-stdlib/recognition.fk
+// SOURCE OF TRUTH: form/form/form-stdlib/nearest-shape.fk + form/form/form-stdlib/recognition.fk
 // (four-way 63). Verbatim recipe TEXT, run as-is on the same kernel that proves the
 // band — not a TypeScript reimplementation. recognition depends on nearest-shape, so
 // both are bundled and wrapped into one (do ...) program with the witness. The web
 // The browser kernel is imported from form/; this recipe text remains a
 // consumer-owned application program, not kernel authority.
-import { Frame, Kernel, Trace, walk } from "../../../form/form-kernel-ts/src/kernel.ts";
-import { readAll } from "../../../form/form-kernel-ts/src/reader.ts";
+import { Frame, Kernel, Trace, walk } from "../../../form/form/form-kernel-ts/src/kernel.ts";
+import { readAll } from "../../../form/form/form-kernel-ts/src/reader.ts";
 
 export const NEAREST_SHAPE_RECIPE = String.raw`
 ; nearest-shape.fk — the body's OWN classifier, built from core primitives: content-addressing as recognition.

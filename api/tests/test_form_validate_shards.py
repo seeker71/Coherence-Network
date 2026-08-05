@@ -50,7 +50,7 @@ def test_nested_kernel_path_still_selects_full_suite(monkeypatch):
     monkeypatch.setattr(
         form_validate_shards,
         "_changed_paths",
-        lambda _ref: {"form/form-kernel-rust/src/lib.rs"},
+        lambda _ref: {"form/form/form-kernel-rust/src/lib.rs"},
     )
 
     assert form_validate_shards._select_changed([], "base") is None
@@ -62,7 +62,7 @@ def test_nested_stdlib_path_still_selects_dependent_workloads(monkeypatch):
     monkeypatch.setattr(
         form_validate_shards,
         "_changed_paths",
-        lambda _ref: {"form/form-stdlib/core.fk"},
+        lambda _ref: {"form/form/form-stdlib/core.fk"},
     )
 
     assert form_validate_shards._select_changed([dependent, unrelated], "base") == [dependent]

@@ -10,6 +10,7 @@ from pathlib import Path
 CANONICAL = (
     Path(__file__).resolve().parents[1]
     / "form"
+    / "form"
     / "scripts"
     / "verify_kernel_conformance.py"
 )

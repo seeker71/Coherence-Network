@@ -112,4 +112,4 @@
 #     form-stdlib/tests/arrival-pack-resolve-band.fk         # → 31 three-way (resolves losslessly)
 #   # rebuild + re-measure from the live arrival corpus (coverage/closure/round-trip self-checked):
 #   python3 scripts/build_arrival_symbol_pack.py             # → coverage=true closed=true roundtrip=true 1.69× MDL
-#   head form/form-stdlib/arrival-symbol-pack.txt            # the pack data (index = symbol)
+#   head form/form/form-stdlib/arrival-symbol-pack.txt            # the pack data (index = symbol)

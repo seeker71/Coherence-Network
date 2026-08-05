@@ -5,7 +5,7 @@ Android. A shell script, launchd plist, PowerShell wrapper, Android service,
 ffmpeg process, Whisper process, driver, or OS API may carry resource access,
 but none of those is the decision-maker.
 
-The decision-maker is `form/form-stdlib/native-host-instance.fk`, now reachable
+The decision-maker is `form/form/form-stdlib/native-host-instance.fk`, now reachable
 through the self-contained native `form-cli` command:
 
 ```text
@@ -20,7 +20,7 @@ native-host-instance|platform|native|listening|sharing|transcribing|
 surprise-count|learned-count|decision|share-route
 ```
 
-The native presence body in `form/native/presence/form_presence_host.c` supplies
+The native presence body in `form/form/native/presence/form_presence_host.c` supplies
 an always-on tick (`FORM_PRESENCE_TICKS=0`) for hosts that need a persistent C
 process, while Android packages the same C-bootstrapped `form-cli` as
 `libform_cli_exec.so` and executes it from `nativeLibraryDir`. Those processes
@@ -52,7 +52,7 @@ streams, and choose actions from Form readings. Shell/PowerShell/launchd and OS
 services remain carriers for process supervision and hardware access; they are
 not the decision boundary.
 
-Proof: `form/form-stdlib/tests/native-host-instance-band.fk` returns `4095` and
-is registered in `form/fourth-arm-bands.txt` for fkwu four-way validation.
-`form/form-stdlib/tests/form-cli-band.fk` returns `1023`, proving the native-host
+Proof: `form/form/form-stdlib/tests/native-host-instance-band.fk` returns `4095` and
+is registered in `form/form/fourth-arm-bands.txt` for fkwu four-way validation.
+`form/form/form-stdlib/tests/form-cli-band.fk` returns `1023`, proving the native-host
 verb and dispatch row across Go/Rust/TS/fkwu before it is packaged for a host.

@@ -102,7 +102,7 @@ This separation matters:
 
 ## The proof-of-shape walk
 
-In [`form/form-samples/cross-modal/11-randomness-doorway/`](../../form/form-samples/cross-modal/11-randomness-doorway/):
+In [`form/form/form-samples/cross-modal/11-randomness-doorway/`](../../form/form/form-samples/cross-modal/11-randomness-doorway/):
 
 - `field-sample.bin` — 4 bytes (`0xAB 0x6F 0x8E 0x46`) sampled from
   `/dev/urandom` on the day this experiment was authored. The

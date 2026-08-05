@@ -39,7 +39,7 @@
     (discipline     kernel-satsang.fk ksat-part)            # spec + verify + expected, circle-witnessed
     (registry       form-stdlib/primitive-registry.fk)      # 207 entries, main.go order
     (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
-    (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
+    (drift-gate     form/form/scripts/validate_primitive_registry.py)  # registry == kernel source
     (wellness       scripts/wellness_check.py sense_form_primitives)
     (feeds          Hati-OS.m2-bmf-compiler-native Hati-OS.m4-walker-emitted))
 
@@ -111,5 +111,5 @@
 #     form-stdlib/primitive-registry.fk \
 #     form-stdlib/tests/primitive-registry-band.fk     # -> 63, 0 divergent
 #
-#   python3 form/scripts/validate_primitive_registry.py  # drift gate, rc 0
+#   python3 form/form/scripts/validate_primitive_registry.py  # drift gate, rc 0
 #   python3 scripts/wellness_check.py                    # Form primitives sense

@@ -87,7 +87,7 @@ it.
 ## The roster
 
 The thirteen grammars and their mandalas (symmetry-fold + radial signature),
-each computed by `form/form-stdlib/grammars/mandala.fk`:
+each computed by `form/form/form-stdlib/grammars/mandala.fk`:
 
 ```
 audio-bmf        10-fold   gematria          9-fold   rust-bmf          8-fold
@@ -118,7 +118,7 @@ petal-lines at the symmetry angle + the core glyph), all three-way identical.
 
 ## Sources to walk further
 
-- **`form/form-stdlib/grammars/mandala.fk`** — the renderer; `mdl-ascii` /
+- **`form/form/form-stdlib/grammars/mandala.fk`** — the renderer; `mdl-ascii` /
   `mdl-svg` / `mdl-petals` / `mdl-depth` / `mdl-roster`.
 - **[lc-codes-as-depth-not-dictionary](lc-codes-as-depth-not-dictionary.md)** —
   the parent teaching: a symbol grows from structure, never assigned.

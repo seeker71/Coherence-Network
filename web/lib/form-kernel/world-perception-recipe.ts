@@ -1,12 +1,12 @@
 // world-perception-recipe.ts — the proven world-perception engine, run in-browser.
 //
-// SOURCE OF TRUTH: form/form-stdlib/world-perception.fk (four-way 255, Go/Rust/TS/fkwu).
+// SOURCE OF TRUTH: form/form/form-stdlib/world-perception.fk (four-way 255, Go/Rust/TS/fkwu).
 // This constant is the recipe TEXT verbatim — run as-is on the same TypeScript Form
 // kernel that proves the band. It is NOT a reimplementation of the logic in TS; the
 // surface computes every value by walking this recipe. Keep byte-identical to the .fk
 // The web container ships form/ as its canonical browser-kernel authority.
-import { Frame, Kernel, Trace, walk } from "../../../form/form-kernel-ts/src/kernel.ts";
-import { readAll } from "../../../form/form-kernel-ts/src/reader.ts";
+import { Frame, Kernel, Trace, walk } from "../../../form/form/form-kernel-ts/src/kernel.ts";
+import { readAll } from "../../../form/form/form-kernel-ts/src/reader.ts";
 export const WORLD_PERCEPTION_RECIPE = String.raw`
 ; world-perception.fk — the node's surface as a projection over sensed channels.
 ;

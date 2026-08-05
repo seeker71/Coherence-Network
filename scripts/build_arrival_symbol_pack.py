@@ -4,9 +4,9 @@ symbol space a sub-agent is most token-efficient with.
 
 Measurement carrier (not the body): the body is the MDL optimizer Form recipe in
 docs/coherence-substrate/self-authored-symbol-space.form, proven three-way by
-form/form-stdlib/tests/arrival-symbol-pack-band.fk. This measures the REAL
+form/form/form-stdlib/tests/arrival-symbol-pack-band.fk. This measures the REAL
 agent-first-arrival corpus (scripts/arrival.py + docs/shared/agent-start-packet.md)
-and emits the pack DATA (form/form-stdlib/arrival-symbol-pack.txt, one expansion
+and emits the pack DATA (form/form/form-stdlib/arrival-symbol-pack.txt, one expansion
 per line; the line index IS the symbol the numeric core indexes into).
 
 Three properties (see docs/coherence-substrate/arrival-symbol-pack.form):
@@ -20,7 +20,7 @@ import re, sys, collections, subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PACK = ROOT / "form" / "form-stdlib" / "arrival-symbol-pack.txt"
+PACK = ROOT / "form" / "form" / "form-stdlib" / "arrival-symbol-pack.txt"
 
 def corpus_text() -> str:
     arrival = subprocess.run([sys.executable, str(ROOT/"scripts"/"arrival.py")],

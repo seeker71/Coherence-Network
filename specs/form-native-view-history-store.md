@@ -8,15 +8,15 @@ source:
     symbols: [list_view_history]
   - file: api/app/services/form_kernel_bridge.py
     symbols: [serve_via_kernel]
-  - file: form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk
+  - file: form/form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk
     symbols: [view-history ordering recipe]
 done_when:
   - "view-history ordering runs as a four-way Form recipe (Go/Rust/TS/fkwu) and the Python sort comparator is removed from list_history"
   - "list_history delegates ordering to the recipe via serve_via_kernel and returns the same list[EntityViewRecord] shape"
   - "the ordering recipe has a four-way band covering the tie case where a superseded row's updated_at >= the canonical row's"
   - "test_flow_multilingual passes deterministically across PYTHONHASHSEED 0-8"
-  - 'file_exists("form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk")'
-  - 'file_exists("form/form-stdlib/tests/view-history-order-band.fk")'
+  - 'file_exists("form/form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/view-history-order-band.fk")'
 test: "cd api && python -m pytest tests/test_flow_multilingual.py -q"
 constraints:
   - "changes scoped to list_history plus the new ordering recipe and its band"
@@ -48,16 +48,16 @@ exist.
 
 ## Requirements
 ### View-history ordering as a four-way Form recipe (Phase 1, committed)
-1. - [ ] Add `form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk`: given the views' ordering keys — a `status` rank (`canonical` = 0, every other status = 1) and a comparable `updated_at` key per row — it returns the row indices in canonical-first, then newest-first order, using only Form list/compare primitives. Pure function, no IO.
-2. - [ ] Add `form/form-stdlib/tests/view-history-order-band.fk` proving the recipe four-way (Go/Rust/TS/fkwu), including the exact tie that broke Python: a superseded row whose `updated_at` equals or exceeds the canonical row's must still order *after* the canonical row.
+1. - [ ] Add `form/form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk`: given the views' ordering keys — a `status` rank (`canonical` = 0, every other status = 1) and a comparable `updated_at` key per row — it returns the row indices in canonical-first, then newest-first order, using only Form list/compare primitives. Pure function, no IO.
+2. - [ ] Add `form/form/form-stdlib/tests/view-history-order-band.fk` proving the recipe four-way (Go/Rust/TS/fkwu), including the exact tie that broke Python: a superseded row whose `updated_at` equals or exceeds the canonical row's must still order *after* the canonical row.
 3. - [ ] `list_history` delegates ordering to the recipe via `serve_via_kernel(...)` and the Python `rows.sort(...)` comparator is deleted; the function still returns `list[EntityViewRecord]` in the same order the current code intends (canonical first).
 4. - [ ] The kernel carrier that served the ordering is observable (the `runtime` string), exactly as the vitality route exposes it; missing kernel remains a hard failure (no silent Python fallback).
 
 ## Files to Create/Modify
-- `form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_view_history_order_demo.py` — the Python twin (source of truth the compiler lowers). **Landed** and verified as plain Python.
-- `form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile` — `cygpath -m` path normalization so recipe generation runs on Windows/MSYS. **Landed** (unblocks generation on this host).
-- `form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk` — generated ordering recipe. **Blocked** — see the lifter gap in Known Gaps.
-- `form/form-stdlib/tests/view-history-order-band.fk` — new four-way band for the ordering recipe (after the recipe generates cleanly).
+- `form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_view_history_order_demo.py` — the Python twin (source of truth the compiler lowers). **Landed** and verified as plain Python.
+- `form/form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile` — `cygpath -m` path normalization so recipe generation runs on Windows/MSYS. **Landed** (unblocks generation on this host).
+- `form/form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk` — generated ordering recipe. **Blocked** — see the lifter gap in Known Gaps.
+- `form/form/form-stdlib/tests/view-history-order-band.fk` — new four-way band for the ordering recipe (after the recipe generates cleanly).
 - `api/app/services/translation_cache_service.py` — `list_history` becomes a thin shell over the Form runtime; the Python comparator is removed (only once the recipe exists and crosses four-way).
 
 ## Acceptance Criteria
@@ -99,7 +99,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-native-view-history-s
 - **Tie semantics**: ordering must be total and deterministic even when `updated_at` ties across rows; the recipe breaks ties by `status` rank first, then a stable secondary key (e.g. `id`), so no hash-dependent comparison remains.
 
 ## Known Gaps and Follow-up Tasks
-- **PHASE 1 PRECONDITION (the blocker) — close the python-bmf lifter gap**: add a lift arm for multi-branch `if` / comparison ladders to `form/form-stdlib/python-bmf-lift.fk` (+ matching eval arm in `python-bmf-eval.fk`), proven by a small band, so `endpoint_view_history_order_demo.py` compiles to a valid recipe. Until this lands, `list_history` keeps its deterministic Python comparator (already merged) and is NOT rewired.
+- **PHASE 1 PRECONDITION (the blocker) — close the python-bmf lifter gap**: add a lift arm for multi-branch `if` / comparison ladders to `form/form/form-stdlib/python-bmf-lift.fk` (+ matching eval arm in `python-bmf-eval.fk`), proven by a small band, so `endpoint_view_history_order_demo.py` compiles to a valid recipe. Until this lands, `list_history` keeps its deterministic Python comparator (already merged) and is NOT rewired.
 - **Landed this slice**: the verified Python twin (`endpoint_view_history_order_demo.py`) and the `kernel-bmf-compile` cygpath fix (Windows recipe generation now runs). The generated `.fk`, the four-way band, and the `list_history` rewire are all gated on the lifter gap above.
 - **Phase 2 — view-store over the storage port**: `view-store.fk` (`vs-list-history`/`vs-canonical`) reading Form cells via `storage-get`/`storage-put`, with `upsert_view` projecting rows into the carrier and a read-parity band; retire the SQLAlchemy read for this family once parity holds.
 - **Generalize** to `canonical_views`/`all_canonical_views` and then to other entity families.

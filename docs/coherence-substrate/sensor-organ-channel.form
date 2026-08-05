@@ -3,10 +3,10 @@
 (sensor-organ-channel
   (lineage
     (rests-on android-mesh-learning.form mesh-sensings.form organ-reading.fk channel-interface-consent.form)
-    (recipe form/form-stdlib/sensor-organ-channel.fk)
-    (proof form/form-stdlib/tests/sensor-organ-channel-band.fk -> 4095)
-    (android-bridge form/form-stdlib/sensor-organ-android-bridge.fk)
-    (android-bridge-proof form/form-stdlib/tests/sensor-organ-android-bridge-band.fk -> 4095))
+    (recipe form/form/form-stdlib/sensor-organ-channel.fk)
+    (proof form/form/form-stdlib/tests/sensor-organ-channel-band.fk -> 4095)
+    (android-bridge form/form/form-stdlib/sensor-organ-android-bridge.fk)
+    (android-bridge-proof form/form/form-stdlib/tests/sensor-organ-android-bridge-band.fk -> 4095))
 
   (purpose
     "Make physical sensing organs speak one inspectable channel contract."

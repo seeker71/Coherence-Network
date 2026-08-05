@@ -6,7 +6,7 @@
 # Running the kernel binary IS the host exec, a carrier-not-debt (host-kernel.form).
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"
-[ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . )
-cd "$ROOT" && "$GO" form/form-stdlib/json.fk form/form-stdlib/string-case.fk \
-    form/form-stdlib/nl-lexicon-grow.fk scripts/grow_nl_lexicon.fk
+GO="$ROOT/form/form/form-kernel-go/bin-go"
+[ -x "$GO" ] || ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . )
+cd "$ROOT" && "$GO" form/form/form-stdlib/json.fk form/form/form-stdlib/string-case.fk \
+    form/form/form-stdlib/nl-lexicon-grow.fk scripts/grow_nl_lexicon.fk

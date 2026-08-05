@@ -84,7 +84,7 @@ AGENT_START_PACKET: dict[str, Any] = {
                     "carrier last — not FastAPI-first."
                 ),
                 "grammar_executes": (
-                    "apply-object-rule in form/form-stdlib/engine.fk: pattern match fires "
+                    "apply-object-rule in form/form/form-stdlib/engine.fk: pattern match fires "
                     "semantic action; fail backtracks without sediment."
                 ),
                 "branching": (
@@ -97,7 +97,7 @@ AGENT_START_PACKET: dict[str, Any] = {
                     "docs/shared/agent-start-packet.md",
                     "docs/coherence-substrate/form-language.md",
                     "kernels/BMF_BML_COMPILER_PICTURE.md",
-                    "form/form-stdlib/engine.fk",
+                    "form/form/form-stdlib/engine.fk",
                 ],
                 "prove_with": "cd form && ./validate.sh … (form-stdlib/tests/*-band.fk)",
                 "next_ripening": (

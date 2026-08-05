@@ -129,13 +129,13 @@
       eval-receipt
       vitality-receipt
       lineage)
-    (proved-by "form/form-stdlib/tests/model-vitality-band.fk")
+    (proved-by "form/form/form-stdlib/tests/model-vitality-band.fk")
     (verdict 4095)
     (fourth-arm four-way)
-    (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
-    (physical-carrier-proof "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
-    (production-ingestion-proof "form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
-    (native-http-capture-proof "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095")
+    (real-storage-proof "form/form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
+    (physical-carrier-proof "form/form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
+    (production-ingestion-proof "form/form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
+    (native-http-capture-proof "form/form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095")
     (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
     (production-live-witness "scripts/model_vitality_production_ingest_probe.sh")
     (native-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh")

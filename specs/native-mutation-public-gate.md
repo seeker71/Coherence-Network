@@ -2,17 +2,17 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/native-mutation-public-gate.fk
+  - file: form/form/form-stdlib/native-mutation-public-gate.fk
     symbols: [nmpg-public-gate-header, nmpg-native-invitation-json, nmpg-public-gate-rollback-receipt-sql, nmpg-run-idea-create-public-gate, nmpg-run-idea-update-public-gate, nmpg-run-spec-update-public-gate, nmpg-public-gate-test]
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-run-idea-update-with-valuation-audit]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/tests/native-mutation-public-gate-band.fk
+  - file: form/form/form-stdlib/tests/native-mutation-public-gate-band.fk
     symbols: []
-  - file: form/form-stdlib/integration/native-mutation-public-gate-live.fk
+  - file: form/form/form-stdlib/integration/native-mutation-public-gate-live.fk
     symbols: []
-  - file: form/scripts/native-mutation-public-gate-test.sh
+  - file: form/form/scripts/native-mutation-public-gate-test.sh
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
@@ -42,9 +42,9 @@ source:
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
     symbols: [spec_registry_router_structure]
-  - file: form/form-stdlib/native-route-goal-cells.fk
+  - file: form/form/form-stdlib/native-route-goal-cells.fk
     symbols: [nrg-manifest-route-status, nrg-observation-from-manifest-route]
-  - file: form/form-stdlib/tests/native-route-goal-cells-band.fk
+  - file: form/form/form-stdlib/tests/native-route-goal-cells-band.fk
     symbols: []
   - file: scripts/native_route_goal_loop.py
     symbols: [load_form_routes, route_status, build_goal_state]
@@ -63,11 +63,11 @@ requirements:
   - "Native/default/preview mutation responses carry a `native_invitation` receipt that names the ordinary JSON received, the Form-native mutation recipe it became, execution evidence, the next native protocol, and the explicit decline signal."
   - "The route-goal Form cells understand method-specific Form route cells so bounded ordinary mutation defaults are reported as Form-native executable instead of Python fanout; Python remains a temporary I/O carrier."
 done_when:
-  - 'file_exists("form/form-stdlib/native-mutation-public-gate.fk")'
+  - 'file_exists("form/form/form-stdlib/native-mutation-public-gate.fk")'
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
   - 'file_exists("scripts/verify_kernel_canary_public_gate.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_public_gate.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not execute against the production application database from local proof harnesses."
   - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip; this release only promotes bounded mutable ideas/spec method/path routers."
@@ -162,15 +162,15 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/native-mutation-public-gate.fk` - public-gate receipt and
+- `form/form/form-stdlib/native-mutation-public-gate.fk` - public-gate receipt and
   runner recipes.
-- `form/form-stdlib/native-idea-valuation-audit-ledger.fk` - idea update
+- `form/form/form-stdlib/native-idea-valuation-audit-ledger.fk` - idea update
   audit-ledger parity carrier consumed by the public gate.
-- `form/form-stdlib/tests/native-mutation-public-gate-band.fk` - sibling-kernel
+- `form/form/form-stdlib/tests/native-mutation-public-gate-band.fk` - sibling-kernel
   proof.
-- `form/form-stdlib/integration/native-mutation-public-gate-live.fk` - live
+- `form/form/form-stdlib/integration/native-mutation-public-gate-live.fk` - live
   Postgres proof.
-- `form/scripts/native-mutation-public-gate-test.sh` - throwaway Postgres
+- `form/form/scripts/native-mutation-public-gate-test.sh` - throwaway Postgres
   harness.
 - `deploy/kernel-router/production-routes.fk` - public-gate route rows and
   response envelope plus native invitation receipt.
@@ -198,9 +198,9 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   that method-specific native mutation rows are not misclassified as Python
   fanout.
 - `scripts/native_route_goal_loop.py` - route-goal observation loop.
-- `form/form-stdlib/native-route-goal-cells.fk` - Form-native route manifest
+- `form/form/form-stdlib/native-route-goal-cells.fk` - Form-native route manifest
   classification and observation cells.
-- `form/form-stdlib/tests/native-route-goal-cells-band.fk` - sibling-kernel
+- `form/form/form-stdlib/tests/native-route-goal-cells-band.fk` - sibling-kernel
   proof for route-goal traffic and manifest classification.
 - `docs/coherence-substrate/ideas-router.form` - ideas route state.
 - `docs/coherence-substrate/spec-registry-router.form` - spec route state.
@@ -216,7 +216,7 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 - `api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_bounded_no_header_native_mutation_flip`
 - `api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_sees_method_specific_form_mutation_routes`
 - `api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_counts_form_mutations_as_native_executable`
-- `form/form-stdlib/tests/native-route-goal-cells-band.fk`
+- `form/form/form-stdlib/tests/native-route-goal-cells-band.fk`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
@@ -226,7 +226,7 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 
 ```bash
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
-cd .. && form/scripts/native-mutation-public-gate-test.sh
+cd .. && form/form/scripts/native-mutation-public-gate-test.sh
 python3 deploy/kernel-router/mutation_public_gate_harness.py --json
 python3 deploy/kernel-router/mutation_ab_observation_harness.py --json
 bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh
