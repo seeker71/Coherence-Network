@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 
 import httpx
 import pytest
 
+from pulse_app import probe
 from pulse_app.analysis import status_from_last_sample
 from pulse_app.probe import probe_all
 
@@ -146,9 +148,10 @@ def _handler(
     ready_status=200,
     ideas_body=None,
     ideas_status=200,
-    ideas_headers=None,  # None → default native-kernel carrier header;
-                         # pass {} for a response with no x-form-router header,
-                         # or {"x-form-router": "fanout-python"} for failover.
+    ideas_headers=None,  # None → no x-form-router header (production truth
+                         # since the fkwu-only collapse retired the stamping
+                         # kernel-router); pass {"x-form-router": ...} to
+                         # exercise the expected_router mechanism.
     vitality_api_body=None,
     vitality_api_status=200,
     web_status=200,
@@ -185,11 +188,7 @@ def _handler(
                 headers={"content-type": "application/json"},
             )
         if path == "/api/ideas":
-            router_headers = (
-                {"x-form-router": "native-kernel"}
-                if ideas_headers is None
-                else ideas_headers
-            )
+            router_headers = {} if ideas_headers is None else ideas_headers
             return httpx.Response(
                 ideas_status,
                 content=json.dumps(ideas_body if ideas_body is not None else HEALTHY_IDEAS),
@@ -697,23 +696,35 @@ async def test_endpoint_ideas_http_error():
 
 
 @pytest.mark.asyncio
-async def test_endpoint_ideas_native_kernel_breathes_clean():
-    """The healthy carrier path: native-kernel served it, no strain detail."""
-    by = await _run(_handler())  # default headers carry x-form-router: native-kernel
+async def test_endpoint_ideas_breathes_without_router_header():
+    """The current carrier truth: the api container serves /api/ideas and no
+    production surface stamps x-form-router (the fkwu-only collapse retired the
+    stamping kernel-router). Status + shape + latency healthy → clean breath."""
+    by = await _run(_handler())
     sample = by["endpoint_ideas"]
     assert sample.ok is True
     assert sample.detail is None
     assert status_from_last_sample(sample) == "breathing"
 
 
+def _organs_with_ideas_expecting(router: str):
+    """The ORGANS registry with endpoint_ideas declaring expected_router."""
+    return [
+        dataclasses.replace(o, expected_router=router)
+        if o.name == "endpoint_ideas"
+        else o
+        for o in probe.ORGANS
+    ]
+
+
 @pytest.mark.asyncio
-async def test_endpoint_ideas_fanout_python_fallback_strains():
-    """The #3087 blindness: the native route regressed, Traefik failed over to
-    the Python fan-out, which returned a 200 with a valid 'ideas' list. Status
-    and shape both pass — the only tell is the x-form-router header. The witness
-    must now read this as strained (breathing surface, wrong carrier), not as a
-    clean breath.
-    """
+async def test_expected_router_fallback_strains(monkeypatch):
+    """The #3087 blindness the mechanism exists for: a declared native route
+    served by the Python fan-out returns 200 with a valid body — status and
+    shape both pass, the only tell is the x-form-router header. An organ that
+    declares expected_router must read that as strained (breathing surface,
+    wrong carrier), not as a clean breath."""
+    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("native-kernel"))
     by = await _run(_handler(ideas_headers={"x-form-router": "fanout-python"}))
     sample = by["endpoint_ideas"]
     # The surface still answers, so the probe itself succeeded — strain, not silence.
@@ -722,7 +733,6 @@ async def test_endpoint_ideas_fanout_python_fallback_strains():
     assert sample.detail.startswith("fell back: ")
     assert "native-kernel" in sample.detail
     assert "fanout-python" in sample.detail
-    # End-to-end: the strain detail makes the current status read 'strained'.
     assert status_from_last_sample(sample) == "strained"
     # Sibling organs are untouched — this is a carrier-path sensing win.
     assert by["api"].ok is True
@@ -730,9 +740,11 @@ async def test_endpoint_ideas_fanout_python_fallback_strains():
 
 
 @pytest.mark.asyncio
-async def test_endpoint_ideas_missing_router_header_strains():
-    """No x-form-router header at all means the native carrier never stamped the
-    response — treat it as a fallback too, naming what was (not) seen."""
+async def test_expected_router_missing_header_strains(monkeypatch):
+    """No x-form-router header on a route that declares one means the native
+    carrier never stamped the response — a fallback too, naming what was
+    (not) seen."""
+    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("native-kernel"))
     by = await _run(_handler(ideas_headers={}))
     sample = by["endpoint_ideas"]
     assert sample.ok is True
