@@ -542,13 +542,14 @@ ORGANS: list[Organ] = [
         upstream=UPSTREAM_API_IDEAS,
         extractor=extract_api_ideas,
         latency_threshold_ms=1500,
-        # /api/ideas?limit=1 is a native-promoted route — its body runs in the Go
-        # form-kernel and the response carries `x-form-router: native-kernel`.
-        # If the kernel-router is unhealthy, Traefik fails over to the Python
-        # fan-out (`x-form-router: fanout-python`), which returns 200 and masks
-        # a native-route regression (the #3087 boolean::bigint 500). Declaring
-        # the expected carrier makes the witness flag that failover as strain.
-        expected_router="native-kernel",
+        # The fkwu-only kernel collapse (spec fkwu-only-kernel-collapse) retired
+        # the sibling Go kernel-router container that used to serve this route
+        # and stamp `x-form-router: native-kernel`; today the api container is
+        # the sole carrier and no production surface stamps that header. This
+        # organ senses status + shape + latency. When a native fkwu carrier
+        # serves this route and stamps its header again, declare it here via
+        # `expected_router` so a silent failover reads as strain (the #3087
+        # class of blindness the mechanism exists for).
     ),
     Organ(
         name="endpoint_vitality",
