@@ -35,9 +35,26 @@ class NativeRuntimeObservationError(RuntimeError):
 
 def _root() -> Path:
     api_root = Path(__file__).resolve().parents[2]
-    if (api_root / "form" / "form" / "form-cli").is_file():
+    if (api_root / "form" / "form-cli").is_file():
         return api_root
     return api_root.parent
+
+
+def _classic_form_root(root: Path) -> Path:
+    """The classic kernel tree base (form-stdlib, form-cli, bootstrap/...).
+
+    Dockerfile.api's COPY destinations deliberately keep this flat under the
+    deployed image (``root/form/...``) so this consumer never needed
+    image-vs-source awareness before the coherence-kernel submodule
+    restructured its own source tree to nest one level deeper
+    (``form/form/...``). A source checkout now needs that extra segment; the
+    deployed image does not. The image always ships ``form/form-cli.sha256``
+    as a build artifact (never committed in the submodule at any depth), so
+    its presence reliably tells the two apart.
+    """
+    if (root / "form" / "form-cli.sha256").is_file():
+        return root / "form"
+    return root / "form" / "form"
 
 
 def _sha256_file(path: Path) -> str:
@@ -83,9 +100,7 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
     machine = platform.machine().lower()
     machine = {"aarch64": "arm64", "amd64": "x86_64"}.get(machine, machine)
     committed = (
-        root
-        / "form"
-        / "form"
+        _classic_form_root(root)
         / "form-stdlib"
         / "bootstrap"
         / f"form-cli-{system}-{machine}"
@@ -100,13 +115,13 @@ def _expected_form_cli_digest(root: Path) -> tuple[str, str]:
 def _selected_form_cli_binary(root: Path) -> Path:
     """Return the host-native carrier selected by the bootstrap proof.
 
-    Production images place their built carrier at ``form/form/form-cli`` beside
+    Production images place their built carrier at ``form/form-cli`` beside
     its digest authority.  Source checkouts instead keep host-specific
     carriers outside the pinned submodule and record the exact selection in a
     receipt.  Reading that receipt is essential on Linux/Windows runners,
-    where the convenience ``form/form/form-cli`` file may target another host.
+    where the convenience ``form/form-cli`` file may target another host.
     """
-    image_binary = root / "form" / "form" / "form-cli"
+    image_binary = _classic_form_root(root) / "form-cli"
     if (root / "form" / "form-cli.sha256").is_file():
         return image_binary
 
@@ -146,7 +161,7 @@ def _selected_form_cli_binary(root: Path) -> Path:
     if _sha256_file(binary) != binary_sha:
         raise NativeRuntimeObservationError("selected form-cli carrier digest mismatch")
     source_digest_file = (
-        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+        _classic_form_root(root) / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
     )
     if source_digest_file.read_text(encoding="ascii").strip() != source_sha:
         raise NativeRuntimeObservationError("selected form-cli source digest mismatch")
@@ -182,15 +197,11 @@ def _observe_form_cli(
     root: Path, *, challenge_input: str | None = None
 ) -> dict[str, Any]:
     binary = _selected_form_cli_binary(root)
-    table = root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
-    stamp_file = root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp"
+    classic_root = _classic_form_root(root)
+    table = classic_root / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
+    stamp_file = classic_root / "form-stdlib" / "bootstrap" / "form-cli.stamp"
     source_digest_file = (
-        root
-        / "form"
-        / "form"
-        / "form-stdlib"
-        / "bootstrap"
-        / "form-cli.source.sha256"
+        classic_root / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
     )
     wrapper = root / "bin" / "form-cli"
     wrapper_manifest = root / "bin" / "form-cli.sha256"
@@ -310,18 +321,14 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
 
 
 def _artifact_fingerprint(root: Path) -> str:
+    classic_root = _classic_form_root(root)
     paths = [
-        root / "form" / "form" / "form-cli",
+        classic_root / "form-cli",
         root / "form" / "form-cli.sha256",
         root / ".cache" / "form-cli-native" / "selected.json",
-        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.stamp",
-        root
-        / "form"
-        / "form"
-        / "form-stdlib"
-        / "bootstrap"
-        / "form-cli.source.sha256",
-        root / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli-table.txt",
+        classic_root / "form-stdlib" / "bootstrap" / "form-cli.stamp",
+        classic_root / "form-stdlib" / "bootstrap" / "form-cli.source.sha256",
+        classic_root / "form-stdlib" / "bootstrap" / "form-cli-table.txt",
         root / "bin" / "form-cli",
         root / "bin" / "form-cli.sha256",
     ]

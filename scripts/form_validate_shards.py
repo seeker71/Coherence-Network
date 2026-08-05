@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FORM_DIR = REPO_ROOT / "form"
+FORM_DIR = REPO_ROOT / "form" / "form"
 VALIDATE_SH = FORM_DIR / "validate.sh"
 DEFAULT_OUTPUT_LINES = 120
 

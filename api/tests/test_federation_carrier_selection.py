@@ -47,7 +47,7 @@ def test_a_production_image_uses_the_carrier_shipped_beside_its_digest():
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        shipped = _executable(root / "form" / "form" / "form-cli")
+        shipped = _executable(root / "form" / "form-cli")
         (root / "form" / "form-cli.sha256").write_text("0" * 64, encoding="utf-8")
         # Even with a receipt present, the image's own carrier is the answer.
         _receipt(root, _executable(root / ".cache" / "form-cli-native" / "x" / "form-cli"))

@@ -62,12 +62,30 @@ NATIVE_CARRIER_RECEIPT = (
     if _ATTESTATION_DIR.is_dir()
     else Path(ROOT) / ".cache" / "form-cli-native" / "selected.json"
 )
+
+
+def _classic_form_prefix() -> str:
+    """The classic kernel tree's path prefix, relative to ROOT.
+
+    Dockerfile.api's COPY destinations keep this flat in the deployed image
+    (``form/...``); a source checkout of the restructured coherence-kernel
+    submodule nests one level deeper (``form/form/...``). The image always
+    ships ``form/form-cli.sha256`` as a build artifact (never committed in
+    the submodule at any depth), so its presence reliably tells the two apart.
+    """
+    if os.path.isfile(os.path.join(ROOT, "form", "form-cli.sha256")):
+        return "form"
+    return "form/form"
+
+
+_CLASSIC_FORM_PREFIX = _classic_form_prefix()
+
 NATIVE_SOURCE_DIGEST_FILE = (
-    Path(ROOT) / "form" / "form" / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
+    Path(ROOT) / _CLASSIC_FORM_PREFIX / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
 )
 
 SOURCES = [
-    ("recipe",    "form/form/form-stdlib/*.fk"),
+    ("recipe",    f"{_CLASSIC_FORM_PREFIX}/form-stdlib/*.fk"),
     ("spec",      "specs/*.md"),
     ("concept",   "docs/vision-kb/concepts/*.md"),
     ("substrate", "docs/coherence-substrate/*.form"),
@@ -564,9 +582,9 @@ def _native_source_stamp() -> str:
     """Bind the cache to the committed native table/stamp inputs."""
     digest = hashlib.sha256(b"native-rag-carrier-v1\n")
     for relative in (
-        "form/form/form-stdlib/bootstrap/form-cli.source.sha256",
-        "form/form/form-stdlib/bootstrap/form-cli.stamp",
-        "form/form/form-stdlib/bootstrap/form-cli-table.txt",
+        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli.source.sha256",
+        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli.stamp",
+        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli-table.txt",
     ):
         path = Path(ROOT) / relative
         digest.update(relative.encode("utf-8"))

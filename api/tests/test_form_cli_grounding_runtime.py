@@ -897,7 +897,7 @@ def test_bootstrap_corpus_includes_every_native_answer_family():
 
 def test_rag_source_identity_is_platform_independent():
     assert (
-        rag._canonical_source_path(r"form\form-stdlib\rag-ask.fk")
+        rag._canonical_source_path(r"form\form\form-stdlib\rag-ask.fk")
         == "form/form/form-stdlib/rag-ask.fk"
     )
 
