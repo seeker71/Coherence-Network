@@ -34,7 +34,7 @@ done_when:
   - "Both bands pass three-way (Go, Rust, TypeScript agree) under form/form/validate.sh."
   - "A mistyped .bml source (operator with no matching method on the base type) reports a compile diagnostic, not a runtime crash, identically in all three kernels."
   - "bml.fk method/param emits carry typerefs; the typed slots are readable from Form via .children."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk form-stdlib/bml.fk form-stdlib/tests/bml-typed-fndef-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk form-stdlib/bml.fk form-stdlib/tests/bml-typed-fndef-band.fk"
 constraints:
   - "One universal typed-function shape shared by every dialect lifter (BML, Python annotations, TS types) — never a bml_typed_fndef parallel shape."
   - "Type checking is a Form recipe walk (the resolution walk carrying type coordinates), not a Python or host-language checker."
@@ -149,7 +149,7 @@ rests on the same content-addressed ground as everything else.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk ... form-stdlib/bml.fk form-stdlib/tests/bml-typed-fndef-band.fk
-cd form && ./validate.sh form-stdlib/core.fk ... form-stdlib/bml.fk form-stdlib/tests/bml-type-check-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk ... form-stdlib/bml.fk form-stdlib/tests/bml-typed-fndef-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk ... form-stdlib/bml.fk form-stdlib/tests/bml-type-check-band.fk
 python3 scripts/validate_spec_quality.py --file specs/bml-typed-recipes.md
 ```

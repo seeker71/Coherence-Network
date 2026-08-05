@@ -27,7 +27,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/pdf-text.fk", "defn pdf-text-file")'
   - "validate.sh reports `fourth arm: ... four-way` for the inflate band (verdict 31) and the pdf-text band (verdict 1)."
   - "validate.sh reports the pdf-text-file band converting four real PDFs three-way (verdict 15)."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-file-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-file-band.fk"
 constraints:
   - "Two lanes stay separate: pure logic (inflate, stream-scan, text-pull) proves four-way over in-recipe fixtures; the file read (read_file_bytes) is honestly three-way + carrier (fkwu has no host I/O; host-io is a named unsupported family in form/form/fourth-arm-bands.txt). Never dress the carrier lane as four-way."
   - "One engine: the recipe that proves four-way is the recipe that crystallizes to native asm via the existing self-JIT / Form→asm lane — no hand-written C/clang inflate beside it."
@@ -147,13 +147,13 @@ recipes, bands, a witness.
 
 ## Acceptance
 
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk` reports the band with `fourth arm: ... four-way` (not `3-kernel only`).
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk` reports the band with `fourth arm: ... four-way` (not `3-kernel only`).
 - The band asserts `inflate(<deflate fixture>) == <original bytes>` and `adler32(<original bytes>) == <trailer>`, both as in-recipe literals — no `tests/`-side Python and no host file read.
 
 ## Verification
 
 ```bash
-cd form
+cd form/form
 # M1 — inflate four-way (verdict 31)
 ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk
 # text extraction logic four-way (verdict 1)

@@ -34,7 +34,7 @@ done_when:
   - 'pytest_passes("api/tests/test_runtime_web_api_provenance.py")'
   - 'form_validate_passes("form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk")'
   - 'public_verify_requires("POST /api/substrate/kernel-image/proposals", "X-Form-Router: native-kernel")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk && cd ../api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk && cd ../../api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py"
 constraints:
   - "Do not mutate production, write kernel image files, open deploys, or bypass source-control proof from the public POST."
   - "This slice previews BML kernel-core image proposals only; broader Form expression mutation remains a follow-up."
@@ -145,7 +145,7 @@ authority.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk
 cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py
 cd api && python3 -m ruff check tests/test_runtime_web_api_provenance.py
 scripts/kernel_front_door_local_preflight.sh

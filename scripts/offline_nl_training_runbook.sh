@@ -100,7 +100,7 @@ SELF-LEARNING (the loop that improves the model and keeps the best)
 PROOF
   The lawful/test decision is form-stdlib/corpus-license-gate.fk, proven FOUR-WAY
   (Go=Rust=TS=fkwu → 31). Re-verify offline any time:
-       cd form && ./validate.sh form-stdlib/core.fk \
+       cd form/form && ./validate.sh form-stdlib/core.fk \
             form-stdlib/corpus-license-gate.fk form-stdlib/tests/corpus-license-gate-band.fk
 ────────────────────────────────────────────────────────────────────────────
 TXT

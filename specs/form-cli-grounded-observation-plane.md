@@ -37,7 +37,7 @@ done_when:
   - "The default ask carrier renders the kernel's independently-derived trust result and has no hardcoded grounded, frequency, sufficiency, or OBSERVED values"
   - "A persisted live observation is queryable by NodeID and a stale or mismatched deployment observation cannot pass sufficiency"
   - "Focused kernel bands, consumer tests, spec gate, worktree guard, CI, deployment, and a public native ask all pass"
-test: "cd form && for band in form-stdlib/tests/rag-embed-band.fk form-stdlib/tests/rag-index-codec-band.fk form-stdlib/tests/rag-retrieve-band.fk form-stdlib/tests/rag-ask-grounded-band.fk form-stdlib/tests/rag-heal-grounding-band.fk form-stdlib/tests/form-freq-check-band.fk form-stdlib/tests/trust-row-band.fk form-stdlib/tests/form-cli-sufficiency-band.fk form-stdlib/tests/form-cli-ask-band.fk form-stdlib/tests/form-cli-staged-trace-band.fk form-stdlib/tests/form-cli-band.fk; do ./validate.sh \"$band\" || exit; done && cd .. && api/.venv/bin/pytest -q api/tests/test_form_cli_grounding_runtime.py"
+test: "cd form/form && for band in form-stdlib/tests/rag-embed-band.fk form-stdlib/tests/rag-index-codec-band.fk form-stdlib/tests/rag-retrieve-band.fk form-stdlib/tests/rag-ask-grounded-band.fk form-stdlib/tests/rag-heal-grounding-band.fk form-stdlib/tests/form-freq-check-band.fk form-stdlib/tests/trust-row-band.fk form-stdlib/tests/form-cli-sufficiency-band.fk form-stdlib/tests/form-cli-ask-band.fk form-stdlib/tests/form-cli-staged-trace-band.fk form-stdlib/tests/form-cli-band.fk; do ./validate.sh \"$band\" || exit; done && cd ../.. && api/.venv/bin/pytest -q api/tests/test_form_cli_grounding_runtime.py"
 constraints:
   - "Working behavior lands before evidence records; evidence records document executed proof and never supply trust booleans"
   - "Form owns identity, ranking, trust decisions, and observation composition; host code only carries filesystem, model, network, time, and persistence boundaries"
@@ -165,7 +165,7 @@ DeploymentWitness:
 ## Verification
 
 ```bash
-cd form
+cd form/form
 for band in \
   form-stdlib/tests/rag-embed-band.fk \
   form-stdlib/tests/rag-index-codec-band.fk \

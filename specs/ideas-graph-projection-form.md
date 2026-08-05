@@ -25,7 +25,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/tests/ideas-graph-projection-band.fk", "Band verdict: 11111")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/graph-projection\"    route_ideas_graph_projection)")'
   - 'pytest_passes("api/tests/test_ideas_graph_projection_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk"
 constraints:
   - "Do not change existing /api/ideas response behavior in this slice."
   - "Bind only a fixture-backed native preview route until a live graph storage carrier is available."
@@ -79,7 +79,7 @@ same response shape, and preserves the live FastAPI `/api/ideas` behavior.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk
 cd form/form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19184 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 curl -i http://127.0.0.1:19184/api/ideas/graph-projection
 cd api && python3 -m pytest -q tests/test_ideas_graph_projection_form.py

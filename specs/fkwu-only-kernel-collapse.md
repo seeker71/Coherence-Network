@@ -22,7 +22,7 @@ done_when:
   - "Phase 2: fkwu BUILD uses form-asm (macho/pe/elf), not clang; table flatten runs on fkwu, not Go bin-go"
   - "Phase 3: form-cli built from c-bootstrap fkwu; scripts/form_fs_fkwu_receipt.sh class of receipts pass on mac/windows/android"
   - "Phase 4: deployment and API expose only fkwu; Go/Rust/TS remain bounded primitive witnesses"
-test: "cd form && python3 scripts/validate_fkwu_native_surface.py && python3 scripts/gen_flt_ops_from_manifest.py && python3 scripts/sync_native_op_manifest.py && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk"
+test: "cd form/form && python3 scripts/validate_fkwu_native_surface.py && python3 scripts/gen_flt_ops_from_manifest.py && python3 scripts/sync_native_op_manifest.py && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk"
 constraints:
   - "Do not add new registerNative entries to Go/Rust/TS except oracle bugfixes on frozen allowlist"
   - "Do not add new per-op fkwu tags without manifest + gate entry"
@@ -149,7 +149,7 @@ bootstrap bytes (form-asm, once)
 ## Verification
 
 ```bash
-cd form && python3 scripts/validate_fkwu_native_surface.py \
+cd form/form && python3 scripts/validate_fkwu_native_surface.py \
   && python3 scripts/gen_flt_ops_from_manifest.py \
   && python3 scripts/sync_native_op_manifest.py \
   && GO_BIN=./form-kernel-go/bin-go ./validate.sh \

@@ -99,7 +99,7 @@ def main():
     out = run_kernel("\n".join(lines))
 
     if not out:
-        print("kernel unavailable — build it first: cd form && ./validate.sh "
+        print("kernel unavailable — build it first: cd form/form && ./validate.sh "
               "form-stdlib/core.fk form-stdlib/sense-liveness.fk "
               "form-stdlib/tests/sense-liveness-band.fk")
         return

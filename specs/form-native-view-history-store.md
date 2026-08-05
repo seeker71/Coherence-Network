@@ -69,7 +69,7 @@ exist.
 ## Verification
 ```bash
 # Four-way proof of the ordering recipe
-cd form && ./validate.sh form-stdlib/core.fk \
+cd form/form && ./validate.sh form-stdlib/core.fk \
   form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk \
   form-stdlib/tests/view-history-order-band.fk
 

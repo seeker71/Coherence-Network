@@ -7,7 +7,7 @@
     (emitter-recipe form/form/form-stdlib/real-mesh-training-emitter.fk)
     (proof form/form/form-stdlib/tests/real-mesh-training-carrier-band.fk -> 65535)
     (emitter-proof form/form/form-stdlib/tests/real-mesh-training-emitter-band.fk -> 65535)
-    (four-way "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier real-mesh-training-emitter"))
+    (four-way "cd form/form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier real-mesh-training-emitter"))
 
   (purpose
     "Stop treating tiny proof rows as training."

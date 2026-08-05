@@ -98,7 +98,7 @@ Python service code.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk
 form/form/scripts/application-graph-response-projection-test.sh
 cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md

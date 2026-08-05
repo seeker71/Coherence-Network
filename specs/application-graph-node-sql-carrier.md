@@ -26,7 +26,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/application-graph-node-port.fk", "defn agn-create-node-sql")'
   - 'file_contains("form/form/form-stdlib/tests/application-graph-node-port-band.fk", "Band verdict: 1111")'
   - 'pytest_passes("api/tests/test_application_graph_node_port_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk && cd ../api && python3 -m pytest -q tests/test_application_graph_node_port_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk && cd ../../api && python3 -m pytest -q tests/test_application_graph_node_port_form.py"
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation routes in this slice."
   - "Do not route live mutations through port_kv."
@@ -97,7 +97,7 @@ and response projection; this carrier remains the SQL source for those rows.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk
 cd api && python3 -m pytest -q tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py
 python3 scripts/validate_spec_quality.py --file specs/application-graph-node-sql-carrier.md
 ```

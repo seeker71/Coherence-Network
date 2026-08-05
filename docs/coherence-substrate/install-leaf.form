@@ -129,7 +129,7 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # the protocol shape, three-way:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
 #     form-stdlib/install-leaf.fk form-stdlib/tests/install-leaf-band.fk   # -> 9
 #
 #   # the native carriers, live (jit a function, install it under a new

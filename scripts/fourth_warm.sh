@@ -11,7 +11,7 @@
 #
 #   scripts/fourth_warm.sh form-bml-cursor-full         # warm one band's table (persists)
 #   scripts/fourth_warm.sh --all                        # warm every manifest band, serial + bounded
-#   cd form && ./validate.sh <preludes> tests/<stem>-band.fk   # now reuses the warm table, four-way
+#   cd form/form && ./validate.sh <preludes> tests/<stem>-band.fk   # now reuses the warm table, four-way
 #
 # MEASURED, so the next session does not re-try a dead lever: the JIT is NOT what speeds the flatten.
 # The Go kernel's self-JIT (FORM_JIT_HOT) crystallizes hot NUMERIC closures (tags 1-7,12); the flt-*

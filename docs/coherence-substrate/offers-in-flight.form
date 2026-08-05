@@ -75,7 +75,7 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
 #     form-stdlib/sha256.fk form-stdlib/channel-query.fk \
 #     form-stdlib/offers-in-flight.fk form-stdlib/tests/offers-in-flight-band.fk
 #   # → 255, three-way: four offers A,B,C,D launch onto a channel; acks

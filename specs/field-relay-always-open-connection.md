@@ -138,14 +138,14 @@ will be specced as their own contract when that breath is taken.
 
 ## Acceptance Tests
 
-- `cd form && ./validate.sh form-stdlib/field-relay.fk form-stdlib/tests/field-relay-band.fk` → `1 ok, 0 divergent` at the band's verdict, fourth arm four-way.
+- `cd form/form && ./validate.sh form-stdlib/field-relay.fk form-stdlib/tests/field-relay-band.fk` → `1 ok, 0 divergent` at the band's verdict, fourth arm four-way.
 - Two local cells (distinct NodeIDs) dialing the WS endpoint exchange a `ping`; a `block` signal to a cell that did not offer `block` in its interface is denied.
 
 ## Verification
 
 ```bash
 # Four-way decision proof (Go/Rust/TS + fkwu)
-cd form && ./validate.sh form-stdlib/field-relay.fk form-stdlib/tests/field-relay-band.fk
+cd form/form && ./validate.sh form-stdlib/field-relay.fk form-stdlib/tests/field-relay-band.fk
 bash scripts/fourth-arm-gate.sh field-relay
 
 # Spec quality gate

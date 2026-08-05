@@ -38,17 +38,17 @@ requirements:
   - "Auto research compiles questions, sources, evidence, residuals, and next questions into FMF field execution with transparent receipts."
 done_when:
   - "cd form/form/form-kernel-ts && npx tsx src/field.test.ts passes"
-  - "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk returns 93"
-  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
-  - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
-  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
-  - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
-  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
-  - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
+  - "cd form/form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk returns 93"
+  - "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
+  - "cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
+  - "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
+  - "cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
+  - "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
+  - "cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk returns 255"
   - "cd web && npm test -- form-kernel-field-runtime.test.ts passes"
   - "cd form/form/form-kernel-ts && npm run check passes"
   - "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md passes"
-test: "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk"
 constraints:
   - "Do not require literal CPU-level simultaneity; logical simultaneity is the contract."
   - "All field mutation goes through candidate deltas and writes receipts."
@@ -148,13 +148,13 @@ FieldRule:
 ## Acceptance Tests
 
 - `cd form/form/form-kernel-ts && npx tsx src/field.test.ts`
-- `cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
-- `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
-- `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
-- `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
+- `cd form/form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
+- `cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
+- `cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
+- `cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk`
 - `cd web && npm test -- form-kernel-field-runtime.test.ts`
 - `cd form/form/form-kernel-ts && npm run check`
 - `python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md`
@@ -166,13 +166,13 @@ FieldRule:
 cd form/form/form-kernel-ts && npm install
 cd form/form/form-kernel-ts && npm run check
 cd form/form/form-kernel-ts && npx tsx src/field.test.ts
-cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
-cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
-cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk
-cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk
+cd form/form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk
 cd web && npm test -- form-kernel-field-runtime.test.ts
 python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md
 ```

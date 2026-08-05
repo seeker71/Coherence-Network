@@ -32,7 +32,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-create-node")'
   - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-delete-node")'
   - 'pytest_passes("api/tests/test_graph_node_mutation_carrier_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk && cd ../api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk && cd ../../api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py"
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation paths in this slice."
   - "Do not introduce a parallel public mutation store for live users."
@@ -92,7 +92,7 @@ default public mutation route still waits for side effects.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk
 cd api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native-carrier.md
 ```

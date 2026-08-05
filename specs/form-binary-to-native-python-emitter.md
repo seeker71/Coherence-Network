@@ -42,7 +42,7 @@ done_when:
   - "Python emission of a function-decl Recipe renders as readable native Python: 'def double(x):\\n    return x * 2'."
   - "Three-kernel parity sum on form-binary-multi-emit.fk = 65 (1 write + 1 round-trip + 16 registry + 16 non-empty + 31 Python length)."
   - 'file_exists("form/form/form-stdlib/tests/form-binary-multi-emit.fk")'
-test: "cd form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk"
+test: "cd form/form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk"
 constraints:
   - "No host-language handwritten emitter — emission lives in Form-native template tables, dispatched by the substrate engine."
   - "No source-text generator as the proof path — the binary IS the source; tongues are emitted from loaded Recipe trees."
@@ -182,7 +182,7 @@ A seventeenth tongue is a seventeenth row.
 
 ## Acceptance Tests
 
-- **Three-kernel parity** — `cd form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk` returns `→ 65` from each of Go, Rust, TypeScript with zero divergence.
+- **Three-kernel parity** — `cd form/form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk` returns `→ 65` from each of Go, Rust, TypeScript with zero divergence.
 - **Auto-discovery** — running `./validate.sh` with no arguments picks up `form-binary-multi-emit.fk` via its `; preludes:` header and runs it alongside every other stdlib test.
 - **Binary round-trip identity** — `write_form_binary` followed by `read_form_binary` produces a NodeID that satisfies `node_eq` against the original Recipe.
 - **Sixteen non-empty tongues** — `emit-all` on a loaded Recipe returns sixteen `(target-name, text)` pairs, every `text` of length ≥ 1.
@@ -194,9 +194,9 @@ A seventeenth tongue is a seventeenth row.
 Local proof:
 
 ```bash
-cd form && go build -o form-kernel-go/bin-go ./form-kernel-go
-cd form && cargo build --release --manifest-path form-kernel-rust/Cargo.toml --quiet
-cd form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk
+cd form/form && go build -o form-kernel-go/bin-go ./form-kernel-go
+cd form/form && cargo build --release --manifest-path form-kernel-rust/Cargo.toml --quiet
+cd form/form && ./validate.sh form-stdlib/tests/form-binary-multi-emit.fk
 # expect: ✓ ... → 65 ; 1 ok, 0 divergent — kernels agree on every sample.
 ```
 

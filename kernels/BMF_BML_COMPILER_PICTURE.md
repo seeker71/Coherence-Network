@@ -77,7 +77,7 @@ This picture is now executable in Form:
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk
 ```
 
@@ -98,7 +98,7 @@ The picture also now lives as BML source:
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk
 ```
 
@@ -116,7 +116,7 @@ The BML source now carries its own lowering model. The proof bridge in Form is i
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk
 ```
 
@@ -138,7 +138,7 @@ Form only reads and proves this shape. The compiler architecture it verifies is 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk
 ```
 
@@ -149,7 +149,7 @@ The current executable proof goes one step further than structure: it parses the
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk
 ```
 
@@ -172,7 +172,7 @@ This lets the bootstrap surface become archival. Once a working `.fkb` can compi
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk
 ```
 
@@ -189,7 +189,7 @@ The runtime record blueprints used by the concrete BML lowerer are now named in 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk
 ```
 
@@ -222,7 +222,7 @@ The compiler choice path now has an optional witnessed form:
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk
 ```
 

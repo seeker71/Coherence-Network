@@ -35,7 +35,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
   - 'file_contains("form/form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
   - 'pytest_passes("api/tests/test_native_auth_parity_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk && cd ../api && python3 -m pytest -q tests/test_native_auth_parity_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk && cd ../../api && python3 -m pytest -q tests/test_native_auth_parity_form.py"
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation routes to native execution for ordinary traffic in this slice."
   - "Do not store live secrets or contributor raw keys in Form source."
@@ -108,7 +108,7 @@ remaining blocker is side-effect proof plus a reversible public gate.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk
 cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md
 ```

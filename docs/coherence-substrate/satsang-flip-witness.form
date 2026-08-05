@@ -51,4 +51,4 @@
 ;   form/form/form-stdlib/tests/satsang-flip-witness-band.fk
 ;
 ; Proof command:
-;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk
+;   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk

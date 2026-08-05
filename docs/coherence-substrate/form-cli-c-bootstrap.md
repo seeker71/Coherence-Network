@@ -38,7 +38,7 @@ verb.
 Build it by hand any time:
 
 ```bash
-cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh  # -> form/form/form-cli, self-contained when the platform stamp is current
+cd form/form && FORM_STANDARD_LANE=1 ./build-form-cli.sh  # -> form/form/form-cli, self-contained when the platform stamp is current
 echo ping | ./form-cli                  # -> pong   (no toolchain present)
 ./form-cli                              # interactive REPL on a real tty
 ```

@@ -35,9 +35,9 @@
     "When a presence cannot lower a node locally (an op family outside the affine/native subset), it asks a sibling for a pre-lowered artifact or a richer recipe and integrates the answer without restarting.")
 
   (receipt-command
-    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk form-stdlib/tests/form-pe-coff-affine-band.fk")
-    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/presence-loop.fk form-stdlib/tests/presence-loop-band.fk")
-    (four-way "cd form && bash scripts/fourth-arm-gate.sh form-pe-coff-affine presence-loop")
+    (form-proof "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk form-stdlib/tests/form-pe-coff-affine-band.fk")
+    (form-proof "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/presence-loop.fk form-stdlib/tests/presence-loop-band.fk")
+    (four-way "cd form/form && bash scripts/fourth-arm-gate.sh form-pe-coff-affine presence-loop")
     (live "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/presence_cycle.ps1"))
 
   (gaps

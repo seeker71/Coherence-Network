@@ -18,13 +18,16 @@ param([string]$WorkRoot = "")
 $ErrorActionPreference = "Stop"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..")
 $form = Join-Path $repo "form"
+# native/ stays at the submodule root; form-stdlib/form-kernel-* nest one
+# level deeper under form/form/.
+$formTree = Join-Path $form "form"
 if (-not $WorkRoot) { $WorkRoot = Join-Path $repo ".cache/presence-cycle" }
 if (Test-Path $WorkRoot) { Remove-Item -Recurse -Force $WorkRoot }
 New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
 
 # The Go kernel builds as extensionless `bin-go`; PowerShell's call operator only
 # launches files with an executable extension, so use a .exe copy.
-$kernelSrc = Join-Path $form "form-kernel-go/bin-go"
+$kernelSrc = Join-Path $formTree "form-kernel-go/bin-go"
 $kernel = Join-Path $WorkRoot "bin-go.exe"
 Copy-Item $kernelSrc $kernel -Force
 
@@ -50,7 +53,7 @@ function Kernel-Run($preludes, $expr) {
     $tmp = Join-Path $WorkRoot ("_eval{0}.fk" -f $script:evalSeq)
     Set-Content -Path $tmp -Value $expr -Encoding ascii
     $args = @()
-    foreach ($p in $preludes) { $args += (Join-Path $form $p) }
+    foreach ($p in $preludes) { $args += (Join-Path $formTree $p) }
     $args += $tmp
     $out = & $kernel @args 2>&1
     if ($LASTEXITCODE -ne 0) { throw "kernel eval failed for `"$expr`": $out" }

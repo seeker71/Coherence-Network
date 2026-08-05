@@ -235,7 +235,7 @@ From the repository root, prove the connected phone and Mac witness shape as
 learning organs:
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk
 ```
 
 That validates capability/liveness receipt rows, typed channels, active
@@ -247,7 +247,7 @@ serial.
 For the four-way gate:
 
 ```bash
-cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning witness-state-receipt
+cd form/form && bash scripts/fourth-arm-gate.sh android-mesh-learning witness-state-receipt
 ```
 
 The current receipt feeds the Form-native learning floor: summarize, code-lower,
@@ -260,7 +260,7 @@ teachers.
 To prove source-backed oracle emission cycles from the live witness counters:
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk
 ```
 
 That proves summary-only STT, vision, multimodal, and GPU label rows from
@@ -321,8 +321,8 @@ content hashes before the cycle can claim `emitted`.
 The receipt shape is validated by:
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk
-cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk
+cd form/form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter
 ```
 
 This closes the previous direct host gap at the receipt boundary: Form now owns

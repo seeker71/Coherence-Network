@@ -35,7 +35,7 @@ done_when:
   - 'file_exists("form/form/form-stdlib/native-mutation-route-side-effects.fk")'
   - 'file_exists("form/form/scripts/native-mutation-route-side-effects-test.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_route_side_effect_binding.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk && cd .. && form/form/scripts/native-mutation-route-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk && cd ../.. && form/form/scripts/native-mutation-route-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -119,7 +119,7 @@ carried before ordinary no-header movement.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk
 cd .. && form/form/scripts/native-mutation-route-side-effects-test.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-route-side-effect-binding.md

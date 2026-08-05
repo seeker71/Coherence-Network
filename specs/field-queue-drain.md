@@ -58,14 +58,14 @@ reconnect handshake).
 
 ## Acceptance Tests
 
-- `cd form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk` → `1 ok, 0 divergent` → 127, fourth arm four-way.
-- `cd form && ./validate.sh --binary ...` → 127, bit-identical.
+- `cd form/form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk` → `1 ok, 0 divergent` → 127, fourth arm four-way.
+- `cd form/form && ./validate.sh --binary ...` → 127, bit-identical.
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk
-cd form && ./validate.sh --binary form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk
+cd form/form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk
 python3 scripts/validate_spec_quality.py --file specs/field-queue-drain.md
 ```
 

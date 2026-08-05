@@ -109,7 +109,7 @@ Anne Tucker new-beginnings |> stage: NEW-BEGINNING |> action: friendship-with-op
 Proof:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/teaching-run-on-body.fk form-stdlib/new-beginnings-body-run.fk form-stdlib/tests/new-beginnings-body-run-band.fk
 ```
 

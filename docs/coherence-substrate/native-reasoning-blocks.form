@@ -102,7 +102,7 @@
 ;   write <name>.fk and tests/<name>-band.fk (bit-flag claims summed to a verdict) -> register <name>
 ;   in form/form/fourth-arm-bands.txt. CHOOSE THE EMITTER: fkc = no string pool (integer-only bands); fks =
 ;   string pool — REQUIRED for any band carrying string OR FLOAT literals (a float literal lowers to a
-;   string-pool entry the walker strtod's). -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk
+;   string-pool entry the walker strtod's). -> cd form/form && ./validate.sh <name>.fk tests/<name>-band.fk
 ;   (must read "fourth arm: ... four-way", 0 divergent) -> ./validate.sh --binary ... (native, bit-
 ;   identical). If fkwu disagrees: a DIVERGENCE (different answer) is a correctness bug — fix to four-
 ;   way; an UNSUPPORTED OP FAMILY is honest 3-kernel-only with the op named. A SIGFPE on a float band is

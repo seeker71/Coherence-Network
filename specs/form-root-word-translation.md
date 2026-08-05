@@ -32,7 +32,7 @@ done_when:
   - "A word-level en surface translates to its de surface through the shared key-path cell, and the same walk returns it home (round-trip identity on a uniquely-mapped surface)."
   - "An unknown surface realizes to nothing in all three kernels; an ambiguous surface returns its sense list as data."
   - "The band reports corpus coverage counts (word-level keys selected, unique mappings, ambiguous surfaces, missing locale surfaces)."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk"
 constraints:
   - "Real data over mocks: the corpus is web/messages/*.json read through i18n.fk's cache layer; the spec adds no invented word lists."
   - "Translation walks are structural only — no frequency ranking, no fuzzy matching, no statistical fallback in this slice."
@@ -92,7 +92,7 @@ No ontology rows are needed for the first slice if the word/meaning cells intern
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk
 python3 scripts/validate_spec_quality.py --file specs/form-root-word-translation.md
 ```
 

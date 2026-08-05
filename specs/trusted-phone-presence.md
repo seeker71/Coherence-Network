@@ -20,7 +20,7 @@ done_when:
   - "phone-presence Form band crosses four-way (Go/Rust/TS/fkwu) with verdict 4095"
   - "/sense renders iPhone as a first-class presence door"
   - "platform call floors are documented from official Apple and Android sources"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk"
 constraints:
   - "Do not claim background call recording or hidden call control"
   - "Use confirmed tel/dialer floors before privileged direct-call/default-calling lanes"
@@ -72,7 +72,7 @@ platform an honest receipt that later native carriers can satisfy.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk
 python3 scripts/validate_spec_quality.py --file specs/trusted-phone-presence.md
 python3 scripts/generate_repo_indexes.py --check
 cd web && npm run build

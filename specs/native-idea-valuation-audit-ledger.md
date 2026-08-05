@@ -30,7 +30,7 @@ done_when:
   - 'file_exists("form/form/form-stdlib/native-idea-valuation-audit-ledger.fk")'
   - 'file_exists("form/form/scripts/native-idea-valuation-audit-ledger-test.sh")'
   - 'pytest_passes("api/tests/test_native_idea_valuation_audit_ledger.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk && cd .. && form/form/scripts/native-idea-valuation-audit-ledger-test.sh && cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk && cd ../.. && form/form/scripts/native-idea-valuation-audit-ledger-test.sh && cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -112,7 +112,7 @@ service code.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk
 cd .. && form/form/scripts/native-idea-valuation-audit-ledger-test.sh
 cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-idea-valuation-audit-ledger.md

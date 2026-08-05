@@ -28,7 +28,7 @@
 #
 # Verify:
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/resource-port.fk \
 #     form-stdlib/recognition-router.fk \
 #     form-stdlib/champion-challenger.fk \

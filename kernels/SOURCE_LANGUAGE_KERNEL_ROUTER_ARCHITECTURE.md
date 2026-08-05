@@ -480,7 +480,7 @@ BML/Form handler core uses `record_new`, `record_get`, `head`, `tail`, and
 numeric primitives, and the focused probe validates it across Go and Rust:
 
 ```
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
 # -> [4.75, 6.75, 2.25, 0.75, 6.75, 7.75]
 ```
 

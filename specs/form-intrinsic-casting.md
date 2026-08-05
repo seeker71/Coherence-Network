@@ -42,7 +42,7 @@ done_when:
   - "Both bands pass three-way (Go, Rust, TypeScript agree) under form/form/validate.sh."
   - "ts-bmf-run-expr-text on a mixed string+int expression lifts to an explicit CAST recipe and evaluates to the coerced string."
   - "A failing cast (string->int on a non-numeric string) realizes to nothing in all three kernels."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk"
 constraints:
   - "No silent kernel-level coercion: every type movement visible in a recipe tree as an explicit CAST node."
   - "Cast failure is nothing, never a thrown error and never a default value."
@@ -110,8 +110,8 @@ CoercionRow:            # one row per dialect implicit rule
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
 python3 scripts/validate_spec_quality.py --file specs/form-intrinsic-casting.md
 ```
 
@@ -156,8 +156,8 @@ done_when:
   - Lifted TS mixed expression shows an explicit CAST node and evaluates correctly.
   - string->int on a non-numeric string realizes to nothing in all three kernels.
 commands:
-  - cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-band.fk
-  - cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
+  - cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-band.fk
+  - cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
 constraints:
   - No silent coercion in kernels; no thrown errors on cast failure; no default-value fallbacks.
   - Coercion rules are ontology data, not evaluator branches.

@@ -34,7 +34,7 @@ done_when:
   - "Every fs_* / socket_* / http_* op in flt-ops has an fkwu walker arm on mac; windows and android have platform-specific arms or honest named gaps with witness bands"
   - "form-cli ask 'what is the standard receipt?' and 'how do host resources work on android?' retrieve grounded hits from the local index after heal — no Python bridge in the default path"
   - "validate.sh full suite: fourth arm count unchanged or increased; zero new fkwu divergences attributable to resource ops"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/tests/resource-port-band.fk && form-cli ask 'what is the standard receipt?' | grep -q grounded"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/tests/resource-port-band.fk && form-cli ask 'what is the standard receipt?' | grep -q grounded"
 constraints:
   - "Go/Rust/TS walkers remain proof siblings only — they never gate shipping or the sovereignty receipt path"
   - "Platform carriers may use host OS APIs (dirent, FindFirstFile, AAssetManager, etc.) inside fkwu emitted C — that is allowed per host-resource-access; the BODY stays Form-native"
@@ -139,18 +139,18 @@ Parallel: rag-heal → local index → form-cli ask (grounded retrieval)
 
 ```bash
 # Interface band (mac filesystem — first milestone)
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/host-resource-interface.fk \
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/host-resource-interface.fk \
   form-stdlib/host-resource-mac.fk form-stdlib/tests/host-resource-fs-mac-band.fk
 
 # T_flat self-host (after serializer split)
-cd form && # regenerate fourth-flatten-table.txt via fkwu only — no bin-go in trace
+cd form/form && # regenerate fourth-flatten-table.txt via fkwu only — no bin-go in trace
 
 # Local knowledge retrieval
 form-cli ask "what is the standard receipt?"  # expect grounded NodeID / doc hit
 form-cli ask "how does host-io work on fkwu?" # expect host-kernel / this spec
 
 # Full suite regression
-cd form && ./validate.sh  # fourth arm count >= prior; no new fkwu divergences
+cd form/form && ./validate.sh  # fourth arm count >= prior; no new fkwu divergences
 ```
 
 ## Risks

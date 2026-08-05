@@ -229,7 +229,7 @@ no further orchestration breath is needed.
 **Repro of the closure:**
 
 ```bash
-cd form
+cd form/form
 form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run \
     form-kernel-ts/seedbank/python-adapter/examples/python_demo.py
 # → 15  (top-level statement count, sibling-parity ✓)
@@ -285,7 +285,7 @@ into `kernel-bmf-run`, then greening every `PARITY_FILES` row.
 ## How to run the proof
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk \
               form-stdlib/json.fk form-stdlib/cache.fk \
               form-stdlib/form-ontology-loader.fk \

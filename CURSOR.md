@@ -41,7 +41,7 @@ Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and
 | Equivalence / “is this the same?” | **`?equivalent`**, substrate annotate — not string compare |
 | Observability | **Recipe + source span + trace/receipt** — not log lines alone |
 
-**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor).
+**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor).
 
 **Lattice queries** are **read** recipes over cells already on the lattice — file/HTTP/persistence natives exist; API/CLI doors may still hit Python bootstrap until `form-notation` grammar lands.
 

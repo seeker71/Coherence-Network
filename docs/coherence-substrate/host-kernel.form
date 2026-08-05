@@ -223,7 +223,7 @@
 # How to verify (the spine, today)
 # ─────────────────────────────────────────────────────────────────────
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/resource-port.fk        form-stdlib/tests/resource-port-band.fk \
 #     form-stdlib/learned-primitive.fk    form-stdlib/tests/learned-primitive-band.fk \
 #     form-stdlib/recognition-router.fk   form-stdlib/tests/recognition-router-band.fk \
@@ -231,7 +231,7 @@
 #
 #   # The kernel AS the composition — hosts as measured, swappable carriers
 #   # of one content-addressed body (verdict 255, also under --binary):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
 #     form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk \
 #     form-stdlib/kernel-satsang.fk form-stdlib/recognition-router.fk \
 #     form-stdlib/champion-challenger.fk form-stdlib/host-kernel-cell.fk \
@@ -241,11 +241,11 @@
 #   # as close to the metal as currently available (verdict 1023; --binary
 #   # runs the same program as a compiled .fkb artifact; the Go arm emits
 #   # a real ELF .so from the band's recipe via the host toolchain):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
-#   cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
 #   # IEEE floats, strings, and the ML vector trio through the Value-ABI
 #   # JIT — identical values across dispatch paths and kernels (255):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk
 #   # One recipe shown as six instruction sets — Android CPU (aarch64),
 #   # Android DSP (hexagon mpyi), Apple/MLX host (arm64 mul), NVIDIA PTX
 #   # (mul.lo.s64), AMD GCN (v_mul_lo), x86-64 (imul) — value parity held,

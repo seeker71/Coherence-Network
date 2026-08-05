@@ -67,7 +67,7 @@ done_when:
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
   - 'file_exists("scripts/verify_kernel_canary_public_gate.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_public_gate.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd ../.. && form/form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not execute against the production application database from local proof harnesses."
   - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip; this release only promotes bounded mutable ideas/spec method/path routers."
@@ -225,14 +225,14 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
 cd .. && form/form/scripts/native-mutation-public-gate-test.sh
 python3 deploy/kernel-router/mutation_public_gate_harness.py --json
 python3 deploy/kernel-router/mutation_ab_observation_harness.py --json
 bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md
 ```
 

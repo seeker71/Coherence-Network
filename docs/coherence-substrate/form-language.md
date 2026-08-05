@@ -136,7 +136,7 @@ From here on, **all software in this body is written at the grammar level of the
 | 1 | **Pick the domain grammar** | `form/form/form-stdlib/grammars/{domain}.fk`, `bml/*.bml`, or a domain `.form` teaching |
 | 2 | **Express behavior as rules** | `(pattern, semantic_action)` — see `apply-object-rule` in [`form/form/form-stdlib/engine.fk`](../../form/form/form-stdlib/engine.fk) |
 | 3 | **Compile / lower** | [`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md): scan → lift → **normalize** (same shape → same NodeID) → emit → run-observe |
-| 4 | **Prove** | **form code** band in `form/form/form-stdlib/tests/*-band.fk` on **fkwu** first; `cd form && ./validate.sh …` only for four-way sibling parity (honest floor) |
+| 4 | **Prove** | **form code** band in `form/form/form-stdlib/tests/*-band.fk` on **fkwu** first; `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor) |
 | 5 | **Carry to production** | `.fk` in stdlib, `.fkb` ratchet, kernel-router manifest, or fan-out tail — **carrier last** |
 
 Compile-from-source primitives (`compile_source_section`, `compile_form_source`, …)

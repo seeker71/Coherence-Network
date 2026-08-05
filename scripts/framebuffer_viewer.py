@@ -159,7 +159,7 @@ def main() -> int:
         print(f"no such file: {args.form_file}", file=sys.stderr)
         return 1
     if not GO_BIN.exists():
-        print(f"go kernel not built — run: cd form && ./validate.sh", file=sys.stderr)
+        print(f"go kernel not built — run: cd form/form && ./validate.sh", file=sys.stderr)
         return 1
 
     out = run_kernel(args.form_file, args.core)

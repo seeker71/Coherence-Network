@@ -19,7 +19,7 @@ done_when:
   - "form-native-resource-interfaces-band.fk verdict 32767 at validate.sh (go/rust/ts/fkwu)"
   - "fnri-dispatch rows map all ten protocols to host-io op families without Go registerNative"
   - "fnri-knowledge-cells lists host-kernel, standard-receipt, and form-first-reasoning paths"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk"
 constraints:
   - "No Go registerNative or Go table emission for interface catalog or knowledge lookup"
   - "Platform rows beyond mac/android/windows-arm64 stay in hati-os-targets.fk without duplicating impl strings"
@@ -55,15 +55,15 @@ Agents and cells need **class-based** host resource interfaces — port shapes, 
 
 ## Acceptance Criteria
 
-- `cd form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **32767** with four-way agreement (band under `form/form/form-stdlib/tests/`).
+- `cd form/form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **32767** with four-way agreement (band under `form/form/form-stdlib/tests/`).
 - `fnri-runtime` = `"fkwu"` and `fnri-no-go-emission?` = 1 in the band proof.
 - All ten `fnri-dispatch-for` rows resolve; process carrier = `filesystem`; http carrier = `http-socket`.
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh … form-native-resource-interfaces-band.fk
-cd form && ./validate.sh … form-cli-band.fk   # 4095 incl. fnri witness + receipt
+cd form/form && ./validate.sh … form-native-resource-interfaces-band.fk
+cd form/form && ./validate.sh … form-cli-band.fk   # 4095 incl. fnri witness + receipt
 ./scripts/verify_fnri_platform_receipt.sh
 ./scripts/verify_fnri_metal_standin_receipt.sh
 ./scripts/verify_fsh_fnri_bootstrap.sh
@@ -71,7 +71,7 @@ bash scripts/verify_fnri_windows_standalone.sh
 bash scripts/verify_fnri_android_receipt.sh
 # In a writable coherence-kernel checkout, never in this pinned consumer:
 ./form/form/scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
-cd form && ./build-form-cli.sh
+cd form/form && ./build-form-cli.sh
 printf 'fnri witness\n' | form/form/form-cli   # → 32767
 ```
 

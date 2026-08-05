@@ -70,7 +70,7 @@ done_when:
   - "Swift package builds the GUI executable"
   - "Swift package cross-compiles the iPhone HealthKit branch with the iPhoneOS SDK"
   - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-health-memory crosses four-way with verdict 1023; satsang-host-boundary crosses four-way with verdict 2097151"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
   - "The GUI edits local event payloads only; speech capture starts only from explicit user action"
@@ -190,13 +190,13 @@ memory.
 
 - `swift test --package-path experiments/satsang-mac-app` passes.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone` passes.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone --sdk "$(xcrun --sdk iphoneos --show-sdk-path)" --triple arm64-apple-ios17.0` passes.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `2097151`.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk` returns `1023`.
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `2097151`.
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk` returns `1023`.
 - Manual validation: launch the app, press Start Listening, allow macOS
   microphone/speech prompts, speak into the room, edit a transcript line, press
   Send, and see a JSON/Form event under
@@ -223,11 +223,11 @@ swift test --package-path experiments/satsang-mac-app
 swift build --package-path experiments/satsang-mac-app --product SatsangGuidance
 swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone
 scripts/build_satsang_mac_app.sh
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk
 python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md
 ```
 

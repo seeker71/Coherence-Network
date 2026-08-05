@@ -26,7 +26,7 @@ done_when:
   - "form-bml-cursor-parse-band.fk crosses the fourth arm: scripts/fourth-arm-gate.sh form-bml-cursor-parse reports PASS-4WAY (verdict 123)"
   - "fsc-compile-section-recipe routing default is unchanged — form.bml still compiles through the line path"
   - "bmf-core and bmf-grammar still PASS-4WAY (no regression from the bmlname char class)"
-test: "cd form && export PATH=\"$PATH:/c/Program Files/LLVM/bin\" && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammars/form-bml.fk form-stdlib/form-bml-lower.fk form-stdlib/tests/form-bml-cursor-full-band.fk && bash scripts/fourth-arm-gate.sh form-bml-cursor-parse"
+test: "cd form/form && export PATH=\"$PATH:/c/Program Files/LLVM/bin\" && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammars/form-bml.fk form-stdlib/form-bml-lower.fk form-stdlib/tests/form-bml-cursor-full-band.fk && bash scripts/fourth-arm-gate.sh form-bml-cursor-parse"
 constraints:
   - "Do not delete or alter the hand line compiler fsc-compile-form-bml-section-recipe in this breath"
   - "Do not flip form.bml routing onto the cursor by default — promotion is a later, ratchet-gated breath"
@@ -72,7 +72,7 @@ The north star (`kernels/BMF_BML_COMPILER_PICTURE.md` "Bootstrap Boundary"; `doc
 
 ```bash
 # Whole-surface cursor proof (Go/Rust/TS) — expect "1 ok, 0 divergent" and verdict 67
-cd form && export PATH="$PATH:/c/Program Files/LLVM/bin" && \
+cd form/form && export PATH="$PATH:/c/Program Files/LLVM/bin" && \
   ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk \
     form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk \
     form-stdlib/source-compiler.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk \
@@ -80,10 +80,10 @@ cd form && export PATH="$PATH:/c/Program Files/LLVM/bin" && \
     form-stdlib/tests/form-bml-cursor-full-band.fk
 
 # Fourth arm (fkwu) — cursor parse crosses; expect PASS-4WAY (verdict 123)
-cd form && bash scripts/fourth-arm-gate.sh form-bml-cursor-parse
+cd form/form && bash scripts/fourth-arm-gate.sh form-bml-cursor-parse
 
 # Regression: the cursor engine still crosses after the bmlname char class
-cd form && bash scripts/fourth-arm-gate.sh bmf-core bmf-grammar
+cd form/form && bash scripts/fourth-arm-gate.sh bmf-core bmf-grammar
 
 # Spec quality gate
 python3 scripts/validate_spec_quality.py --file specs/lift-form-bml-onto-bmf-cursor.md

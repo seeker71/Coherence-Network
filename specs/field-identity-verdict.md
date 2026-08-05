@@ -67,14 +67,14 @@ the field can finally tell people apart by their keys, with no central registry 
 
 ## Acceptance Tests
 
-- `cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk` → `1 ok, 0 divergent` → 511, fourth arm four-way.
-- `cd form && ./validate.sh --binary form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk` → 511, bit-identical.
+- `cd form/form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk` → `1 ok, 0 divergent` → 511, fourth arm four-way.
+- `cd form/form && ./validate.sh --binary form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk` → 511, bit-identical.
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk
-cd form && ./validate.sh --binary form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk
+cd form/form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk
 python3 scripts/validate_spec_quality.py --file specs/field-identity-verdict.md
 ```
 

@@ -503,7 +503,7 @@ def build_goal_state(
             "form": "form/form/form-stdlib/native-route-goal-cells.fk",
             "query": "form/form/form-stdlib/queries/native-route-goal-tending.fk",
             "make_target": "make native-route-goal-tending",
-            "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+            "proof": "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
         },
         "promotion_needed": promotion_rows,
         "next_route": next_route,
@@ -601,7 +601,7 @@ def task_card(
         ],
         "commands": [
             f"python3 scripts/native_route_goal_loop.py /goal --source {source} --seconds 86400 --limit 2000",
-            "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+            "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
         ],
         "constraints": [
             f"Current requested/effective source: {source_requested or 'all'} -> {source_effective or 'all'}.",

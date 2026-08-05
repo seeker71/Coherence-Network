@@ -107,7 +107,7 @@
 # How to verify (today)
 # ─────────────────────────────────────────────────────────────────────
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/primitive-registry.fk \
 #     form-stdlib/tests/primitive-registry-band.fk     # -> 63, 0 divergent
 #

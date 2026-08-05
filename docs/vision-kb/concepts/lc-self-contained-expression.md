@@ -128,7 +128,7 @@ Anne Tucker world-changing |> stage: SELF-CONTAINED |> action: return-to-heart-s
 Proof:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/teaching-run-on-body.fk form-stdlib/world-changing-body-run.fk form-stdlib/tests/world-changing-body-run-band.fk
 ```
 

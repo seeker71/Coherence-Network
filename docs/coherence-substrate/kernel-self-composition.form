@@ -142,17 +142,17 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # The primitives + persistence + sharing already run:
-#   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk \
+#   cd form/form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk \
 #                            form-stdlib/cell-sync.fk
 #   # Self-describing parts that declare spec + verification recipe, are
 #   # witnessed by the circle, swap only when the swap survives it, and
 #   # shrink/expand through .fkb (verdict 255, also under --binary):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
 #     form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk \
 #     form-stdlib/kernel-satsang.fk form-stdlib/tests/kernel-satsang-band.fk
 #   # Boot from axioms — load a .fkb image, offer a channel, self-extend by
 #   # minting (the boot artifact never mutates; the minted image boots):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
 #     form-stdlib/persistence.fk form-stdlib/cell-registry.fk \
 #     form-stdlib/boot.fk form-stdlib/tests/boot-band.fk
 #   # The offered channels (cell<->cell):

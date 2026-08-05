@@ -22,7 +22,7 @@
 #
 # Verify:
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/grammars/living-equation.fk \
 #     form-stdlib/all-life-north-star.fk \
 #     form-stdlib/tests/all-life-north-star-band.fk

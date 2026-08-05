@@ -99,7 +99,7 @@ AGENT_START_PACKET: dict[str, Any] = {
                     "kernels/BMF_BML_COMPILER_PICTURE.md",
                     "form/form/form-stdlib/engine.fk",
                 ],
-                "prove_with": "cd form && ./validate.sh … (form-stdlib/tests/*-band.fk)",
+                "prove_with": "cd form/form && ./validate.sh … (form-stdlib/tests/*-band.fk)",
                 "next_ripening": (
                     "form-notation grammar in .fk replacing Python parse of @spec and ?verbs"
                 ),

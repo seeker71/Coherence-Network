@@ -98,8 +98,8 @@ Both measured rather than assumed, and built around over the minimal proven core
 
 ## Acceptance Tests
 
-- `cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` → `65535`, `fourth arm: 1 band(s) four-way`, `1 ok, 0 divergent`
-- `cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk` → `8191` four-way; the classifier is unchanged by its new caller
+- `cd form/form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` → `65535`, `fourth arm: 1 band(s) four-way`, `1 ok, 0 divergent`
+- `cd form/form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk` → `8191` four-way; the classifier is unchanged by its new caller
 - Every lane tag on the page matches the computed walk `5 4 5 5 4 4 4 4 4 5 4 5 2 2 5 2 2 1 2 5 2 0`
 - The page states the band, the verdict, and that transcription is manual
 
@@ -108,15 +108,15 @@ Both measured rather than assumed, and built around over the minimal proven core
 Flip any signal in `zpl-claims` and the band must move rather than the page silently re-grading. Measured, not asserted: setting `water-car` `refuted?` from `1` to `0` drops verdict **65535 → 48127** — bit 1024 (water-car CONTESTED) and bit 16384 (the profile) both fall. Restoring it returns 65535 four-way. That movement is the guarantee this spec actually provides.
 
 ```bash
-cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk
+cd form/form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk
 ```
 
 ```bash
-cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk
+cd form/form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk
 ```
 
 ```bash
-cd form && sed -i '' 's/(list "water-car"             1 0 0 0 1)/(list "water-car"             1 0 0 0 0)/' form-stdlib/tests/zero-point-ladder-band.fk && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk; git checkout form-stdlib/tests/zero-point-ladder-band.fk
+cd form/form && sed -i '' 's/(list "water-car"             1 0 0 0 1)/(list "water-car"             1 0 0 0 0)/' form-stdlib/tests/zero-point-ladder-band.fk && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk; git checkout form-stdlib/tests/zero-point-ladder-band.fk
 ```
 
 ## Risks

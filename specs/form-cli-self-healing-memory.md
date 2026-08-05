@@ -41,7 +41,7 @@ done_when:
   - 'file_exists("form/form/form-stdlib/rag-heal.fk")'
   - 'file_exists("form/form/form-stdlib/tests/rag-freshness-band.fk")'
   - 'file_exists("form/form/form-stdlib/tests/rag-adaptive-k-band.fk")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk"
 constraints:
   - "the key, freshness, adaptive-k, ranking, and directory-list (fs_list) are Form recipes/ops (four-way + fkwu); the heal loop is Form on the kernel (universal host-io, Go-kernel + fkwu-native-exe)"
   - "Python (form_cli_rag.py) is the RETIRING bootstrap bridge for the default serving path; its content_key/freshness/rak_k/rag_l1 are labeled mirrors of the canonical Form recipes"
@@ -131,9 +131,9 @@ RagEntry:
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk   # -> 7, fourth arm four-way, 0 divergent
-cd form && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk   # -> 63, four-way
-cd form && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk # -> 15, four-way
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk   # -> 7, fourth arm four-way, 0 divergent
+cd form/form && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk   # -> 63, four-way
+cd form/form && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk # -> 15, four-way
 python3 scripts/validate_spec_quality.py --file specs/form-cli-self-healing-memory.md
 python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260624_form_native_rag_memory.json
 ```

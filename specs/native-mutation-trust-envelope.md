@@ -33,7 +33,7 @@ done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "\"choice_success\":1")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "\"prediction_error\":\"carried_as_residual\"")'
   - 'pytest_passes("api/tests/test_native_mutation_route_bindings.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk && cd ../api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk && cd ../../api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not perform the ordinary public mutation traffic flip in this slice."
   - "This slice does not claim side-effect execution; the later side-effect carrier proof must remain separately named."
@@ -121,7 +121,7 @@ traffic native by default while keeping explicit Python fallback observable.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk
 cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md
 ```

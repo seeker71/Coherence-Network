@@ -688,7 +688,7 @@ the source shape and uses `record_new`/`record_get` plus head/tail folds. This
 is the shape the Go front door should carry as the handler source:
 
 ```
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
 # -> [4.75, 6.75, 2.25, 0.75, 6.75, 7.75]
 ```
 

@@ -67,7 +67,7 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
 #     form-stdlib/tests/sqlite-read-band.fk          # → 31 four-way over real sqlite3 bytes
 #   # the band's page is the leaf sqlite3 wrote for:
 #   #   CREATE TABLE idea(id INTEGER, slug TEXT, title TEXT);

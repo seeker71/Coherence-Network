@@ -37,7 +37,7 @@ requirements:
   - "R7: Malformed BML definition shapes report source-aware compiler errors before host-language slice crashes; uncaught kernel panics in Go, Rust, and TypeScript leave source-bearing crash traces for inspection."
 done_when:
   - "cd pulse && python3 -m pytest -q"
-  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk"
+  - "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk"
   - "A stale open silence with three breathing samples is absent from /pulse/now ongoing_silences and has a closure note; incomplete evidence leaves the silence visible."
 test: "cd pulse && python3 -m pytest -q"
 constraints:
@@ -124,8 +124,8 @@ The generic Form receipt records:
 
 ```bash
 cd pulse && python3 -m pytest -q
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk
-cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk
+cd form/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk
 cd form/form/form-kernel-go && go test ./...
 cd form/form/form-kernel-rust && cargo test --quiet
 cd form/form/form-kernel-ts && npm run check

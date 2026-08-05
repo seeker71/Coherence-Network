@@ -349,7 +349,7 @@ JIT runtime — no Go/Rust/clang in the default path:
 | Ask / route / structural lookup | `form-cli ask` (`form-cli-main.fk` + `rag-ask.fk`: fkwu grounded RAG, no HTTP local oracle) | Python `coh_substrate.py`, rented LLM, host-local LLM as default answer |
 | Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` | bash one-offs, `rg`/`grep` when `source_inventory` exists |
 | Author / test / prove | **form code** — BML or `.fk` proof bands | new Python services, hand-written host scripts |
-| Four-way parity (honest floor) | `cd form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
+| Four-way parity (honest floor) | `cd form/form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
 
 Covered bands report `fourth arm: ... four-way`; uncovered bands are recorded as
 `3-kernel only` with the manifest blocker. The sovereignty receipt bar is
@@ -400,7 +400,7 @@ writes `docs/system_audit/native_route_goal_state.json` with the next route/task
 card. Treat that JSON as an edge lens: the native cell surface is
 `form/form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
 `make native-route-goal-tending` and proof
-`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+`cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
 The related native-mutation receipt family now crosses four-way too:
 side-effect SQL, route side-effect binding, public-gate receipts, trust
 envelopes, and idea valuation audit-ledger parity are manifest rows.
@@ -635,7 +635,7 @@ when a Form carrier exists. **No substrate HTTP POST writes** for querying;
 durable *authoring* stays **source file + ingest**, not chat-only.
 
 Proof habit: run the band on **fkwu** (`form-cli` / flattened table) first;
-use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor,
+use `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor,
 not the sovereignty receipt).
 
 ### Writing new software (when you implement, not when you query)

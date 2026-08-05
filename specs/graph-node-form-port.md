@@ -20,7 +20,7 @@ done_when:
   - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-list-nodes")'
   - 'file_contains("form/form/form-stdlib/tests/graph-node-port-band.fk", "Band verdict: 11111")'
   - 'pytest_passes("api/tests/test_graph_node_form_port.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk"
 constraints:
   - "Do not change api/app/services/graph_service.py behavior in this slice."
   - "Do not add a parallel Python graph-node service."
@@ -71,7 +71,7 @@ test existence, count by type, and list nodes by type.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk
 cd api && python3 -m pytest -q tests/test_graph_node_form_port.py
 python3 scripts/validate_spec_quality.py --file specs/graph-node-form-port.md
 ```

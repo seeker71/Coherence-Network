@@ -31,7 +31,7 @@ done_when:
   - "host-kernel-gaps-close-band crosses four-way on fkwu without segfault (verdict 127)"
   - "platform carrier band proves Mac/Windows/Android dispatch shape on all siblings incl. fkwu"
   - "standard-receipt rows c-bootstrap toolchain-free mac windows android observed for host-metal band"
-test: "cd form && bash scripts/fourth-arm-gate.sh host-kernel-gaps-close fkwu-platform-carrier && python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_<date>_fkwu_native_host_platform.json"
+test: "cd form/form && bash scripts/fourth-arm-gate.sh host-kernel-gaps-close fkwu-platform-carrier && python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_<date>_fkwu_native_host_platform.json"
 constraints:
   - "No new syscall tables in hand-written C beside platform emit slices driven from BML registry"
   - "Go/Rust/TS remain parity witnesses until receipt path retires them — not shipping compilers for host resources"
@@ -75,7 +75,7 @@ Ship the universal kernel (fkwu) as the **only** host resource runtime on the st
 ## Verification
 
 ```bash
-cd form && GO_BIN=./form-kernel-go/bin-go ./validate.sh \
+cd form/form && GO_BIN=./form-kernel-go/bin-go ./validate.sh \
   form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk
 python3 scripts/validate_commit_evidence.py \
   --file docs/system_audit/commit_evidence_2026-06-24_fkwu_kernel_collapse_form_fs.json

@@ -63,7 +63,7 @@ function ConvertTo-GitBashPath {
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
-$formDir = Join-Path $repoRoot "form"
+$formDir = Join-Path $repoRoot "form/form"
 $cacheDir = Join-Path $formDir "form-stdlib\.cache\fourth"
 $bashPath = Resolve-Tool -Requested $Bash -Names @("bash.exe", "bash") -Fallbacks @("C:\Program Files\Git\bin\bash.exe")
 $goPath = Resolve-Tool -Requested $Go -Names @("go.exe", "go") -Fallbacks @("C:\Program Files\Go\bin\go.exe")
