@@ -15,6 +15,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM_DIR="$REPO_ROOT/form"
+[ -d "$FORM_DIR/form-stdlib" ] || FORM_DIR="$REPO_ROOT/form/form"
 
 KERNEL="rust"
 while [[ $# -gt 0 ]]; do

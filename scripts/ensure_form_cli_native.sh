@@ -12,6 +12,9 @@
 set -euo pipefail
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM_DIR="$ROOT/form"
+# The kernel repo carries the classic tree nested one level down (form/form/…);
+# container images keep the flat lane. Stand on whichever is present.
+[ -d "$FORM_DIR/form-stdlib" ] || FORM_DIR="$ROOT/form/form"
 PRINT_PATH=0
 if [ "${1:-}" = "--print-path" ]; then
   PRINT_PATH=1

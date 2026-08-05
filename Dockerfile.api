@@ -37,9 +37,9 @@ RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
 # the local wrapper. Build the committed emitted-C carrier here; no Go/runtime
 # compiler enters the final image. A stale emitted carrier fails this image
 # build instead of silently deploying a different trust gate.
-COPY form/form-stdlib /build/form-cli-src/form-stdlib
-COPY form/scripts /build/form-cli-src/scripts
-COPY form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
+COPY form/form/form-stdlib /build/form-cli-src/form-stdlib
+COPY form/form/scripts /build/form-cli-src/scripts
+COPY form/form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
 RUN cd /build/form-cli-src \
  && CC=cc FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh /build/form-cli \
  && test "$(printf 'ping\n' | /build/form-cli)" = "pong" \
@@ -120,7 +120,7 @@ COPY api/ ./
 # post-build (substrate ingest). Ship them at build time too so the image
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
-COPY form/scripts/ ./form/scripts/
+COPY form/form/scripts/ ./form/scripts/
 COPY bin/form-cli ./bin/form-cli
 COPY bin/form-cli.sha256 ./bin/form-cli.sha256
 RUN chmod +x ./bin/form-cli \
@@ -128,7 +128,7 @@ RUN chmod +x ./bin/form-cli \
 
 # Form stdlib sources are executable runtime material. Direct fkwu evaluation
 # prepends the pinned core before each endpoint recipe.
-COPY form/form-stdlib/ ./form/form-stdlib/
+COPY form/form/form-stdlib/ ./form/form-stdlib/
 # Native carrier selection verifies the image-built binary with the pinned
 # Form proof helper before writing its receipt. Keep those scripts beside the
 # stdlib in the runtime image; they are verification tissue, not a toolchain.
@@ -136,33 +136,33 @@ RUN test "$(./bin/form-cli eval '(add 20 22)')" = 42
 
 # Transmuted-endpoint recipes. api/app/services/form_kernel_bridge.py resolves
 # `load_recipe("endpoint_*_demo.fk")` against
-# <repo-root>/form/form-kernel-ts/seedbank/python-adapter/examples/ — which,
+# <repo-root>/form/form/form-kernel-ts/seedbank/python-adapter/examples/ — which,
 # with api/ flattened onto /app, is /app/form/form-kernel-ts/seedbank/
 # python-adapter/examples/. Without these `.fk` on disk, load_recipe raises
 # FileNotFoundError and route execution fails closed. The complete live shared
 # recipe set is baked from the same coherence-kernel pin as fkwu.
-COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_simpson_diversity_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_marginal_cc_return_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_breath_balance_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_softmax_weights_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_cost_vector_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_value_vector_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_roi_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_shannon_entropy_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_marginal_from_record_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounding_summary_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounded_cost_sum_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_value_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_concept_match_score_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_tag_match_score_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_worldview_alignment_demo.fk \
-     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_summary_score_demo.fk \
+COPY form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_simpson_diversity_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_marginal_cc_return_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_breath_balance_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_softmax_weights_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_cost_vector_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_value_vector_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_roi_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_shannon_entropy_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_marginal_from_record_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounding_summary_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounded_cost_sum_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_value_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_concept_match_score_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_tag_match_score_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_worldview_alignment_demo.fk \
+     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_summary_score_demo.fk \
      ./form/form-kernel-ts/seedbank/python-adapter/examples/
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script

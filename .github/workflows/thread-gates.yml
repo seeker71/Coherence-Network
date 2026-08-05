@@ -163,8 +163,8 @@ jobs:
           test "$(bin/form-cli eval '(add 20 22)')" = 42
           test "$(bin/form-cli eval '(do (defn sum-to (n) (if (eq n 0) 0 (add n (sum-to (sub n 1))))) (sum-to 10))')" = 55
           test "$(bin/form-cli eval '(list 1 2.5 (list 3 4))')" = '[1, 2.5, [3, 4]]'
-          test "$(form/fkwu --src form/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
-          form/validate.sh form-stdlib/tests/round-ndigits-band.fk
+          test "$(form/fkwu --src form/form/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
+          form/form/validate.sh form-stdlib/tests/round-ndigits-band.fk
 
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
