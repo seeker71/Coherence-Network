@@ -182,3 +182,37 @@ async def test_pulse_response_under_500ms():
     body = r.json()
     silent_names = [o["name"] for o in body["organs"] if o["status"] == "silent"]
     assert "neo4j" in silent_names
+
+
+# ---------------------------------------------------------------------------
+# 8. The neo4j probe reaches the real server, honestly in both directions
+# ---------------------------------------------------------------------------
+
+def test_check_neo4j_breathing_when_server_answers(monkeypatch):
+    class _Resp:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout: _Resp())
+    status, score, detail = instance_pulse_service._check_neo4j()
+    assert (status, score, detail) == ("breathing", 1.0, None)
+
+
+def test_check_neo4j_silent_when_server_unreachable(monkeypatch):
+    import urllib.request
+
+    def _refuse(url, timeout):
+        raise ConnectionRefusedError("refused")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _refuse)
+    status, score, detail = instance_pulse_service._check_neo4j()
+    assert status == "silent"
+    assert score == 0.0
+    assert "neo4j unreachable" in detail
