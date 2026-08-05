@@ -137,15 +137,17 @@ def _check_postgres() -> tuple[str, float, str | None]:
 
 
 def _check_neo4j() -> tuple[str, float, str | None]:
+    # Reachability probe against the Neo4j server's unauthenticated HTTP
+    # discovery endpoint. NEO4J_HTTP_URL overrides the in-compose default.
+    url = os.environ.get("NEO4J_HTTP_URL", "http://neo4j:7474/")
     try:
-        # Lazy import — the graph store is optional in some test environments.
-        from app.services import graph_store_service
-        store = graph_store_service.get_store()
-        if store is None:
-            return ("silent", 0.0, "graph store unavailable")
-        # A simple read; the count itself is incidental.
-        store.run_query("MATCH (n) RETURN count(n) AS c LIMIT 1")
-        return ("breathing", 1.0, None)
+        import urllib.request
+
+        with urllib.request.urlopen(url, timeout=3) as resp:
+            status = getattr(resp, "status", 200)
+        if 200 <= status < 300:
+            return ("breathing", 1.0, None)
+        return ("strained", 0.5, f"neo4j answered {status}")
     except Exception as exc:
         return ("silent", 0.0, f"neo4j unreachable: {type(exc).__name__}")
 
