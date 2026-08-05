@@ -50,10 +50,10 @@ WORKDIR /build
 # Copy the kernel crate. The crate is self-contained — no workspace, no
 # repo-relative path deps — so this is all the source it needs. This is the
 # SAME source set Dockerfile.api's kernel-builder copies.
-COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock ./
-COPY form/form-kernel-rust/src ./src
-COPY form/form-kernel-rust/libraries ./libraries
-COPY form/form-kernel-rust/recipes ./recipes
+COPY form/form/form-kernel-rust/Cargo.toml form/form/form-kernel-rust/Cargo.lock ./
+COPY form/form/form-kernel-rust/src ./src
+COPY form/form/form-kernel-rust/libraries ./libraries
+COPY form/form/form-kernel-rust/recipes ./recipes
 
 # Build the release binary and strip it — the SAME load-bearing build step
 # Dockerfile.api runs (cargo build --release --bin form-kernel-rust && strip).
@@ -104,7 +104,7 @@ COPY api/config/api.json /app/api/config/api.json
 # source-compiled at load via --stdlib). The default shadow manifest is raw
 # S-expression Form and does NOT touch the source-compiler, but baking the
 # stdlib in lets a BML manifest work later without rebuilding the image.
-COPY form/form-stdlib/ /app/form/form-stdlib/
+COPY form/form/form-stdlib/ /app/form/form-stdlib/
 
 # The route manifests: shadow is the deployable default; production carries the
 # current native route surface and its route metadata so promotion is a runtime
@@ -112,7 +112,7 @@ COPY form/form-stdlib/ /app/form/form-stdlib/
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
 COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
 COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
-COPY form/apps/coherence-network/api.bml /routes/api.bml
+COPY form/form/apps/coherence-network/api.bml /routes/api.bml
 
 # Source-backed native routes read the canonical idea markdown index directly.
 # This is not the mutable DB-backed registry; it is the repo source surface that

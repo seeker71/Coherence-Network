@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends clang sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY form/ form/
-RUN cd form/form-kernel-go && go build -o bin-go .
-RUN cd form \
+RUN cd form/form/form-kernel-go && go build -o bin-go .
+RUN cd form/form \
  && { printf '(do\n'; cat form-stdlib/db-api-server.fk; \
       printf '\n(print "==C==")\n(print (das-emit))\n(print "==END==")\n0)\n'; } > /tmp/driver.fk \
  && ./form-kernel-go/bin-go /tmp/driver.fk \
