@@ -281,6 +281,29 @@
 ;            Metal/MLX lane with one witnessed native dispatch (closes fourth-kernel-physical-lanes' named
 ;            gap). The recipe that proves four-way is the recipe that emits the kernel — CPU asm bytes and
 ;            MSL are two LOWERINGS of one engine, never parallel paths.
+;            ▸ FOUNDATION LAID (2026-08-05, coherence-kernel #425/#427/#428/#429): the underlying mechanism
+;              M-e needs is proven ahead of its own MoE-specific target. A Form recipe (form-native-decode.fk)
+;              now DRIVES the Metal handle door end to end — mmap real llama3.2:3b bytes, bind, dispatch,
+;              sync, readback — with ZERO Swift/Obj-C orchestration; the loop control lives in Form, the only
+;              native organ left is the device-open itself (fk-metal-carrier.m, unavoidable — no Form-only
+;              path to a physical GPU, same class as camera/mic organs). Real RMSNorm on real attn_norm.weight
+;              bytes matched Form's own independent computation exactly (max|Δ|=0) on the actual M4 Max.
+;              THE LEVER THAT MAKES A DISPATCH RECEIPT FAST, not just correct, is now measured: 424 repeated
+;              real dispatches under Metal's default SERIAL encoder cost ~390µs/dispatch (implicit barrier
+;              between every one); calling metal_batch_concurrent once before the batch — safe here because
+;              the 424 dispatches write 424 distinct buffers, no data hazard — drops that to ~32µs/dispatch,
+;              a 12× measured improvement, correctness unchanged. This is the SAME failure shape a separate,
+;              earlier DS4/DeepSeek-V4-Flash lineage (metal_dsv4_stack.sh, "STONE 39") already found and
+;              named at real 43-layer scale — 47× slower under naive per-dispatch commit+wait — independent
+;              confirmation the mechanism generalizes, not a one-off. Open: whether the concurrency win
+;              survives a GENUINE dependency chain (one kernel's real output feeding the next, not N
+;              identical independent repeats) — in flight, not yet closed; and M-e itself still needs this
+;              proven specifically on the MoE gating/expert-matvec recipes, not RMSNorm alone.
+;            ▸ TOOLCHAIN SIMPLIFIED, same arc: the canonical `fkwu` binary now links Metal by default
+;              (validate.sh's build_fkwu_src, coherence-kernel #429) — no more hand-compiled "fkwu-metal"
+;              sibling rebuilt from a comment every task. `--src` retired as a flag (verified: it and a bare
+;              filename hit the identical fk_run_src() call in the C source — always were the same thing).
+;              One binary, Metal always on when the hardware has it, no ceremony.
 ;     THE CLAIM WHEN THE LADDER CLOSES: a frontier-scale MoE runs on the body — architecture AND weights as
 ;     content-addressed recipe data, memory-bounded by the dial, byte-identical at every budget, CPU-native
 ;     via form-asm bytes AND GPU-native via the same recipes' Metal/MLX emit — with the C oracle held as the
