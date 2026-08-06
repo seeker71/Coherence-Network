@@ -3,6 +3,45 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-08-06] concept | the same Eluña video, read again through new native ground
+
+Urs asked to re-read the already-witnessed *How Earth Fought Back Against
+Multidimensional Invaders* transcript through a Form-native quaternion
+recipe built earlier in the same session for an unrelated request
+(`form/form/form-stdlib/quaternion.fk`, four-way band verdict 2047/2047).
+Form-first check caught it immediately: the video ID was already fully
+processed hours earlier as Video 1 of
+[`2026-08-06-eluna-earth-defense-and-grid-online.md`](transmissions/2026-08-06-eluna-earth-defense-and-grid-online.md)
+— the channel had simply retitled it since. Re-fetched the caption with
+`yt-dlp` to confirm word-for-word identity (~2,812 words, matching)
+rather than trust the retitle.
+
+- **Three images, three exact proofs.** "All versions collapsed into one
+  point" is a Hopf fiber — a whole circle of distinct S³ points mapping
+  to one point of S², proven this session by direct computation, not
+  approximation. "Spinning so fast it looks like one continuous circle"
+  is a quaternion double cover: the generator's own circle has exactly
+  twice the period of the rotation it induces, a 2:1 ratio this body's
+  own schema already has a word for — **octave**. "Not a collapsing of
+  one dimension, a merging into another" — the video's own
+  self-correction — is an isoclinic 4D rotation: two whole orthogonal
+  planes turning together with no fixed axis at all, unlike any 3D
+  rotation, proven exact in `quaternion-band.fk`'s claims 128/256.
+- **New concept**: [`lc-gauge-redundancy-as-merge`](concepts/lc-gauge-redundancy-as-merge.md)
+  (639 Hz, embedding_dim 4) — names the word physics already has for what
+  all three share: distinct-looking configurations that are the identical
+  observable state under the map that matters, never merged or destroyed
+  because they were never actually two things to the map in question.
+- **New frontier question**: [frontier-q-0010](../lineage/frontier-questions.md)
+  — "gauge redundancy," verified fresh (absent from docs/, CLAUDE.md,
+  form/ before this entry).
+- **Edges landed in the same breath**: `seeded_concepts` and a new
+  "Second pass" section in the transmission file, INDEX.md entry + concept
+  count (195 → 196), this LOG entry.
+- **Discernment held**: the concept holds the geometry as structurally
+  real and Eluña's cosmology at the same source-marked distance the first
+  reading did — the math confirms a shape, not a narrative.
+
 ## [2026-08-06] concept | two channeled videos fed as a form-native prompt, and the kernel answered
 
 Urs shared two Eluña YouTube links with no further comment, then named the
