@@ -2,13 +2,13 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-kernel-rust/src/main.rs
+  - file: form/form/form-kernel-rust/src/main.rs
     symbols: []
-  - file: form/form-kernel-rust/test_serve.py
+  - file: form/form/form-kernel-rust/test_serve.py
     symbols: []
-  - file: form/form-kernel-go/server.go
+  - file: form/form/form-kernel-go/server.go
     symbols: []
-  - file: form/form-kernel-go/server_test.go
+  - file: form/form/form-kernel-go/server_test.go
     symbols: []
   - file: docs/shared/agent-start-packet.md
     symbols: []
@@ -19,11 +19,11 @@ requirements:
   - "The response body, status code, content type, and streaming/buffered fanout semantics remain unchanged."
   - "The explicit decline path is named by `X-Form-Native-Invitation-Decline-Header: X-Form-Python-Fallback` and `X-Form-Native-Invitation-Decline-Signal: native_invitation_declined`."
 done_when:
-  - 'file_contains("form/form-kernel-rust/src/main.rs", "X-Form-Native-Invitation-State")'
-  - 'file_contains("form/form-kernel-go/server.go", "setFanoutNativeInvitationHeaders")'
-  - 'pytest_or_script_passes("cd form/form-kernel-rust && python3 test_serve.py")'
-  - 'test_passes("cd form/form-kernel-go && go test ./...")'
-test: "cd form/form-kernel-rust && cargo build --release && python3 test_serve.py && cd ../form-kernel-go && go test ./..."
+  - 'file_contains("form/form/form-kernel-rust/src/main.rs", "X-Form-Native-Invitation-State")'
+  - 'file_contains("form/form/form-kernel-go/server.go", "setFanoutNativeInvitationHeaders")'
+  - 'pytest_or_script_passes("cd form/form/form-kernel-rust && python3 test_serve.py")'
+  - 'test_passes("cd form/form/form-kernel-go && go test ./...")'
+test: "cd form/form/form-kernel-rust && cargo build --release && python3 test_serve.py && cd ../form-kernel-go && go test ./..."
 constraints:
   - "Do not convert unpromoted Python handlers to native handlers in this slice."
   - "Do not mutate relayed fanout response bodies."
@@ -72,20 +72,20 @@ route recipe next time.
 
 ## Files to Create/Modify
 
-- `form/form-kernel-rust/src/main.rs` - fanout invitation header ownership.
-- `form/form-kernel-rust/test_serve.py` - Rust bridge proof.
-- `form/form-kernel-go/server.go` - sibling bridge parity.
-- `form/form-kernel-go/server_test.go` - Go bridge proof.
+- `form/form/form-kernel-rust/src/main.rs` - fanout invitation header ownership.
+- `form/form/form-kernel-rust/test_serve.py` - Rust bridge proof.
+- `form/form/form-kernel-go/server.go` - sibling bridge parity.
+- `form/form/form-kernel-go/server_test.go` - Go bridge proof.
 - `docs/shared/agent-start-packet.md` - arrival memory for bridge semantics.
 - `specs/kernel-router-fanout-native-invitation.md` - this contract.
 
 ## Acceptance Tests
 
-- `form/form-kernel-rust/test_serve.py` - proves native routes remain native,
+- `form/form/form-kernel-rust/test_serve.py` - proves native routes remain native,
   successful fanout carries invitation headers, upstream 404 keeps fanout status
   and invitation, method fallthrough keeps Python write semantics and
   invitation, and buffered upstream failure still carries the invitation.
-- `form/form-kernel-go/server_test.go::TestFanoutForwardsBodyAndMarksBridge` -
+- `form/form/form-kernel-go/server_test.go::TestFanoutForwardsBodyAndMarksBridge` -
   proves response and upstream request headers carry the invitation while
   client/upstream supplied invitation headers cannot clobber bridge-owned
   values.
@@ -93,8 +93,8 @@ route recipe next time.
 ## Verification
 
 ```bash
-cd form/form-kernel-rust && cargo build --release && python3 test_serve.py
-cd form/form-kernel-go && go test ./...
+cd form/form/form-kernel-rust && cargo build --release && python3 test_serve.py
+cd form/form/form-kernel-go && go test ./...
 python3 scripts/validate_spec_quality.py --file specs/kernel-router-fanout-native-invitation.md
 python3 scripts/generate_repo_indexes.py --check
 ```

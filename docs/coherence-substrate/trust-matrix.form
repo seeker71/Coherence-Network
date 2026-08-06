@@ -18,8 +18,8 @@
   (lineage
     (kin form-first-router.fk form-cli-sufficiency.fk form-freq-check.fk sovereignty-receipt.fk
          native-reasoning.form lc-cognitive-sovereignty)
-    (proof form/form-stdlib/trust-matrix.fk
-           form/form-stdlib/tests/trust-matrix-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (proof form/form/form-stdlib/trust-matrix.fk
+           form/form/form-stdlib/tests/trust-matrix-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
     (named-with urs sema))
 
   ; the per-step observation — four signals, each 0/1

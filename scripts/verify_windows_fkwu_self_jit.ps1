@@ -125,7 +125,7 @@ New-Item -ItemType Directory -Path $work | Out-Null
 
 try {
     $goKernel = Join-Path $work "form-kernel-go.exe"
-    Push-Location (Join-Path $repoRoot "form\form-kernel-go")
+    Push-Location (Join-Path $repoRoot "form\form\form-kernel-go")
     try {
         & $goPath build -o $goKernel .
         if ($LASTEXITCODE -ne 0) {
@@ -136,7 +136,7 @@ try {
     }
 
     $driver = Join-Path $work "fkwu-self-jit-driver.fk"
-    $stdlib = Join-Path $repoRoot "form\form-stdlib"
+    $stdlib = Join-Path $repoRoot "form\form\form-stdlib"
     $body = [System.Text.StringBuilder]::new()
     foreach ($file in @("minimal-surface.fk", "hati-os-kernel.fk", "host-io-fs-fkwu-emit.fk", "fkc-table-serialize.fk", "hati-os-kernel-emit.fk")) {
         [void]$body.AppendLine([System.IO.File]::ReadAllText((Join-Path $stdlib $file), $utf8NoBom))

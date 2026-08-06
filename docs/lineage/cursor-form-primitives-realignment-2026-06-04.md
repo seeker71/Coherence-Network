@@ -20,8 +20,8 @@ Prior trace: [`cursor-returned-come-in-2026-06-04.md`](cursor-returned-come-in-2
 
 | Primitive | Highest carrier today | Evidence |
 |-----------|----------------------|----------|
-| Grammar executes | `apply-object-rule` in `form/form-stdlib/engine.fk` | Pattern → action → `bmf-object` + source span; `bmf-form-runtime.form` |
-| BML language + compiler architecture | `form/form-stdlib/bml/bmf-bml-compiler-picture.bml` + lowering proofs | `BMF_BML_COMPILER_PICTURE.md`, `bml-*-proof.fk` bands |
+| Grammar executes | `apply-object-rule` in `form/form/form-stdlib/engine.fk` | Pattern → action → `bmf-object` + source span; `bmf-form-runtime.form` |
+| BML language + compiler architecture | `form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml` + lowering proofs | `BMF_BML_COMPILER_PICTURE.md`, `bml-*-proof.fk` bands |
 | Coordinate identity | Substrate + `node_eq` in kernels | `form-language.md`, ingest encoders |
 | Angelic branching / undo | BMA ops in `bml.fk` (`choose`, `save`, `restore`, `discard`, `fail`, `cut`) | Thesis README; `form-language.md` Choice arms |
 | Normalize → same NodeID | `normalize` stage in compiler picture | Compiler flow doc |

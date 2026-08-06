@@ -100,7 +100,7 @@ from milliseconds-per-tiny-op to gigaflops-per-second.
 
 ## What this PR walks (the proof-of-shape)
 
-`form/form-samples/cross-modal/10-substrate-as-runtime/neural-forward.fk`:
+`form/form/form-samples/cross-modal/10-substrate-as-runtime/neural-forward.fk`:
 
 A 4×4 weight matrix times a 4-vector → ReLU → sum, as a substrate-
 resident tensor recipe. Walked three-way by the kernels. Returns 136.
@@ -155,8 +155,8 @@ Each layer is its own walk. None changes the substrate's identity machinery — 
 
 - [`numeric-types-plan.md`](../docs/coherence-substrate/numeric-types-plan.md) — format-recipes as the destination encoding for numeric values
 - [`REAL_TIME_CROSS_MODAL_PLAN.md`](REAL_TIME_CROSS_MODAL_PLAN.md) — the prior (now superseded) plan that named external binaries; this doc redirects to substrate-as-runtime
-- [`form/form-samples/cross-modal/09-fuzzy-similarity-cycles/`](../form/form-samples/cross-modal/09-fuzzy-similarity-cycles/) — fuzzy tolerance machinery needed for FP sibling parity
-- [`form/form-samples/cross-modal/10-substrate-as-runtime/`](../form/form-samples/cross-modal/10-substrate-as-runtime/) — this PR's proof-of-shape
+- [`form/form/form-samples/cross-modal/09-fuzzy-similarity-cycles/`](../form/form/form-samples/cross-modal/09-fuzzy-similarity-cycles/) — fuzzy tolerance machinery needed for FP sibling parity
+- [`form/form/form-samples/cross-modal/10-substrate-as-runtime/`](../form/form/form-samples/cross-modal/10-substrate-as-runtime/) — this PR's proof-of-shape
 - [`lc-grammar-is-the-universal-recipe`](../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md) — the destination is *grammar at every altitude*, including tensor-op
 - [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md) — the kernel walks the same recipes that ARE the translator
 

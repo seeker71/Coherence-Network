@@ -20,8 +20,8 @@
 #     "(tri 5)" 15 "ollama run coder"
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO_DIR="$ROOT/form/form-kernel-go"; GO="$GO_DIR/bin-go"
-STD="$ROOT/form/form-stdlib"
+GO_DIR="$ROOT/form/form/form-kernel-go"; GO="$GO_DIR/bin-go"
+STD="$ROOT/form/form/form-stdlib"
 GAP="${1:?gap-name}"; SPEC="${2:?recipe-spec}"; ASSERT="${3:?assert-expr}"; EXPECT="${4:?expected}"
 ORACLE="${5:-ollama run coder}"
 # optional 6th arg: space-separated stdlib basenames preluded BEFORE the draft, so a
@@ -123,7 +123,7 @@ fi
 
 # 7. Verdict ------------------------------------------------------------------
 if [[ "$OUTCOME" == "success" ]]; then
-    echo "── gap '$GAP' CLOSED offline → draft kept at form/form-stdlib/drafts/${GAP}.fk"
+    echo "── gap '$GAP' CLOSED offline → draft kept at form/form/form-stdlib/drafts/${GAP}.fk"
     echo "   next: name an assertion band and add to the manifest to make it four-way."
     exit 0
 else

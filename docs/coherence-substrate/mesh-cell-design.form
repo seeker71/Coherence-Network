@@ -115,7 +115,7 @@
 ;   IR power, Powercast RF harvesting, and FDA ingestible capsule guidance.
 ;
 ; PROOF
-;   cd form && ./validate.sh form-stdlib/core.fk \
+;   cd form/form && ./validate.sh form-stdlib/core.fk \
 ;     form-stdlib/organism-mesh.fk \
 ;     form-stdlib/mesh-cell-design.fk \
 ;     form-stdlib/tests/mesh-cell-design-band.fk

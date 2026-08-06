@@ -2,7 +2,7 @@
 # fnri_fkwu_witness.sh — fnri witness/know proven via the current form-cli band.
 set -eu
 ROOT="$(cd -P "$(dirname "$0")/.." && pwd)"
-WANT="$(awk '$1=="form-cli"{print $3; exit}' "$ROOT/form/fourth-arm-bands.txt")"
+WANT="$(awk '$1=="form-cli"{print $3; exit}' "$ROOT/form/form/fourth-arm-bands.txt")"
 [ -n "$WANT" ] || { echo "FAIL: form-cli band missing from fourth-arm-bands.txt" >&2; exit 1; }
 OUT="$(cd "$ROOT/form" && ./validate.sh form-stdlib/tests/form-cli-band.fk 2>&1)"
 echo "$OUT" | grep -E "$WANT|fourth|divergent" | tail -3 || true
@@ -16,7 +16,7 @@ fi
 [ "$VERDICT" = "$WANT" ] || { echo "FAIL: form-cli-band verdict=$VERDICT want $WANT" >&2; exit 1; }
 case "$(uname -s 2>/dev/null || echo unknown)" in
   Darwin)
-    if [ -x "${FORM_CLI:-$ROOT/form/form-cli}" ]; then
+    if [ -x "${FORM_CLI:-$ROOT/form/form/form-cli}" ]; then
       "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
       dispatch="mac binary dispatch"
     else

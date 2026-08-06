@@ -3,8 +3,8 @@
 (channel-loopback
   (lineage
     (rests-on tool-channel.form fourth-kernel-physical-lanes.form encoder-decoder-as-recipe.form modality-as-recipe.form video-as-recipe.form)
-    (recipe form/form-stdlib/channel-loopback.fk)
-    (proof form/form-stdlib/tests/channel-loopback-band.fk -> 255)
+    (recipe form/form/form-stdlib/channel-loopback.fk)
+    (proof form/form/form-stdlib/tests/channel-loopback-band.fk -> 255)
     (learning-floor loopback-learning.form))
 
   (purpose

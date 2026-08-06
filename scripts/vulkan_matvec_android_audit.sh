@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # vulkan_matvec_android_audit.sh — Adreno GPU witness for the Form GLSL matvec emitter
-# (fglsl-matvec in form/form-stdlib/form-glsl.fk): the Android twin of metal_matvec_audit.sh.
+# (fglsl-matvec in form/form/form-stdlib/form-glsl.fk): the Android twin of metal_matvec_audit.sh.
 # The kernel's mouth prints the Form-emitted GLSL compute shader, glslangValidator mints the
 # SPIR-V (authoring, like nvrtc->cubin), the NDK cross-compiles the headless Vulkan host carrier
-# (form/native/vulkan/matvec_vk.c — driver-only: dlopen libvulkan.so + vkGetInstanceProcAddr),
+# (form/form/native/vulkan/matvec_vk.c — driver-only: dlopen libvulkan.so + vkGetInstanceProcAddr),
 # adb pushes both to the connected phone, and the harness DISPATCHES the .spv on the device's
 # Adreno GPU and bit-checks every output row against its OWN CPU right-fold oracle (j DOWN,
 # mul then add, val(n)=n/256 — the same op order as the recipe / PTX / MSL / CPU lanes).
@@ -24,7 +24,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 ROWS="${1:-1280}"; COLS="${2:-1280}"
 

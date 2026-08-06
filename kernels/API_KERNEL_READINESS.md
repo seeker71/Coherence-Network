@@ -50,7 +50,7 @@ binds the request inputs, and dispatches by the fastest path available:
   not a Python serving path.
 
 A separate, heavier path exists for parity proof:
-[`form/scripts/pyfkb-run.sh --kernel rust`](../form/scripts/pyfkb-run.sh)
+[`form/form/scripts/pyfkb-run.sh --kernel rust`](../form/form/scripts/pyfkb-run.sh)
 source-compiles the BML preludes and runs the whole python-bmf pipeline over raw
 `.py` bytes. That is a **correctness/parity instrument**, not a serving path.
 
@@ -84,7 +84,7 @@ the readiness evidence names: correct, stable, sub-100µs.
 ### Building the carrier
 
 `maturin develop --release` from
-[`form/form-kernel-rust/`](../form/form-kernel-rust/) builds and installs the
+[`form/form/form-kernel-rust/`](../form/form/form-kernel-rust/) builds and installs the
 `form_kernel_rust` PyO3 extension into the API venv. The deploy image runs the
 same build (add `maturin` to the API image and `maturin build --release` / a
 `develop` into the image's venv) so `form_kernel_rust` imports in production and

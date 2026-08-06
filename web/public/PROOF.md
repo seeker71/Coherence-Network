@@ -7,7 +7,7 @@ Three witnesses at three altitudes. Each proves something the others don't. None
 Three sibling kernel implementations (Go, Rust, TypeScript) all agree on every probe of the triangle Recipe inside one process: handshake equality (`node_eq`), session-fingerprint, content-derived witness, vertex count, distinct-content discrimination.
 
 ```
-cd form
+cd form/form
 ./validate.sh 2>&1 | grep triangulate-band
 # → stdlib/triangulate-band.fk → 1700
 ```

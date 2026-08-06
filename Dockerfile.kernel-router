@@ -3,7 +3,7 @@
 # Coherence Network kernel-router image — the kernel as the request FRONT DOOR.
 #
 # This packages `form-kernel-rust serve` (cli_serve in
-# form/form-kernel-rust/src/main.rs) as a STANDALONE deployable server. It is the
+# form/form/form-kernel-rust/src/main.rs) as a STANDALONE deployable server. It is the
 # inversion described in kernels/KERNEL_AS_ROUTER.md: the Form kernel owns the
 # listening socket and is the router; CPython (the api container) becomes the
 # fan-out UPSTREAM for the routes the kernel does not yet serve natively.
@@ -13,7 +13,7 @@
 # — the missing deployable artifact named in KERNEL_AS_ROUTER.md.
 #
 # Two stages, mirroring Dockerfile.api's proven build:
-#   1. kernel-builder — compiles form/form-kernel-rust → release binary, stripped
+#   1. kernel-builder — compiles form/form/form-kernel-rust → release binary, stripped
 #      (the SAME load-bearing build Dockerfile.api runs; no PyO3 wheel needed here
 #      because this image serves, it is not imported by Python).
 #   2. runtime — a lean debian-slim with ONLY the stripped binary, the form-stdlib

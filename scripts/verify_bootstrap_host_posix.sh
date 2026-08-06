@@ -3,7 +3,7 @@
 #
 # scripts/verify_cross_platform_bootstrap_host_no_go.ps1 is the Windows lane this mirrors.
 #
-# Proves the cross-platform bootstrap host (form/native/bootstrap/form_bootstrap_host.c)
+# Proves the cross-platform bootstrap host (form/form/native/bootstrap/form_bootstrap_host.c)
 # on macOS / Linux / Android (Termux): compile the tiny C host, build three swappable
 # `recipe` dynamic libraries, dlopen-swap them behind the same symbol, assert the
 # results, and confirm the measurement fields (loader == dlopen/dlsym).
@@ -19,7 +19,7 @@
 set -u
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO/form/native/bootstrap/form_bootstrap_host.c"
+SRC="$REPO/form/form/native/bootstrap/form_bootstrap_host.c"
 WORK="${1:-$REPO/.cache/bootstrap-host-posix}"
 
 uname_s="$(uname -s 2>/dev/null || echo unknown)"

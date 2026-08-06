@@ -138,7 +138,7 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify — and notice that the verification IS the theorem
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/witness-theorem-band.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/witness-theorem-band.fk
 #   # -> 31, "1 ok, 0 divergent". The 31 is the witness speaking pass/fail/silence;
 #   #    the "0 divergent" is the three siblings trusting each other on the spread.
 #   coh substrate form "?equivalent @recipe(witness-theorem)"   # after ingest

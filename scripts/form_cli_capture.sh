@@ -12,17 +12,17 @@
 # The reshaping of the transcript jsonl into turn records is pure I/O gathering (a
 # thin carrier). The SAMPLE is a Form cell: form-cli-sample.fk validates every
 # captured sample's shape on the kernel before it lands in the corpus. The corpus
-# (form/form-samples/agent-turns/corpus.jsonl) accumulates locally; a curated
+# (form/form/form-samples/agent-turns/corpus.jsonl) accumulates locally; a curated
 # seed.jsonl is committed so form-cli has samples to replay offline.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 # Corpus path: defaults to the gitignored in-repo store; FORM_CLI_CORPUS points it
 # at a stable location (e.g. ~/.coherence-network/form-cli-corpus) that survives
 # worktree cleanup — used for the historical archive.
-CORPUS="${FORM_CLI_CORPUS:-$ROOT/form/form-samples/agent-turns/corpus.jsonl}"
+CORPUS="${FORM_CLI_CORPUS:-$ROOT/form/form/form-samples/agent-turns/corpus.jsonl}"
 mkdir -p "$(dirname "$CORPUS")"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 MODE="${1:-}"; shift || true
 

@@ -114,9 +114,9 @@
 # How to verify the running organs
 # ─────────────────────────────────────────────────────────────────────
 #   # the translator, three-way:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/natural-bmf-bidirectional.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/natural-bmf-bidirectional.fk
 #   # the self-emission (output its own body), byte-exact:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
 #     form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-fixpoint-band.fk
 #   # the organ-as-witness, live (100% local), the model swappable by fitness:
 #   #   echo "<satsang prompt over substrate content>" | ollama run <model>  -> content-address the reflection

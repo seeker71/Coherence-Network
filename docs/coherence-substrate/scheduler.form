@@ -45,7 +45,7 @@
 ;   (authority flips on proven competition) · host-kernel.form os-feature-coverage (scheduler =
 ;   axiom-5 + sovereignty) · substrate-phase.fk (state threads as values, no mutation).
 ;
-; Proof: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/recognition-router.fk \
+; Proof: cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/recognition-router.fk \
 ;   form-stdlib/scheduler.fk form-stdlib/tests/scheduler-band.fk        -> 511, 0 divergent
 ;
 ; THE ROW SHAPE READS BOTH DIRECTIONS (2026-06-11): afferent-priority.fk delivers

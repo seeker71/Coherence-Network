@@ -1,6 +1,6 @@
 # BMF/BML Compiler Picture
 
-This is the current picture for a modern BMF/BML compiler and compiler-compiler. It is not a new parallel stack. The executable carrier lives in [`form/form-stdlib/compiler.fk`](../form/form-stdlib/compiler.fk); this document is the readable map.
+This is the current picture for a modern BMF/BML compiler and compiler-compiler. It is not a new parallel stack. The executable carrier lives in [`form/form/form-stdlib/compiler.fk`](../form/form/form-stdlib/compiler.fk); this document is the readable map.
 
 ## Shape
 
@@ -72,12 +72,12 @@ This picture is now executable in Form:
 
 - `compiler-stage`, `compiler-flow`, `compiler-language-port`, and `compiler-picture` are model cells in `compiler.fk`.
 - `bmf-bml-compiler-picture` returns the current BMF/BML north-star picture.
-- `form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk` proves the invariants across sibling kernels: ten stages, eight language ports, eight shared ports, and two proven ports.
+- `form/form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk` proves the invariants across sibling kernels: ten stages, eight language ports, eight shared ports, and two proven ports.
 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk
 ```
 
@@ -87,18 +87,18 @@ Expected result: `112251` with `1 ok, 0 divergent`.
 
 The picture also now lives as BML source:
 
-- [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml) is the compiler/compiler-compiler source body.
+- [`form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml) is the compiler/compiler-compiler source body.
 - It uses BML classes, interfaces, class templates, generic fields and methods, sections, constants, constructors, property bags, a `syntax` block, and reversible `choose` / `fail` / `save` / `discard` control.
 - It names reusable ports for BML, CSharp, Java, TypeScript, Go, and Rust without changing the core flow.
 - It now declares the source-lowering architecture in BML: `CompilerCarrier`, `CompilerDeclaration<T>`, `CompilerSectionModel<T>`, `CompilerUnitModel<T>`, `SourceLowerer<TSource,TDeclaration,TCarrier>`, `BMLDeclarationLoweringStage<TDeclaration,TCarrier>`, `BMLSourceLoweringFlow<TSource,TDeclaration,TCarrier>`, and `SelfHostingPlan`.
 - It also declares the concrete BML compiler lowerer in BML: `BMLSourceDeclaration`, `BMLSourceParser`, `BMLSourceCarrier`, `BMLCompilerDeclarationLoweringStage`, and `BMLCompilerSourceLoweringFlow`. The parser adapter is the named bootstrap boundary; declaration classification, carrier construction, and source-unit lowering are high-level BML class/template code.
 - It names the bootstrap-image ratchet in BML: `BMLCompilerBootstrapImage` records the source path, `.fkb` image path, compiler version, and source hash; `BMLBootstrapRatchet` states that BML source is the authority and that a new `.fkb` promotes only after source compile proof plus sibling proof.
-- [`form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
+- [`form/form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk
 ```
 
@@ -116,7 +116,7 @@ The BML source now carries its own lowering model. The proof bridge in Form is i
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk
 ```
 
@@ -138,7 +138,7 @@ Form only reads and proves this shape. The compiler architecture it verifies is 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk
 ```
 
@@ -149,7 +149,7 @@ The current executable proof goes one step further than structure: it parses the
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk
 ```
 
@@ -172,7 +172,7 @@ This lets the bootstrap surface become archival. Once a working `.fkb` can compi
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk
 ```
 
@@ -184,12 +184,12 @@ The first `.fkb` checkpoint is now proven as a source-derived compiler image rec
 
 This matters because the ratchet now has a real binary checkpoint path. BML source is still authoritative; the `.fkb` is the recoverable image projection. The next promotion step is to replace metadata-only image payload with executable compiler payload, then prove that the image compiles the same BML source.
 
-The runtime record blueprints used by the concrete BML lowerer are now named in `form/form-stdlib/blueprint-registry.json` and regenerated into the kernel bp tables, so compiler image proofs do not depend on anonymous type-99 numbers.
+The runtime record blueprints used by the concrete BML lowerer are now named in `form/form/form-stdlib/blueprint-registry.json` and regenerated into the kernel bp tables, so compiler image proofs do not depend on anonymous type-99 numbers.
 
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk
 ```
 
@@ -200,7 +200,7 @@ Expected result: `24` with `1 ok, 0 divergent`.
 The pieces above compose into one loop, and every part of it already runs somewhere:
 
 1. **The compiler is a CLI-shippable binary.** `--emit-binary` compiles any workload (the compiler's own preludes included) into one `.fkb` artifact; `--binary` executes it natively on any sibling kernel. The bootstrap image ratchet (above) is this loop applied to the compiler itself.
-2. **Hot recipes become host-native code — and the machine code itself is witnessed.** `jit_compile` turns a recipe into machine code — the Go arm emits a real ELF `.so` through the host toolchain (proven mid-band in `form/form-stdlib/tests/host-kernel-metal-band.fk`, verdict 1023 three-way and under `--binary`). `jit_compile_value` carries the full-Value ABI; the Rust arm is an honest 0-stub until cranelift. `scripts/jit_assembly_audit.sh` disassembles the emitted `.so` and verifies in two horizons: minimum gates (arithmetic native inside the plugin, native self-call recursion, value parity) that hold today, and north-star metrics (instruction count, boxed-value traffic, frame size, helper calls) whose measured gap is the de-boxing/inlining road ahead. The same recipe also projects to every ISA the host's LLVM can show: `jit_emit_c` (jit_c.go) lowers the int64 subset to freestanding C, and `scripts/cross_isa_assembly_audit.sh` reads the assembly for Android CPU (aarch64), Android DSP (hexagon `mpyi`), Apple/MLX host (arm64), NVIDIA PTX, AMD GCN, and x86-64 — value parity held, recursion lowered to loops, generation proven on this host while organ execution awaits the device.
+2. **Hot recipes become host-native code — and the machine code itself is witnessed.** `jit_compile` turns a recipe into machine code — the Go arm emits a real ELF `.so` through the host toolchain (proven mid-band in `form/form/form-stdlib/tests/host-kernel-metal-band.fk`, verdict 1023 three-way and under `--binary`). `jit_compile_value` carries the full-Value ABI; the Rust arm is an honest 0-stub until cranelift. `scripts/jit_assembly_audit.sh` disassembles the emitted `.so` and verifies in two horizons: minimum gates (arithmetic native inside the plugin, native self-call recursion, value parity) that hold today, and north-star metrics (instruction count, boxed-value traffic, frame size, helper calls) whose measured gap is the de-boxing/inlining road ahead. The same recipe also projects to every ISA the host's LLVM can show: `jit_emit_c` (jit_c.go) lowers the int64 subset to freestanding C, and `scripts/cross_isa_assembly_audit.sh` reads the assembly for Android CPU (aarch64), Android DSP (hexagon `mpyi`), Apple/MLX host (arm64), NVIDIA PTX, AMD GCN, and x86-64 — value parity held, recursion lowered to loops, generation proven on this host while organ execution awaits the device.
 3. **A faster version of any part — including the JIT recipe itself — earns its place, never asserts it.** `champion-challenger.fk` flips authority only on proven head-to-head competition; `recognition-router.fk` routes to measured fitness; `kernel-satsang.fk` + `host-kernel-cell.fk` gate the actual swap through declared spec equality and the witnessing circle (verdict 255 three-way and under `--binary`).
 4. **The same loop ships any CLI tool.** The API host is the second instance: `kernel-http.fk` + the native kernel router already serve routes natively; an improved handler recipe enters through the same verify → A/B → circle-gated swap.
 
@@ -210,7 +210,7 @@ This is `kernel-self-composition.form`'s `close-self-rebuild-loop` seen from the
 
 The compiler choice path now has an optional witnessed form:
 
-- `form/form-stdlib/bmf-choice-receipts.fk` wraps the existing indexed
+- `form/form/form-stdlib/bmf-choice-receipts.fk` wraps the existing indexed
   `apply-indexed-object-rule-set` path and returns a `CHOICE-RECEIPT` plus
   `CHOICE-SIGNATURE` beside the normal match.
 - Literal-only BMF object choices are proven safe as `choose_any`; indexed BMF
@@ -222,7 +222,7 @@ The compiler choice path now has an optional witnessed form:
 Proof command:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk
 ```
 

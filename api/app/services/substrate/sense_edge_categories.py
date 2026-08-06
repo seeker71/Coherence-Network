@@ -156,7 +156,7 @@ def format_edge_categories_for_wellness(report: EdgeCategoryReport) -> list[str]
         "  repeated relation edges compress into edge_reputation counts; "
         "clusters name target hubs and source fan-outs",
         "  carrier_reflex: python source scanner is a bridge, not a home; "
-        "desired=form/form-stdlib/edge-categories.fk; "
+        "desired=form/form/form-stdlib/edge-categories.fk; "
         "released_slice=concept_contains_concept/sample-via-concept-corpus; "
         "surprise=not-surprised; self_inflicted_pain=hot; "
         "release_target=form-substrate-cell",

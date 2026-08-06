@@ -31,12 +31,12 @@ chmod +x "$APP/Contents/Resources/native/fkwu-mac"
 PRESENCE_TABLE="$APP/Contents/Resources/native/presence-table.txt"
 flatten_presence_table() {
     local form="$HERE/../../form"
-    local go_bin="$form/form-kernel-go/bin-go"
+    local go_bin="$form/form/form-kernel-go/bin-go"
     if [[ ! -x "$go_bin" ]]; then
-        ( cd "$form/form-kernel-go" && go build -o bin-go . ) \
+        ( cd "$form/form/form-kernel-go" && go build -o bin-go . ) \
             || { echo "• bin-go build failed — reusing staged presence-table"; return 0; }
     fi
-    local S="$form/form-stdlib"
+    local S="$form/form/form-stdlib"
     local chain=("$S/minimal-surface.fk" "$S/hati-os-kernel.fk" "$S/host-io-fs-fkwu-emit.fk" \
                  "$S/fkc-table-serialize.fk" "$S/hati-os-kernel-emit.fk" "$S/form-parse.fk" \
                  "$S/form-flatten.fk" "$S/fourth-shim.fk")

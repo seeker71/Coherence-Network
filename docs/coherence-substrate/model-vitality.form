@@ -9,17 +9,17 @@
 ;   and that focus is chosen from resonance, vitality, sovereignty, and trust.
 ;   Focused testing is part of the floor: the smallest meaningful proof should
 ;   run first, before broader release gates.
-;   Current proof: cd form && ./validate.sh form-stdlib/core.fk
+;   Current proof: cd form/form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095,
 ;   fourth arm: 1 band(s) four-way.
-;   Real chunk storage floor: cd form && ./validate.sh form-stdlib/core.fk
+;   Real chunk storage floor: cd form/form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
 ;   form-stdlib/tests/model-vitality-storage-band.fk -> 8191. This proof writes
 ;   a tensor chunk payload into the segmented file carrier, reopens the store,
 ;   reads the bytes back, verifies sha256, checks CPU/GPU/MLX/Metal projection
 ;   re-hash receipt rows, rejects a tampered returned payload, and routes a
 ;   model-vitality read through wellness/pulse/release-health signals.
-;   Physical ingest/carrier floor: cd form && ./validate.sh form-stdlib/core.fk
+;   Physical ingest/carrier floor: cd form/form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
 ;   form-stdlib/tests/model-vitality-physical-band.fk -> 65535. This proof
 ;   writes a tiny real safetensors/MLX-style carrier file, reads two tensor
@@ -32,7 +32,7 @@
 ;   sha256 7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014
 ;   for CPU bytes, generic GPU bytes via Metal, Metal bytes on Apple M4 Max, and
 ;   MLX bytes through /opt/homebrew/lib/libmlxc.dylib.
-;   Production ingestion floor: cd form && ./validate.sh form-stdlib/core.fk
+;   Production ingestion floor: cd form/form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
 ;   form-stdlib/tests/model-vitality-production-band.fk -> 32767. This proof
 ;   stores a live model-vitality row in the segmented store, reads it back, and
@@ -46,7 +46,7 @@
 ;   API pulse read overall=strained with silences=2, the pulse front door read
 ;   overall=breathing, and runtime-summary returned native-kernel with
 ;   x-form-python-authority=false and handler api_runtime_endpoints_summary.
-;   Native HTTP/HTTPS capture floor: cd form && ./validate.sh form-stdlib/core.fk
+;   Native HTTP/HTTPS capture floor: cd form/form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/json.fk form-stdlib/model-vitality.fk
 ;   form-stdlib/tests/model-vitality-native-http-band.fk -> 4095. This proof
 ;   lifts the dict returned by kernel-native http_get into explicit capture rows,
@@ -129,13 +129,13 @@
       eval-receipt
       vitality-receipt
       lineage)
-    (proved-by "form/form-stdlib/tests/model-vitality-band.fk")
+    (proved-by "form/form/form-stdlib/tests/model-vitality-band.fk")
     (verdict 4095)
     (fourth-arm four-way)
-    (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
-    (physical-carrier-proof "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
-    (production-ingestion-proof "form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
-    (native-http-capture-proof "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095")
+    (real-storage-proof "form/form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
+    (physical-carrier-proof "form/form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
+    (production-ingestion-proof "form/form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
+    (native-http-capture-proof "form/form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095")
     (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
     (production-live-witness "scripts/model_vitality_production_ingest_probe.sh")
     (native-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh")

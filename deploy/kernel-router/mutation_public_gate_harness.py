@@ -10,7 +10,7 @@ This is the movement after A/B preview confidence:
   D: X-Form-Python-Fallback -> explicit refusal/control signal, fanned out.
 
 The HTTP native route still keeps DB execution honest in its response. The live
-Postgres receipt proof lives in form/scripts/native-mutation-public-gate-test.sh.
+Postgres receipt proof lives in form/form/scripts/native-mutation-public-gate-test.sh.
 """
 
 from __future__ import annotations
@@ -33,9 +33,9 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
-BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+BIN = REPO_ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 PRODUCTION_ROUTES = HERE / "production-routes.fk"
-STDLIB = REPO_ROOT / "form" / "form-stdlib"
+STDLIB = REPO_ROOT / "form" / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
 PUBLIC_GATE_HEADER = "X-Form-Native-Public-Gate"
 PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"

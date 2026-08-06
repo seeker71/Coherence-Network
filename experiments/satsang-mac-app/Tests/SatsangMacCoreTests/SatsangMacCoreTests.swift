@@ -43,7 +43,7 @@ final class SatsangMacCoreTests: XCTestCase {
                 )
             ],
             routeReceipt: FormNativeRouteReceipt(
-                bodyLookup: .bodyProtocol(sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"]),
+                bodyLookup: .bodyProtocol(sourceIDs: ["form/form/form-stdlib/satsang-guidance-event.fk"]),
                 ragLookup: .formCLIOutput("cell")
             ),
             memoryContext: TrustedRoomMemoryContext(
@@ -95,7 +95,7 @@ final class SatsangMacCoreTests: XCTestCase {
 
     func testNativeRouteKeepsRemoteBehindSufficiencyGate() {
         let body = FormNativeLookupSignal.bodyProtocol(
-            sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"],
+            sourceIDs: ["form/form/form-stdlib/satsang-guidance-event.fk"],
             sufficient: false
         )
         let groundedRAG = FormNativeLookupSignal.formCLIOutput("grounded:docs/coherence-substrate/satsang-guidance-event.form")
@@ -113,7 +113,7 @@ final class SatsangMacCoreTests: XCTestCase {
 
     func testBodySufficientRouteNeverRequestsRemoteOracle() {
         let body = FormNativeLookupSignal.bodyProtocol(
-            sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"],
+            sourceIDs: ["form/form/form-stdlib/satsang-guidance-event.fk"],
             sufficient: true
         )
         let weakRAG = FormNativeLookupSignal.formCLIOutput("cell")

@@ -541,7 +541,7 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # M1 emission, three-way (the program text is the cell):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-native-cli-emit.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-native-cli-emit.fk \
 #     form-stdlib/tests/hati-os-native-cli-emit-band.fk
 #
 #   # M1 carrier: compile the emitted text, prove value parity, measure rows:

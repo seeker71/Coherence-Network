@@ -9,18 +9,18 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-PUBLIC_GATE_PATH = ROOT / "form" / "form-stdlib" / "native-mutation-public-gate.fk"
-AUDIT_LEDGER_PATH = ROOT / "form" / "form-stdlib" / "native-idea-valuation-audit-ledger.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "native-mutation-public-gate-band.fk"
-INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-mutation-public-gate-live.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "native-mutation-public-gate-test.sh"
+PUBLIC_GATE_PATH = ROOT / "form" / "form" / "form-stdlib" / "native-mutation-public-gate.fk"
+AUDIT_LEDGER_PATH = ROOT / "form" / "form" / "form-stdlib" / "native-idea-valuation-audit-ledger.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "native-mutation-public-gate-band.fk"
+INTEGRATION_PATH = ROOT / "form" / "form" / "form-stdlib" / "integration" / "native-mutation-public-gate-live.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "native-mutation-public-gate-test.sh"
 PRODUCTION_ROUTES_PATH = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 PUBLIC_GATE_HARNESS_PATH = ROOT / "deploy" / "kernel-router" / "mutation_public_gate_harness.py"
 KERNEL_CANARY_COMPOSE_PATH = ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml"
 HOSTINGER_AUTO_DEPLOY_PATH = ROOT / "deploy" / "hostinger" / "auto-deploy.sh"
 HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "hostinger-auto-deploy.yml"
 PUBLIC_DEPLOY_CONTRACT_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "public-deploy-contract.yml"
-KERNEL_BIN = ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+KERNEL_BIN = ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
 
@@ -70,7 +70,7 @@ def test_public_gate_band_executes_across_sibling_kernels():
             "form-stdlib/native-mutation-public-gate.fk",
             "form-stdlib/tests/native-mutation-public-gate-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -223,7 +223,7 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
 
 def test_route_forms_name_public_gate_default_evidence_boundary():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/scripts/native-mutation-public-gate-test.sh" in text
+        assert "form/form/scripts/native-mutation-public-gate-test.sh" in text
         assert "native mutation public gate proven" in text
         assert "X-Form-Native-Public-Gate" in text
         assert "implicit native invitation" in text

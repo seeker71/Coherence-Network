@@ -2,9 +2,9 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json, nmte-side-effect-intents-json, nmte-reversible-gate-json, nmte-test]
-  - file: form/form-stdlib/tests/native-mutation-trust-envelope-band.fk
+  - file: form/form/form-stdlib/tests/native-mutation-trust-envelope-band.fk
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: [mpv-trust-envelope-json, mpv-side-effect-intents-json, mpv-reversible-gate-json]
@@ -29,11 +29,11 @@ requirements:
   - "The envelope carries side-effect intents for cache invalidation, parent-edge repair, contributor-key audit, and rollback receipt."
   - "The reversible gate names native-kernel default, implicit native invitation, and X-Form-Python-Fallback as the explicit rollback/control signal."
 done_when:
-  - 'file_exists("form/form-stdlib/native-mutation-trust-envelope.fk")'
+  - 'file_exists("form/form/form-stdlib/native-mutation-trust-envelope.fk")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "\"choice_success\":1")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "\"prediction_error\":\"carried_as_residual\"")'
   - 'pytest_passes("api/tests/test_native_mutation_route_bindings.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk && cd ../api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk && cd ../../api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not perform the ordinary public mutation traffic flip in this slice."
   - "This slice does not claim side-effect execution; the later side-effect carrier proof must remain separately named."
@@ -53,7 +53,7 @@ traffic native by default while keeping explicit Python fallback observable.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/native-mutation-trust-envelope.fk` defines a
+- [ ] **R1**: `form/form/form-stdlib/native-mutation-trust-envelope.fk` defines a
   reusable envelope recipe that returns JSON with operation, node id, state, and
   `choice_success=1`.
 - [ ] **R2**: The envelope carries `prediction_error="carried_as_residual"` and
@@ -93,9 +93,9 @@ traffic native by default while keeping explicit Python fallback observable.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/native-mutation-trust-envelope.fk` - reusable trust envelope
+- `form/form/form-stdlib/native-mutation-trust-envelope.fk` - reusable trust envelope
   recipe.
-- `form/form-stdlib/tests/native-mutation-trust-envelope-band.fk` - sibling
+- `form/form/form-stdlib/tests/native-mutation-trust-envelope-band.fk` - sibling
   kernel proof.
 - `deploy/kernel-router/production-routes.fk` - preview response envelope.
 - `deploy/kernel-router/mutation_ab_observation_harness.py` - B-arm envelope
@@ -110,7 +110,7 @@ traffic native by default while keeping explicit Python fallback observable.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/native-mutation-trust-envelope-band.fk` returns
+- `form/form/form-stdlib/tests/native-mutation-trust-envelope-band.fk` returns
   `11111` across sibling kernels.
 - `api/tests/test_native_mutation_route_bindings.py::test_native_mutation_preview_handlers_emit_application_graph_sql`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_with_native_default_preview_and_fallback`
@@ -121,7 +121,7 @@ traffic native by default while keeping explicit Python fallback observable.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk
 cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md
 ```

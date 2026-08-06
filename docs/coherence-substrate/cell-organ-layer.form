@@ -63,7 +63,7 @@
 ;   layer shared substrate content without losing sovereignty.
 ;
 ; PROOF
-;   cd form && ./validate.sh form-stdlib/core.fk \
+;   cd form/form && ./validate.sh form-stdlib/core.fk \
 ;     form-stdlib/hati-mesh.fk \
 ;     form-stdlib/cell-organ-layer.fk \
 ;     form-stdlib/tests/cell-organ-layer-band.fk

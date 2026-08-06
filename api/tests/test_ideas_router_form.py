@@ -183,10 +183,10 @@ def test_ideas_router_form_names_native_mutation_carrier():
     form_text = _form_text()
 
     assert "mutable service calls -> Form-native graph-node mutation carrier" in form_text
-    assert "form/form-stdlib/graph-node-port.fk::gn-create-node" in form_text
-    assert "form/form-stdlib/graph-node-port.fk::gn-replace-node" in form_text
-    assert "form/form-stdlib/graph-node-port.fk::gn-delete-node" in form_text
-    assert "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk" in form_text
+    assert "form/form/form-stdlib/graph-node-port.fk::gn-create-node" in form_text
+    assert "form/form/form-stdlib/graph-node-port.fk::gn-replace-node" in form_text
+    assert "form/form/form-stdlib/graph-node-port.fk::gn-delete-node" in form_text
+    assert "form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk" in form_text
     assert "POST /api/ideas + PATCH /api/ideas/{idea_id}" in form_text
     assert "X-Form-Native-Preview" in form_text
     assert "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview" in form_text

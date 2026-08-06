@@ -213,7 +213,7 @@
     (grounded "The answer carries this cell or another body cell as source; a local RAG miss is not grounded.")
     (sufficient "The carrier order, bridge rule, proof floor, and receipt rule are all present.")
     (prompt-guide "Print the canonical query so every session can ask the same body cell.")
-    (rag-index "Heal ~/.coherence-network/rag-index from docs/coherence-substrate, docs/shared, specs, and form/form-stdlib.")
+    (rag-index "Heal ~/.coherence-network/rag-index from docs/coherence-substrate, docs/shared, specs, and form/form/form-stdlib.")
     (proof "form-cli ask+ agent operating canon returns grounded yes and suffic yes; plain ask uses the staged fkwu/T_flat path when warm."))
 
   (north-star

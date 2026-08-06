@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 KERNELS = {
-    "go": ROOT / "form/form-kernel-go/main.go",
-    "rust": ROOT / "form/form-kernel-rust/src/main.rs",
-    "typescript": ROOT / "form/form-kernel-ts/src/kernel.ts",
+    "go": ROOT / "form/form/form-kernel-go/main.go",
+    "rust": ROOT / "form/form/form-kernel-rust/src/main.rs",
+    "typescript": ROOT / "form/form/form-kernel-ts/src/kernel.ts",
 }
 
 REGISTER_PATTERNS = [

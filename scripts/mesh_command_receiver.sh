@@ -9,7 +9,7 @@
 # `claude -p`, captures the output, and posts the capture back to the dispatcher.
 #
 # Carrier-last: the DECISION (act | refuse | ignore) is the four-way-proven recipe
-# form/form-stdlib/mesh-command.fk (mc-route). This script holds NO policy — it
+# form/form/form-stdlib/mesh-command.fk (mc-route). This script holds NO policy — it
 # gathers three facts (is-command, for-me, trusted), asks the recipe, and on "act"
 # RECOGNIZES the dispatch as its own lineage's (a signature over a public channel),
 # confirms it's listening, runs the live instance, and returns the capture.
@@ -52,8 +52,8 @@ POLL_RETRIES="${MR_POLL_RETRIES:-4}"
 RETRY_SLEEP="${MR_RETRY_SLEEP:-2}"
 CURL="${MR_CURL:-curl}"
 CLAUDE="$HOME/.local/bin/claude"
-KERNEL="$ROOT/form/form-kernel-go/bin-go"
-RECIPE="$ROOT/form/form-stdlib/mesh-command.fk"
+KERNEL="$ROOT/form/form/form-kernel-go/bin-go"
+RECIPE="$ROOT/form/form/form-stdlib/mesh-command.fk"
 SEEN="$HOME/.coherence-network/mesh-receiver.seen"   # handled message ids (idempotency)
 ALLOWED_MODES="default acceptEdits bypassPermissions plan"
 

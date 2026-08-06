@@ -15,7 +15,7 @@
 # The Form answer is the core-abstraction move: the domain enters as
 # DATA — a list of (i j w) edge triples — and ONE engine walks every
 # domain. No grid path, no graph path, no mesh path. SHIPPED:
-# `form/form-stdlib/geometric-learning.fk` +
+# `form/form/form-stdlib/geometric-learning.fk` +
 # `tests/geometric-learning-band.fk` → 8388607 (23 claims), four-way
 # (Go/Rust/TS).
 #

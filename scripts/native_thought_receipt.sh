@@ -11,7 +11,7 @@
 # Usage: native_thought_receipt.sh <body-hit|escalated> <structural|frontier> <nodeid|-> [query...]
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"
+STD="$ROOT/form/form/form-stdlib"
 LEDGER="${NATIVE_THOUGHT_RECEIPTS:-$HOME/.coherence-network/native-thought-receipts.jsonl}"
 
 PATHK="${1:-}"; KIND="${2:-}"; NODEID="${3:--}"; shift 3 2>/dev/null || true; QUERY="${*:-}"

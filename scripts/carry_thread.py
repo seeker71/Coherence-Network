@@ -3,7 +3,7 @@
 
 The BODY — resolve the arriving agent to its presence, compose the identity card
 from the record — is Form, four-way proven (Go/Rust/TypeScript/fkwu → 11111):
-`form/form-stdlib/carry-thread.fk`, band `tests/carry-thread-band.fk`, manifest row
+`form/form/form-stdlib/carry-thread.fk`, band `tests/carry-thread-band.fk`, manifest row
 `carry-thread fks 11111`. This Python file is the carrier authored last: it reads the
 host-local registry and the presence thread's last breath, and prints at session
 start. The north star is the fkwu host-io entry running the recipe directly at

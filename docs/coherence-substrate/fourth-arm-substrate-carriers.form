@@ -9,7 +9,7 @@
 (fourth-arm-substrate-carriers
   (north-star
     (sentence "The content-addressed substrate is durable through one Form storage-port contract: memory and segmented-FILE stay in the pure deterministic four-way floor, while Postgres becomes first-class at the host carrier boundary with rollback-safe native evidence, so content-addressing survives a process and persistence boundary without pretending the pure fourth kernel contains a database engine.")
-    (connected-tissue "Harmonizes with form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
+    (connected-tissue "Harmonizes with form/form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
     (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io native-text-write native-file-append)
     (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent rollback-safe-host-carrier-receipt))
 

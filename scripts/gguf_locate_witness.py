@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """gguf_locate_witness.py — witness that the FOUR-WAY-PROVEN Form GGUF locate logic
-(form/form-stdlib/gguf-read.fk: gg-tinfo-start + gg-ti-*) reads REAL tensors from the
+(form/form/form-stdlib/gguf-read.fk: gg-tinfo-start + gg-ti-*) reads REAL tensors from the
 real llama3.2:3b GGUF. The Form recipe is the body; this carrier mirrors its exact
 integer walk to confirm the ALGORITHM scales to the real file (128k-element vocab
 arrays, 255-tensor table) before the M2 buffer-bridge feeds real bytes to the kernel.
 
 A band fixture can't hold a 2GB file; this is the real-data complement to the four-way
-proof on the synthetic mini-GGUF (form/form-stdlib/tests/gguf-locate-band.fk).
+proof on the synthetic mini-GGUF (form/form/form-stdlib/tests/gguf-locate-band.fk).
 
 Usage: python3 scripts/gguf_locate_witness.py [path-to-gguf]
 Default path is the llama3.2:3b blob ollama serves.

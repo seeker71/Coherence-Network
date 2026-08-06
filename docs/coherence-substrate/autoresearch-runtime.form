@@ -445,13 +445,13 @@ defn translator_first_night = r_autoresearch_loop(
 #         preference-learning.fk's row catalog, including pl_qam (the diffusion-Q
 #         tilt), with pl-fitness (achieved value) as the evaluator seam. one_iteration's
 #         keep-or-rollback CORE is now RUNNABLE for that coordinate:
-#         form/form-stdlib/diffusion-q-autoresearch.fk (dqa-step = propose→measure→keep-or-rollback,
+#         form/form/form-stdlib/diffusion-q-autoresearch.fk (dqa-step = propose→measure→keep-or-rollback,
 #         dqa-search = the iteration fold) + tests/diffusion-q-autoresearch-band.fk → 63, four-way.
 #         The fold's candidate stream stands in for agent_propose; the loop tracks the target and
 #         rediscovers the catalog gene. See diffusion-q-learning.form Q4-autoresearch.
 #
 # GAP-A6: a REAL PROPOSER + POPULATION landed (closing the agent_propose half of GAP-A1/A4).
-#         form/form-stdlib/model-search.fk is the TOURNAMENT RATCHET: a population of candidate genes,
+#         form/form/form-stdlib/model-search.fk is the TOURNAMENT RATCHET: a population of candidate genes,
 #         train+measure each, and ms-improve = the proposer that IMPROVES THE WORST from the findings
 #         (the measurements reveal the uphill direction), repeated until the worst can no longer be
 #         improved (the population fixpoint — the honest never-stop halt). It finds the best gene PER

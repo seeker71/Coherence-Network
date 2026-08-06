@@ -1082,7 +1082,7 @@ defn python_lang = language_cell_shape {
 # - **Cross-language structural equivalence.** A Python function and
 #   its TypeScript port that compile to the same recipe NodeIDs are
 #   one structural identity at the lattice altitude. The
-#   `form/form-kernel-ts/` work and the Python kernel become
+#   `form/form/form-kernel-ts/` work and the Python kernel become
 #   sibling carriers of the same recipes — substrate's content-
 #   addressing recognizes the equivalence without manual declaration.
 #

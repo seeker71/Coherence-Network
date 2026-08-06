@@ -168,7 +168,7 @@
 #   coh substrate form "?equivalent @recipe(offer-and-acknowledge)"
 #
 #   # The runnable heart (GAP-OA2), three-way:
-#   cd form && ./validate.sh form-stdlib/offer-acknowledge.fk \
+#   cd form/form && ./validate.sh form-stdlib/offer-acknowledge.fk \
 #                            form-stdlib/tests/offer-acknowledge-band.fk
 #
 #   # Substrate auto-ingest picks up new .form files on merge to main

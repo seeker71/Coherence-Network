@@ -19,12 +19,12 @@
 # must then stay clean. The ratchet only ever tightens.
 #
 # Run standalone:  scripts/check_route_manifests.sh   (builds the kernel if stale)
-# Designed to also be called from form/validate.sh (the proof harness, which already
+# Designed to also be called from form/form/validate.sh (the proof harness, which already
 # builds the kernel), so the gate runs as part of the three-way proof.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 RS_BIN="$FORMDIR/form-kernel-rust/target/release/form-kernel-rust"
 MANIFEST_DIR="$ROOT/deploy/kernel-router"
 BASELINE="$MANIFEST_DIR/.namecheck-baseline"

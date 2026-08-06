@@ -6,10 +6,10 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SIDE_EFFECTS_PATH = ROOT / "form" / "form-stdlib" / "native-mutation-side-effects.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "native-mutation-side-effects-band.fk"
-INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-mutation-side-effects-live.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "native-mutation-side-effects-test.sh"
+SIDE_EFFECTS_PATH = ROOT / "form" / "form" / "form-stdlib" / "native-mutation-side-effects.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "native-mutation-side-effects-band.fk"
+INTEGRATION_PATH = ROOT / "form" / "form" / "form-stdlib" / "integration" / "native-mutation-side-effects-live.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "native-mutation-side-effects-test.sh"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
 IDEA_HIERARCHY_PATH = ROOT / "api" / "app" / "services" / "idea_hierarchy.py"
@@ -55,7 +55,7 @@ def test_native_side_effects_band_executes_across_sibling_kernels():
             "form-stdlib/native-mutation-side-effects.fk",
             "form-stdlib/tests/native-mutation-side-effects-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -102,7 +102,7 @@ def test_native_side_effects_live_integration_executes_each_intent():
 
 def test_route_forms_name_side_effect_execution_carrier_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/scripts/native-mutation-side-effects-test.sh" in text
+        assert "form/form/scripts/native-mutation-side-effects-test.sh" in text
         assert "native side-effect execution carrier proven" in text
         assert "parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt" in text
         assert "does not bind side-effect execution to public Traefik default traffic" in text

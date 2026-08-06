@@ -14,10 +14,10 @@
 # Usage: form_cli_distill_receipt.sh [corpus]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 CORPUS="${1:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
 OUT="${FORM_CLI_RECEIPTS:-$HOME/.coherence-network/native-training-receipts.jsonl}"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
 echo "── oracle→native distillation receipt (real corpus, Form-proven logic) ──"
@@ -39,7 +39,7 @@ wmerkle="sha256:$(printf 'base-rates+agent-keyword-boosts/%s/%s' "$samples" "$he
 
 # 3. feed the MEASURED counts through the Form recipe (the proven receipt logic).
 # core.fk is BML dialect — source-compile it once (content-keyed cache, exactly
-# as form/validate.sh prepare_sources does); the rest are plain Form.
+# as form/form/validate.sh prepare_sources does); the rest are plain Form.
 CACHE="$STD/.cache/source-compiled"; mkdir -p "$CACHE"
 chain=(form-ontology-loader.fk line-grammar.fk bmf-core.fk bmf-grammar.fk bml.fk bml-source.fk source-compiler.fk)
 stamp="$( (cd "$STD" && cat "${chain[@]}"; cat "$GO") 2>/dev/null | shasum | cut -c1-16)"
@@ -56,7 +56,7 @@ prog="$(mktemp)"
       "$STD/oracle-distillation-learning.fk" "$STD/native-training-receipt.fk" "$STD/oracle-distill-corpus.fk"
   # a live receipt built from the measured counts (not the recorded constants)
   echo "(let r (ntr-row \"form-cli-tool-predict-live\" \"form-native-tool-predictor\""
-  echo "   \"form/form-stdlib/oracle-distill-corpus.fk\" \"$wmerkle\" \"$dmerkle\" \"$emerkle\""
+  echo "   \"form/form/form-stdlib/oracle-distill-corpus.fk\" \"$wmerkle\" \"$dmerkle\" \"$emerkle\""
   echo "   1 $samples $held $nfc (sub $held $nfc) (odc-ppm $nfc) (odc-ppm $bfc) \"active\"))"
   echo "(print (ntr-trained? r))"                 # 1 = a valid trained native artifact
   echo "(print (ntr-beats-oracle? r))"            # 1 = native full-cover beats the baseline bar
@@ -75,7 +75,7 @@ python3 - "$OUT" "$samples" "$held" "$nfc" "$nmc" "$bfc" "$nppm" "$bppm" "$close
 import json,sys
 (out,samples,held,nfc,nmc,bfc,nppm,bppm,close,trained,beats,wm,dm,em)=sys.argv[1:15]
 row={"artifact":"form-cli-tool-predict","kind":"form-native-tool-predictor",
-     "recipe":"form/form-stdlib/oracle-distill-corpus.fk","lane":"tool-selection",
+     "recipe":"form/form/form-stdlib/oracle-distill-corpus.fk","lane":"tool-selection",
      "oracle":"claude","samples":int(samples),"heldout":int(held),
      "native_fullcover_correct":int(nfc),"native_majority_correct":int(nmc),
      "baseline_fullcover_correct":int(bfc),

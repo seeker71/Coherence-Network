@@ -81,6 +81,6 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/protocol-beliefs.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/protocol-beliefs.fk \
 #     form-stdlib/tests/protocol-beliefs-band.fk     # → 31 four-way
 #   bash scripts/protocol_beliefs_demo.sh            # English + German, all four + selected

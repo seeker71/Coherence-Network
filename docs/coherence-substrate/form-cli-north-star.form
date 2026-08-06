@@ -32,8 +32,8 @@
     (capture "the call is a catalog entry: request, raw answer, and transmuted answer, each content-addressed (training-catalog.fk over io-match.fk). Usage becomes learning, not just spend")
     (learn   "the captured pairs train SEPARABLE models that compose as building blocks: raw (request->raw, the reference), transmutation (raw->transmuted, reusable on any output), reasoning (request->transmuted, the native target). Each is its own auto-ml race; pass-rate rises, the shape crosses the threshold, and routes local")
     (embody  "when the local lane works cheaper and sovereign at the trust gate, it embodies — replacing the oracle for that shape entirely")
-    (recipe  form/form-stdlib/form-cli-loop.fk)
-    (proof   form/form-stdlib/tests/form-cli-loop-band.fk -> 31 four-way))
+    (recipe  form/form/form-stdlib/form-cli-loop.fk)
+    (proof   form/form/form-stdlib/tests/form-cli-loop-band.fk -> 31 four-way))
 
   ; ── the organs, each already proven four-way ─────────────────────────────────
   (organs

@@ -98,7 +98,7 @@ def form_first_source_paths() -> list[Path]:
     markdown domains lands as an ARTIFACT cell through ``ingest-paths``.
     """
     patterns = (
-        REPO_ROOT / "form/form-stdlib/*.fk",
+        REPO_ROOT / "form/form/form-stdlib/*.fk",
         REPO_ROOT / "specs/*.md",
         REPO_ROOT / "docs/vision-kb/concepts/*.md",
         REPO_ROOT / "docs/coherence-substrate/*.form",

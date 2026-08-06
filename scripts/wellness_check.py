@@ -557,7 +557,7 @@ def sense_locale_parity() -> list[str]:
     bilingual in name only. The number speaks; the body chooses what
     to do with it.
     """
-    # Substrate-altitude companion: form/form-stdlib/i18n-parity.fk
+    # Substrate-altitude companion: form/form/form-stdlib/i18n-parity.fk
     # reaches the same per-locale leaf counts through (i18n-load → recursive
     # node_category walk). Python stays the runtime reporter; Form proves
     # the corpus is reachable from substrate without the Python boundary.
@@ -882,7 +882,7 @@ def sense_form_engine() -> list[str]:
 def sense_form_ontology() -> list[str]:
     """Does the Form-side ontology table agree with the kernel parsers?
 
-    `form/form-stdlib/form-ontology.json` holds the canonical (name,
+    `form/form/form-stdlib/form-ontology.json` holds the canonical (name,
     type, inst) rows for parser-special-form primitives (add/gt/and/...)
     and composite shapes (do/let/if/fndef/...). The generated kernel
     `bp` table carries those coordinates, and form-stdlib/form-ontology-loader.fk
@@ -891,13 +891,13 @@ def sense_form_ontology() -> list[str]:
     If a primitive is added to one but not the other, every test that
     doesn't happen to exercise it stays silent through the drift.
 
-    Delegates to form/scripts/validate_form_ontology.py — the canonical
+    Delegates to form/form/scripts/validate_form_ontology.py — the canonical
     drift reader. Silent on a clean match; surfaces the divergence
     otherwise.
     """
-    script = ROOT / "form" / "scripts" / "validate_form_ontology.py"
+    script = ROOT / "form" / "form" / "scripts" / "validate_form_ontology.py"
     if not script.is_file():
-        return ["  (form/scripts/validate_form_ontology.py not present; skipping)"]
+        return ["  (form/form/scripts/validate_form_ontology.py not present; skipping)"]
     try:
         result = subprocess.run(
             [*_python_cmd(), str(script)],
@@ -972,12 +972,12 @@ def sense_form_primitives() -> list[str]:
     tests/primitive-registry-band.fk; lane-0 entries are carrier-declared
     (panic-contract, sockets, gc sweep, toolchain, sibling-gap) and this
     sense keeps that tail visible. Delegates to
-    form/scripts/validate_primitive_registry.py — the canonical drift gate
+    form/form/scripts/validate_primitive_registry.py — the canonical drift gate
     between registry and kernel source.
     """
-    script = ROOT / "form" / "scripts" / "validate_primitive_registry.py"
+    script = ROOT / "form" / "form" / "scripts" / "validate_primitive_registry.py"
     if not script.is_file():
-        return ["  (form/scripts/validate_primitive_registry.py not present; skipping)"]
+        return ["  (form/form/scripts/validate_primitive_registry.py not present; skipping)"]
     try:
         result = subprocess.run(
             [*_python_cmd(), str(script)],
@@ -1095,12 +1095,12 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
         "kind": "static release ledger",
         "successor": "substrate:compost-release-ledger-cells",
-        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "carrier": "form/form/form-stdlib/static-to-dynamic-cells.fk",
         "proof": "make static-to-dynamic-tending",
         "evidence": (
-            "form/form-stdlib/static-to-dynamic-cells.fk",
-            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
-            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "form/form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form/form-stdlib/queries/static-to-dynamic-tending.fk",
             "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
         ),
         "wants": (
@@ -1116,12 +1116,12 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "kernels/PHASE_A_FIRING_QUESTIONS.md",
         "kind": "static firing-question narrative",
         "successor": "substrate:metabolic-attestation-cells",
-        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "carrier": "form/form/form-stdlib/static-to-dynamic-cells.fk",
         "proof": "make static-to-dynamic-tending",
         "evidence": (
-            "form/form-stdlib/static-to-dynamic-cells.fk",
-            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
-            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "form/form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form/form-stdlib/queries/static-to-dynamic-tending.fk",
             "kernels/PHASE_A_FIRING_QUESTIONS.md",
         ),
         "wants": (
@@ -1137,12 +1137,12 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "docs/shared/agent-start-packet.md",
         "kind": "static compressed agent memory",
         "successor": "substrate:generated-agent-start-packet",
-        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "carrier": "form/form/form-stdlib/static-to-dynamic-cells.fk",
         "proof": "make static-to-dynamic-tending",
         "evidence": (
-            "form/form-stdlib/static-to-dynamic-cells.fk",
-            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
-            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "form/form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form/form-stdlib/queries/static-to-dynamic-tending.fk",
             "docs/shared/agent-start-packet.md",
         ),
         "wants": (
@@ -1157,12 +1157,12 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "docs/system_audit/native_route_goal_state.json",
         "kind": "static route-promotion snapshot",
         "successor": "substrate:native-route-goal-cells",
-        "carrier": "form/form-stdlib/native-route-goal-cells.fk",
+        "carrier": "form/form/form-stdlib/native-route-goal-cells.fk",
         "proof": "make native-route-goal-tending",
         "evidence": (
-            "form/form-stdlib/native-route-goal-cells.fk",
-            "form/form-stdlib/tests/native-route-goal-cells-band.fk",
-            "form/form-stdlib/queries/native-route-goal-tending.fk",
+            "form/form/form-stdlib/native-route-goal-cells.fk",
+            "form/form/form-stdlib/tests/native-route-goal-cells-band.fk",
+            "form/form/form-stdlib/queries/native-route-goal-tending.fk",
             "docs/system_audit/native_route_goal_state.json",
         ),
         "wants": (
@@ -1389,17 +1389,17 @@ def sense_bootstrap_compost() -> list[str]:
     # the on-disk LOC is the actual remaining weight.
     phase_files = {
         "A": [
-            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
-            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
-            "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
-            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
-            "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
-            "form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts.ts",
-            "form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts-fk.ts",
+            "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
+            "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
+            "form/form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
+            "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
+            "form/form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
+            "form/form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts.ts",
+            "form/form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts-fk.ts",
         ],
         "B": [
-            "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
-            "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
+            "form/form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
+            "form/form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
         ],
         "C": [
             "api/app/services/form_kernel_bridge.py",
@@ -1446,15 +1446,15 @@ def sense_bootstrap_compost() -> list[str]:
         )
 
     python_adapter_released = [
-        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
-        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
-        "form/form-kernel-ts/seedbank/python-adapter/src/main.ts",
-        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
+        "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
+        "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
+        "form/form/form-kernel-ts/seedbank/python-adapter/src/main.ts",
+        "form/form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
     ]
     released_count = sum(1 for rel in python_adapter_released if not (ROOT / rel).exists())
     reworked_scripts = [
-        "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
-        "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
+        "form/form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
+        "form/form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
     ]
     reworked_count = sum(1 for rel in reworked_scripts if (ROOT / rel).is_file())
     if released_count or reworked_count:
@@ -1469,8 +1469,8 @@ def sense_bootstrap_compost() -> list[str]:
         (
             "shared ctor vocabulary",
             [
-                "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
-                "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
+                "form/form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
+                "form/form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
             ],
             "CTOR vocabulary moves into Form data and NodeID identity tests",
         ),
@@ -1637,7 +1637,7 @@ def sense_bootstrap_compost() -> list[str]:
     # Third-runtime selector release — older manifests exposed
     # PARITY_THIRD_RUNTIME=ts-eval. The current script should be Form-native
     # only; if the selector returns, wellness names the regression.
-    parity = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
+    parity = ROOT / "form" / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
     selector_state = "unknown"
     if parity.is_file():
         parity_text = parity.read_text()

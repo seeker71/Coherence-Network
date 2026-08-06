@@ -62,7 +62,7 @@ python3 "$DEST/scripts/prepare_form_submodule.py" --repo-root "$DEST" --verify-c
 
 # 2. the Form kernel binary -------------------------------------------------------
 say "[2/7] Form kernel"
-GO_DIR="$DEST/form/form-kernel-go"; GO_BIN="$GO_DIR/bin-go"
+GO_DIR="$DEST/form/form/form-kernel-go"; GO_BIN="$GO_DIR/bin-go"
 if command -v go >/dev/null 2>&1; then
   ( cd "$GO_DIR" && go build -o bin-go . ) && ok "built kernel from source (go)"
 elif command -v gh >/dev/null 2>&1; then

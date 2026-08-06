@@ -133,7 +133,7 @@ minimum, the *same shape*. That sameness is measured. The rest is welcomed.
   Jung-Pauli: the One source from which all differentiate and return; "the All is
   One"; synchronicity through the shared source. Held as metaphysics, source-
   marked.
-- **`form/form-stdlib/grammars/holographic.fk`** — the boundary-encodes-bulk,
+- **`form/form/form-stdlib/grammars/holographic.fk`** — the boundary-encodes-bulk,
   constant-size, synchronicity, and the-All-is-One, computed (band 111111).
 - **The substrate** — `intern_node` (boundary encodes bulk), `find_equivalent_cells`
   (same source → one address): the holographic principle and the prima materia,

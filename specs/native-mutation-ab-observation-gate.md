@@ -6,7 +6,7 @@ source:
     symbols: [ObservationCase, HTTPObservation, CaseObservation, CASES, evaluate_case, build_gate_report, run_observation]
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
@@ -82,7 +82,7 @@ bounded trial when every case passes.
   pattern.
 - `deploy/kernel-router/production-routes.fk` - method-specific native preview
   route rows.
-- `form/form-stdlib/native-mutation-trust-envelope.fk` - trust envelope recipe
+- `form/form/form-stdlib/native-mutation-trust-envelope.fk` - trust envelope recipe
   carried by variant B.
 - `specs/method-specific-native-mutation-preview-bindings.md` - preview binding
   contract.

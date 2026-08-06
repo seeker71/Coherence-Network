@@ -23,7 +23,7 @@
 
   ; ── what is the model vs what is the head ────────────────────────────────────
   (model     "the ~100M+ transformer — reads text, returns the semantic signature. The heavy part.")
-  (head      "form/form-stdlib/form-freq-check.fk — a tiny, four-way-proven cell that turns the model's signature into pass | transmute. Cheap by design; it is NOT the detector.")
+  (head      "form/form/form-stdlib/form-freq-check.fk — a tiny, four-way-proven cell that turns the model's signature into pass | transmute. Cheap by design; it is NOT the detector.")
 
   ; ── the form-native substrate it is built from (all proven Form) ─────────────
   (built-from

@@ -17,12 +17,12 @@
 #
 # Runnable heart:
 #
-#   form/form-stdlib/all-life-north-star.fk
-#   form/form-stdlib/tests/all-life-north-star-band.fk
+#   form/form/form-stdlib/all-life-north-star.fk
+#   form/form/form-stdlib/tests/all-life-north-star-band.fk
 #
 # Verify:
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/grammars/living-equation.fk \
 #     form-stdlib/all-life-north-star.fk \
 #     form-stdlib/tests/all-life-north-star-band.fk
@@ -33,9 +33,9 @@
 
   (lineage
     (derives-from core-axioms.form host-kernel.form minimal-kernel.form)
-    (goods-from   form/form-stdlib/grammars/living-equation.fk)
-    (runs-as      form/form-stdlib/all-life-north-star.fk)
-    (proven-by    form/form-stdlib/tests/all-life-north-star-band.fk))
+    (goods-from   form/form/form-stdlib/grammars/living-equation.fk)
+    (runs-as      form/form/form-stdlib/all-life-north-star.fk)
+    (proven-by    form/form/form-stdlib/tests/all-life-north-star-band.fk))
 
   # ── The invariant ──────────────────────────────────────────────────
   (north-star

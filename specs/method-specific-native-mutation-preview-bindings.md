@@ -16,7 +16,7 @@ source:
     symbols: [test_parser_reads_bindings_not_comments, test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
     symbols: [run_observation, build_gate_report]
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: api/tests/test_native_mutation_ab_observation.py
     symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes]
@@ -70,11 +70,11 @@ binding as an explicit native preview surface.
 
 - `2026-06-08` - User direction: expose graph-node functions so mutable surfaces
   can move toward Form native without waiting at the Python boundary.
-- `form/form-stdlib/kernel-http.fk` - `kh-route` method/pattern/header/pressure
+- `form/form/form-stdlib/kernel-http.fk` - `kh-route` method/pattern/header/pressure
   route shape.
-- `form/form-kernel-rust/src/main.rs` - kernel-router method, wildcard, header,
+- `form/form/form-kernel-rust/src/main.rs` - kernel-router method, wildcard, header,
   body, and fanout behavior.
-- `form/form-stdlib/application-graph-node-port.fk` - application graph SQL
+- `form/form/form-stdlib/application-graph-node-port.fk` - application graph SQL
   carrier semantics.
 - `api/app/services/spec_registry_service.py` - live spec node id convention:
   `spec-{spec_id}`.
@@ -89,7 +89,7 @@ binding as an explicit native preview surface.
 - `deploy/kernel-router/mutation_ab_observation_harness.py` - A/B observation
   gate over fanout vs native preview.
 - `api/tests/test_native_mutation_ab_observation.py` - observation gate proof.
-- `form/form-stdlib/native-mutation-trust-envelope.fk` - reusable envelope
+- `form/form/form-stdlib/native-mutation-trust-envelope.fk` - reusable envelope
   recipe for residual, side-effect intents, and reversible gate state.
 - `docs/coherence-substrate/ideas-router.form` - high-level ideas route state.
 - `docs/coherence-substrate/spec-registry-router.form` - high-level spec route
@@ -113,7 +113,7 @@ binding as an explicit native preview surface.
 python3 deploy/kernel-router/mutation_ab_observation_harness.py --json
 cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_runtime_surface_native_routes.py
 python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md
-cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
+cd form/form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{"spec_id":"native-bind","title":"Native Bind"}'
 curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' --data '{"spec_id":"native-bind","title":"Native Bind"}'
 ```

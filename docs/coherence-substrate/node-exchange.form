@@ -50,7 +50,7 @@
 ;     report -> research only while receipts and consent remain intact.
 ;
 ; PROOF
-;   cd form && ./validate.sh form-stdlib/core.fk \
+;   cd form/form && ./validate.sh form-stdlib/core.fk \
 ;     form-stdlib/channel-interface.fk \
 ;     form-stdlib/hati-mesh.fk \
 ;     form-stdlib/cell-organ-layer.fk \

@@ -342,7 +342,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if not state["kernel_ok"]:
         print(f"NOTE: kernel binary not built at {KERNEL}")
-        print("  build it once:  cd form && ./validate.sh form-stdlib/core.fk form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk")
+        print("  build it once:  cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk")
     state["witness"] = witness_descriptor(args.port, "recognition")
     mdns = start_mdns_advertisement(args.port, "recognition")
     srv = ThreadingHTTPServer(("0.0.0.0", args.port), Server)

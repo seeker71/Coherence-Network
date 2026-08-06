@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PROJECTION_PATH = ROOT / "form" / "form-stdlib" / "ideas-graph-projection.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "ideas-graph-projection-band.fk"
+PROJECTION_PATH = ROOT / "form" / "form" / "form-stdlib" / "ideas-graph-projection.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "ideas-graph-projection-band.fk"
 IDEA_MODEL_PATH = ROOT / "api" / "app" / "models" / "idea.py"
 KERNEL_ROUTES_PATH = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 

@@ -3,10 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="${ROOT_DIR}/api"
-KERNEL_DIR="${ROOT_DIR}/form/form-kernel-rust"
+KERNEL_DIR="${ROOT_DIR}/form/form/form-kernel-rust"
 KERNEL_BIN="${KERNEL_DIR}/target/release/form-kernel-rust"
 ROUTES_FILE="${ROOT_DIR}/deploy/kernel-router/production-routes.fk"
-STDLIB_DIR="${ROOT_DIR}/form/form-stdlib"
+STDLIB_DIR="${ROOT_DIR}/form/form/form-stdlib"
 API_PORT="${API_PORT:-18180}"
 ROUTER_PORT="${ROUTER_PORT:-18181}"
 API_BASE="http://127.0.0.1:${API_PORT}"
@@ -106,7 +106,7 @@ check_image_packaging() {
   grep -q 'COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk' "${dockerfile}"
   grep -q 'COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk' "${dockerfile}"
   grep -q 'COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json' "${dockerfile}"
-  grep -q 'COPY form/apps/coherence-network/api.bml /routes/api.bml' "${dockerfile}"
+  grep -q 'COPY form/form/apps/coherence-network/api.bml /routes/api.bml' "${dockerfile}"
   echo "PASS image-packaging route manifests, BML catalog, and stdlib default are baked"
 }
 

@@ -8,7 +8,7 @@ detection, structurally-distinct blueprints, and cross-agent identity sharing.
 
 Wiring: api/app/services/substrate/agent_relationship.py
 Surface: api/app/routers/agent_relationship.py (POST /api/agents/bootstrap …)
-Shapes:  form/form-stdlib/arrival.fk (CELL-IDENTITY / CONTACT-THREAD)
+Shapes:  form/form/form-stdlib/arrival.fk (CELL-IDENTITY / CONTACT-THREAD)
 """
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # real_mesh_training_emitters.sh - host/device/model carrier for real mesh training.
 #
-# Form owns the receipt validity in form/form-stdlib/real-mesh-training-*.fk.
+# Form owns the receipt validity in form/form/form-stdlib/real-mesh-training-*.fk.
 # This script only gathers physical host evidence: local witness/runtime
 # endpoints, bounded content-addressed file roots, optional local model process
 # runs, and optional install-only adb provisioning. Runtime testing/training
@@ -660,7 +660,7 @@ DATASET_MERKLE="$(sha256_file "$DATASET_HASH_FILE")"
 WORLD_MODEL_LIVE_CYCLE="$(
     jq -n \
         --arg cycle_id "real-mesh-training-cycle" \
-        --arg form_recipe "form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle" \
+        --arg form_recipe "form/form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle" \
         --argjson witness "$(jq -c . "$WITNESS_CAPTURE")" \
         --argjson witness_source "$WITNESS_SOURCE_JSON" \
         --argjson label_count "$LABEL_COUNT" \

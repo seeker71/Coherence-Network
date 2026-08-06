@@ -2,7 +2,7 @@
 """Run API-oriented Form band proofs on the universal Hati-OS binary.
 
 This harness compares the Hati-OS arm against the existing sibling proof path:
-`form/validate.sh`. It also includes the SQLite-backed mutation harness so the
+`form/form/validate.sh`. It also includes the SQLite-backed mutation harness so the
 API-shaped mutation lane is checked against a production-seeded local DB.
 """
 

@@ -2,7 +2,7 @@
 # install_mesh_command_receiver.sh — bring the device-side dispatch receiver online.
 #
 # The receiver is the live local instance that lets the cloud cell make a session
-# on THIS device ACT (form/form-stdlib/mesh-command.fk decides; the carrier runs a
+# on THIS device ACT (form/form/form-stdlib/mesh-command.fk decides; the carrier runs a
 # real claude -p and sends the capture home). This installer writes a launchd agent
 # that runs the canonical repo script in a poll loop, provisions the lineage signing
 # key if absent, and (by default) leaves the receiver LISTENING. Idempotent — re-

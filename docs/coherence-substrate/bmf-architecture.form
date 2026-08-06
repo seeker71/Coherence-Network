@@ -592,7 +592,7 @@ grammar bmf over chars {
 Run this grammar over its own source through `Match` and it emits the
 `Rule` / `Pattern` / `Template` recipes that *are* a grammar — the body's
 compiler-compiler, frozen into `bmf-meta.fkb` so the bootstrap need never expand
-again. (The data shapes in [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk) —
+again. (The data shapes in [`bmf-core.fk`](../../form/form/form-stdlib/bmf-core.fk) —
 `lit` / `cls` / `run` / `seq` / `alt` / `opt` / `cap` — are what this surface
 compiles *to*; the surface is the thesis, the interned recipes are the lattice.)
 
@@ -645,7 +645,7 @@ form OpPrec = { op: ~String, prec: ~Integer, assoc: ~Assoc }
 This is the reconciliation written *after* looking at the current implementation.
 
 **What the body holds today.** The engine is `apply-object-rule` in
-[`form/form-stdlib/engine.fk`](../../form/form-stdlib/engine.fk) — pure-functional,
+[`form/form/form-stdlib/engine.fk`](../../form/form/form-stdlib/engine.fk) — pure-functional,
 with pattern constructors (`object`, `sequence`, `choice`, `capture`, `star`,
 `opt`, `cut`, `stop`) and `cut` for backtrack pruning. It is elegant. But:
 
@@ -670,8 +670,8 @@ with pattern constructors (`object`, `sequence`, `choice`, `capture`, `star`,
 | Universal emit always (`bp op`) | per-dialect categories | CTOR unification #4 |
 | Self-hosted meta-grammar | `source-compiler.fk` line-scanner | #5 |
 
-**What landed this breath** ([`form/form-stdlib/bmf-core.fk`](../../form/form-stdlib/bmf-core.fk),
-proven by [`form/form-stdlib/tests/bmf-core-band.fk`](../../form/form-stdlib/tests/bmf-core-band.fk)
+**What landed this breath** ([`form/form/form-stdlib/bmf-core.fk`](../../form/form/form-stdlib/bmf-core.fk),
+proven by [`form/form/form-stdlib/tests/bmf-core-band.fk`](../../form/form/form-stdlib/tests/bmf-core-band.fk)
 → `600`, `1 ok, 0 divergent` across Go/Rust/TS): the keystone and two of the four
 deltas, on a minimal worked example —
 
@@ -687,7 +687,7 @@ deltas, on a minimal worked example —
 
 1. **Migrate the language grammars** to `(pattern, template)` data rules over the
    cursor; retire the per-rule emit/reverse lambdas. (engine.fk #2, #3) — *the
-   recursive engine is shipped:* [`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk)
+   recursive engine is shipped:* [`bmf-grammar.fk`](../../form/form/form-stdlib/bmf-grammar.fk)
    adds named rules + `ref`/recursion + `rep`/`sep` list-capture + node-captures
    (the two primitives the slice once lacked). Full **BML**, **Go**, and **Java**
    method grammars now parse real source into universal trees and converge on one

@@ -47,7 +47,7 @@
 ;                     onto the wire: what survives re-addressing is real.
 ;
 ; ── WHY merkle.fk IS THE ADDRESSING PRIMITIVE ──  [BUILT, three-way proven]
-;   form/form-stdlib/merkle.fk already computes a content-address over a tree of byte-blocks:
+;   form/form/form-stdlib/merkle.fk already computes a content-address over a tree of byte-blocks:
 ;   leaf-hash(b)=SHA-256(0x00||b), branch-hash(L,R)=SHA-256(0x01||L||R), folded to one root. That
 ;   IS the cross-device-stable address. The subtlety it resolves, named honestly: a substrate
 ;   NodeID is (package, level, type, INSTANCE), and the instance number is allocated LOCALLY

@@ -15,12 +15,12 @@
 # Usage: form_cli_tiered.sh "<task>" [max-steps] [tier1] [tier2] [remote]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
+GO="$ROOT/form/form/form-kernel-go/bin-go"; STD="$ROOT/form/form/form-stdlib"
 TASK="${1:?task}"; MAX="${2:-4}"
 TIER1="${3:-ollama run llama3.2:3b}"     # fast, weak — handles the easy ones
 TIER2="${4:-ollama run coder}"           # bigger local — catches what tier1 drops
 REMOTE="${5:-claude -p}"                 # last resort: the only tier that needs network
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 echo "── tiered local-first runner ──"
 echo "  task: $(printf '%s' "$TASK" | head -c 70)"

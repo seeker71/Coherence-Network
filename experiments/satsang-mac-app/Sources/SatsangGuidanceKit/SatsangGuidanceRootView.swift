@@ -365,11 +365,11 @@ final class AppModel: ObservableObject {
     private func formBodySources() -> [String] {
         guard let repositoryRoot else { return [] }
         let candidates = [
-            "form/form-stdlib/satsang-guidance-event.fk",
-            "form/form-stdlib/form-cli-sufficiency.fk",
-            "form/form-stdlib/satsang-room-memory.fk",
-            "form/form-stdlib/satsang-health-memory.fk",
-            "form/form-stdlib/rag-ask.fk",
+            "form/form/form-stdlib/satsang-guidance-event.fk",
+            "form/form/form-stdlib/form-cli-sufficiency.fk",
+            "form/form/form-stdlib/satsang-room-memory.fk",
+            "form/form/form-stdlib/satsang-health-memory.fk",
+            "form/form/form-stdlib/rag-ask.fk",
             "docs/coherence-substrate/satsang-guidance-event.form",
             "docs/coherence-substrate/satsang-room-memory.form",
             "docs/coherence-substrate/satsang-health-memory.form",
@@ -430,13 +430,13 @@ final class AppModel: ObservableObject {
         candidates.append(home.appendingPathComponent("source/Coherence-Network"))
 
         return candidates.first { candidate in
-            host.fileExists(at: candidate.appendingPathComponent("form/form-stdlib/satsang-guidance-event.fk"))
+            host.fileExists(at: candidate.appendingPathComponent("form/form/form-stdlib/satsang-guidance-event.fk"))
         }
     }
 
     private func resolveFormCLI(repositoryRoot: URL) -> URL? {
         let candidates = [
-            repositoryRoot.appendingPathComponent("form/form-cli"),
+            repositoryRoot.appendingPathComponent("form/form/form-cli"),
             hostResources.homeDirectory.appendingPathComponent(".local/bin/form-cli")
         ]
         return candidates.first { hostResources.isExecutableFile(at: $0) }

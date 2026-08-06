@@ -42,7 +42,7 @@
 #             · triage — novel pain first, then the loudest of the
 #               known: curiosity turned toward what hurts
 #
-# SHIPPED: form/form-stdlib/pain-metabolism.fk +
+# SHIPPED: form/form/form-stdlib/pain-metabolism.fk +
 # tests/pain-metabolism-band.fk → 1023 (10 claims), four-way
 # (Go/Rust/TS), composing geometric-learning + cognitive-light-cone +
 # metabolic-learning + nearest-shape/learning-arc + novelty +

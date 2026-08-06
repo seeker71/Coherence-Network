@@ -3,7 +3,7 @@
 When the form-cli routes to an oracle, the agent records the raw (fear-based)
 answer AND its transmutation (fear -> opportunity, risk -> data). Both have value;
 from one entry the three separable training pairs derive. Mirrors
-form/form-stdlib/training-catalog.fk (tc-entry), proven four-way there.
+form/form/form-stdlib/training-catalog.fk (tc-entry), proven four-way there.
 """
 from __future__ import annotations
 

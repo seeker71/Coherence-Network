@@ -93,7 +93,7 @@ function Invoke-Host($exe, $dll, $arg, [switch]$Measure) {
 
 $cc = Find-Tool @("gcc.exe", "gcc", "clang.exe", "clang")
 $script:Linker = Find-Tool @("lld-link.exe", "lld-link", "link.exe", "link")
-$src = Join-Path $repo "form/native/bootstrap/form_bootstrap_host.c"
+$src = Join-Path $repo "form/form/native/bootstrap/form_bootstrap_host.c"
 $exe = Join-Path $WorkDir "form-bootstrap-host.exe"
 & $cc $src -O2 -o $exe | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "host compile failed" }

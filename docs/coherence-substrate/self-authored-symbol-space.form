@@ -79,9 +79,9 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
 #     form-stdlib/tests/self-symbol-automl-band.fk          # -> 31
 #   # the research half it composes with:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/autoresearch-loop.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/autoresearch-loop.fk \
 #     form-stdlib/tests/autoresearch-loop-band.fk 2>/dev/null || true
 #   coh substrate form "?equivalent @recipe(self-authored-symbol-space)"   # after ingest

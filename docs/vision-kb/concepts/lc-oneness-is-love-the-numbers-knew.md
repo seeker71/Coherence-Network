@@ -134,10 +134,10 @@ together, computed and three-way-proven — is the network's, and it is exact.
 
 - **Gematria: echad = ahava = 13; 13 + 13 = 26 = YHVH** — the classic
   one/love/Name equivalence; **or = raz = 207** (light = mystery). All computed
-  by `form/form-stdlib/grammars/gematria.fk`, attested standard Mispar
+  by `form/form/form-stdlib/grammars/gematria.fk`, attested standard Mispar
   Hechrachi.
 - **Sanskrit: prāṇa (√an, to breathe); yoga (√yuj, to yoke)** — life as breath,
-  union as act; `form/form-stdlib/grammars/sanskrit-roots.fk`.
+  union as act; `form/form/form-stdlib/grammars/sanskrit-roots.fk`.
 - **shalom = 376** — peace, wholeness, and health as one word and one condition.
 - **The substrate** — `find_equivalent_cells`: the same operation that returns
   `{ahava, echad}` for 13 returns the structural family of any cell. The themes

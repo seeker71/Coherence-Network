@@ -17,8 +17,8 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GO = os.path.join(ROOT, "form", "form-kernel-go", "bin-go")
-STD = os.path.join(ROOT, "form", "form-stdlib")
+GO = os.path.join(ROOT, "form", "form", "form-kernel-go", "bin-go")
+STD = os.path.join(ROOT, "form", "form", "form-stdlib")
 LOGIC = ["form-cli-repl-control.fk"]   # pure launch/line-routing recipe; no fkwu-only IO loop
 
 

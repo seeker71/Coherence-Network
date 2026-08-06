@@ -691,7 +691,7 @@ def test_pr_guard_collapses_status_descendants_to_gitlink(monkeypatch) -> None:
     changed = [
         "form",
         "form/README.md",
-        "form/form-stdlib/core.fk",
+        "form/form/form-stdlib/core.fk",
         "form-notes/README.md",
         "vendor/kernel/src/main.rs",
         "vendor/kernel-extra/README.md",
@@ -876,19 +876,19 @@ def test_wellness_symbol_resolution_recognizes_form_bml_and_emitted_c(
     monkeypatch.setattr(mod, "ROOT", tmp_path)
 
     (tmp_path / "specs").mkdir()
-    (tmp_path / "form" / "form-stdlib" / "bml").mkdir(parents=True)
-    (tmp_path / "form" / "form-stdlib").mkdir(exist_ok=True)
+    (tmp_path / "form" / "form" / "form-stdlib" / "bml").mkdir(parents=True)
+    (tmp_path / "form" / "form" / "form-stdlib").mkdir(exist_ok=True)
     (tmp_path / "docs" / "coherence-substrate").mkdir(parents=True)
 
     (tmp_path / "specs" / "literal-symbols.md").write_text(
         """---
 status: active
 source:
-  - file: form/form-stdlib/bml/form-fs.bml
+  - file: form/form/form-stdlib/bml/form-fs.bml
     symbols: [IFormFilesystem]
-  - file: form/form-stdlib/resource-port.fk
+  - file: form/form/form-stdlib/resource-port.fk
     symbols: [port]
-  - file: form/form-stdlib/hati-os-kernel-emit.fk
+  - file: form/form/form-stdlib/hati-os-kernel-emit.fk
     symbols: [fk_walk]
   - file: docs/coherence-substrate/standard-receipt.form
     symbols: [platforms]
@@ -896,15 +896,15 @@ source:
 """,
         encoding="utf-8",
     )
-    (tmp_path / "form" / "form-stdlib" / "bml" / "form-fs.bml").write_text(
+    (tmp_path / "form" / "form" / "form-stdlib" / "bml" / "form-fs.bml").write_text(
         "interface IFormFilesystem [public] {}\n",
         encoding="utf-8",
     )
-    (tmp_path / "form" / "form-stdlib" / "resource-port.fk").write_text(
+    (tmp_path / "form" / "form" / "form-stdlib" / "resource-port.fk").write_text(
         "(do\n  (defn port (direction value-shape) (list direction value-shape)))\n",
         encoding="utf-8",
     )
-    (tmp_path / "form" / "form-stdlib" / "hati-os-kernel-emit.fk").write_text(
+    (tmp_path / "form" / "form" / "form-stdlib" / "hati-os-kernel-emit.fk").write_text(
         '(defn fkc-walk-text () "static long long fk_walk(long long i, long long fp) { return i; }")\n',
         encoding="utf-8",
     )

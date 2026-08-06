@@ -6,7 +6,7 @@ source:
     symbols: []
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-run-idea-update-with-valuation-audit]
   - file: specs/INDEX.md
     symbols: []
@@ -18,17 +18,17 @@ source:
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
   - file: api/tests/test_native_mutation_route_bindings.py
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql]
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node, agn-update-node, agn-delete-node]
-  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_route_forms_name_response_projection_after_bounded_flip]
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
-  - file: form/form-stdlib/native-mutation-side-effects.fk
+  - file: form/form/form-stdlib/native-mutation-side-effects.fk
     symbols: [nms-record-cache-invalidation, nms-repair-parent-edge, nms-audit-contributor-key, nms-record-rollback-receipt]
-  - file: form/scripts/native-mutation-side-effects-test.sh
+  - file: form/form/scripts/native-mutation-side-effects-test.sh
     symbols: []
   - file: api/tests/test_spec_registry_router_form.py
     symbols: [test_spec_registry_router_form_describes_live_and_native_carriers]
@@ -110,7 +110,7 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 ```bash
 cd api && python3 -m pytest -q tests/test_specs_source_native_route.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py
 python3 scripts/validate_spec_quality.py --file specs/spec-registry-source-native.md
-cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19186 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
+cd form/form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19186 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 python3 - <<'PY'
 import json, urllib.request
 with urllib.request.urlopen('http://127.0.0.1:19186/api/spec-registry/source-list') as r:

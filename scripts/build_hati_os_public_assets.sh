@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 CLANG="${CLANG:-clang}"
 STAMP="${HATI_OS_ASSET_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
@@ -86,7 +86,7 @@ cat > "$MAC_STAGE/README.txt" <<EOF
 Hati-OS macOS arm64 native package
 
 Binary: bin/hati-os
-Source: proof/hati_os.c, emitted by form/form-stdlib/hati-os-native-cli-emit.fk
+Source: proof/hati_os.c, emitted by form/form/form-stdlib/hati-os-native-cli-emit.fk
 Proof: proof/receipt.json
 EOF
 
@@ -96,7 +96,7 @@ path, file_line, go_fib, go_sum, go_ack, mac_fib, mac_sum, mac_ack = sys.argv[1:
 data = {
     "target": "macos-arm64",
     "package": "hati-os-macos-arm64.tar.zst",
-    "emitter": "form/form-stdlib/hati-os-native-cli-emit.fk",
+    "emitter": "form/form/form-stdlib/hati-os-native-cli-emit.fk",
     "binary": "bin/hati-os",
     "file": file_line,
     "local_execution": {
@@ -120,11 +120,11 @@ android_file_so=""
 ANDROID_TARBALL="$OUT/hati-os-android-arm64.tar.zst"
 if [[ "${HATI_OS_SKIP_ANDROID:-0}" == "1" ]]; then
     android_reason="HATI_OS_SKIP_ANDROID=1"
-elif [[ -x "$ROOT/form/form-kernel-rust/build-android.sh" ]]; then
-    if (cd "$ROOT/form/form-kernel-rust" && ./build-android.sh); then
+elif [[ -x "$ROOT/form/form/form-kernel-rust/build-android.sh" ]]; then
+    if (cd "$ROOT/form/form/form-kernel-rust" && ./build-android.sh); then
         mkdir -p "$ANDROID_STAGE/bin" "$ANDROID_STAGE/lib/arm64-v8a" "$ANDROID_STAGE/proof" "$ANDROID_STAGE/checksums"
-        cp "$ROOT/form/form-kernel-rust/target/aarch64-linux-android/release/form-kernel-rust" "$ANDROID_STAGE/bin/hati-os"
-        cp "$ROOT/form/form-kernel-rust/target/aarch64-linux-android/release/libform_kernel_rust.so" "$ANDROID_STAGE/lib/arm64-v8a/libform_kernel_rust.so"
+        cp "$ROOT/form/form/form-kernel-rust/target/aarch64-linux-android/release/form-kernel-rust" "$ANDROID_STAGE/bin/hati-os"
+        cp "$ROOT/form/form/form-kernel-rust/target/aarch64-linux-android/release/libform_kernel_rust.so" "$ANDROID_STAGE/lib/arm64-v8a/libform_kernel_rust.so"
         android_file_bin="$(file "$ANDROID_STAGE/bin/hati-os")"
         android_file_so="$(file "$ANDROID_STAGE/lib/arm64-v8a/libform_kernel_rust.so")"
         case "$android_file_bin" in
@@ -168,10 +168,10 @@ PY
         android_status="pass"
     else
         android_status="fail"
-        android_reason="form/form-kernel-rust/build-android.sh failed"
+        android_reason="form/form/form-kernel-rust/build-android.sh failed"
     fi
 else
-    android_reason="form/form-kernel-rust/build-android.sh is not executable"
+    android_reason="form/form/form-kernel-rust/build-android.sh is not executable"
 fi
 
 mac_sha="$(cut -d' ' -f1 "$OUT/hati-os-macos-arm64.tar.zst.sha256")"

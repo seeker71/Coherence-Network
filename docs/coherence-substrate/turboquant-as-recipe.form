@@ -110,7 +110,7 @@
 #   fixed quantizer     — universal pressure/score buckets, not learned from traffic
 #   compressed handle   — `KernelHTTPRouteChoiceSignature`
 #
-# In Form this lives in `form/form-stdlib/kernel-http.fk`:
+# In Form this lives in `form/form/form-stdlib/kernel-http.fk`:
 #
 #   kh-pressure-bucket(pressure)
 #   kh-score-bucket(score)

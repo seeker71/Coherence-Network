@@ -1,7 +1,7 @@
 package com.coherence.sema.data
 
 // The satsang-session agreements, carried onto the phone. The AUTHORITY is the Form cell —
-// coherence-kernel form/form-stdlib/satsang-session.fk, proven 255 four-way on 2026-07-06.
+// coherence-kernel form/form/form-stdlib/satsang-session.fk, proven 255 four-way on 2026-07-06.
 // This Kotlin mirror exists so the UI can fold a witness record on-device with the same
 // shape; it adds nothing the cell does not hold.
 //

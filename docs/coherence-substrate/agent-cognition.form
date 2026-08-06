@@ -36,7 +36,7 @@
 
     (test-spec
       (does "turn a spec's done_when into a four-way band and run it")
-      (carrier form/validate.sh form-stdlib/tests)
+      (carrier form/form/validate.sh form-stdlib/tests)
       (arc "done_when -> band verdict; pass is the four kernels agreeing"))
 
     (create-recipe

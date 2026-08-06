@@ -158,7 +158,7 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # The kernel offer already runs two cells over a channel:
-#   cd form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
+#   cd form/form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
 #
 #   # The contract's cells are queryable by NodeID once ingested:
 #   coh substrate form "?equivalent @recipe(kernel-offer-protocol)"

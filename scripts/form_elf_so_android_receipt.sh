@@ -11,7 +11,7 @@
 # proof is tests/form-elf-so-band.fk (127). This is the runtime half.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 KERNEL="$FORM/form-kernel-rust/target/release/form-kernel-rust"
 [[ -x "$KERNEL" ]] || KERNEL="$FORM/form-kernel-rust/target/debug/form-kernel-rust"
 [[ -x "$KERNEL" ]] || { echo "no form-kernel-rust binary; skipping"; exit 0; }

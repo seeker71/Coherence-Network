@@ -5,11 +5,11 @@ The relay (api/app/routers/field_relay.py) is open, content-blind, dial-out. IDE
 — this is the thin crypto+network CARRIER that lets a cell sign envelopes and decide whether a presented
 sender is trustworthy. The DECISIONS stay Form, proven four-way + native + mac/windows/android rows:
 
-  - the trust VERDICT is the proven fiv-verdict recipe (form/form-stdlib/field-identity.fk), run on the
-    fkwu universal kernel itself via form/form-stdlib/field-identity-decide.fk + scripts/fkwu_run.sh:
+  - the trust VERDICT is the proven fiv-verdict recipe (form/form/form-stdlib/field-identity.fk), run on the
+    fkwu universal kernel itself via form/form/form-stdlib/field-identity-decide.fk + scripts/fkwu_run.sh:
     the carrier computes the four crypto booleans, stages them as DATA, and reads the verdict back from
     the kernel. The security-critical decision is never re-implemented here.
-  - the reconnect DRAIN selection is fq-drain (form/form-stdlib/field-queue.fk, verdict 127). For the
+  - the reconnect DRAIN selection is fq-drain (form/form/form-stdlib/field-queue.fk, verdict 127). For the
     e2e it is mirrored faithfully in Python (``_fq_drain``) exactly as the live relay endpoint mirrors
     fr-route in ``_decide`` — the canonical body is the proven recipe; this is the bootstrap carrier.
 

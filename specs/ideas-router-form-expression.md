@@ -6,19 +6,19 @@ source:
     symbols: [idea_route_shape, idea_route_recipe_shape, ideas_router_structure, browse_ideas_recipe, sense_governance_recipe, choose_next_idea_recipe, mutate_idea_recipe, question_answer_recipe, link_idea_recipe, translate_idea_recipe, invest_in_idea_recipe, rollup_super_idea_recipe, inspect_idea_recipe]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-run-idea-update-with-valuation-audit]
-  - file: form/form-stdlib/graph-node-port.fk
+  - file: form/form/form-stdlib/graph-node-port.fk
     symbols: [gn-create-node, gn-replace-node, gn-delete-node]
-  - file: form/form-stdlib/auth-port.fk
+  - file: form/form/form-stdlib/auth-port.fk
     symbols: [auth-require-api-key]
-  - file: form/form-stdlib/tests/auth-port-band.fk
+  - file: form/form/form-stdlib/tests/auth-port-band.fk
     symbols: []
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node, agn-update-node, agn-delete-node]
-  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
-  - file: form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
+  - file: form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
@@ -36,11 +36,11 @@ source:
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql]
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_route_forms_name_response_projection_after_bounded_flip]
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
-  - file: form/form-stdlib/native-mutation-side-effects.fk
+  - file: form/form/form-stdlib/native-mutation-side-effects.fk
     symbols: [nms-record-cache-invalidation, nms-repair-parent-edge, nms-audit-contributor-key, nms-record-rollback-receipt]
-  - file: form/scripts/native-mutation-side-effects-test.sh
+  - file: form/form/scripts/native-mutation-side-effects-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_ab_observation.py
     symbols: [test_ab_gate_recommends_live_db_trial_after_full_confidence]
@@ -105,8 +105,8 @@ constraints:
 - `api/app/routers/ideas.py` - live FastAPI carrier for the ideas portfolio routes.
 - `deploy/kernel-router/production-routes.fk` - native kernel-router manifest for whole-request Form routes.
 - `ideas/INDEX.md` - canonical super-idea source index.
-- `form/form-stdlib/graph-node-port.fk` - native graph-node read and mutation carrier.
-- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - memory/file proof for create, replace, and delete.
+- `form/form/form-stdlib/graph-node-port.fk` - native graph-node read and mutation carrier.
+- `form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - memory/file proof for create, replace, and delete.
 - `specs/method-specific-native-mutation-preview-bindings.md` - method-specific preview route binding contract.
 - `specs/native-mutation-trust-envelope.md` - trust envelope contract for the
   current mutable route boundary.
@@ -114,8 +114,8 @@ constraints:
 ## Files to Create/Modify
 
 - `docs/coherence-substrate/ideas-router.form` - high-level route expression and shifted recipe families.
-- `form/form-stdlib/graph-node-port.fk` - native graph-node mutation carrier functions.
-- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - native mutation proof band.
+- `form/form/form-stdlib/graph-node-port.fk` - native graph-node mutation carrier functions.
+- `form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - native mutation proof band.
 - `deploy/kernel-router/production-routes.fk` - native structure route for the high-level ideas router reading.
 - `Dockerfile.kernel-router` - carries the production route manifest and idea source files into the kernel-router image.
 - `scripts/runtime_surface_report.py` - honest capable-route wording for native structure routes without CPython twins.
@@ -156,7 +156,7 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 ## Gaps
 
 - GAP-I1: closed by `public-no-header-native-mutation-flip`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, `native-mutation-route-side-effects-test.sh` proves application graph mutation plus side-effect execution are bound in one Form-native route runner, `native-mutation-public-gate-test.sh` plus `mutation_public_gate_harness.py` prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate route rows, and bounded public Traefik no-header `POST/PATCH /api/ideas` now enters the kernel-router native default invitation with `X-Form-Python-Fallback` as explicit fanout.
-- GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
+- GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form/form-stdlib/ideas-graph-projection.fk`.
 - GAP-I3: closed by `specs/native-idea-valuation-audit-ledger.md`. The
   side-effect ledger now classifies idea valuation audit-ledger writes as carried
   Python parity.

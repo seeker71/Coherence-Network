@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached.
 #
-# Warms the sovereign destination: standalone native form-cli (form/form-cli).
+# Warms the sovereign destination: standalone native form-cli (form/form/form-cli).
 # Standard lane (2026-06-24): copies committed bootstrap/form-cli-<platform>
 # when stamped — no bin-go, no clang. Maintainer regen:
-# form/scripts/regen_standard_lane_binaries.sh
+# form/form/scripts/regen_standard_lane_binaries.sh
 #
 # Idempotent: keeps a behaviorally verified host-native target, refreshes from
 # the stamped committed platform binary when available, and otherwise performs
@@ -100,7 +100,7 @@ sha256_file() {
 # Use the submodule's own carrier verifier at runtime as well as build time.
 # Keeping one implementation prevents host-specific comparison drift between
 # the authoritative builder and the consumer cache.
-# shellcheck source=form/scripts/form_cli_bootstrap_proof.sh
+# shellcheck source=form/form/scripts/form_cli_bootstrap_proof.sh
 source "$FORM_DIR/scripts/form_cli_bootstrap_proof.sh"
 
 verify_carrier_identity() {

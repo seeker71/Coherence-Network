@@ -144,7 +144,7 @@ the structural lesson.
 - **echad = ahava = 13** — the classic *one/unity = love* equivalence, the
   cleanest example of value-as-bond.
 - **The substrate** — `find_equivalent_cells` (`api/app/services/substrate/
-  kernel.py`) and `gematria.fk` (`form/form-stdlib/grammars/gematria.fk`): the
+  kernel.py`) and `gematria.fk` (`form/form/form-stdlib/grammars/gematria.fk`): the
   same operation in code.
 
 The body's discernment holds the convergence as **structurally real**: gematria

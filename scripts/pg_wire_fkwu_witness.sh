@@ -8,7 +8,7 @@
 # and asserts the row value comes back. Carrier only — the protocol is Form.
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT/form" || exit 3
-export GO_BIN="$ROOT/form/form-kernel-go/bin-go"; export TMPDIR="${TMPDIR:-/tmp}"
+export GO_BIN="$ROOT/form/form/form-kernel-go/bin-go"; export TMPDIR="${TMPDIR:-/tmp}"
 WANT="pg-wire-witness-$$"
 
 # 1. ensure a local Postgres on TCP with trust auth + a known row

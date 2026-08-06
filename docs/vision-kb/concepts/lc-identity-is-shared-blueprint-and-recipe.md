@@ -130,8 +130,8 @@ leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
 
 The reducing recipe executes three-way (Rust == Go == TS). Two recipes that
 are exact inverses on a redundant axis live in
-[`form/form-stdlib/grammars/compression-fold.fk`](../../../form/form-stdlib/grammars/compression-fold.fk),
-held to the bit by the band [`compression-fold-band.fk`](../../../form/form-stdlib/tests/compression-fold-band.fk):
+[`form/form/form-stdlib/grammars/compression-fold.fk`](../../../form/form/form-stdlib/grammars/compression-fold.fk),
+held to the bit by the band [`compression-fold-band.fk`](../../../form/form/form-stdlib/tests/compression-fold-band.fk):
 
 - `compress(inputs, idx) → N−1 outputs` — the fold itself: a recipe with one
   less output than input. It removes the element at position `idx`, dropping

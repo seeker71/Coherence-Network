@@ -159,7 +159,7 @@ def main():
         "expected_y": y.tolist()
     }
     
-    out_dir = os.path.join(os.path.dirname(HERE), "form", "form-samples")
+    out_dir = os.path.join(os.path.dirname(HERE), "form", "form", "form-samples")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "whisper_block0_test_data.json")
     with open(out_path, "w") as f_out:

@@ -13,7 +13,7 @@
 # Run:  scripts/agent_tooluse_train.sh [hid epochs lr]    (defaults 64 80 0.02)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 HID="${1:-64}"; EPOCHS="${2:-80}"; LR="${3:-0.02}"
 DATA="${DATA:-/tmp/agent_tooluse.dat}"

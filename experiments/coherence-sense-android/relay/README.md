@@ -10,7 +10,7 @@ EXCHANGE → FUSE → LEARN, until the surprise between their views of the same 
   a host stand-in for the in-fkwu native TCP server (which exists in the kernel's
   `driver.fk` host-net serve loop; wiring its roster *state* across fork-per-connection
   is the deep piece deferred for one pass). The relay's **routing DECISION is
-  `form/form-stdlib/field-relay.fk`'s law** — content-blind (reads `from`/`kind`
+  `form/form/form-stdlib/field-relay.fk`'s law** — content-blind (reads `from`/`kind`
   metadata, never the sensing payload) and consent-is-the-one-gate (a cell is reachable
   only through the `sense` kind it offers; an unoffered kind is DENY 3).
 - **The fusion / surprise / trust MATH is NOT in the carrier** — it runs in **native

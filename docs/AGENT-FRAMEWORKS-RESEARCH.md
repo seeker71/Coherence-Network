@@ -138,8 +138,8 @@ external state includes a candidate pool, curated set, compact evidence links,
 verification records, compressed/deduplicated observations, and budget-aware
 context rendering.
 
-Coherence's compact proof is `form/form-stdlib/search-harness.fk` with
-`form/form-stdlib/tests/search-harness-compact-proof.fk`. It carries those six
+Coherence's compact proof is `form/form/form-stdlib/search-harness.fk` with
+`form/form/form-stdlib/tests/search-harness-compact-proof.fk`. It carries those six
 surfaces as one Form fact ledger and returns a trace-preserving choice receipt
 for the selected search branch.
 

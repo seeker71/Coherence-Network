@@ -16,9 +16,9 @@
 #     -> say (TTS oracle). The native middle is the only non-oracle stage.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) >/dev/null 2>&1
-[[ -x "$GO" ]] || { echo "FAIL no Form kernel (bin-go) — build: (cd $ROOT/form/form-kernel-go && go build -o bin-go .)"; exit 1; }
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) >/dev/null 2>&1
+[[ -x "$GO" ]] || { echo "FAIL no Form kernel (bin-go) — build: (cd $ROOT/form/form/form-kernel-go && go build -o bin-go .)"; exit 1; }
 # core.fk is the only source-compiled prelude; nl-translate's deps are all builtins
 # + already-low-level cells, so the native translate runs without it.
 PRELUDE=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar string-case nl-lexicon-data nl-translate)

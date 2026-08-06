@@ -11,7 +11,7 @@ from app.main import app
 
 
 ROOT = Path(__file__).resolve().parents[2]
-KERNEL_CORE_SOURCE = ROOT / "form" / "form-stdlib" / "bml" / "kernel-core.bml"
+KERNEL_CORE_SOURCE = ROOT / "form" / "form" / "form-stdlib" / "bml" / "kernel-core.bml"
 
 
 @pytest.mark.asyncio

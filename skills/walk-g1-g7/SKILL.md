@@ -24,7 +24,7 @@ form-cli roadmap                     # the plan; read the next open step + its s
 form-cli asm "<C for the construct>" # learn LLVM's lowering offline (clang, local)
 form-cli close "<id>" "<spec informed by the asm>" "<assert>" "<expected>" "ollama run coder"
 # close: a LOCAL oracle drafts the recipe; the kernel validates it against the assert.
-# if it validates -> register a band + run: cd form && ./validate.sh ... (four-way) -> ship.
+# if it validates -> register a band + run: cd form/form && ./validate.sh ... (four-way) -> ship.
 # if it does not -> record WHY, do not hand-write the fix; the point is to find what
 #   form-cli itself still lacks.
 ```

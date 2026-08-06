@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # cuda_matvec_audit.sh — GPU witness for the Form CUDA matvec emitter (jte-matvec-cuda in
-# form/form-stdlib/jit-tensor-emit.fk): bin-go prints the Form-emitted __global__ CUDA, CuPy/NVRTC
+# form/form/form-stdlib/jit-tensor-emit.fk): bin-go prints the Form-emitted __global__ CUDA, CuPy/NVRTC
 # compiles it with --fmad=false (no FMA contraction — mul-then-add stays TWO roundings, not a fused
 # one), one thread per output row dispatches over deterministic input cells, and BIT-EXACT value
 # parity against a CPU right-fold reference (same op order, fp32 accumulation) gates the timing rows.
@@ -22,7 +22,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 ROWS="${1:-256}"; COLS="${2:-256}"; ITERS="${3:-20}"
 
 # go kernel — the mouth that prints the Form-emitted CUDA (bin-go.exe on Windows, bin-go elsewhere)

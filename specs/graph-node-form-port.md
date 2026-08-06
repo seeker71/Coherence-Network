@@ -2,9 +2,9 @@
 idea_id: data-infrastructure
 status: done
 source:
-  - file: form/form-stdlib/graph-node-port.fk
+  - file: form/form/form-stdlib/graph-node-port.fk
     symbols: []
-  - file: form/form-stdlib/tests/graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/graph-node-port-band.fk
     symbols: []
   - file: api/app/services/graph_service.py
     symbols: [get_node, list_nodes, count_nodes]
@@ -15,12 +15,12 @@ requirements:
   - "The graph-node port preserves type counts and typed indexes across create, update, and retype operations."
   - "A Form band proves the same graph-node contract over memory and durable file carriers."
 done_when:
-  - 'file_exists("form/form-stdlib/graph-node-port.fk")'
-  - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-count-nodes")'
-  - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-list-nodes")'
-  - 'file_contains("form/form-stdlib/tests/graph-node-port-band.fk", "Band verdict: 11111")'
+  - 'file_exists("form/form/form-stdlib/graph-node-port.fk")'
+  - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-count-nodes")'
+  - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-list-nodes")'
+  - 'file_contains("form/form/form-stdlib/tests/graph-node-port-band.fk", "Band verdict: 11111")'
   - 'pytest_passes("api/tests/test_graph_node_form_port.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk"
 constraints:
   - "Do not change api/app/services/graph_service.py behavior in this slice."
   - "Do not add a parallel Python graph-node service."
@@ -38,7 +38,7 @@ test existence, count by type, and list nodes by type.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/graph-node-port.fk` declares `gn-put-node`, `gn-get-node`, `gn-node-exists?`, `gn-count-nodes`, `gn-list-node-ids`, and `gn-list-nodes`.
+- [ ] **R1**: `form/form/form-stdlib/graph-node-port.fk` declares `gn-put-node`, `gn-get-node`, `gn-node-exists?`, `gn-count-nodes`, `gn-list-node-ids`, and `gn-list-nodes`.
 - [ ] **R2**: The port keeps node type metadata, total counts, typed counts, and typed indexes in storage-port keys.
 - [ ] **R3**: Updating an existing node with the same type does not duplicate typed indexes or counts.
 - [ ] **R4**: Retyping a node decrements the old typed count/index and increments the new typed count/index.
@@ -49,13 +49,13 @@ test existence, count by type, and list nodes by type.
 - `2026-06-08` - User direction: expose graph-node functions so ideas can move more native.
 - `api/app/services/graph_service.py` - current Python source of truth for `get_node`, `list_nodes`, and `count_nodes`.
 - `api/app/services/idea_graph_adapter.py` - ideas already read graph nodes with `list_nodes(type="idea")` and `count_nodes(type="idea")`.
-- `form/form-stdlib/storage-port.fk` - carrier-agnostic storage interface.
-- `form/form-stdlib/storage-port-file.fk` - durable file carrier used as native proof.
+- `form/form/form-stdlib/storage-port.fk` - carrier-agnostic storage interface.
+- `form/form/form-stdlib/storage-port-file.fk` - durable file carrier used as native proof.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/graph-node-port.fk` - Form graph-node port over storage-port.
-- `form/form-stdlib/tests/graph-node-port-band.fk` - memory/file carrier proof.
+- `form/form/form-stdlib/graph-node-port.fk` - Form graph-node port over storage-port.
+- `form/form/form-stdlib/tests/graph-node-port-band.fk` - memory/file carrier proof.
 - `api/tests/test_graph_node_form_port.py` - repository-level contract proof.
 - `docs/coherence-substrate/INDEX.md` - public substrate map entry.
 - `docs/coherence-substrate/ideas-router.form` - gap updated now that the graph-node read port exists.
@@ -71,7 +71,7 @@ test existence, count by type, and list nodes by type.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-port-band.fk
 cd api && python3 -m pytest -q tests/test_graph_node_form_port.py
 python3 scripts/validate_spec_quality.py --file specs/graph-node-form-port.md
 ```

@@ -27,13 +27,13 @@
 ;   floor because uninterrupted listening is the primary carrier.
 ;
 ; Body:
-;   form/form-stdlib/satsang-room-memory.fk decides the trust boundary:
+;   form/form/form-stdlib/satsang-room-memory.fk decides the trust boundary:
 ;   explicit Send is the capture boundary; local JSON/segmented file is an
 ;   accepted storage carrier; hidden capture is rejected; transcript id,
 ;   channel-label, and passive shared-stream continuity are allowed; mic-exclusive
 ;   biometric speaker-id carriers are rejected; prior sessions plus speakers can
 ;   feed later context.
-;   Proof: form/form-stdlib/tests/satsang-room-memory-band.fk -> 255 four-way.
+;   Proof: form/form/form-stdlib/tests/satsang-room-memory-band.fk -> 255 four-way.
 ;
 ; Boundary:
 ;   This is a trusted memory receipt, not a surveillance feature. It stores the

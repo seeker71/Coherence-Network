@@ -3,8 +3,8 @@
 (llm-feature-channel-floor
   (lineage
     (rests-on text-summary-learning.fk oracle-catalog.fk choice-receipt.fk tool-channel.fk loopback-learning.fk code-tool-learning.fk)
-    (recipe form/form-stdlib/llm-feature-channel-floor.fk)
-    (proof form/form-stdlib/tests/llm-feature-channel-floor-band.fk -> 131071 four-way))
+    (recipe form/form/form-stdlib/llm-feature-channel-floor.fk)
+    (proof form/form/form-stdlib/tests/llm-feature-channel-floor-band.fk -> 131071 four-way))
 
   (purpose
     "Answer what a full Form-native LLM feature surface needs by making each feature a queryable language/channel row."

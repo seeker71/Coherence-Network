@@ -44,9 +44,9 @@ body carries an implementation in**.
 The body holds four kernel implementations:
 
 - **Python** — [`api/app/services/substrate/`](../../../api/app/services/substrate/) (the production kernel)
-- **TypeScript** — [`form/form-kernel-ts/`](../../../form/form-kernel-ts/) (already reaching native parity per the [`form-kernel-comparison.md`](../../../form/kernel-comparison.md) record)
-- **Rust** — [`form/form-kernel-rust/`](../../../form/form-kernel-rust/)
-- **Go** — [`form/form-kernel-go/`](../../../form/form-kernel-go/)
+- **TypeScript** — [`form/form/form-kernel-ts/`](../../../form/form/form-kernel-ts/) (already reaching native parity per the [`form-kernel-comparison.md`](../../../form/form/kernel-comparison.md) record)
+- **Rust** — [`form/form/form-kernel-rust/`](../../../form/form/form-kernel-rust/)
+- **Go** — [`form/form/form-kernel-go/`](../../../form/form/form-kernel-go/)
 
 Each is the same substrate kernel expressed in a different host
 language. Each is currently *opaque source* — to understand its
@@ -82,7 +82,7 @@ With BMF grammars for every host language, the equivalence becomes
     @recipe(parse(@language(python),
                   read_bytes("api/app/services/substrate/kernel.py")))
     @recipe(parse(@language(rust),
-                  read_bytes("form/form-kernel-rust/src/kernel.rs")))
+                  read_bytes("form/form/form-kernel-rust/src/kernel.rs")))
 ```
 
 The substrate walks both Form trees. Where structural shapes agree
@@ -268,10 +268,10 @@ sprouting; this section names that without rushing the formal status field.
 
 - **The four kernel implementations:**
   - [`api/app/services/substrate/kernel.py`](../../../api/app/services/substrate/kernel.py) — the production Python kernel
-  - [`form/form-kernel-ts/`](../../../form/form-kernel-ts/) — the TypeScript port reaching native parity
-  - [`form/form-kernel-rust/`](../../../form/form-kernel-rust/) — the Rust port
-  - [`form/form-kernel-go/`](../../../form/form-kernel-go/) — the Go port
-  - [`form/kernel-comparison.md`](../../../form/kernel-comparison.md) — the current hand-authored comparison; this concept turns it into a substrate query
+  - [`form/form/form-kernel-ts/`](../../../form/form/form-kernel-ts/) — the TypeScript port reaching native parity
+  - [`form/form/form-kernel-rust/`](../../../form/form/form-kernel-rust/) — the Rust port
+  - [`form/form/form-kernel-go/`](../../../form/form/form-kernel-go/) — the Go port
+  - [`form/form/kernel-comparison.md`](../../../form/form/kernel-comparison.md) — the current hand-authored comparison; this concept turns it into a substrate query
 - **[`lc-parsers-as-recipes`](lc-parsers-as-recipes.md)** — the architectural choice this concept extends: grammar rules as first-class Recipes; AST is bootstrap; BMF-pattern is the destination.
 - **[`api/app/services/substrate/grammar.py`](../../../api/app/services/substrate/grammar.py)** — the body's existing BMF-seed (Rule cell-domain, `register_form_rule`, pattern primitives). The substrate already carries the machinery; this concept names what falls out when every kernel's host language is wired through it.
 - **Bjorg's BMF (2000)** — the direct lineage. Grammar rules as data; backtracking-as-architecture; the parser itself is a tree of rules.

@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 DEFAULT_RECEIPT="$ROOT/.cache/body-test-receipts/fkwu-form-cli-metal-direct-$STAMP/receipt.json"

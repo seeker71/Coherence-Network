@@ -86,9 +86,9 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
 #     form-stdlib/tests/prosody-channel-band.fk          # -> 31
 #   # the sensing side it mirrors:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affect-traits.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/affect-traits.fk \
 #     form-stdlib/tests/affect-traits-band.fk
 #   coh substrate form "?equivalent @recipe(prosody-channel)"   # after ingest

@@ -76,6 +76,6 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/shared-heart.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/shared-heart.fk \
 #     form-stdlib/tests/shared-heart-band.fk      # → 31 four-way
 #   bash scripts/shared_heart_demo.sh             # en/es/de from one numeric model

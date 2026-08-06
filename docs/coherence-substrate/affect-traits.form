@@ -2,7 +2,7 @@
 ; The body bands and gates what free oracles measure; a reading is never a soul-state, and a label
 ; is shown only when it is earned.
 ;
-; Proven three-way (Go · Rust · TS) by form-stdlib/tests/affect-traits-band.fk at form/validate.sh → 65535.
+; Proven three-way (Go · Rust · TS) by form-stdlib/tests/affect-traits-band.fk at form/form/validate.sh → 65535.
 
 ; ---------------------------------------------------------------------------
 ; purpose

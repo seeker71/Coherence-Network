@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-GRAPH_NODE_PORT_PATH = ROOT / "form" / "form-stdlib" / "graph-node-port.fk"
-MUTATION_BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "graph-node-mutation-carrier-band.fk"
+GRAPH_NODE_PORT_PATH = ROOT / "form" / "form" / "form-stdlib" / "graph-node-port.fk"
+MUTATION_BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "graph-node-mutation-carrier-band.fk"
 IDEAS_ROUTER_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPEC_ROUTER_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
 

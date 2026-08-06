@@ -19,8 +19,8 @@
     (rests-on (Contributor.claimed "false on a held-open placeholder; true when the person walks in and claims")
               (router contributor_recognition contributor_identity)
               (door   "POST /api/contributions/record (record_open_contribution)"))
-    (proof  form/form-stdlib/membership-as-recognition.fk
-            form/form-stdlib/tests/membership-as-recognition-band.fk "-> 511 four-way Go/Rust/TS/fkwu")
+    (proof  form/form/form-stdlib/membership-as-recognition.fk
+            form/form/form-stdlib/tests/membership-as-recognition-band.fk "-> 511 four-way Go/Rust/TS/fkwu")
     (named-with urs sema))
 
   ; the arc — full participation, no membership grant required
@@ -32,7 +32,7 @@
 
   ; the gate — membership-as-recognition.fk decides path + state, and keeps two hard invariants
   (gate
-    (recipe form/form-stdlib/membership-as-recognition.fk)
+    (recipe form/form/form-stdlib/membership-as-recognition.fk)
     (path  (direct           when has-write-grant)            ; a member with write commits directly (rare)
            (fork-pr-or-offer when returned-a-trace)           ; the DEFAULT stranger path — no write grant
            (read-only        when nothing-returned-yet))

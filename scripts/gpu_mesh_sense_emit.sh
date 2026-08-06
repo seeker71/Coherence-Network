@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gpu_mesh_sense_emit.sh — the GPU sensing organ reports live into the mesh.
 #
-# The body is Form: form/form-stdlib/gpu-mesh-sense.fk turns a GPU bit-exact proof verdict
+# The body is Form: form/form/form-stdlib/gpu-mesh-sense.fk turns a GPU bit-exact proof verdict
 # (backend, device, kernel, parity N/N, max-abs ULP) into a wmg-sense row — the SAME shape the
 # world-model learner already consumes from active samples and capability receipts. Proven four-way
 # (Go/Rust/TS/fkwu) by form-stdlib/tests/gpu-mesh-sense-band.fk → verdict 511.
@@ -18,7 +18,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 POST_TO_BOARD="${POST_TO_BOARD:-1}"
 ORGAN="${COORD_AGENT:-gpu-organ}"
 
@@ -78,7 +78,7 @@ done
 echo
 if [ "$POST_TO_BOARD" = "1" ]; then
     echo "ok — the GPU organ is live in the mesh as '$ORGAN'. Read it: scripts/agent-coord.sh roster   (or  log)"
-    echo "     The reading shape is wmg-sense (form/form-stdlib/gpu-mesh-sense.fk), the same the world-model"
+    echo "     The reading shape is wmg-sense (form/form/form-stdlib/gpu-mesh-sense.fk), the same the world-model"
     echo "     learner ingests — so cells learn from the silicon's proof, not just stdout."
 else
     echo "ok — rendered + proven (511 four-way), not posted (POST_TO_BOARD=0)."

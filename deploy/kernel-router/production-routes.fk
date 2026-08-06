@@ -1818,7 +1818,7 @@
 ; observes it and fans out to FastAPI rather than silently treating refusal as
 ; absence.
 ;
-; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
+; The SQL shape mirrors form/form/form-stdlib/application-graph-node-port.fk. The
 ; preview response intentionally does not execute. The public-gate and default
 ; invitation arms execute through the kernel config carrier when database.url is
 ; configured. Response projection, side-effect execution, route-runner
@@ -2164,7 +2164,7 @@
     ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
     ",\"ordinary_traffic_flip_performed\":true"
     ",\"persistence\":\"proven-in-form-pg-fixture\""
-    ",\"proof\":\"form/scripts/native-mutation-public-gate-test.sh\""
+    ",\"proof\":\"form/form/scripts/native-mutation-public-gate-test.sh\""
     "}")))
 
 (defn mpg-reversible-gate-json ()

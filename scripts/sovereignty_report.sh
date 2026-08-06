@@ -46,8 +46,8 @@ if [ -f "$NTR" ]; then
   printf '\n' > "$empty"
   printf '(do (print (ntr-tally "%s")))\n' "$NTR" > "$drv"
   read -r N HIT ESC <<<"$(bash "$ROOT/scripts/fkwu_run.sh" "$empty" \
-    "$ROOT/form/form-stdlib/sovereignty-receipt.fk" \
-    "$ROOT/form/form-stdlib/native-thought-receipt.fk" \
+    "$ROOT/form/form/form-stdlib/sovereignty-receipt.fk" \
+    "$ROOT/form/form/form-stdlib/native-thought-receipt.fk" \
     "$drv" 2>/dev/null | grep -E '^[0-9]+ [0-9]+ [0-9]+$' | head -1)"
   rm -f "$empty" "$drv"
   if [ "${N:-0}" -gt 0 ] 2>/dev/null; then

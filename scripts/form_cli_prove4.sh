@@ -12,7 +12,7 @@
 #   dep-basenames: space-separated stdlib files the recipe needs (e.g. "form-asm.fk")
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; MAN="$ROOT/form/fourth-arm-bands.txt"
+STD="$ROOT/form/form/form-stdlib"; MAN="$ROOT/form/form/fourth-arm-bands.txt"
 ID="${1:?id}"; ASSERT="${2:?assert}"; EXPECT="${3:?expected}"; DEPS="${4:-}"
 DRAFT="$STD/drafts/$ID.fk"; RECIPE="$STD/$ID.fk"; BAND="$STD/tests/$ID-band.fk"
 [ -f "$DRAFT" ] || { echo "prove4: no draft at $DRAFT"; exit 2; }

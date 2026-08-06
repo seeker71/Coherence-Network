@@ -3,8 +3,8 @@
 (code-tool-learning
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk tool-channel.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
-    (recipe form/form-stdlib/code-tool-learning.fk)
-    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 1048575 four-way))
+    (recipe form/form/form-stdlib/code-tool-learning.fk)
+    (proof form/form/form-stdlib/tests/code-tool-learning-band.fk -> 1048575 four-way))
 
   (purpose
     "Every coding action can leave native training data: the intent that was sensed, the tool that was planned, the branch that executed, the receipt that came back, and the metadata that made the result trustworthy enough to learn from."
@@ -78,8 +78,8 @@
 
   (embodiment
     "tool-embodiment.fk projects REAL per-tool runner telemetry (lane, locality, completed, failed, runtime-ms) into ctl-floor-oracle rows, deriving cost, nutrition, sovereignty, trust, and confidence honestly off measurement, then asks this sideband's proven gate which lane holds the body."
-    (recipe form/form-stdlib/tool-embodiment.fk)
-    (proof form/form-stdlib/tests/tool-embodiment-band.fk -> 127 four-way)
+    (recipe form/form/form-stdlib/tool-embodiment.fk)
+    (proof form/form/form-stdlib/tests/tool-embodiment-band.fk -> 127 four-way)
     (rule "a Form-native lane embodies — replaces the external tool — only when ctl-fo-ready? clears sovereignty/trust/confidence >= 70 AND it is cheaper than the incumbent; until its measured success rate crosses the gate, the external lane keeps the body. No assertion replaces a tool; only a measured receipt does."))
 
   (capture-and-learn
@@ -90,8 +90,8 @@
     "The Form read door now names two bounded sides: canonical JSONL receipt text can lower into a receipt cell, and carrier-native cells with the same field names become the learning row. General raw JSON parsing inside fkwu remains a separate parser-carrier gap; the four-way floor is the committed-turn receipt schema and the substrate cell it should produce."
     "A lane that WORKS — cheaper (0 external tokens) and sovereign (local) — earns the body and replaces the LLM it learned from."
     "Capture is itself a recipe: iom-capture takes the real input/output BYTES of a call and content-addresses them with sha256.fk (the same content-addressing the substrate is built on), so identity comes for free — same input -> same sig (iom-sig-eq?, a fourth-arm-safe digest compare), repeat calls group and dedup."
-    (recipe form/form-stdlib/io-match.fk)
-    (proof form/form-stdlib/tests/io-match-band.fk -> 127 four-way)
+    (recipe form/form/form-stdlib/io-match.fk)
+    (proof form/form/form-stdlib/tests/io-match-band.fk -> 127 four-way)
     (carrier "the Mac binary channel — form-macho.fk emits the native arm64 binary — intercepts the agent's real reasoning/tool calls at the tool boundary (the runner's _post_runtime_event point), calls iom-capture on the real (input, output) bytes, runs the candidate's output through the same downstream check, and writes io-match records; the learning body and capture recipe are here, the live interception is the thin carrier still to wire")
     (why "the model cost is not maintainable; switching tool and LLM use to Form-native, learned by efficacy from real usage, is how we keep access to the highest-value capability when the external lane is no longer affordable"))
 

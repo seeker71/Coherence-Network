@@ -29,7 +29,7 @@ from app.routers.kernel_shared import (
 # bonus per above-threshold count.
 #
 # The runtime path is the Form recipe compiled from
-# form/form-kernel-ts/seedbank/python-adapter/examples/
+# form/form/form-kernel-ts/seedbank/python-adapter/examples/
 # endpoint_coherence_weight_demo.py. The parity_suite anchors the canonical
 # result across the source example and kernel siblings.
 # ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ class CoherenceWeightResponse(BaseModel):
     description=(
         "First transmutation gesture: the body of this endpoint is a Form "
         "recipe compiled from "
-        "form/form-kernel-ts/seedbank/python-adapter/examples/"
+        "form/form/form-kernel-ts/seedbank/python-adapter/examples/"
         "endpoint_coherence_weight_demo.py. The request must run through a "
         "Form-kernel carrier. Three-way parity (source example, TS, Rust) is "
         "the regression gate."

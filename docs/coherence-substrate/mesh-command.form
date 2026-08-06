@@ -30,8 +30,8 @@
     (rests-on hati-mesh.form mesh-relay.form kernel-offer-protocol.form form-first-reasoning.form)
     (stance   lc-trust-over-fear)                ; default open; history is the correction surface, not a gate
     (kin      organ-offer.form)                  ; the sovereign decline is the cell's nature, not a roster
-    (recipe form/form-stdlib/mesh-command.fk)            ; [GAP] the command/receipt/gate body
-    (band   form/form-stdlib/tests/mesh-command-band.fk) ; [GAP] proven four-way as the closing recipe
+    (recipe form/form/form-stdlib/mesh-command.fk)            ; [GAP] the command/receipt/gate body
+    (band   form/form/form-stdlib/tests/mesh-command-band.fk) ; [GAP] proven four-way as the closing recipe
     (carrier api/app/routers/hati_mesh.py)               ; thin: POST /command, GET /commands, the receipt store
     (daemon scripts/mesh_organ_loop.sh))                 ; [GAP] poll -> verify -> self-update -> run -> receipt
 
@@ -79,7 +79,7 @@
 
   ; --- self-update is per-organ-kind (the body updates differently on each carrier) ---
   (self-update-matrix
-    (mac-kernel    "git pull <sha> ; (cd form/form-kernel-go && go build -o bin-go .) ; ensure_form_cli_kernel.sh")
+    (mac-kernel    "git pull <sha> ; (cd form/form/form-kernel-go && go build -o bin-go .) ; ensure_form_cli_kernel.sh")
     (android-phone "the Coherence Sense app pulls the new form-cli kernel / .so; form_elf_so receipt path")
     (agent         "re-read the body at <sha> — claude/codex/cursor read CLAUDE.md + recipes natively")
     (vps           "deploy/hostinger/auto-deploy.sh to <sha> ; verify witness")

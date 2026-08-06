@@ -14,7 +14,7 @@ This module is the authoritative runtime implementation (Option A):
   the prior event log and adds to it. First contact (an empty log) is when a
   welcome/orientation is recorded.
 
-The Blueprint NodeIDs are shared verbatim with ``form/form-stdlib/arrival.fk``
+The Blueprint NodeIDs are shared verbatim with ``form/form/form-stdlib/arrival.fk``
 (CELL-IDENTITY = 1.2.99.1880, CONTACT-THREAD = 1.2.99.1881). The Form recipes
 define the protocol's universal shapes; this Python is the live wiring that
 makes registration, resolving, storing, and continuation actually happen
@@ -50,7 +50,7 @@ from app.services.substrate.substrate_strings import lookup_string_value
 AGENT_IDENTITY_DOMAIN = "agent-identity"
 RELATIONSHIP_DOMAIN = "relationship"
 
-# Blueprints — shared verbatim with form/form-stdlib/arrival.fk so a cell
+# Blueprints — shared verbatim with form/form/form-stdlib/arrival.fk so a cell
 # created here IS the cell the Form layer names (same content-addressed shape).
 AGENT_IDENTITY_BLUEPRINT = NodeID(1, 2, 99, 1880)  # CELL-IDENTITY
 RELATIONSHIP_BLUEPRINT = NodeID(1, 2, 99, 1881)  # CONTACT-THREAD

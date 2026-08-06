@@ -2,19 +2,19 @@
 idea_id: agent-cli
 status: active
 source:
-  - file: form/form-stdlib/rag-key.fk
+  - file: form/form/form-stdlib/rag-key.fk
     symbols: [str-bytes, rk-text-key]
-  - file: form/form-stdlib/rag-freshness.fk
+  - file: form/form/form-stdlib/rag-freshness.fk
     symbols: [rf-heal-set, rf-orphans, rf-fresh?, rf-stale?]
-  - file: form/form-stdlib/rag-adaptive-k.fk
+  - file: form/form/form-stdlib/rag-adaptive-k.fk
     symbols: [rak-k, rak-knee-loop]
-  - file: form/form-stdlib/rag-heal.fk
+  - file: form/form/form-stdlib/rag-heal.fk
     symbols: [rh-file-key, rh-fresh?, rh-cell-stale?, rh-dir-cells, rh-build, rh-heal]
-  - file: form/form-stdlib/rag-index-codec.fk
+  - file: form/form/form-stdlib/rag-index-codec.fk
     symbols: [ric-id, ric-key, ric-emit]
-  - file: form/form-stdlib/rag-embed.fk
+  - file: form/form/form-stdlib/rag-embed.fk
     symbols: [re-vec]
-  - file: form/form-stdlib/rag-retrieve.fk
+  - file: form/form/form-stdlib/rag-retrieve.fk
     symbols: [rag-topk, rag-dist]
   - file: scripts/form_cli_rag.py
     symbols: [content_key, freshness, heal, retrieve]
@@ -30,18 +30,18 @@ requirements:
   - "ask heals the stale delta before retrieving, so a fresh file is answerable without a manual index step"
   - "the post-merge hook heals the index beside substrate ingest"
 done_when:
-  - "rag-key band crosses four-way (Go/Rust/TS/fkwu) via form/validate.sh → 7"
+  - "rag-key band crosses four-way (Go/Rust/TS/fkwu) via form/form/validate.sh → 7"
   - "rag-freshness band crosses four-way → 63"
   - "rag-adaptive-k band crosses four-way → 15"
   - "fs-list band crosses four-way (Go/Rust/TS/fkwu) → 3 — directory enumeration on the emitted universal kernel"
   - "rag-heal keys a real file and senses fresh-vs-drift on the kernel with no Python (Go leg → 7)"
   - "rag-heal's enumerate→read→write loop runs on the fkwu native exe via fs_list/read_file/write_file_text"
   - "form-cli ask \"what is form shell?\" retrieves shell-grammar.fk / fsh-main.fk after a heal"
-  - 'file_exists("form/form-stdlib/rag-key.fk")'
-  - 'file_exists("form/form-stdlib/rag-heal.fk")'
-  - 'file_exists("form/form-stdlib/tests/rag-freshness-band.fk")'
-  - 'file_exists("form/form-stdlib/tests/rag-adaptive-k-band.fk")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk"
+  - 'file_exists("form/form/form-stdlib/rag-key.fk")'
+  - 'file_exists("form/form/form-stdlib/rag-heal.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/rag-freshness-band.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/rag-adaptive-k-band.fk")'
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk"
 constraints:
   - "the key, freshness, adaptive-k, ranking, and directory-list (fs_list) are Form recipes/ops (four-way + fkwu); the heal loop is Form on the kernel (universal host-io, Go-kernel + fkwu-native-exe)"
   - "Python (form_cli_rag.py) is the RETIRING bootstrap bridge for the default serving path; its content_key/freshness/rak_k/rag_l1 are labeled mirrors of the canonical Form recipes"
@@ -52,7 +52,7 @@ constraints:
 
 > **Parent idea**: [agent-cli](../ideas/agent-cli.md)
 > **North star**: [`form-cli-north-star.form`](../docs/coherence-substrate/form-cli-north-star.form) — `rag-retrieve.fk` is the memory organ; this gives it freshness.
-> **Source**: [`rag-retrieve.fk`](../form/form-stdlib/rag-retrieve.fk) | [`form_cli_rag.py`](../scripts/form_cli_rag.py) | [`substrate_post_merge_hook.sh`](../scripts/substrate_post_merge_hook.sh)
+> **Source**: [`rag-retrieve.fk`](../form/form/form-stdlib/rag-retrieve.fk) | [`form_cli_rag.py`](../scripts/form_cli_rag.py) | [`substrate_post_merge_hook.sh`](../scripts/substrate_post_merge_hook.sh)
 
 # Spec: form-cli self-healing memory
 
@@ -105,35 +105,35 @@ RagEntry:
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/rag-key.fk` — Form content key (adler32 over bytes), BML (new)
-- `form/form-stdlib/tests/rag-key-band.fk` — four-way band → 7 (new)
-- `form/form-stdlib/rag-freshness.fk` — freshness delta recipe (new)
-- `form/form-stdlib/tests/rag-freshness-band.fk` — four-way band → 63 (new)
-- `form/form-stdlib/rag-adaptive-k.fk` — knee-cut depth recipe (new)
-- `form/form-stdlib/tests/rag-adaptive-k-band.fk` — four-way band → 15 (new)
-- `form/form-stdlib/rag-heal.fk` — universal host-io heal lane (enumerate→key→embed→write) on the Go kernel + fkwu native exe, no Python (new)
-- `form/form-stdlib/rag-index-codec.fk` — Form jsonl codec (parse id/key, emit line) (new)
-- `form/form-stdlib/rag-embed.fk` — sovereign lexical embedding (token-hash histogram) (new)
-- `form/form-stdlib/tests/fs-list-band.fk` — four-way band → 3, directory enumeration on fkwu (new)
-- `form/form-stdlib/hati-os-kernel-emit.fk` — fkwu `fs_list` walker arm (opendir/readdir) + serializer (modify)
-- `form/form-stdlib/form-flatten.fk` — `fs_list` op row (op 132, arity 1, effectful) (modify)
+- `form/form/form-stdlib/rag-key.fk` — Form content key (adler32 over bytes), BML (new)
+- `form/form/form-stdlib/tests/rag-key-band.fk` — four-way band → 7 (new)
+- `form/form/form-stdlib/rag-freshness.fk` — freshness delta recipe (new)
+- `form/form/form-stdlib/tests/rag-freshness-band.fk` — four-way band → 63 (new)
+- `form/form/form-stdlib/rag-adaptive-k.fk` — knee-cut depth recipe (new)
+- `form/form/form-stdlib/tests/rag-adaptive-k-band.fk` — four-way band → 15 (new)
+- `form/form/form-stdlib/rag-heal.fk` — universal host-io heal lane (enumerate→key→embed→write) on the Go kernel + fkwu native exe, no Python (new)
+- `form/form/form-stdlib/rag-index-codec.fk` — Form jsonl codec (parse id/key, emit line) (new)
+- `form/form/form-stdlib/rag-embed.fk` — sovereign lexical embedding (token-hash histogram) (new)
+- `form/form/form-stdlib/tests/fs-list-band.fk` — four-way band → 3, directory enumeration on fkwu (new)
+- `form/form/form-stdlib/hati-os-kernel-emit.fk` — fkwu `fs_list` walker arm (opendir/readdir) + serializer (modify)
+- `form/form/form-stdlib/form-flatten.fk` — `fs_list` op row (op 132, arity 1, effectful) (modify)
 - `scripts/form_cli_rag.py` — RETIRING bridge: content_key mirrors `rk-text-key`
   (adler32), delta heal, adaptive-k retrieve, fuller snippet, lazy heal on `ask` (modify)
 - `scripts/substrate_post_merge_hook.sh` — rag heal step (modify)
-- `form/fourth-arm-bands.txt` — register rag-key/rag-freshness/rag-adaptive-k/rag-index-codec/rag-embed/fs-list bands (modify)
+- `form/form/fourth-arm-bands.txt` — register rag-key/rag-freshness/rag-adaptive-k/rag-index-codec/rag-embed/fs-list bands (modify)
 
 ## Acceptance Tests
 
-- `form/validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk` → 63, four-way
-- `form/validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk` → 15, four-way
+- `form/form/validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk` → 63, four-way
+- `form/form/validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk` → 15, four-way
 - `form-cli ask "what is form shell?"` cites `shell-grammar.fk` / `fsh-main.fk`
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk   # -> 7, fourth arm four-way, 0 divergent
-cd form && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk   # -> 63, four-way
-cd form && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk # -> 15, four-way
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk   # -> 7, fourth arm four-way, 0 divergent
+cd form/form && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk   # -> 63, four-way
+cd form/form && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk # -> 15, four-way
 python3 scripts/validate_spec_quality.py --file specs/form-cli-self-healing-memory.md
 python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260624_form_native_rag_memory.json
 ```

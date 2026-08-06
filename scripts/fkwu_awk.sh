@@ -8,7 +8,7 @@
 # the host carrier only reads the file's bytes and stages them.
 #
 # Usage:  fkwu_awk.sh <file> '<awk-program>'
-#   e.g.  fkwu_awk.sh form/fourth-arm-bands.txt '$1=="shell-awk"{print $3}'   -> 127
+#   e.g.  fkwu_awk.sh form/form/fourth-arm-bands.txt '$1=="shell-awk"{print $3}'   -> 127
 #
 # First breath: single-value field queries (the verdict is the first stdout line;
 # fkwu appends its arm/JIT profile after). The native awk covers {print $N} /

@@ -6,9 +6,9 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PROJECTION_PATH = ROOT / "form" / "form-stdlib" / "application-graph-response-projection.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "application-graph-response-projection-band.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "application-graph-response-projection-test.sh"
+PROJECTION_PATH = ROOT / "form" / "form" / "form-stdlib" / "application-graph-response-projection.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "application-graph-response-projection-band.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "application-graph-response-projection-test.sh"
 IDEA_MODEL_PATH = ROOT / "api" / "app" / "models" / "idea.py"
 SPEC_MODEL_PATH = ROOT / "api" / "app" / "models" / "spec_registry.py"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
@@ -48,7 +48,7 @@ def test_response_projection_band_executes_across_sibling_kernels():
             "form-stdlib/application-graph-response-projection.fk",
             "form-stdlib/tests/application-graph-response-projection-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -79,7 +79,7 @@ def test_response_projection_live_db_script_runs_or_skips_when_pg_missing():
 
 def test_route_forms_name_response_projection_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/scripts/application-graph-response-projection-test.sh" in text
+        assert "form/form/scripts/application-graph-response-projection-test.sh" in text
         assert "response projection parity proven" in text
         assert "response projection for the promoted mutable routes" in text
         assert "public/default receipts are now proven before broader traffic moves" in text

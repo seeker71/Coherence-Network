@@ -107,7 +107,7 @@
 | [fkwu_form_cli_metal_model_cell_receipt.sh](fkwu_form_cli_metal_model_cell_receipt.sh) | fkwu_form_cli_metal_model_cell_receipt.sh |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — enter the c-bootstrapped fkwu runtime. |
 | [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via the current form-cli band. |
-| [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
+| [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form/form-cli (one line, then EOF). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_exp_coef_pool_witness.sh](form_asm_exp_coef_pool_witness.sh) | form_asm_exp_coef_pool_witness.sh — the EXECUTION WITNESS for fam-pool-fma carrying REAL transcendental |

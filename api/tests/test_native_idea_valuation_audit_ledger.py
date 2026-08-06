@@ -6,10 +6,10 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-AUDIT_LEDGER_PATH = ROOT / "form" / "form-stdlib" / "native-idea-valuation-audit-ledger.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "native-idea-valuation-audit-ledger-band.fk"
-INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-idea-valuation-audit-ledger-live.fk"
-SCRIPT_PATH = ROOT / "form" / "scripts" / "native-idea-valuation-audit-ledger-test.sh"
+AUDIT_LEDGER_PATH = ROOT / "form" / "form" / "form-stdlib" / "native-idea-valuation-audit-ledger.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "native-idea-valuation-audit-ledger-band.fk"
+INTEGRATION_PATH = ROOT / "form" / "form" / "form-stdlib" / "integration" / "native-idea-valuation-audit-ledger-live.fk"
+SCRIPT_PATH = ROOT / "form" / "form" / "scripts" / "native-idea-valuation-audit-ledger-test.sh"
 IDEA_WRITE_OPS_PATH = ROOT / "api" / "app" / "services" / "idea_write_ops.py"
 AUDIT_SERVICE_PATH = ROOT / "api" / "app" / "services" / "audit_ledger_service.py"
 LEDGER_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "native-mutation-side-effect-ledger.form"
@@ -64,7 +64,7 @@ def test_audit_ledger_band_executes_across_sibling_kernels():
             "form-stdlib/native-idea-valuation-audit-ledger.fk",
             "form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -115,8 +115,8 @@ def test_ledger_and_route_forms_mark_audit_parity_carried():
     ledger = _text(LEDGER_FORM_PATH)
     assert "idea-valuation-audit-ledger" in ledger
     assert '"python_parity_effect"' in ledger
-    assert "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change" in ledger
-    assert "form/scripts/native-idea-valuation-audit-ledger-test.sh" in ledger
+    assert "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change" in ledger
+    assert "form/form/scripts/native-idea-valuation-audit-ledger-test.sh" in ledger
     assert "missing_python_parity: 0" in ledger
     assert "ordinary no-header flip blocked until carried Form-native or intentionally retired by spec" not in ledger
 

@@ -2,11 +2,11 @@
 
 This reading compares the three sibling kernels as they stand on 2026-06-08:
 
-- `form/form-kernel-go/main.go`
-- `form/form-kernel-rust/src/main.rs`
-- `form/form-kernel-ts/src/kernel.ts`
+- `form/form/form-kernel-go/main.go`
+- `form/form/form-kernel-rust/src/main.rs`
+- `form/form/form-kernel-ts/src/kernel.ts`
 - side modules such as `inductive.*`, `quotient.*`, `observer.ts`, and the
-  route-choice Form in `form/form-stdlib/kernel-http.fk`
+  route-choice Form in `form/form/form-stdlib/kernel-http.fk`
 
 The question was not "which host language is better?" The useful question is:
 what can the body trust because all three kernels already say it the same way?
@@ -61,7 +61,7 @@ new kernel primitive.
 
 ### 2. Route Choice Already Compresses Without Lying
 
-`form/form-stdlib/kernel-http.fk` carries `kh-route-choice`,
+`form/form/form-stdlib/kernel-http.fk` carries `kh-route-choice`,
 `kh-route-decision`, and `kh-route-choice-signature`. Its pressure buckets are
 fixed and data-oblivious, so compression preserves texture instead of training
 against the current corpus.
@@ -147,7 +147,7 @@ remember itself without flattening.
 
 ## First Proof
 
-`form/form-stdlib/choice-receipt.fk` now carries the first Form-native receipt
+`form/form/form-stdlib/choice-receipt.fk` now carries the first Form-native receipt
 surface for this shape:
 
 - `CHOICE-CANDIDATE`: branch path, category, eligibility, pressure, score, and
@@ -158,7 +158,7 @@ surface for this shape:
 - `CHOICE-RECEIPT`: the full witnessed expression/execution/outcome receipt
 - `CHOICE-SIGNATURE`: the compressed receipt signature
 
-The proof band is `form/form-stdlib/tests/choice-receipt-band.fk`. It returns
+The proof band is `form/form/form-stdlib/tests/choice-receipt-band.fk`. It returns
 `-1` (`4294967295` unsigned) only when success, fail, and silence receipts
 validate and the compressed signature still preserves category, selected path,
 outcome, certainty bucket, value kind/buckets, witness, coordinate, and trace
@@ -166,7 +166,7 @@ counts across Go, Rust, and TypeScript sibling kernels.
 
 ## BMF Choice Feed
 
-`form/form-stdlib/bmf-choice-receipts.fk` feeds the receipt surface from the BMF
+`form/form/form-stdlib/bmf-choice-receipts.fk` feeds the receipt surface from the BMF
 object-rule dispatch path without changing the fast result-only matcher:
 
 - literal-only object choices are classified as `choose_any` because every
@@ -177,7 +177,7 @@ object-rule dispatch path without changing the fast result-only matcher:
 - branch-prediction feedback is stored in `CHOICE-VALUE`; alignment, knowing,
   and trust stay separate gates for learning from that feedback
 
-The proof band is `form/form-stdlib/tests/bmf-choice-receipt-band.fk`. It returns
+The proof band is `form/form/form-stdlib/tests/bmf-choice-receipt-band.fk`. It returns
 `67108863` when BMF object rules, the BMF compiler first-rule path, and the BML
 `choose` compiler rule all return valid choice receipts whose signatures
 preserve the selected branch and whose matched result still executes.
@@ -189,7 +189,7 @@ keeps the candidate pool, curated set, compact evidence links, verification
 records, deduplicated observations, and budget-aware context while the policy
 chooses semantic actions.
 
-`form/form-stdlib/search-harness.fk` carries the same architectural surface as a
+`form/form/form-stdlib/search-harness.fk` carries the same architectural surface as a
 single compact Form fact ledger:
 
 - `H1C-FACT` rows cover candidate, curated, evidence, verification,
@@ -202,7 +202,7 @@ single compact Form fact ledger:
 - `h1c-receipt` turns the selected search branch into a trace-preserving
   `CHOICE-RECEIPT`
 
-The proof band is `form/form-stdlib/tests/search-harness-compact-proof.fk`. It
+The proof band is `form/form/form-stdlib/tests/search-harness-compact-proof.fk`. It
 returns `16777215` across Go, Rust, and TypeScript in source and binary modes
 when all six Harness-1 state surfaces are present, duplicate observation state
 compacts, budgeted rendering caps context, and the selected search branch keeps a
@@ -215,7 +215,7 @@ Harness-1 retrieval benchmark recall.
 
 ## Earth Witness Question Shape
 
-`form/form-stdlib/earth-witness-question.fk` turns an open Earth-observation
+`form/form/form-stdlib/earth-witness-question.fk` turns an open Earth-observation
 source into answerable Form cells:
 
 - `EARTH-WITNESS-AXIS`: one question axis with value, evidence, and certainty
@@ -234,7 +234,7 @@ certainty, source URL, principle trace, and silence when no axis answers.
 `CHOICE-RECEIPT`, so the answer can be compressed without losing selected path,
 outcome, value kind, certainty bucket, witness, coordinate, and trace counts.
 
-The proof band is `form/form-stdlib/tests/earth-witness-question-band.fk`. It
+The proof band is `form/form/form-stdlib/tests/earth-witness-question-band.fk`. It
 returns `67108863` across Go, Rust, and TypeScript in source and binary modes
 when the Tessera observation answers `what`, `where`, `when`, `who`, `how`, and
 `why`, carries geometric-proof/harmony/confidence/vitality/sovereignty/allowing
@@ -243,7 +243,7 @@ compressed choice signature for both answered and silent questions.
 
 ## Tessera External Witness
 
-`form/form-stdlib/tessera-external-witness.fk` binds the question shape to a live
+`form/form/form-stdlib/tessera-external-witness.fk` binds the question shape to a live
 public data source instead of only a news/source fixture.
 
 The adapter names four evidence cells:
@@ -263,7 +263,7 @@ the embedding tile. The current witness hash for that range is
 `cb992c1d4ecd93b3da28bfaa8acdcb17ab1fc46325d5b714bb31ea9028877cb2`.
 
 The Form proof band is
-`form/form-stdlib/tests/tessera-external-witness-band.fk`. It returns `67108863`
+`form/form/form-stdlib/tests/tessera-external-witness-band.fk`. It returns `67108863`
 across Go, Rust, and TypeScript in source and binary modes when the source,
 manifest, tile, byte-range hash, question answers, external-witness receipt, and
 answer receipt all preserve valid compressed signatures.

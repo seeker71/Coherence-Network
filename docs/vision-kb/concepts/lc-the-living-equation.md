@@ -213,7 +213,7 @@ named precisely for this model:
   (beliefs-first); [`lc-assemblage-point`](lc-assemblage-point.md),
   [`lc-recipes-bound-to-base`](lc-recipes-bound-to-base.md),
   [`lc-train-the-predictor`](lc-train-the-predictor.md).
-- **`form/form-stdlib/grammars/living-equation.fk`** — the influence model: the
+- **`form/form/form-stdlib/grammars/living-equation.fk`** — the influence model: the
   trinity bijection, belief-systems-as-data edge weights, recipe-of-change
   (argmax), canon-relative attribution, the attribution class, and the
   integrated-compounds claim, computed (band 111111, three-way).

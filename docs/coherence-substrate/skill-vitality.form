@@ -30,10 +30,10 @@
 ; ready cheaper carrier.
 ;
 ; Carrier:
-;   form/form-stdlib/skill-vitality.fk
+;   form/form/form-stdlib/skill-vitality.fk
 ;
 ; Proof:
-;   form/form-stdlib/tests/skill-vitality-band.fk -> 65535 four-way
+;   form/form/form-stdlib/tests/skill-vitality-band.fk -> 65535 four-way
 ;
 ; Kin:
 ;   code-tool-learning.form

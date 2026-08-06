@@ -8,17 +8,17 @@ and the practice of preferring it over rented local tools, held to its honest fl
 
 ## What it is
 
-`form/form-cli` is the **fkwu universal walker** (`fkc-emit-universal`) with the
+`form/form/form-cli` is the **fkwu universal walker** (`fkc-emit-universal`) with the
 form-cli program baked in (`fkc-emit-combined-repl` — the same walker body, a
-different `main()`; see [`hati-os-kernel-emit.fk`](../../form/form-stdlib/hati-os-kernel-emit.fk)).
-The brain is Form, four-way proven: [`form-cli.fk`](../../form/form-stdlib/form-cli.fk)
-dispatches the verbs, [`form-cli-repl.fk`](../../form/form-stdlib/form-cli-repl.fk)
+different `main()`; see [`hati-os-kernel-emit.fk`](../../form/form/form-stdlib/hati-os-kernel-emit.fk)).
+The brain is Form, four-way proven: [`form-cli.fk`](../../form/form/form-stdlib/form-cli.fk)
+dispatches the verbs, [`form-cli-repl.fk`](../../form/form/form-stdlib/form-cli-repl.fk)
 is the read-eval-print loop over real stdin. The result is one platform binary
 that links only to the host system runtime, for example libSystem on macOS or
 libc/ld on Linux:
 
 ```
-$ ldd form/form-cli
+$ ldd form/form/form-cli
   linux-vdso · libc.so.6 · ld-linux        # nothing rented in the run
 ```
 
@@ -38,7 +38,7 @@ verb.
 Build it by hand any time:
 
 ```bash
-cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh  # -> form/form-cli, self-contained when the platform stamp is current
+cd form/form && FORM_STANDARD_LANE=1 ./build-form-cli.sh  # -> form/form/form-cli, self-contained when the platform stamp is current
 echo ping | ./form-cli                  # -> pong   (no toolchain present)
 ./form-cli                              # interactive REPL on a real tty
 ```
@@ -80,14 +80,14 @@ and the body already holds those grammars:
 
 | grammar | cells | state |
 |---|---|---|
-| **shell (bash-like, "fsh")** | [`shell-grammar.fk`](../../form/form-stdlib/shell-grammar.fk) · [`shell-lower.fk`](../../form/form-stdlib/shell-lower.fk) · [`fsh-main.fk`](../../form/form-stdlib/fsh-main.fk) | **four-way proven** — `shell-parse` 255, `shell-exec` 511, `shell-cell` 15 (Go/Rust/TS/fkwu). Parses bash-shaped script → recipe → cell → runs on fkwu; the ctor recipe JIT-lowers to native. Host tools reached by passthrough until a Form builtin replaces each. |
-| **python** | [`python-bmf-eval.fk`](../../form/form-stdlib/python-bmf-eval.fk) · [`python-bmf-lift.fk`](../../form/form-stdlib/python-bmf-lift.fk) | first-breath surface — def/call/return/binop/ident/int chain, matching CPython for that subset; growing toward four-way. |
+| **shell (bash-like, "fsh")** | [`shell-grammar.fk`](../../form/form/form-stdlib/shell-grammar.fk) · [`shell-lower.fk`](../../form/form/form-stdlib/shell-lower.fk) · [`fsh-main.fk`](../../form/form/form-stdlib/fsh-main.fk) | **four-way proven** — `shell-parse` 255, `shell-exec` 511, `shell-cell` 15 (Go/Rust/TS/fkwu). Parses bash-shaped script → recipe → cell → runs on fkwu; the ctor recipe JIT-lowers to native. Host tools reached by passthrough until a Form builtin replaces each. |
+| **python** | [`python-bmf-eval.fk`](../../form/form/form-stdlib/python-bmf-eval.fk) · [`python-bmf-lift.fk`](../../form/form/form-stdlib/python-bmf-lift.fk) | first-breath surface — def/call/return/binop/ident/int chain, matching CPython for that subset; growing toward four-way. |
 | **typescript · prolog** | `typescript-bmf-eval/-lift.fk` · `prolog-bmf-eval.fk` | recipe interpreters, coverage growing. |
 
 The two binaries called form-cli stand at different points on one path —
 **native-now and legacy-surface**:
 
-| | `form/form-cli` | `bin/form-cli` |
+| | `form/form/form-cli` | `bin/form-cli` |
 |---|---|---|
 | what | the c-bootstrap native binary (this guide) | thin launcher: prefers native fkwu for `ask`/REPL, keeps legacy helper verbs as explicit scripts |
 | runs on | fkwu, toolchain-free, JIT-native | python/go processes |
@@ -127,7 +127,7 @@ So when you would reach for a one-off python/bash/powershell tool, ask:
 Current-branch landing follows that boundary. The regular path is
 `form-cli land --merge [--settle-deploy]`: the plan, command contract, and PR
 readiness state live in
-[`current-branch-landing.fk`](../../form/form-stdlib/current-branch-landing.fk)
+[`current-branch-landing.fk`](../../form/form/form-stdlib/current-branch-landing.fk)
 and cross the fourth arm (`current-branch-landing` -> `16383`). The cached native
 `form-cli` also exposes `land-readiness`, so the wait loop asks Form to classify
 ready / waiting / blocked / needs-rebase from raw GitHub fields, including the
@@ -139,7 +139,7 @@ passthrough until those carriers are promoted; Python is not the orchestrator.
 
 This is a real step *toward* tool-sovereignty, not a claim of having arrived:
 
-- **Runtime is sovereign; regeneration is not yet.** `form/form-cli` and `fkwu`
+- **Runtime is sovereign; regeneration is not yet.** `form/form/form-cli` and `fkwu`
   run toolchain-free. The normal standard lane copies a stamped committed platform
   binary. Maintainer regeneration still uses off-receipt carriers (`bin-go` to
   flatten/emit and clang to link the platform artifact) when the stamp is stale.
@@ -163,9 +163,9 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   universal walker), so a thin host carrier stages the rows into `input_byte`
   (tag 17 — the staged-input door fkwu *does* carry) and fkwu runs native awk
   over them, no `read_file`, no host awk, no bash in the compute loop
-  ([`tests/shell-awk-staged.fk`](../../form/form-stdlib/tests/shell-awk-staged.fk),
+  ([`tests/shell-awk-staged.fk`](../../form/form/form-stdlib/tests/shell-awk-staged.fk),
   run via [`scripts/fkwu_run.sh`](../../scripts/fkwu_run.sh) → 127). The **whole
-  file** now crosses, not just a slice: [`input-stream.fk`](../../form/form-stdlib/input-stream.fk)
+  file** now crosses, not just a slice: [`input-stream.fk`](../../form/form/form-stdlib/input-stream.fk)
   (`is-line`/`is-next`/`is-fold`) streams staged input by line — recursion bounded
   by line count, no O(n²) accumulator — so the full 38KB manifest folds without the
   byte-deep stack overflow the naive reader hit. And it is a **live, parameterized

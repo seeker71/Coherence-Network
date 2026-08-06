@@ -1,7 +1,7 @@
 // channel.ts — open a live channel to a cell, in the substrate's own terms.
 //
 // The transport is single-writer / multi-reader and lives in
-// form/form-stdlib/channel.fk; every protocol wraps its payload as a
+// form/form/form-stdlib/channel.fk; every protocol wraps its payload as a
 // CHANNEL-MSG Recipe (@1.2.99.1701) and the kernel's content-addressing makes
 // the payload NodeID identity-stable — the same message to the same cell is the
 // same identity, so a thread accretes as one dedup'd conversation in the body

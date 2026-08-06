@@ -19,7 +19,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 cd "$FORM"
 
 if [[ ! -x form-kernel-go/bin-go ]]; then
@@ -44,7 +44,7 @@ fi
 
 GO_BIN="form-kernel-go/bin-go"
 RS_BIN="form-kernel-rust/target/release/form-kernel-rust"
-# shellcheck source=form/scripts/fourth-arm.sh
+# shellcheck source=form/form/scripts/fourth-arm.sh
 source scripts/fourth-arm.sh
 build_fourth
 if ! fourth_available; then

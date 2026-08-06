@@ -10,14 +10,14 @@
 #     bash scripts/offline_nl_training_runbook.sh run <corpus.jsonl> [options]
 #
 # OFFLINE GUARANTEE: every step computes through the LOCAL Form kernel binary
-# (form/form-kernel-go/bin-go) over files already on your disk. No URL is fetched,
+# (form/form/form-kernel-go/bin-go) over files already on your disk. No URL is fetched,
 # no model is downloaded, no agent is called. If the kernel binary must be built,
 # it is built from the local Go module cache with GOPROXY=off — the network is
 # never touched. Companion reference (agent-facing):
 # docs/coherence-substrate/offline-nl-translation-training.form
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"
+GO="$ROOT/form/form/form-kernel-go/bin-go"
 PART="$ROOT/scripts/corpus_partition_by_license.sh"
 TRAIN="$ROOT/scripts/form_cli_transformer_train_wide.sh"
 NLTRAIN="$ROOT/scripts/form_cli_neural_lm_train.sh"   # the NL→NL neural-LM trainer (held-out accuracy)
@@ -44,7 +44,7 @@ THE RULE (enforced, not just intended)
   on it), never to learn weights.
 
 PREREQUISITES (all local, all offline)
-  1. The local Form kernel binary: form/form-kernel-go/bin-go
+  1. The local Form kernel binary: form/form/form-kernel-go/bin-go
        Present already?  ->  nothing to do.
        Missing?          ->  built once from the local Go module cache (GOPROXY=off,
                              no network). Needs a Go toolchain installed.
@@ -73,7 +73,7 @@ THE THREE STEPS (offline)
        a separate "copyright TEST" loss — measured, NEVER trained.
 
   3) (inference) Translate NL→NL by nearest meaning over the corpus faces:
-       form/form-stdlib/translation-engine.fk  (te-translate), corpus passed as data.
+       form/form/form-stdlib/translation-engine.fk  (te-translate), corpus passed as data.
 
   Or do steps 1–2 in one command:
        bash scripts/offline_nl_training_runbook.sh run <corpus.jsonl> \
@@ -100,7 +100,7 @@ SELF-LEARNING (the loop that improves the model and keeps the best)
 PROOF
   The lawful/test decision is form-stdlib/corpus-license-gate.fk, proven FOUR-WAY
   (Go=Rust=TS=fkwu → 31). Re-verify offline any time:
-       cd form && ./validate.sh form-stdlib/core.fk \
+       cd form/form && ./validate.sh form-stdlib/core.fk \
             form-stdlib/corpus-license-gate.fk form-stdlib/tests/corpus-license-gate-band.fk
 ────────────────────────────────────────────────────────────────────────────
 TXT
@@ -109,9 +109,9 @@ TXT
 ensure_kernel() {
   if [[ ! -x "$GO" ]]; then
     echo "kernel binary missing — building offline from the local Go module cache (no network)..."
-    ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) \
+    ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) \
       || { echo "OFFLINE BUILD FAILED — the Go module cache is incomplete. Build once on a"
-           echo "machine with the cache populated, or copy form/form-kernel-go/bin-go over."; return 1; }
+           echo "machine with the cache populated, or copy form/form/form-kernel-go/bin-go over."; return 1; }
   fi
   return 0
 }

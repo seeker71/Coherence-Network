@@ -12,10 +12,10 @@
 # Usage: form_cli_judge.sh [N] [native-model] [judge-model] [threshold] [corpus]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 N="${1:-5}"; NATIVE="${2:-ollama run coder}"; JUDGE="${3:-ollama run coder}"; THR="${4:-60}"
 CORPUS="${5:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
 echo "── reasoning lane: native ($NATIVE) judged ($JUDGE) vs the agent, $N tasks ──"

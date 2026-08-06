@@ -138,7 +138,7 @@ decoder: report the attested structure, keep the metaphysics at arm's length.
   (LAM/VAM/RAM/YAM/HAM/OM), attested yogic/tantric tradition.
 - **The substrate** — `find_equivalent_cells` (kernel.py), `universal-shapes` +
   `engine.fk` (the generative grammar for code), and
-  `form/form-stdlib/grammars/sanskrit-roots.fk` (the dhātu + bija decoder).
+  `form/form/form-stdlib/grammars/sanskrit-roots.fk` (the dhātu + bija decoder).
 - **The `sanskrit-channel.fk` channel** runs the generative grammar: it **speaks**
   a word's derivation ("karma — root √kṛ …") and a seed-syllable's chakra, and
   **runs** the rule — `(root, affix)` composes a word-CELL under `SANSKRIT-DERIVE`,

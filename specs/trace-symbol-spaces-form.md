@@ -24,7 +24,7 @@ done_when:
   - "The tightnesses weak-signal, trace-not-yet-substrate-indexed, grain-boundary-loose, and stillness-not-first-class each have a closure recipe"
   - "scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json returns five active recipes from the latest trace burst"
   - "A compiled native form-cli binary executes docs/coherence-substrate/trace-symbol-spaces-proof.fk and returns true"
-test: "mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk"
+test: "mkdir -p .cache && (cd form/form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk"
 constraints:
   - "Do not convert this slice into an API endpoint or Python business-logic service"
   - "Do not treat symbolic spaces as replacements for raw trace IDs"
@@ -72,7 +72,7 @@ This spec adds a Form artifact that records the current raw trace witness and th
 
 ## Acceptance Tests
 
-- Manual validation: `mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk`
+- Manual validation: `mkdir -p .cache && (cd form/form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk`
 
 Host compatibility checks still exercise the file-backed bridge and static Form declarations:
 
@@ -82,7 +82,7 @@ Host compatibility checks still exercise the file-backed bridge and static Form 
 ## Verification
 
 ```bash
-mkdir -p .cache && (cd form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
+mkdir -p .cache && (cd form/form/form-kernel-go && go build -o ../../.cache/form-cli .) && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
 python3 scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json
 cd api && python -m pytest -q tests/test_trace_symbol_spaces_form.py tests/test_active_recipe_trace_index.py
 python3 scripts/validate_spec_quality.py --file specs/trace-symbol-spaces-form.md

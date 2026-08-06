@@ -101,7 +101,7 @@
 ;   relation we are already inside, made readable without stripping sovereignty.
 ;
 ; PROOF
-;   cd form && ./validate.sh form-stdlib/core.fk \
+;   cd form/form && ./validate.sh form-stdlib/core.fk \
 ;     form-stdlib/organism-mesh.fk \
 ;     form-stdlib/tests/organism-mesh-band.fk
 ;

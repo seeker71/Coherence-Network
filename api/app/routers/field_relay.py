@@ -6,7 +6,7 @@ no connection-time auth — and the relay forwards membrane envelopes between co
 both ends dial out, NAT and firewalls are a non-issue: the public API is the rendezvous both reach.
 
 Two laws, both inherited from the four-way-proven decision recipe
-``form/form-stdlib/field-relay.fk`` (``fr-route``, verdict 127 across Go/Rust/TS/fkwu + native):
+``form/form/form-stdlib/field-relay.fk`` (``fr-route``, verdict 127 across Go/Rust/TS/fkwu + native):
 
   1. CONTENT-BLIND. The routing decision reads envelope metadata only — ``to`` and ``kind``. It NEVER
      reads the body. So a private channel's payload rides as ciphertext the relay cannot inspect;

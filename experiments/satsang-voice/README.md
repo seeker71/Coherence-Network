@@ -8,7 +8,7 @@ an **offering**. Shown live in the browser, updating as people talk.
 audio leaving the room. For a circle of real people, local compute *is* the
 consent — each member's words stay with them unless they choose to send one in.
 This is a **carrier**; the body it serves is the satsang circle
-([`form/form-stdlib/satsang.fk`](../../form/form-stdlib/satsang.fk)) and its law:
+([`form/form/form-stdlib/satsang.fk`](../../form/form/form-stdlib/satsang.fk)) and its law:
 any question welcome, the circle witnesses, silence is whole, an offering is
 offered — never imposed. See [`satsang-voice.form`](satsang-voice.form).
 
@@ -31,7 +31,7 @@ offered — never imposed. See [`satsang-voice.form`](satsang-voice.form).
   frame.jpg`) and `./vision_classify frame.jpg` returns the same `[{label,confidence}]` shape the
   sound carrier returns. The camera sees *you*: nothing is captured unless you run it, nothing
   leaves the Mac. Sight and sound feed the **same** router —
-  [`form/form-stdlib/recognition-router.fk`](../../form/form-stdlib/recognition-router.fk),
+  [`form/form/form-stdlib/recognition-router.fk`](../../form/form/form-stdlib/recognition-router.fk),
   proven on sound (`recognition-router-band.fk` → 127) and on sight
   (`recognition-router-vision-band.fk` → 31): a reading is a reading, the strongest recognition
   wins the stream.

@@ -3,12 +3,12 @@
 (learned-model-service
   (lineage
     (rests-on native-presence.form http-server.fk affine-train.fk channel.fk cell-sync-transport.form)
-    (model-handler form/form-stdlib/model-service.fk)
-    (middleware form/form-stdlib/http-layer.fk)
-    (assembly form/form-stdlib/presence-service.fk)
-    (proof-core form/form-stdlib/tests/model-serve-core-band.fk -> 15 four-way)
-    (proof-service form/form-stdlib/tests/model-service-band.fk -> 255 three-way)
-    (proof-wire form/form-stdlib/tests/presence-service-band.fk -> 127 three-way)
+    (model-handler form/form/form-stdlib/model-service.fk)
+    (middleware form/form/form-stdlib/http-layer.fk)
+    (assembly form/form/form-stdlib/presence-service.fk)
+    (proof-core form/form/form-stdlib/tests/model-serve-core-band.fk -> 15 four-way)
+    (proof-service form/form/form-stdlib/tests/model-service-band.fk -> 255 three-way)
+    (proof-wire form/form/form-stdlib/tests/presence-service-band.fk -> 127 three-way)
     (federation scripts/federation_service.ps1 -> status pass))
 
   (purpose
@@ -37,9 +37,9 @@
     "The HTTP verb surface is the example; the same shape carries any BML recipe — a learned classifier, a translation lens, a compute kernel — built as a part, shared as a node, integrated live.")
 
   (receipt-command
-    (four-way "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-serve-core-band.fk")
-    (three-way-service "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/tests/model-service-band.fk")
-    (three-way-wire "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/presence-service.fk form-stdlib/tests/presence-service-band.fk")
+    (four-way "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-serve-core-band.fk")
+    (three-way-service "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/tests/model-service-band.fk")
+    (three-way-wire "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/presence-service.fk form-stdlib/tests/presence-service-band.fk")
     (federation "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/federation_service.ps1"))
 
   (gaps

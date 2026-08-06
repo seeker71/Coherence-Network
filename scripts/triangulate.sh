@@ -40,7 +40,7 @@ fi
 KERNEL="./form-kernel-go/bin-go"
 if [[ ! -x "$KERNEL" ]]; then
     echo "ERROR: $KERNEL not found; build with:" >&2
-    echo "  cd form && go build -o form-kernel-go/bin-go ./form-kernel-go" >&2
+    echo "  cd form/form && go build -o form-kernel-go/bin-go ./form-kernel-go" >&2
     exit 2
 fi
 

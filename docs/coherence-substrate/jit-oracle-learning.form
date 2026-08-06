@@ -3,7 +3,7 @@
 (jit-oracle-learning
   (lineage
     (rests-on bml-native-north-star.form hati-os-targets.form fourth-kernel-physical-lanes.form)
-    (proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu)
+    (proof form/form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu)
     (audit scripts/bml_form_jit_metal_planes_audit.sh))
 
   (north-star

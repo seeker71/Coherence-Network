@@ -31,8 +31,8 @@
 #   - docs/coherence-substrate/metabolic-learning.form (the two-angle operator DPO IS a paired call of)
 #   - docs/coherence-substrate/autoresearch-runtime.form (the loop these rows feed as genome + fitness)
 #   - docs/coherence-substrate/signal-metabolism.form (the witness/receipt stream these rows consume)
-#   - form/form-stdlib/choice-receipt-learning.fk (the unpaired binary signal KTO is the gradient twin of)
-#   - form/form-stdlib/tests/training-catalog-band.fk (the body's already-minted preference pairs)
+#   - form/form/form-stdlib/choice-receipt-learning.fk (the unpaired binary signal KTO is the gradient twin of)
+#   - form/form/form-stdlib/tests/training-catalog-band.fk (the body's already-minted preference pairs)
 #
 # Field sources (survey to Sep 2025): A Comprehensive Survey of Direct
 # Preference Optimization (arXiv:2410.15595). DPO (Rafailov 2023),
@@ -75,7 +75,7 @@ defn pl_rdpo  = pref_loss_shape { id:"rdpo",  reference:"champion", pairing:"pai
 
 # QAM (the diffusion-Q tilt) appends as the value-cousin of KTO: same transform:"value" family, but
 # the reference is a LEARNED CRITIC, not a fixed point — the pull is the adjoint-matched ∇Q. beta is
-# the q-focus / λ aperture. SHIPPED: form/form-stdlib/preference-learning.fk (pl-qam) +
+# the q-focus / λ aperture. SHIPPED: form/form/form-stdlib/preference-learning.fk (pl-qam) +
 # tests/preference-learning-band.fk → 31, four-way; pl-qam-apply IS dql-improve. See diffusion-q-learning.form.
 # The qam row's beta is an evolvable GENE: diffusion-q-autoresearch.fk runs the autoresearch keep-or-
 # rollback loop over it (propose→measure pl-fitness→keep), converging to the best beta (band → 63, four-way).
@@ -113,7 +113,7 @@ defn pl_qam   = pref_loss_shape { id:"qam",   reference:"critic",   pairing:"unp
 #         + (aux == "sft") → one mtb-learn descent on the chosen alone
 #
 # The shapes below name the seam to the operator; the numeric bodies
-# land in form/form-stdlib/preference-learning.fk when the first row is
+# land in form/form/form-stdlib/preference-learning.fk when the first row is
 # proven (GAP-P1).
 
 form pref_step_shape = {
@@ -285,7 +285,7 @@ form pref_signal_shape = {
 # Part 7 — Gaps (the next breaths — none need kernel change)
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-P1: OPENED. form/form-stdlib/preference-learning.fk now exists with the row
+# GAP-P1: OPENED. form/form/form-stdlib/preference-learning.fk now exists with the row
 #         accessors, the pull combinator (squared/value dispatched on the row's
 #         transform), and the pl-qam (q-tilt) apply — proven four-way by
 #         tests/preference-learning-band.fk → 31. Remaining: pl_kto over a tiny

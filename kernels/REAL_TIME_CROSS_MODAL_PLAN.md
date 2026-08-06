@@ -7,7 +7,7 @@
 
 ## What this plan composts
 
-The cross-modal experiments in `form/form-samples/cross-modal/05-..09-..`
+The cross-modal experiments in `form/form/form-samples/cross-modal/05-..09-..`
 use an LLM session as both extractor and generator. That's a useful
 *verification-side* demonstration of substrate addressing but it
 **cannot scale to real-time** — LLM round-trip latency is 100–10000ms
@@ -232,7 +232,7 @@ up and ship the natives.
 ## Cross-references
 
 - [`numeric-types-plan.md`](../docs/coherence-substrate/numeric-types-plan.md) — the destination shape for numeric formats (format-recipes as substrate citizens)
-- [`form/form-samples/cross-modal/09-fuzzy-similarity-cycles/`](../form/form-samples/cross-modal/09-fuzzy-similarity-cycles/) — fuzzy tolerance machinery already in the kernel; needed for noisy real-time model outputs
+- [`form/form/form-samples/cross-modal/09-fuzzy-similarity-cycles/`](../form/form/form-samples/cross-modal/09-fuzzy-similarity-cycles/) — fuzzy tolerance machinery already in the kernel; needed for noisy real-time model outputs
 - [`lc-cross-modal-unity`](../docs/vision-kb/concepts/lc-cross-modal-unity.md) — the unity claim at the recipe altitude; trained models extend this from hand-authored Blueprints to learned-from-data ones
 - [`lc-grammar-is-the-universal-recipe`](../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md)
 

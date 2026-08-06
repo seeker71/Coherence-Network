@@ -38,7 +38,7 @@ Gematria binds words by numeric value. Pāṇini binds words by generative root.
 The genetic code binds codons by **which amino acid they translate to** — and
 all three say the same thing the substrate says: *meaning lives in the shared
 address, not the surface.* Here it is computed, three-way (Go/Rust/TS), in
-[`form/form-stdlib/grammars/genetic-code.fk`](../../../form/form-stdlib/grammars/genetic-code.fk)
+[`form/form/form-stdlib/grammars/genetic-code.fk`](../../../form/form/form-stdlib/grammars/genetic-code.fk)
 (`genetic-code-band.fk`, 111111):
 
 - **Transcription is reversible.** DNA→RNA is the single substitution T→U;
@@ -108,7 +108,7 @@ class — runs at every rung. The genetic code is where it writes a body.
   table, near-universal across life; the degeneracy of the code.
 - **Crick's central dogma; the Watson–Crick double helix** — transcription,
   complementary base pairing, translation.
-- **`form/form-stdlib/grammars/genetic-code.fk`** — transcription ⇄
+- **`form/form/form-stdlib/grammars/genetic-code.fk`** — transcription ⇄
   back-transcription, complement (involution), parse ⇄ unparse, codon → amino,
   amino → synonymous-codon class, computed (band 111111, three-way).
 - **The substrate** — `intern_node` (codon → address) and `find_equivalent_cells`

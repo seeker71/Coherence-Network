@@ -36,13 +36,13 @@ FORBIDDEN = (
 )
 
 REQUIRED = (
-    "form/apps/coherence-network/api.bml",
-    "form/contracts/numeric-formats.canonical.json",
-    "form/form-stdlib/form-cli-main.fk",
-    "form/form-kernel-go",
-    "form/form-kernel-rust",
-    "form/form-kernel-ts/src/browser.ts",
-    "form/python_bmf/CONTRACT.md",
+    "form/form/apps/coherence-network/api.bml",
+    "form/form/contracts/numeric-formats.canonical.json",
+    "form/form/form-stdlib/form-cli-main.fk",
+    "form/form/form-kernel-go",
+    "form/form/form-kernel-rust",
+    "form/form/form-kernel-ts/src/browser.ts",
+    "form/form/python_bmf/CONTRACT.md",
 )
 
 

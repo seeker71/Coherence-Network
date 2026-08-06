@@ -5,9 +5,9 @@
     (rests-on fourth-kernel.form tool-channel.form host-kernel.form hati-os-targets.form)
     (probe scripts/hati_os_physical_lanes_probe.sh)
     (assembly-probe scripts/bml_form_jit_metal_planes_audit.sh)
-    (carrier form/form-stdlib/hati-os-kernel.fk)
-    (emitter form/form-stdlib/hati-os-kernel-emit.fk)
-    (matcher form/form-stdlib/hati-os-match.fk))
+    (carrier form/form/form-stdlib/hati-os-kernel.fk)
+    (emitter form/form/form-stdlib/hati-os-kernel-emit.fk)
+    (matcher form/form/form-stdlib/hati-os-match.fk))
 
   (jit-hardware-lane-contract
     (oracle clang-and-host-driver-samples)
@@ -16,8 +16,8 @@
     (executable-floor form-native-elf-exec-recipe)
     (choice measured-oracle-learning-samples)
     (hardware-classes cpu gpu ml)
-    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 8191 four-way-fkwu)
-    (learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu))
+    (proof form/form/form-stdlib/tests/jit-metal-lanes-band.fk -> 8191 four-way-fkwu)
+    (learning-proof form/form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu))
 
   (claim
     "The tool/channel surface is more than catalog data when a lane is backed by a Hati-emitted binary."
@@ -105,7 +105,7 @@
       (host-image-surface windows-pe-coff)
       (form-native-object form-pe-coff)
       (form-native-executable form-pe-coff+dll-bootstrap-exe)
-      (bootstrap-host form/native/bootstrap/form_bootstrap_host.c)
+      (bootstrap-host form/form/native/bootstrap/form_bootstrap_host.c)
       (jit-oracle optional-clang-llvm-build-witness)
       (jit-runtime fkwu-self-jit-no-runtime-toolchain)
       (distribution https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip)

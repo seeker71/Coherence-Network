@@ -4,8 +4,8 @@
 
   (lineage
     (rests-on channel-interface-consent.form organ-sense.fk organ-reading.fk hati-mesh.fk)
-    (recipe form/form-stdlib/organ-offer.fk)
-    (proof form/form-stdlib/tests/organ-offer-band.fk -> 63 fkwu-manifest-row))
+    (recipe form/form/form-stdlib/organ-offer.fk)
+    (proof form/form/form-stdlib/tests/organ-offer-band.fk -> 63 fkwu-manifest-row))
 
   (purpose
     "Let an organ declare what planes it can offer through a channel, to which audience, with what question gate, disclosure level, receipt type, and refusal mode."

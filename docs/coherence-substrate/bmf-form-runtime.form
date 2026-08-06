@@ -1,6 +1,6 @@
 ; bmf-form-runtime.form — BMF rule machinery lives above the kernel
 ;
-; The BMF object-rule runtime is defined in form/form-stdlib/engine.fk and is
+; The BMF object-rule runtime is defined in form/form/form-stdlib/engine.fk and is
 ; shared by BML, Python, TypeScript, Go, Rust, natural language, and media
 ; grammars. Host kernels expose generic execution and source primitives; they
 ; do not own BMF rule semantics.
@@ -44,7 +44,7 @@
 
     ;; Proof:
     ;;
-    ;; form/form-stdlib/tests/bmf-form-object-runtime-band.fk exercises object,
+    ;; form/form/form-stdlib/tests/bmf-form-object-runtime-band.fk exercises object,
     ;; sequence, capture, choice, star, opt, cut, stop, match source spans, and
     ;; reverse emission through engine.fk.
     "bmf-form-runtime-boundary"))

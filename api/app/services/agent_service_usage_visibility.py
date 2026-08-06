@@ -54,7 +54,7 @@ def _embodiment_rows_by_tool(recent_runs: list[dict[str, Any]]) -> dict[str, lis
     """Group real per-event telemetry into the rows the Form gate reads.
 
     One row is [lane, locality, completed, failed, runtime_ms] — exactly what
-    te-embody-lanes (form/form-stdlib/tool-embodiment.fk) consumes, grouped by
+    te-embody-lanes (form/form/form-stdlib/tool-embodiment.fk) consumes, grouped by
     (tool, lane). Fan-out only: no projection, no verdict. Those stay in Form,
     served by the kernel over these rows.
     """
@@ -79,7 +79,7 @@ def _embodiment_block(execution: dict[str, Any]) -> dict[str, Any]:
     return {
         "rows_by_tool": rows if isinstance(rows, dict) else {},
         "row_shape": ["lane", "locality", "completed", "failed", "runtime_ms"],
-        "recipe": "form/form-stdlib/tool-embodiment.fk",
+        "recipe": "form/form/form-stdlib/tool-embodiment.fk",
         "gate": "te-embody-lanes",
         "note": (
             "Real per-(tool, lane) telemetry, shaped for the Form embodiment "

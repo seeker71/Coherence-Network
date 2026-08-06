@@ -2,17 +2,17 @@
 idea_id: agent-cli
 status: active
 source:
-  - file: form/form-stdlib/rag-index-codec.fk
+  - file: form/form/form-stdlib/rag-index-codec.fk
     symbols: [ric-node-id, ric-grounding-ready?, ric-emit-grounded]
-  - file: form/form-stdlib/rag-retrieve.fk
+  - file: form/form/form-stdlib/rag-retrieve.fk
     symbols: [rag-admitted?, rag-overlap, rag-best-overlap]
-  - file: form/form-stdlib/rag-ask.fk
+  - file: form/form/form-stdlib/rag-ask.fk
     symbols: [ra-select-hit, ra-grounded-at, ra-output-answer-binds-hit?]
-  - file: form/form-stdlib/form-cli-staged-trace.fk
+  - file: form/form/form-stdlib/form-cli-staged-trace.fk
     symbols: [fcast-persistence-bound?, fcast-certificate-valid-at?, fcast-trace-hit-at]
-  - file: form/form-stdlib/form-cli-ask-gate.fk
+  - file: form/form/form-stdlib/form-cli-ask-gate.fk
     symbols: [fca-ask-trace-row]
-  - file: form/form-stdlib/form-freq-check.fk
+  - file: form/form/form-stdlib/form-freq-check.fk
     symbols: [fc-check, fc-semantic-reading, fc-certified-form-reading]
   - file: bin/form-cli
     symbols: [ask_native_local]
@@ -37,7 +37,7 @@ done_when:
   - "The default ask carrier renders the kernel's independently-derived trust result and has no hardcoded grounded, frequency, sufficiency, or OBSERVED values"
   - "A persisted live observation is queryable by NodeID and a stale or mismatched deployment observation cannot pass sufficiency"
   - "Focused kernel bands, consumer tests, spec gate, worktree guard, CI, deployment, and a public native ask all pass"
-test: "cd form && for band in form-stdlib/tests/rag-embed-band.fk form-stdlib/tests/rag-index-codec-band.fk form-stdlib/tests/rag-retrieve-band.fk form-stdlib/tests/rag-ask-grounded-band.fk form-stdlib/tests/rag-heal-grounding-band.fk form-stdlib/tests/form-freq-check-band.fk form-stdlib/tests/trust-row-band.fk form-stdlib/tests/form-cli-sufficiency-band.fk form-stdlib/tests/form-cli-ask-band.fk form-stdlib/tests/form-cli-staged-trace-band.fk form-stdlib/tests/form-cli-band.fk; do ./validate.sh \"$band\" || exit; done && cd .. && api/.venv/bin/pytest -q api/tests/test_form_cli_grounding_runtime.py"
+test: "cd form/form && for band in form-stdlib/tests/rag-embed-band.fk form-stdlib/tests/rag-index-codec-band.fk form-stdlib/tests/rag-retrieve-band.fk form-stdlib/tests/rag-ask-grounded-band.fk form-stdlib/tests/rag-heal-grounding-band.fk form-stdlib/tests/form-freq-check-band.fk form-stdlib/tests/trust-row-band.fk form-stdlib/tests/form-cli-sufficiency-band.fk form-stdlib/tests/form-cli-ask-band.fk form-stdlib/tests/form-cli-staged-trace-band.fk form-stdlib/tests/form-cli-band.fk; do ./validate.sh \"$band\" || exit; done && cd ../.. && api/.venv/bin/pytest -q api/tests/test_form_cli_grounding_runtime.py"
 constraints:
   - "Working behavior lands before evidence records; evidence records document executed proof and never supply trust booleans"
   - "Form owns identity, ranking, trust decisions, and observation composition; host code only carries filesystem, model, network, time, and persistence boundaries"
@@ -128,10 +128,10 @@ DeploymentWitness:
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/rag-embed.fk`, `rag-index-codec.fk`, `rag-retrieve.fk`, and
+- `form/form/form-stdlib/rag-embed.fk`, `rag-index-codec.fk`, `rag-retrieve.fk`, and
   `rag-ask.fk` — canonical semantic-v2 retrieval, strict index admission, and
   answer binding supplied only by the `coherence-kernel` submodule.
-- `form/form-stdlib/form-cli-staged-trace.fk`, `form-cli-ask-gate.fk`,
+- `form/form/form-stdlib/form-cli-staged-trace.fk`, `form-cli-ask-gate.fk`,
   `form-freq-check.fk`, and `trust-row.fk` — independent native trust signals
   and the all-four observation gate.
 - `scripts/form_cli_rag.py`, `scripts/coh_substrate.py`, and
@@ -152,10 +152,10 @@ DeploymentWitness:
   produces a non-empty substrate and a NodeID-backed index.
 - `api/tests/test_form_cli_grounding_runtime.py` proves paraphrases resolve the
   same cell while unrelated real-corpus queries miss.
-- `form/form-stdlib/tests/rag-ask-grounded-band.fk` and the consumer test prove
+- `form/form/form-stdlib/tests/rag-ask-grounded-band.fk` and the consumer test prove
   syntactically valid but absent NodeIDs, path-only IDs, swapped answers, and
   stale CTORs do not ground.
-- `form/form-stdlib/tests/form-cli-staged-trace-band.fk` independently mutates
+- `form/form/form-stdlib/tests/form-cli-staged-trace-band.fk` independently mutates
   every trust input and proves `OBSERVED` requires all four.
 - `api/tests/test_form_cli_grounding_runtime.py` proves blocked, mismatched,
   expired, unavailable-runtime, and tampered deployment reports cannot certify.
@@ -165,7 +165,7 @@ DeploymentWitness:
 ## Verification
 
 ```bash
-cd form
+cd form/form
 for band in \
   form-stdlib/tests/rag-embed-band.fk \
   form-stdlib/tests/rag-index-codec-band.fk \

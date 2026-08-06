@@ -364,14 +364,14 @@ are not kernel-first HTTP routes.
 
 The live body already has the pieces:
 
-- `form/form-kernel-rust/src/main.rs::cli_serve` is an HTTP listener with two
+- `form/form/form-kernel-rust/src/main.rs::cli_serve` is an HTTP listener with two
   paths: the compatibility host-router path, and `--form`, which hands each
   accepted stream to the Form HTTP stack through `kh-serve-conn`.
 - `deploy/kernel-router/production-routes.fk` is the compatibility/shadow route
   manifest for byte-identical native route promotion and upstream fan-out.
-- `form/form-stdlib/router-routes.fk` is the current `--form` route/registry
+- `form/form/form-stdlib/router-routes.fk` is the current `--form` route/registry
   manifest; it proves dispatch but still carries placeholder response bodies.
-- `form/form-stdlib/source-compiler.fk` owns `section [form.route]` lowering
+- `form/form/form-stdlib/source-compiler.fk` owns `section [form.route]` lowering
   beside the existing `form.bml` and `form.action` high-level source dialects.
   Rust can invoke it at load time, but the grammar and lowering live in
   Form-stdlib, not in the router host.
@@ -430,11 +430,11 @@ longer a toy scalar route:
   runtime provenance field, and a first-class 422 failure response.
 - It has three comparison surfaces in the tree:
   - Python source-reference body for measurement only:
-    [`form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.py`](../form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.py)
+    [`form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.py`](../form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.py)
   - compiled legacy Python-adapter recipe:
-    [`form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk`](../form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk)
+    [`form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk`](../form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk)
   - sibling-portable BML/Form handler core:
-    [`form/form-stdlib/tests/grounded-cost-record-handler-band.fk`](../form/form-stdlib/tests/grounded-cost-record-handler-band.fk)
+    [`form/form/form-stdlib/tests/grounded-cost-record-handler-band.fk`](../form/form/form-stdlib/tests/grounded-cost-record-handler-band.fk)
 
 The focused probe is
 [`scripts/grounded_cost_endpoint_probe.py`](../scripts/grounded_cost_endpoint_probe.py).
@@ -480,7 +480,7 @@ BML/Form handler core uses `record_new`, `record_get`, `head`, `tail`, and
 numeric primitives, and the focused probe validates it across Go and Rust:
 
 ```
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
 # -> [4.75, 6.75, 2.25, 0.75, 6.75, 7.75]
 ```
 
@@ -502,14 +502,14 @@ construction, Form JSON emission, and `kh-response` framing.
 The source artifact is a BML front-door catalog, not a Go/Rust/Python route
 file:
 
-- [`form/apps/coherence-network/api.bml`](../form/apps/coherence-network/api.bml) defines the
+- [`form/form/apps/coherence-network/api.bml`](../form/form/apps/coherence-network/api.bml) defines the
   `api_ideas` BML handler and `IdeasIndexRoute` route class.
-- [`form/form-stdlib/kernel-http.fk`](../form/form-stdlib/kernel-http.fk)
+- [`form/form/form-stdlib/kernel-http.fk`](../form/form/form-stdlib/kernel-http.fk)
   supplies typed query helpers (`kh-query-value-or`, `kh-query-int-or`,
   `kh-query-bool-or`).
-- [`form/form-stdlib/json.fk`](../form/form-stdlib/json.fk) owns JSON node
+- [`form/form/form-stdlib/json.fk`](../form/form/form-stdlib/json.fk) owns JSON node
   constructors and `json-emit`; the kernel does not own JSON layout.
-- [`form/form-kernel-go/server.go`](../form/form-kernel-go/server.go) now loads
+- [`form/form/form-kernel-go/server.go`](../form/form/form-kernel-go/server.go) now loads
   source-authored manifests through the Form source compiler and passes typed
   `kh-request` values to `kh-route` handlers.
 - `idea-sort-value` uses BML `match`, which lowers to `MATCH.SWITCH`; route sort
@@ -527,10 +527,10 @@ handlers.
 Go route-load command:
 
 ```bash
-cd form/form-kernel-go
+cd form/form/form-kernel-go
 go run . serve --port 19086 \
   --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json \
-  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../form/apps/coherence-network/api.bml
+  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../form/form/apps/coherence-network/api.bml
 ```
 
 Observed load result:
@@ -661,7 +661,7 @@ Next walked pass in the same session:
 - The value ABI now covers `scan_run`, `substring`, `char_at`, `ord`,
   `byte_to_str`, and `str_eq`. This keeps scanner/string work in Form while
   allowing the repeated recipe shape to condense.
-- `form/validate.sh` was fixed to rebuild the Go kernel when any Go source file
+- `form/form/validate.sh` was fixed to rebuild the Go kernel when any Go source file
   changes, including `jit.go` and `jitabi/*.go`; the previous staleness check
   only noticed a few named Go files.
 - Warmed `/api/ideas` after `warm=40`: `11` compile-failed rows, `76` warming
@@ -835,24 +835,24 @@ classDiagram
 
 Current implementation anchors:
 
-- `form/form-stdlib/bml-source.fk` names reusable BML source cells such as
+- `form/form/form-stdlib/bml-source.fk` names reusable BML source cells such as
   typed template use and route call source objects before any dialect chooses
   what they mean.
-- `form/form-stdlib/source-compiler.fk` walks full `section [form.bml]` and
+- `form/form/form-stdlib/source-compiler.fk` walks full `section [form.bml]` and
   `section [form.route]` bodies through the BML line/block compiler, consumes
   those source cells for route-domain lowering, and returns Recipe objects through
   `fsc-compile-section-recipe`.
-- `form/form-stdlib/language-model.fk` defines `LanguageTemplate`,
+- `form/form/form-stdlib/language-model.fk` defines `LanguageTemplate`,
   `LanguageClass`, and `language-route-class-kernel-route`. Their runtime type
   tags are compact numeric IDs, not repeated type-name strings. BML is one
   dialect that can emit these cells; future grammars should emit the same model.
-- `form/form-stdlib/kernel-http.fk` defines `KernelHTTPRequest`,
+- `form/form/form-stdlib/kernel-http.fk` defines `KernelHTTPRequest`,
   `KernelHTTPResponse`, `KernelHTTPRoute`, and `KernelHTTPRouteCandidate`.
   Their value tags are numeric IDs (`43001`..`43007`) so the class hierarchy is
   carried compactly while route decision flow remains visible. `43007` is
   `KernelHTTPRouteDataRef`, the bridge from source-language route class flow
   into compact route table data.
-- `form/form-kernel-rust/src/main.rs` stores the compiled object graph as
+- `form/form/form-kernel-rust/src/main.rs` stores the compiled object graph as
   `CompiledRouteProgram { kernel, root }` and carries it as
   `RouteProgram::RecipeObject(Arc<CompiledRouteProgram>)`.
 - `build_worker_kernel` uses `readonly_worker_clone()` for that route program,
@@ -919,8 +919,8 @@ Rules:
 
 - Source route declarations use registered Blueprint names. Unknown route,
   request, response, channel, or body class names fail through the existing
-  registry discipline in `form/user-blueprint-registry.md` and
-  `form/form-stdlib/form-ontology-loader.fk`.
+  registry discipline in `form/form/user-blueprint-registry.md` and
+  `form/form/form-stdlib/form-ontology-loader.fk`.
 - Generic parameters are authoring-time names for Form Blueprints and Recipe
   shapes. After lowering, no dialect-specific route object remains in the
   runtime.
@@ -934,7 +934,7 @@ Rules:
 The compiler is part of the reasoning surface. It must expose the structure it
 uses to lower BML, not only the lowered Form text.
 
-`form/form-stdlib/compiler-lens.fk` defines the first BML-authored lens values:
+`form/form/form-stdlib/compiler-lens.fk` defines the first BML-authored lens values:
 
 | Value | Carries |
 |---|---|
@@ -1098,7 +1098,7 @@ compatibility with scalar handlers, but the BML architecture reads the structure
 observation cell.
 
 The authored BML layer must not duplicate those counters. It reads them through
-Form, projects them through `form/form-stdlib/attention.fk`, and emits route
+Form, projects them through `form/form/form-stdlib/attention.fk`, and emits route
 attention records. `scripts/runtime_surface_report.py` remains the static
 route-share readout. `scripts/native_route_goal_loop.py` is the traffic-weighted
 promotion readout: it reads `source=web_api` endpoint summaries, overlays the BML
@@ -1151,13 +1151,13 @@ Hard stops override the score:
 ## Channels
 
 Channels are Form recipes, not sidecar queues. The existing carrier is
-`form/form-stdlib/channel.fk`:
+`form/form/form-stdlib/channel.fk`:
 
 - `CHANNEL-V0` holds ordered `CHANNEL-MSG` children.
 - `channel-message` wraps a payload recipe.
 - `channel-append` writes the next channel state.
 - `channel-read` and `channel-read-since` read message recipes.
-- `form/form-stdlib/tests/channel-bml-band.fk` shows BML-authored code calling
+- `form/form/form-stdlib/tests/channel-bml-band.fk` shows BML-authored code calling
   the channel transport functions.
 
 The router uses channels for three concrete flows:
@@ -1215,7 +1215,7 @@ Current configuration lives in three places:
 | Route surface | `.fk` manifest with optional `section [form.route]` blocks | Raw Form manifests go through `read_root_from_source`; source sections call `fsc-compile-section-recipe` and become `CompiledRouteProgram` object graphs | Route config is source-language/Form cells: classes, templates, request/response contracts, handlers, and source maps. |
 | Channel traffic policy | `kh-default-channel-policy()` in `kernel-http.fk`; Rust compatibility mirror exports `__router_channel_policy__` | Form recipes read allowed methods, method bridges, no-body methods, and `Allow`; Rust uses the same defaults for route validation, unmatched `OPTIONS`, and `HEAD` body suppression | Load channel policy from `KernelRouterConfig`, then make CORS/access-control, cache, compression, streaming, identity/authorization, and shape policy executed Form recipes. |
 | Host defaults | Rust constants for keep-alive, fanout deadlines, and request/response shape limits | Functions such as `fanout_connect_timeout`, `fanout_read_timeout`, `request_shape_limit`, and `response_shape_limit` return constants | Lift tunable policy into `KernelRouterConfig` as a Form value; keep only emergency host ceilings in Rust. |
-| Canonical numeric formats | Repository JSON file at `form/contracts/numeric-formats.canonical.json` | `form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
+| Canonical numeric formats | Repository JSON file at `form/form/contracts/numeric-formats.canonical.json` | `form/form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
 
 No environment variable is part of the live kernel-router configuration surface.
 If a value should vary by deployment or route, it should become a config file or

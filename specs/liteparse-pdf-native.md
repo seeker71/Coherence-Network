@@ -2,17 +2,17 @@
 idea_id: idea-realization-engine
 status: active
 source:
-  - file: form/form-stdlib/inflate.fk
+  - file: form/form/form-stdlib/inflate.fk
     symbols: [inflate, zlib-inflate, inflate-block, inflate-syms, inflate-stored, inflate-dynamic, huff-build, huff-decode, lz-copy, br-bits, fixed-litlen-lengths]
-  - file: form/form-stdlib/tests/inflate-band.fk
+  - file: form/form/form-stdlib/tests/inflate-band.fk
     symbols: []
-  - file: form/form-stdlib/pdf-text.fk
+  - file: form/form/form-stdlib/pdf-text.fk
     symbols: [pdf-text-file, pdf-text-bytes, collect-content, maybe-inflate, zlib?, read-paren, extract-text, after-sub, take-until]
-  - file: form/form-stdlib/tests/pdf-text-band.fk
+  - file: form/form/form-stdlib/tests/pdf-text-band.fk
     symbols: []
-  - file: form/form-stdlib/tests/pdf-text-file-band.fk
+  - file: form/form/form-stdlib/tests/pdf-text-file-band.fk
     symbols: []
-  - file: form/form-stdlib/adler32.fk
+  - file: form/form/form-stdlib/adler32.fk
     symbols: [adler32, adler32-step]
 requirements:
   - "DEFLATE (RFC 1951) inflate runs as a pure Form recipe over an in-recipe byte list — stored blocks, fixed-Huffman blocks, dynamic-Huffman blocks, LZ77 back-references over a sliding window — using the bit primitives (band, bor, shl_u32, shr_u32), no host zlib. (The codec is integer by its own nature — Huffman/bit-reads/byte-copies — NOT a Form limit; the body proves fp64 four-way, incl. the native asm lane: transformer-numerics, form-asm-float.)"
@@ -22,21 +22,21 @@ requirements:
   - "The file-reading lane (pdf-text-file → read_file_bytes) converts multiple real PDF files off disk, proven three-way (Go/Rust/TS — host I/O is fkwu's one unsupported family): pdf-text-file-band over four fixtures, verdict 15, independently cross-checked by pdftotext."
   - "LiteParse v2.1's remaining layers — M5 layout/structure, M6 forms, M7 scanned/OCR — are named here as the path and graduate as sibling specs."
 done_when:
-  - 'file_contains("form/form-stdlib/inflate.fk", "defn inflate")'
-  - 'file_contains("form/form-stdlib/inflate.fk", "defn huff-decode")'
-  - 'file_contains("form/form-stdlib/pdf-text.fk", "defn pdf-text-file")'
+  - 'file_contains("form/form/form-stdlib/inflate.fk", "defn inflate")'
+  - 'file_contains("form/form/form-stdlib/inflate.fk", "defn huff-decode")'
+  - 'file_contains("form/form/form-stdlib/pdf-text.fk", "defn pdf-text-file")'
   - "validate.sh reports `fourth arm: ... four-way` for the inflate band (verdict 31) and the pdf-text band (verdict 1)."
   - "validate.sh reports the pdf-text-file band converting four real PDFs three-way (verdict 15)."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-file-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk form-stdlib/tests/pdf-text-file-band.fk"
 constraints:
-  - "Two lanes stay separate: pure logic (inflate, stream-scan, text-pull) proves four-way over in-recipe fixtures; the file read (read_file_bytes) is honestly three-way + carrier (fkwu has no host I/O; host-io is a named unsupported family in form/fourth-arm-bands.txt). Never dress the carrier lane as four-way."
+  - "Two lanes stay separate: pure logic (inflate, stream-scan, text-pull) proves four-way over in-recipe fixtures; the file read (read_file_bytes) is honestly three-way + carrier (fkwu has no host I/O; host-io is a named unsupported family in form/form/fourth-arm-bands.txt). Never dress the carrier lane as four-way."
   - "One engine: the recipe that proves four-way is the recipe that crystallizes to native asm via the existing self-JIT / Form→asm lane — no hand-written C/clang inflate beside it."
   - "The text-extraction path handles the common digital PDF; cross-reference/object streams, octal/control string escapes, and /ToUnicode CMap remapping are named gaps for the robust M2/M4, not silent omissions."
   - "ASCIIHexDecode / ASCII85Decode / RunLengthDecode / LZWDecode are trivial companions; the four-way gate is on DEFLATE inflate."
 ---
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
-> **Source**: [`form/form-stdlib/inflate.fk`](../form/form-stdlib/inflate.fk) (new) · reuses [`form/form-stdlib/adler32.fk`](../form/form-stdlib/adler32.fk), the grammar engine ([`bmf-grammar.fk`](../form/form-stdlib/bmf-grammar.fk), [`dynamic-grammar-carrier.fk`](../form/form-stdlib/dynamic-grammar-carrier.fk)), and the byte-walk pattern in [`wav-sense.fk`](../form/form-stdlib/wav-sense.fk)
+> **Source**: [`form/form/form-stdlib/inflate.fk`](../form/form/form-stdlib/inflate.fk) (new) · reuses [`form/form/form-stdlib/adler32.fk`](../form/form/form-stdlib/adler32.fk), the grammar engine ([`bmf-grammar.fk`](../form/form/form-stdlib/bmf-grammar.fk), [`dynamic-grammar-carrier.fk`](../form/form/form-stdlib/dynamic-grammar-carrier.fk)), and the byte-walk pattern in [`wav-sense.fk`](../form/form/form-stdlib/wav-sense.fk)
 
 # LiteParse v2.1 — Form-Native PDF Parsing — inflate four-way + real PDFs convert to text
 
@@ -113,7 +113,7 @@ not just literals) → assert the original bytes and the adler32 trailer.
 
 The *full* pipeline reading a PDF off disk needs `read_file_bytes` — a host
 carrier that is 3-kernel-only (fkwu has no host I/O; it is a named unsupported
-family in `form/fourth-arm-bands.txt`). LiteParse keeps two lanes separate, as
+family in `form/form/fourth-arm-bands.txt`). LiteParse keeps two lanes separate, as
 the body's discipline requires: the **logic** (inflate, grammar matching, CMap
 lookup) is pure recipe proven four-way over in-recipe fixtures; the **file read**
 is a thin carrier proven 3-kernel + carrier. We never dress the carrier lane as
@@ -139,21 +139,21 @@ recipes, bands, a witness.
 
 ## Files
 
-- [`form/form-stdlib/inflate.fk`](../form/form-stdlib/inflate.fk) — new: the DEFLATE inflate recipe (`inflate`, `huffman-build`, `huffman-decode`, `lz77-copy`, `bitreader`).
-- [`form/form-stdlib/tests/inflate-band.fk`](../form/form-stdlib/tests/inflate-band.fk) — the four-way inflate band over in-recipe fixtures, verdict 31.
-- [`form/form-stdlib/pdf-text.fk`](../form/form-stdlib/pdf-text.fk) — text extraction (stream-scan + inflate + Tj/TJ pull); `tests/pdf-text-band.fk` (four-way, verdict 1) and `tests/pdf-text-file-band.fk` (three-way over four fixtures, verdict 15).
-- [`form/form-stdlib/adler32.fk`](../form/form-stdlib/adler32.fk) — reused: cross-checks the inflated bytes against the zlib trailer.
-- [`form/fourth-arm-bands.txt`](../form/fourth-arm-bands.txt) — add the `inflate` band row (four-way coverage floor).
+- [`form/form/form-stdlib/inflate.fk`](../form/form/form-stdlib/inflate.fk) — new: the DEFLATE inflate recipe (`inflate`, `huffman-build`, `huffman-decode`, `lz77-copy`, `bitreader`).
+- [`form/form/form-stdlib/tests/inflate-band.fk`](../form/form/form-stdlib/tests/inflate-band.fk) — the four-way inflate band over in-recipe fixtures, verdict 31.
+- [`form/form/form-stdlib/pdf-text.fk`](../form/form/form-stdlib/pdf-text.fk) — text extraction (stream-scan + inflate + Tj/TJ pull); `tests/pdf-text-band.fk` (four-way, verdict 1) and `tests/pdf-text-file-band.fk` (three-way over four fixtures, verdict 15).
+- [`form/form/form-stdlib/adler32.fk`](../form/form/form-stdlib/adler32.fk) — reused: cross-checks the inflated bytes against the zlib trailer.
+- [`form/form/fourth-arm-bands.txt`](../form/form/fourth-arm-bands.txt) — add the `inflate` band row (four-way coverage floor).
 
 ## Acceptance
 
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk` reports the band with `fourth arm: ... four-way` (not `3-kernel only`).
+- `cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk` reports the band with `fourth arm: ... four-way` (not `3-kernel only`).
 - The band asserts `inflate(<deflate fixture>) == <original bytes>` and `adler32(<original bytes>) == <trailer>`, both as in-recipe literals — no `tests/`-side Python and no host file read.
 
 ## Verification
 
 ```bash
-cd form
+cd form/form
 # M1 — inflate four-way (verdict 31)
 ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk form-stdlib/tests/inflate-band.fk
 # text extraction logic four-way (verdict 1)

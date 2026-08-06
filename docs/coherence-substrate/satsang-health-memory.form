@@ -20,5 +20,5 @@ The trust receipt is the boundary:
 - hidden capture: false
 - later context: allowed after explicit import
 
-The Form proof is `form/form-stdlib/satsang-health-memory.fk`, with
-`form/form-stdlib/tests/satsang-health-memory-band.fk` as the fourth-arm band.
+The Form proof is `form/form/form-stdlib/satsang-health-memory.fk`, with
+`form/form/form-stdlib/tests/satsang-health-memory-band.fk` as the fourth-arm band.

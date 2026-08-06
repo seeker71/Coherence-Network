@@ -18,6 +18,9 @@ param([string]$WorkRoot = "")
 $ErrorActionPreference = "Stop"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..")
 $form = Join-Path $repo "form"
+# native/ stays at the submodule root; form-stdlib/form-kernel-* nest one
+# level deeper under form/form/.
+$formTree = Join-Path $form "form"
 if (-not $WorkRoot) { $WorkRoot = Join-Path $repo ".cache/federation-service" }
 if (Test-Path $WorkRoot) { Remove-Item -Recurse -Force $WorkRoot }
 New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
@@ -32,8 +35,8 @@ $cc = Find-Tool @("gcc.exe","gcc","clang.exe","clang")
 
 # kernels (PowerShell needs an executable extension; copy the Go kernel)
 $kernelGo = Join-Path $WorkRoot "bin-go.exe"
-Copy-Item (Join-Path $form "form-kernel-go/bin-go") $kernelGo -Force
-$kernelRsSrc = Join-Path $form "form-kernel-rust/target/release/form-kernel-rust.exe"
+Copy-Item (Join-Path $formTree "form-kernel-go/bin-go") $kernelGo -Force
+$kernelRsSrc = Join-Path $formTree "form-kernel-rust/target/release/form-kernel-rust.exe"
 $haveRust = Test-Path $kernelRsSrc
 
 # the presence body
@@ -42,8 +45,8 @@ $hostExe = Join-Path $WorkRoot "form-presence-host.exe"
 if ($LASTEXITCODE -ne 0) { throw "presence host compile failed" }
 
 # raw S-expr parts (no section-compile needed for the model layer)
-$aff = (Join-Path $form "form-stdlib/affine-train.fk")    -replace '\\','/'
-$ms  = (Join-Path $form "form-stdlib/model-service.fk")   -replace '\\','/'
+$aff = (Join-Path $formTree "form-stdlib/affine-train.fk")    -replace '\\','/'
+$ms  = (Join-Path $formTree "form-stdlib/model-service.fk")   -replace '\\','/'
 
 function Fwd($p) { return ($p -replace '\\','/') }
 

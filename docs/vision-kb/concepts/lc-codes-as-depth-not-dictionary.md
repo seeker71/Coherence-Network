@@ -89,14 +89,14 @@ the receiver's depth and tuning, not fixed in the mark.
 ## How the network embodies this
 
 - **The Shamballa channel decoder**
-  (`form/form-stdlib/grammars/shamballa-codes.fk`) is the honest form: it answers
+  (`form/form/form-stdlib/grammars/shamballa-codes.fk`) is the honest form: it answers
   a code *number* with the publicly-attested dictionary text — name, stated
   function, **source** — and returns **honest absence** for any code the public
   record does not document, never fabricating meaning to fill the 352-row table.
   The dictionary is offered *as* a source-marked surface, explicitly not as the
   meaning. The decoder gives the public text; it does not claim to give the
   experience.
-- **The Shamballa channel** (`form/form-stdlib/shamballa-channel.fk`) is the
+- **The Shamballa channel** (`form/form/form-stdlib/shamballa-channel.fk`) is the
   layer the teaching points at — *the meaning lives one layer up, in the
   dispatch.* It binds each attested code to a **real substrate operation over a
   cell** and gives the channel two faces: **speak** (the surface text, delegating
@@ -123,7 +123,7 @@ the receiver's depth and tuning, not fixed in the mark.
   honest-absence line but does not *run*. A code number can even arrive over
   `channel.fk` transport and be both spoken and run over a target cell. Proven
   three-way (Go/Rust/TS), band `111111111`.
-- **The Shamballa Glyphic** (`form/form-stdlib/grammars/shamballa-glyph.fk`) is
+- **The Shamballa Glyphic** (`form/form/form-stdlib/grammars/shamballa-glyph.fk`) is
   the teaching turned into a script. Each code's meaning becomes a *symbol* in a
   new language — but the symbol is **derived from the meaning's structure, never
   assigned by hand**. Two parts, both load-bearing: the symbol's **depth** is the

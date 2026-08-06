@@ -13,8 +13,8 @@ import os, sys, ctypes, subprocess, time, math
 import numpy as np
 
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GO=f"{ROOT}/form/form-kernel-go/bin-go"
-STD=f"{ROOT}/form/form-stdlib"
+GO=f"{ROOT}/form/form/form-kernel-go/bin-go"
+STD=f"{ROOT}/form/form/form-stdlib"
 WORK="/tmp/mvjit"; os.makedirs(WORK, exist_ok=True)
 
 # 1) emit the native matvec source FROM the Form emitter recipe

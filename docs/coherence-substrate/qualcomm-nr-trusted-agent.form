@@ -23,12 +23,12 @@
 #
 # Runnable heart:
 #
-#   form/form-stdlib/qualcomm-nr-trusted-agent.fk
-#   form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk
+#   form/form/form-stdlib/qualcomm-nr-trusted-agent.fk
+#   form/form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk
 #
 # Verify:
 #
-#   cd form && ./validate.sh form-stdlib/core.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/resource-port.fk \
 #     form-stdlib/recognition-router.fk \
 #     form-stdlib/champion-challenger.fk \
@@ -43,12 +43,12 @@
 
   (lineage
     (derives-from core-axioms.form host-kernel.form minimal-kernel.form all-life-north-star.form)
-    (ports       form/form-stdlib/resource-port.fk)
-    (routing     form/form-stdlib/recognition-router.fk)
-    (promotion   form/form-stdlib/champion-challenger.fk)
-    (health      form/form-stdlib/all-life-north-star.fk)
-    (runs-as     form/form-stdlib/qualcomm-nr-trusted-agent.fk)
-    (proven-by   form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk))
+    (ports       form/form/form-stdlib/resource-port.fk)
+    (routing     form/form/form-stdlib/recognition-router.fk)
+    (promotion   form/form/form-stdlib/champion-challenger.fk)
+    (health      form/form/form-stdlib/all-life-north-star.fk)
+    (runs-as     form/form/form-stdlib/qualcomm-nr-trusted-agent.fk)
+    (proven-by   form/form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk))
 
   # -- Recipient lens -------------------------------------------------
   (recipient-lens

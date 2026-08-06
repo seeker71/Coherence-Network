@@ -178,7 +178,7 @@ circle, it becomes a way to stay sovereign without making permanent
 enemies out of every rupture.
 
 In Form, this concept is executable as
-`form/form-stdlib/sovereign-boundary-protocol.fk`. The cell accepts
+`form/form/form-stdlib/sovereign-boundary-protocol.fk`. The cell accepts
 boundary evidence: subject, offered interface, protocol, reach, consent,
 violation, trusted witness, repair evidence, threshold, vitality, certainty,
 and time. It returns a boundary receipt with a `CHOICE-RECEIPT`, so the

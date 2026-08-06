@@ -4,12 +4,12 @@ idea_id: knowledge-and-resonance
 status: active
 decision: approved-2026-07-30-lanes-computed-not-typed
 source:
-  - file: form/form-stdlib/evidence-grounding.fk
+  - file: form/form/form-stdlib/evidence-grounding.fk
     symbols: [eg-lane, eg-forms?, eg-honest-absence?, eg-contested?, eg-surface, eg-spectrum]
-  - file: form/form-stdlib/tests/evidence-grounding-band.fk
-  - file: form/form-stdlib/tests/zero-point-ladder-band.fk
+  - file: form/form/form-stdlib/tests/evidence-grounding-band.fk
+  - file: form/form/form-stdlib/tests/zero-point-ladder-band.fk
     symbols: [zpl-claims, zpl-lane-at, zpl-tally, zpl-surface]
-  - file: form/fourth-arm-bands.txt
+  - file: form/form/fourth-arm-bands.txt
   - file: docs/vision-kb/resources/zero-point-plasma-water.md
   - file: docs/vision-kb/concepts/lc-honest-lane.md
   - file: docs/coherence-substrate/evidence-grounding.form
@@ -23,7 +23,7 @@ done_when:
   - "zero-point-ladder-band.fk returns 65535 identically on Go, Rust, TS AND crosses the fourth arm (fkwu), registered in fourth-arm-bands.txt (1 ok, 0 divergent)"
   - "evidence-grounding-band.fk still returns 8191 four-way — the classifier is unchanged by gaining a caller"
   - "Every lane tag on docs/vision-kb/resources/zero-point-plasma-water.md matches the band's computed walk 5 4 5 5 4 4 4 4 4 5 4 5 2 2 5 2 2 1 2 5 2 0, and the page names the band and verdict it was transcribed from"
-  - 'file_exists("form/form-stdlib/tests/zero-point-ladder-band.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/zero-point-ladder-band.fk")'
 constraints:
   - "The lane logic is Form and only Form; no Python or shell decides a lane. validate.sh is the honest-floor parity harness, not the classifier"
   - "Transcription from band output to page text is manual today — there is NO automated parser comparing the Markdown labels to the band. The page says so plainly; a no-drift guarantee is not claimed until such a check exists"
@@ -37,7 +37,7 @@ constraints:
 
 An evidence-lane discipline that grades its own claims by hand is not a discipline. The
 [zero-point ladder](../docs/vision-kb/resources/zero-point-plasma-water.md) shipped with typed
-lane tags sitting beside [`evidence-grounding.fk`](../form/form-stdlib/evidence-grounding.fk), a
+lane tags sitting beside [`evidence-grounding.fk`](../form/form/form-stdlib/evidence-grounding.fk), a
 classifier already proven four-way — the exact failure the lane discipline exists to catch, an
 author grading their own claim, committed inside the document warning about it.
 
@@ -89,17 +89,17 @@ Both measured rather than assumed, and built around over the minimal proven core
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/tests/zero-point-ladder-band.fk` — the claim table plus computed assertions (the first instance)
-- `form/form-stdlib/evidence-grounding.fk` — the classifier the band calls, unchanged by gaining a caller
-- `form/fourth-arm-bands.txt` — registers `zero-point-ladder fks 65535` so fkwu is gated
+- `form/form/form-stdlib/tests/zero-point-ladder-band.fk` — the claim table plus computed assertions (the first instance)
+- `form/form/form-stdlib/evidence-grounding.fk` — the classifier the band calls, unchanged by gaining a caller
+- `form/form/fourth-arm-bands.txt` — registers `zero-point-ladder fks 65535` so fkwu is gated
 - `docs/vision-kb/resources/zero-point-plasma-water.md` — carries the computed tags, names the band, names the manual-transcription edge
 - `docs/vision-kb/concepts/lc-honest-lane.md` — the six-stratum spectrum the classifier implements
 - `docs/coherence-substrate/evidence-grounding.form` — the teaching cell behind the classifier
 
 ## Acceptance Tests
 
-- `cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` → `65535`, `fourth arm: 1 band(s) four-way`, `1 ok, 0 divergent`
-- `cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk` → `8191` four-way; the classifier is unchanged by its new caller
+- `cd form/form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk` → `65535`, `fourth arm: 1 band(s) four-way`, `1 ok, 0 divergent`
+- `cd form/form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk` → `8191` four-way; the classifier is unchanged by its new caller
 - Every lane tag on the page matches the computed walk `5 4 5 5 4 4 4 4 4 5 4 5 2 2 5 2 2 1 2 5 2 0`
 - The page states the band, the verdict, and that transcription is manual
 
@@ -108,15 +108,15 @@ Both measured rather than assumed, and built around over the minimal proven core
 Flip any signal in `zpl-claims` and the band must move rather than the page silently re-grading. Measured, not asserted: setting `water-car` `refuted?` from `1` to `0` drops verdict **65535 → 48127** — bit 1024 (water-car CONTESTED) and bit 16384 (the profile) both fall. Restoring it returns 65535 four-way. That movement is the guarantee this spec actually provides.
 
 ```bash
-cd form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk
+cd form/form && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk
 ```
 
 ```bash
-cd form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk
+cd form/form && ./validate.sh form-stdlib/tests/evidence-grounding-band.fk
 ```
 
 ```bash
-cd form && sed -i '' 's/(list "water-car"             1 0 0 0 1)/(list "water-car"             1 0 0 0 0)/' form-stdlib/tests/zero-point-ladder-band.fk && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk; git checkout form-stdlib/tests/zero-point-ladder-band.fk
+cd form/form && sed -i '' 's/(list "water-car"             1 0 0 0 1)/(list "water-car"             1 0 0 0 0)/' form-stdlib/tests/zero-point-ladder-band.fk && ./validate.sh form-stdlib/tests/zero-point-ladder-band.fk; git checkout form-stdlib/tests/zero-point-ladder-band.fk
 ```
 
 ## Risks

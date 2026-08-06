@@ -10,7 +10,7 @@
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-grep -oE 'k\.registerNative\("[a-z_0-9]+"' "$ROOT/form/form-kernel-go/main.go" \
+grep -oE 'k\.registerNative\("[a-z_0-9]+"' "$ROOT/form/form/form-kernel-go/main.go" \
   | sed 's/.*("//;s/"//' | sort -u | python3 -c "
 import sys, re
 names = [l.strip() for l in sys.stdin if l.strip()]

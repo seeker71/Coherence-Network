@@ -45,7 +45,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         "docs/lineage/cursor-form-primitives-realignment-2026-06-04.md",
         "docs/lineage/grok-verified-lineage.md",
         "kernels/BMF_BML_COMPILER_PICTURE.md",
-        "form/form-stdlib/engine.fk",
+        "form/form/form-stdlib/engine.fk",
         "config/agent_profiles.json",
         "scripts/awareness_node_daemon.py",
     ],
@@ -57,7 +57,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             "Agent queries are read-only — no Python eval center, no form-on-form in Python."
         ),
         "primary": [
-            "BMF grammars in form/form-stdlib (*.fk, validate.sh bands)",
+            "BMF grammars in form/form/form-stdlib (*.fk, validate.sh bands)",
             "form-kernel-rust / go / ts walkers",
             "persistence.fk, http-serve.fk, read_file, http_get",
         ],
@@ -79,10 +79,10 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             "docs/shared/agent-start-packet.md",
             "docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent",
             "kernels/BMF_BML_COMPILER_PICTURE.md",
-            "form/form-stdlib/engine.fk",
+            "form/form/form-stdlib/engine.fk",
         ],
         "default_implementation": (
-            "Extend compiler.fk, grammars/*.fk, engine.fk; prove with form/validate.sh bands."
+            "Extend compiler.fk, grammars/*.fk, engine.fk; prove with form/form/validate.sh bands."
         ),
         "next_ripening": (
             "form-notation grammar in .fk for agent DSL (@spec, ?verbs) — NodeID parity then compost form.py"

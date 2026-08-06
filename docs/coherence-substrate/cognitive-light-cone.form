@@ -5,7 +5,7 @@
 # Levin's cognitive light cone (lc-field-substrate: the cone bounds
 # what an agent can ADDRESS — spatial extent × temporal horizon of the
 # largest goal it can hold) made runnable. SHIPPED:
-# `form/form-stdlib/cognitive-light-cone.fk` +
+# `form/form/form-stdlib/cognitive-light-cone.fk` +
 # `tests/cognitive-light-cone-band.fk` → 511, three-way (Go/Rust/TS).
 #
 # The cone is the THIRD semiring reading of geometric-learning's one

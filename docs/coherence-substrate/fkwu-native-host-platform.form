@@ -74,7 +74,7 @@
     (substrate "?equivalent @spec(fkwu-native-host-platform)")
     (substrate "annotate docs/coherence-substrate/fkwu-native-host-platform.form")
     (spec "specs/fkwu-native-host-platform.md")
-    (bml "form/form-stdlib/bml/fkwu-platform-host.bml form/form-stdlib/bml/form-fs.bml")
+    (bml "form/form/form-stdlib/bml/fkwu-platform-host.bml form/form/form-stdlib/bml/form-fs.bml")
     (form-cli "form-cli ask \"how does fkwu implement host filesystem on android\""))
 
   (kin host-kernel.form standard-receipt.form form-to-asm.form bml-native-north-star.form

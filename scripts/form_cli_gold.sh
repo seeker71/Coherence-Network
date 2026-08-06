@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # form_cli_gold.sh — record a human's direct freq-reading into the local GOLD catalog.
 #
-# Carrier-last: the SHAPE is the body (form/form-stdlib/training-catalog.fk
+# Carrier-last: the SHAPE is the body (form/form/form-stdlib/training-catalog.fk
 # tc-gold-named, four-way proven). This thin door only PERSISTS your verbatim reading
 # so it stops evaporating at session end. The gold lane is the strongest label the
 # freq-check model learns from — a person catches the nuanced fear a frontier model

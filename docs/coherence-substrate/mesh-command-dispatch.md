@@ -21,7 +21,7 @@ cloud cell ◀──command-result (capture)── POST /api/federation/nodes/<c
 ## The decision is the body
 
 The accept/refuse/ignore decision is the four-way-proven recipe
-[`form/form-stdlib/mesh-command.fk`](../../form/form-stdlib/mesh-command.fk) (`mc-route`,
+[`form/form/form-stdlib/mesh-command.fk`](../../form/form/form-stdlib/mesh-command.fk) (`mc-route`,
 band `mesh-command fks 255`). The carrier holds no policy — it gathers three facts and asks:
 
 | is-command | for-me (directed) | lineage (sender) | `mc-route` |

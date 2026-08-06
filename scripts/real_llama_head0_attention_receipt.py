@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """real_llama_head0_attention_receipt.py — proves real llama3.2:3b GGUF weights flow
-through the proven Form attention numerics (form/form-stdlib/real-gguf-llama-block-fwd.fk,
+through the proven Form attention numerics (form/form/form-stdlib/real-gguf-llama-block-fwd.fk,
 rgl-head0-fwd) for query-head 0 / kv-head 0 of the real GQA group, over a real 2-token
 sequence. Two things happen here, both honestly separated:
 
@@ -436,7 +436,7 @@ def main() -> int:
             ),
         },
         "kernel": "form-kernel-go (single-kernel exploration; not a four-way-proven band)",
-        "recipe": "form/form-stdlib/real-gguf-llama-block-fwd.fk (rgl-head0-fwd / rgl-head0-fwd-flat)",
+        "recipe": "form/form/form-stdlib/real-gguf-llama-block-fwd.fk (rgl-head0-fwd / rgl-head0-fwd-flat)",
         "total_wall_seconds": round(time.time() - t0, 2),
     }
     receipt_json.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")

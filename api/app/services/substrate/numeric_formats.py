@@ -11,11 +11,11 @@ recipe's NodeID is computed via content-addressing over the
 NodeID via content-addressing.
 
 Cross-kernel coordination lives in
-``form/contracts/numeric-formats.canonical.json``. Every kernel
+``form/form/contracts/numeric-formats.canonical.json``. Every kernel
 (Python, TS, Go, Rust) reads that same contract and interns the formats
 in the same order with the same child structure. The format-recipe NodeIDs
 produced by this module match — by construction — the shape the TS kernel
-produces (see ``form/form-kernel-ts/src/formats.ts``).
+produces (see ``form/form/form-kernel-ts/src/formats.ts``).
 
 This file is read-time-driven by the canonical JSON: do not hardcode the
 format list. Drift between contract and implementation is forbidden.
@@ -223,7 +223,7 @@ def _float_to_two_i32(v: float) -> Tuple[int, int]:
 
 
 def _canonical_json_path() -> Path:
-    """Resolve ``form/contracts/numeric-formats.canonical.json``.
+    """Resolve ``form/form/contracts/numeric-formats.canonical.json``.
 
     Walks up from this file's location to the repo root, then down to the
     canonical contract. Works in worktrees and in the main repo.
@@ -231,12 +231,12 @@ def _canonical_json_path() -> Path:
     here = Path(__file__).resolve()
     # api/app/services/substrate/numeric_formats.py — 5 parents up to repo root
     for parent in [here.parent] + list(here.parents):
-        candidate = parent / "form" / "contracts" / "numeric-formats.canonical.json"
+        candidate = parent / "form" / "form" / "contracts" / "numeric-formats.canonical.json"
         if candidate.exists():
             return candidate
     raise FileNotFoundError(
         "Could not locate numeric-formats.canonical.json; "
-        "expected at form/contracts/ relative to the repo root"
+        "expected at form/form/contracts/ relative to the repo root"
     )
 
 
@@ -411,7 +411,7 @@ def apply_arith(
     """Generic dispatcher (Pass 0).
 
     Switches on ``arith_hint_code`` then on operator. Mirrors the logic in
-    ``form/form-kernel-ts/src/formats.ts`` (``applyArithCode``)
+    ``form/form/form-kernel-ts/src/formats.ts`` (``applyArithCode``)
     exactly, with Python's runtime model standing in for the V8 jump-table
     behaviour the TS comments describe.
     """

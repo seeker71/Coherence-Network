@@ -13,7 +13,7 @@
 # Usage: scripts/form_cli_preflight.sh
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO_DIR="$ROOT/form/form-kernel-go"
+GO_DIR="$ROOT/form/form/form-kernel-go"
 GO="$GO_DIR/bin-go"
 MENTOR_MODELS="$HOME/mentor-install/.models"
 PASS=0; GAP=0
@@ -42,9 +42,9 @@ if [[ -x "$GO" ]]; then
     # The kernel walks the Lisp dialect natively (builtins len/add/eq are native);
     # core.fk is the BML maintenance dialect and needs the source-compiler, so it
     # is NOT preluded here — these three Lisp recipes are all the report needs.
-    { cat "$ROOT/form/form-stdlib/tool-channel.fk" \
-          "$ROOT/form/form-stdlib/choice-receipt.fk" \
-          "$ROOT/form/form-stdlib/form-cli-membrane.fk"
+    { cat "$ROOT/form/form/form-stdlib/tool-channel.fk" \
+          "$ROOT/form/form/form-stdlib/choice-receipt.fk" \
+          "$ROOT/form/form/form-stdlib/form-cli-membrane.fk"
       echo '(print (fcm-surface-protocol-count))'
       echo '(print (fcm-surface-native-count))'
       echo '(print (fcm-surface-host-count))'
@@ -69,10 +69,10 @@ fi
 # 3. Native form-cli + local model assets --------------------------------------
 echo "[3] Native form-cli + model assets"
 NATIVE_CLI=""
-if [[ -x "$ROOT/form/form-cli" ]]; then
-    NATIVE_CLI="$ROOT/form/form-cli"
-elif [[ "$(uname -s)-$(uname -m)" == "Darwin-arm64" && -x "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64" ]]; then
-    NATIVE_CLI="$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64"
+if [[ -x "$ROOT/form/form/form-cli" ]]; then
+    NATIVE_CLI="$ROOT/form/form/form-cli"
+elif [[ "$(uname -s)-$(uname -m)" == "Darwin-arm64" && -x "$ROOT/form/form/form-stdlib/bootstrap/form-cli-darwin-arm64" ]]; then
+    NATIVE_CLI="$ROOT/form/form/form-stdlib/bootstrap/form-cli-darwin-arm64"
 fi
 if [[ -n "$NATIVE_CLI" ]]; then
     ver="$(printf 'version\nquit\n' | "$NATIVE_CLI" 2>/dev/null | head -1)"
@@ -93,7 +93,7 @@ fi
 
 # 4. Recipes + specs on disk ---------------------------------------------------
 echo "[4] Body on disk (recipes + specs)"
-FK=$(find "$ROOT/form/form-stdlib" -name '*.fk' 2>/dev/null | grep -c . | tr -d ' ')
+FK=$(find "$ROOT/form/form/form-stdlib" -name '*.fk' 2>/dev/null | grep -c . | tr -d ' ')
 SPECS=$(find "$ROOT/specs" -name '*.md' 2>/dev/null | grep -c . | tr -d ' ')
 [[ "$FK" -gt 0 ]] && ok "$FK Form stdlib recipes present" || gap "no Form recipes found"
 [[ "$SPECS" -gt 0 ]] && ok "$SPECS specs present (idea→form-spec source)" || gap "no specs found"

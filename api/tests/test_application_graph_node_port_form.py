@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PORT_PATH = ROOT / "form" / "form-stdlib" / "application-graph-node-port.fk"
-BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "application-graph-node-port-band.fk"
+PORT_PATH = ROOT / "form" / "form" / "form-stdlib" / "application-graph-node-port.fk"
+BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "application-graph-node-port-band.fk"
 GRAPH_SERVICE_PATH = ROOT / "api" / "app" / "services" / "graph_service.py"
 GRAPH_MODEL_PATH = ROOT / "api" / "app" / "models" / "graph.py"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
@@ -61,7 +61,7 @@ def test_application_graph_band_executes():
             "form-stdlib/application-graph-node-port.fk",
             "form-stdlib/tests/application-graph-node-port-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -86,7 +86,7 @@ def test_application_graph_sql_carries_revision_and_edge_cleanup_semantics():
 
 def test_idea_and_spec_forms_name_application_graph_carrier():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node" in text
+        assert "form/form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node" in text
         assert "application-graph-node-port-band.fk" in text
         assert "graph_nodes, graph_node_revisions, and graph_edges" in text
         assert "method-specific" in text

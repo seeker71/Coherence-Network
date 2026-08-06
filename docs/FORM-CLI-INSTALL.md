@@ -45,7 +45,7 @@ re-runnable. It will:
 
 ```bash
 git clone --recurse-submodules https://github.com/seeker71/Coherence-Network.git ~/coherence-network
-# Use the prebuilt fkwu/form-cli from the release, or form/build-form-cli.sh
+# Use the prebuilt fkwu/form-cli from the release, or form/form/build-form-cli.sh
 # (c-bootstrap emit — no Go bin-go required for the receipt path)
 brew install ollama && ollama pull llama3.2:3b && ollama pull nomic-embed-text
 ln -s ~/coherence-network/bin/form-cli ~/.local/bin/form-cli
@@ -77,7 +77,7 @@ form-cli preflight                                              # confirm you ca
 ## Requirements
 
 - macOS on Apple silicon (arm64). The prebuilt `fkwu`/`form-cli` is `arm64`; other
-  platforms use the release binary or `form/build-form-cli.sh` (c-bootstrap emit).
+  platforms use the release binary or `form/form/build-form-cli.sh` (c-bootstrap emit).
 - For offline answers: [ollama](https://ollama.com) + the two pulled models. Without
   them the kernel, recipes, gaps, and `eval` still work; `ask` needs the models.
 

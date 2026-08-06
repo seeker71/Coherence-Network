@@ -18,7 +18,7 @@ source:
     symbols: []
   - file: seedbank/form-question-kernels/go/question_kernel.go
     symbols: []
-  - file: form/form-kernel-ts/src/conformance.ts
+  - file: form/form/form-kernel-ts/src/conformance.ts
     symbols: []
   - file: docs/coherence-substrate/kernel-conformance/agent-question-effects.json
     symbols: [form-question-effects]
@@ -167,7 +167,7 @@ Rust, Go, and TypeScript are implemented for this vector only. They parse the qu
 - `seedbank/form-question-kernels/rust/Cargo.toml` - Rust question-effect runner manifest.
 - `seedbank/form-question-kernels/rust/src/main.rs` - Rust question-effect runner.
 - `seedbank/form-question-kernels/go/question_kernel.go` - Go question-effect runner.
-- `form/form-kernel-ts/src/conformance.ts` - TypeScript question-effect runner.
+- `form/form/form-kernel-ts/src/conformance.ts` - TypeScript question-effect runner.
 - `docs/coherence-substrate/form-language.md` - document the Form-visible question effect.
 - `docs/coherence-substrate/kernel-conformance/agent-question-effects.json` - define the Rust/Go/TypeScript/Python runner contract.
 - `docs/coherence-substrate/kernel-conformance/README.md` - document the runner contract.
@@ -226,7 +226,7 @@ files_allowed:
   - seedbank/form-question-kernels/rust/Cargo.toml
   - seedbank/form-question-kernels/rust/src/main.rs
   - seedbank/form-question-kernels/go/question_kernel.go
-  - form/form-kernel-ts/src/conformance.ts
+  - form/form/form-kernel-ts/src/conformance.ts
   - docs/coherence-substrate/form-language.md
   - docs/coherence-substrate/kernel-conformance/README.md
   - docs/coherence-substrate/kernel-conformance/agent-question-effects.json

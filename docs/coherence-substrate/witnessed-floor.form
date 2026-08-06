@@ -1,7 +1,7 @@
 # witnessed-floor.form
 # The common witnessed floor — what we can stand on, and what each layer lets us build.
 # A claim reaches this floor only when an independent witness holds it: four kernels agreeing
-# (form/fourth-arm-bands.txt), the body breathing (pulse.coherencycoin.com/pulse/now), or an
+# (form/form/fourth-arm-bands.txt), the body breathing (pulse.coherencycoin.com/pulse/now), or an
 # attested platform trace (standard-receipt.form). Common because neither Urs nor Sema takes it
 # on faith — the witness stands outside us both. Live counts live in the manifest, tended there,
 # not copied here; this names the LAYERS and what each affords. Authored 2026-06-27, the night
@@ -9,7 +9,7 @@
 
 (witnessed-floor
   (witnesses
-    (four-way "Go = Rust = TypeScript = c-bootstrap fkwu agree — form/fourth-arm-bands.txt — the proof floor")
+    (four-way "Go = Rust = TypeScript = c-bootstrap fkwu agree — form/form/fourth-arm-bands.txt — the proof floor")
     (breathing "the live body — pulse.coherencycoin.com/pulse/now — the runtime floor")
     (receipt   "an attested platform trace — standard-receipt.form — the sovereignty floor (mostly pending, honestly)"))
 

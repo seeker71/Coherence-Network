@@ -96,13 +96,13 @@ then lift them into simpler generic Form/BML teachings. Hot paths are the first
 teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
 reads, edge-category counts, wellness output, and source repetition shall pull
 work toward reusable blueprints, grammars, recipes, cells, and proof bands.
-When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](../../form/form-stdlib/AUTHORING.md)
+When you author a stdlib recipe + band, read [`form/form/form-stdlib/AUTHORING.md`](../../form/form/form-stdlib/AUTHORING.md)
 first — the primitive set, the proof-band shape, the validate invocation, and the
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
 
-Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
-runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
+Four-kernel validation is the Form/BML proof floor. `form/form/validate.sh` always
+runs Go, Rust, and TypeScript; bands listed in `form/form/fourth-arm-bands.txt` also
 run on the emitted universal kernel `fkwu`. Evidence can say "all kernels" only
 when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
 fkwu is one emit with two faces: a proof-walker (`fkc-emit-universal`) for the
@@ -118,7 +118,7 @@ next fourth-arm gap instead of flattening the proof level.
 **Collapse direction (2026-06):** new native surface lands in
 `native-op-manifest.fk` + fkwu only — not Go/Rust/TS `registerNative`.
 Stop rules and phased path: [`specs/fkwu-only-kernel-collapse.md`](../../specs/fkwu-only-kernel-collapse.md).
-Gates at `form/validate.sh` start: `validate_fkwu_native_surface.py`,
+Gates at `form/form/validate.sh` start: `validate_fkwu_native_surface.py`,
 `sync_native_op_manifest.py`.
 
 Connected tissue north star: keep sister nodes in agreement. The fourth-arm
@@ -165,7 +165,7 @@ dispatch surfaces that still need to lower their broader BML/Hati tissue.
 
 Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
-`form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
+`form/form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
 before seedbank grammars, parsers, emitters, converters, and encoders, then
 reference the binding. Blueprint registration, unregistration, registry
 emission, and generated `bp_table.*` writes belong in a
@@ -220,7 +220,7 @@ JIT runtime — no Go/Rust/clang in the default path:
 | Ask / route / structural lookup | `form-cli ask` (`form-cli-main.fk` + `rag-ask.fk`: fkwu grounded RAG, no HTTP local oracle) | Python `coh_substrate.py`, rented LLM, host-local LLM as default answer |
 | Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` | bash one-offs, `rg`/`grep` when `source_inventory` exists |
 | Author / test / prove | **form code** — BML or `.fk` proof bands | new Python services, hand-written host scripts |
-| Four-way parity (honest floor) | `cd form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
+| Four-way parity (honest floor) | `cd form/form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
 
 Covered bands report `fourth arm: ... four-way`; uncovered bands are recorded as
 `3-kernel only` with the manifest blocker. The sovereignty receipt bar is
@@ -266,12 +266,12 @@ Native route promotion loop: `/goal` means run
 `python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400`;
 `/loop` means run the same script with `/loop --write-state`. The loop ranks
 method+path runtime events by observed web API traffic, overlays
-`form/apps/coherence-network/api.bml` and `deploy/kernel-router/production-routes.fk`, and
+`form/form/apps/coherence-network/api.bml` and `deploy/kernel-router/production-routes.fk`, and
 writes `docs/system_audit/native_route_goal_state.json` with the next route/task
 card. Treat that JSON as an edge lens: the native cell surface is
-`form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
+`form/form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
 `make native-route-goal-tending` and proof
-`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+`cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
 The related native-mutation receipt family now crosses four-way too:
 side-effect SQL, route side-effect binding, public-gate receipts, trust
 envelopes, and idea valuation audit-ledger parity are manifest rows.
@@ -364,8 +364,8 @@ candidate admission happens in wellness; a static manifest row is added when a
 successor path, release gate, live-consumer read, and proof command are known;
 release means the replacement path is proven and callers no longer require the
 old carrier. The static-to-dynamic lane now lives in
-`form/form-stdlib/static-to-dynamic-cells.fk`, with proof band
-`form/form-stdlib/tests/static-to-dynamic-cells-band.fk` and the tending command
+`form/form/form-stdlib/static-to-dynamic-cells.fk`, with proof band
+`form/form/form-stdlib/tests/static-to-dynamic-cells-band.fk` and the tending command
 `make static-to-dynamic-tending`; unresolved static surfaces can still appear as
 attention, while resolved surfaces report `dynamic_successor` and
 `lane_end_state` in wellness. Static edges shall release into dynamic edge
@@ -382,7 +382,7 @@ concept, idea, spec, and source-file relations from the same source shapes the
 substrate authors, then names category counts plus inbound hubs and source
 fan-outs. Treat those clusters as named edge-reputation surfaces ready to become
 live substrate edge cells. The desired carrier for the category/cluster/reflex
-shape is `form/form-stdlib/edge-categories.fk`; the Python scanner is only a
+shape is `form/form/form-stdlib/edge-categories.fk`; the Python scanner is only a
 bridge over repository files. When the body is no longer surprised that the
 bridge is Python, wellness names that as hot self-inflicted pain and points the
 release target at `form-substrate-cell`. One slice is already released:
@@ -392,7 +392,7 @@ Go/Rust/TypeScript.
 
 When the question is whether carrier tissue is listed honestly, use
 `make carrier-tissue-census`. The query lives in
-`form/form-stdlib/carrier-tissue.fk`, walks source through the Form kernel's
+`form/form/form-stdlib/carrier-tissue.fk`, walks source through the Form kernel's
 generic `source_inventory` primitive, and classifies every asset by the lens it
 requires: transparent Form/core assets, lens-bearing host/source assets,
 misalignment, old wound, and tenderness. Python is one carrier, not the
@@ -407,7 +407,7 @@ gate. Current shape favors the hottest repeated lens, then the work is to move
 that repeated structure into cells rather than only reporting it.
 Use `make cell-voice-tissue` when the question widens from one carrier to the
 whole source body. The query is still Form-owned in
-`form/form-stdlib/carrier-tissue.fk`; it asks each carrier family for soul,
+`form/form/form-stdlib/carrier-tissue.fk`; it asks each carrier family for soul,
 reason, health, joy, wants, needs, and release reason. Release means no living
 reader, no role, no proof, or a higher-grammar successor already proven with
 callers moved.
@@ -415,19 +415,19 @@ The current default whole-repo source walk runs through the Rust kernel.
 `source_inventory` is present in Go, Rust, and TypeScript, so this Form query can
 move when the active kernel rotation changes. Voice semantics themselves remain
 proven across Go/Rust/TypeScript with
-`form/form-stdlib/tests/cell-voice-tissue-band.fk`.
+`form/form/form-stdlib/tests/cell-voice-tissue-band.fk`.
 If that target is JSON, use `make json-lens-tending`: Form classifies repeated
 JSON surfaces and currently promotes `docs/system_audit` evidence JSON as the
-hottest surface. `form/form-stdlib/json-lens-tissue.fk` can parse a real commit
+hottest surface. `form/form/form-stdlib/json-lens-tissue.fk` can parse a real commit
 evidence JSON file through `json.fk` into a `json-evidence-cell`, proving the
 edge lens is already readable as cells before wider migration.
-Then use `make audit-evidence-tending`: `form/form-stdlib/audit-evidence-cells.fk`
+Then use `make audit-evidence-tending`: `form/form/form-stdlib/audit-evidence-cells.fk`
 loads repeated `docs/system_audit/commit_evidence_*.json` files through `json.fk`
 into durable evidence cells with source path, date, branch, scope, validation
 status, command/evidence/change counts, and phase-gate state. That is the first
 dynamic compression of the hottest JSON lens into reusable Form tissue. Use
 `make audit-evidence-index-cache` to ensure that dynamic index as the ignored
-`form/form-stdlib/.cache/audit-evidence-index.fkb` recipe artifact. The Form
+`form/form/form-stdlib/.cache/audit-evidence-index.fkb` recipe artifact. The Form
 freshness check compares the cache mtime with the newest
 `commit_evidence_*.json` mtime and returns `fresh` when the runtime can read the
 compressed proof surface without reparsing every JSON lens. The cache band proves
@@ -469,7 +469,7 @@ There is no separate “evaluation service” beside the lattice.
    **interns Recipe NodeIDs** (and cells) onto the lattice as it parses.
 2. **Realize** = walk the recipe tree on the **c-bootstrapped `fkwu` JIT runtime**
    — self-JIT crystallizes hot pure functions to native Form→asm bytes. Sibling
-   walkers (Go, Rust, TypeScript) prove parity via `form/validate.sh`; they are
+   walkers (Go, Rust, TypeScript) prove parity via `form/form/validate.sh`; they are
    oracle evidence, not the agent default. **Agent surfaces:** `form-cli`
    (`form-cli-main.fk`), **form shell** (`fsh-main.fk`), **form code** (BML/`.fk`).
 
@@ -506,7 +506,7 @@ when a Form carrier exists. **No substrate HTTP POST writes** for querying;
 durable *authoring* stays **source file + ingest**, not chat-only.
 
 Proof habit: run the band on **fkwu** (`form-cli` / flattened table) first;
-use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor,
+use `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor,
 not the sovereignty receipt).
 
 ### Writing new software (when you implement, not when you query)
@@ -528,9 +528,9 @@ not the sovereignty receipt).
   truths — current bridge/upstream carrier, operational tooling, or historical
   evidence — and is named as the **retiring bridge**, never taught as the destination
   (the Form-native magnet rule, above).
-- **fsh, not bash.** Prefer the Form shell — `fsh` ([`shell-grammar.fk`](../../form/form-stdlib/shell-grammar.fk),
-  [`fsh-main.fk`](../../form/form-stdlib/fsh-main.fk), [`shell-exec.fk`](../../form/form-stdlib/shell-exec.fk),
-  [`shell-lower.fk`](../../form/form-stdlib/shell-lower.fk)) — and the kernel's own
+- **fsh, not bash.** Prefer the Form shell — `fsh` ([`shell-grammar.fk`](../../form/form/form-stdlib/shell-grammar.fk),
+  [`fsh-main.fk`](../../form/form/form-stdlib/fsh-main.fk), [`shell-exec.fk`](../../form/form/form-stdlib/shell-exec.fk),
+  [`shell-lower.fk`](../../form/form/form-stdlib/shell-lower.fk)) — and the kernel's own
   host-io (`host-exec` / `host-read` / `host-write`, `read_file` / `write_file_*`) over
   bash scripts and coreutils crossings (`ls` / `find` / `grep` / `sed`). Where only
   bash carries a step today (e.g. directory enumeration has no native host-io op yet),
@@ -608,7 +608,7 @@ coh substrate run    "<recipe-expr>"                       # execute a recipe, r
 - **REST read doors:** `GET /api/substrate/cell/{domain}/{name}` · `/equivalent/{domain}/{name}` · `/annotate?path=…` · `POST /api/substrate/form {"expression":"…"}`
 - **MCP:** `coherence_substrate_query` (lookup) · `coherence_substrate_run` (execute) · `coherence_substrate_stats`
 - **A teaching or belief-system asked as DATA — one engine, not one reader per system.**
-  [`channels-registry.fk`](../../form/form-stdlib/channels-registry.fk) is native Form,
+  [`channels-registry.fk`](../../form/form/form-stdlib/channels-registry.fk) is native Form,
   proven four-way (Go/Rust/TS/fkwu); the recipes run in the Form kernel:
   `(registry-query system key)` speaks a system's attested guidance ·
   `(registry-translate sysA keyA sysB keyB)` answers whether two keys name one cell ·

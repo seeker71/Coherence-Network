@@ -25,8 +25,12 @@ _ENDPOINT_RECIPES = (
     "endpoint_breath_balance_demo.fk",
     "endpoint_softmax_weights_demo.fk",
 )
-_RECIPE_DIR_IN_KERNEL = "form-kernel-ts/seedbank/python-adapter/examples"
+_RECIPE_DIR_IN_KERNEL = "form/form-kernel-ts/seedbank/python-adapter/examples"
 _RECIPE_DIR_REL = f"form/{_RECIPE_DIR_IN_KERNEL}"
+# The image COPY destination stays flat (matches Dockerfile.api's own
+# convention: nested source, flat /app path) — independent of where the
+# kernel submodule nests its source tree.
+_RECIPE_DIR_DEST_REL = "form/form-kernel-ts/seedbank/python-adapter/examples"
 _APP_RECIPE_DIR_REL = "api/app/form_recipes"
 _APP_ENDPOINT_RECIPES = (
     "endpoint_gathering_head_value.fk",
@@ -142,6 +146,6 @@ def test_dockerfile_copies_endpoint_recipes_to_file_backed_recipe_dir() -> None:
         )
 
     # The COPY destination is the explicit file-backed image path used by the bridge.
-    assert f"./{_RECIPE_DIR_REL}/" in dockerfile, (
+    assert f"./{_RECIPE_DIR_DEST_REL}/" in dockerfile, (
         "Dockerfile.api COPY destination must be the recipe dir under /app"
     )

@@ -101,37 +101,37 @@ circulation:
 	@$(PYTHON) scripts/sense_subscription_circulation.py
 
 carrier-tissue-census:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk
 
 carrier-vitality:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-vitality.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-vitality.fk
 
 carrier-tending:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tending.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tending.fk
 
 cell-voice-tissue:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/cell-voice-tissue.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/cell-voice-tissue.fk
 
 json-lens-tending:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/json-lens-tissue.fk form-stdlib/queries/json-lens-tending.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/json-lens-tissue.fk form-stdlib/queries/json-lens-tending.fk
 
 audit-evidence-tending:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-tending.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-tending.fk
 
 audit-evidence-index-cache:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-index-cache.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-index-cache.fk
 
 native-route-goal-tending:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/queries/native-route-goal-tending.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/queries/native-route-goal-tending.fk
 
 static-to-dynamic-tending:
-	@cd form/form-kernel-rust && cargo build --release --quiet
-	@cd form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/queries/static-to-dynamic-tending.fk
+	@cd form/form/form-kernel-rust && cargo build --release --quiet
+	@cd form/form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/queries/static-to-dynamic-tending.fk

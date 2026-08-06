@@ -2,11 +2,11 @@
 """Scan Form (.fk) sources for `make_nodeid` Blueprint literals and measure
 their legibility against the central registry.
 
-The registry doc (form/user-blueprint-registry.md) named the problem:
+The registry doc (form/form/user-blueprint-registry.md) named the problem:
 hundreds of opaque `(make_nodeid 1 2 99 NNNN)` numbers, each often
 re-declared under a different local name in a different file. This scanner
 is the proprioception tool that doc calls for. It reads the single source
-of truth — form/form-stdlib/form-ontology.json (categories + primitives +
+of truth — form/form/form-stdlib/form-ontology.json (categories + primitives +
 user_blueprints) — and tells the body where Form code still names a shape
 by raw number when a registered name exists, where one number wears many
 names (synonyms), and where one name points at different numbers (drift).
@@ -31,11 +31,11 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-FORM_ROOT = ROOT / "form" / "form-stdlib"
+FORM_ROOT = ROOT / "form" / "form" / "form-stdlib"
 ONTOLOGY = FORM_ROOT / "form-ontology.json"
 # User-space (type-99) registry — the single source of truth for shapes the
 # kernel does not dispatch on. Code-derived, curated, scanner-verified. It
-# replaces the hand-maintained markdown table in form/user-blueprint-registry.md
+# replaces the hand-maintained markdown table in form/form/user-blueprint-registry.md
 # (which drifted: that doc said 1870=ARRIVAL while code says 1870=UUID).
 REGISTRY = FORM_ROOT / "blueprint-registry.json"
 
