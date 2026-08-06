@@ -45,7 +45,7 @@ ref_tanh=block(gelu_tanh); ref_erf=block(gelu_erf)
 def f(a):
     a=np.asarray(a)
     return "(list "+" ".join((repr(float(z)) for z in a) if a.ndim==1 else (f(r) for r in a))+")"
-STD=f"{ROOT}/form/form-stdlib"
+STD=f"{ROOT}/form/form/form-stdlib"
 pre="".join(open(f"{STD}/{m}.fk").read() for m in ["trig","transformer-numerics","transformer-block","transformer-mh"])
 prog=pre+f"""
 (do
@@ -59,7 +59,7 @@ prog=pre+f"""
 """
 pf=f"/tmp/wb_real_{DM}.fk"; open(pf,"w").write(prog)
 sz=os.path.getsize(pf)/1e6
-t0=time.time(); o=subprocess.run([f"{ROOT}/form/form-kernel-go/bin-go",pf],capture_output=True,text=True); dt=time.time()-t0
+t0=time.time(); o=subprocess.run([f"{ROOT}/form/form/form-kernel-go/bin-go",pf],capture_output=True,text=True); dt=time.time()-t0
 line=[l for l in o.stdout.splitlines() if l.startswith("[")]
 if not line: print("KERNEL ERR\n",o.stdout[-600:],o.stderr[-600:]); sys.exit(1)
 got=np.array(json.loads(line[0]))

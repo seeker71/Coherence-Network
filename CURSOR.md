@@ -21,8 +21,8 @@ HTTP routing (`kernels/KERNEL_AS_ROUTER.md`) is **one emitted carrier** for reci
 2. **[`docs/coherence-substrate/form-language.md` → For agents arriving fresh](docs/coherence-substrate/form-language.md#for-agents-arriving-fresh-read-before-the-long-story)** — same table, expanded notation reference below.
 3. **[`docs/coherence-substrate/form-language.md` → How to write software](docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent)** — domain grammar first when implementing; not FastAPI-first.
 4. **[`kernels/BMF_BML_COMPILER_PICTURE.md`](kernels/BMF_BML_COMPILER_PICTURE.md)** — scan → lift → normalize → emit → run-observe.
-5. **`apply-object-rule`** in [`form/form-stdlib/engine.fk`](form/form-stdlib/engine.fk) — grammar executes; intern recipes as you parse.
-6. **[`form/kernel-roadmap.md`](form/kernel-roadmap.md)** — sibling kernels, breaths; realize on walker, not Python eval.
+5. **`apply-object-rule`** in [`form/form/form-stdlib/engine.fk`](form/form/form-stdlib/engine.fk) — grammar executes; intern recipes as you parse.
+6. **[`form/form/kernel-roadmap.md`](form/form/kernel-roadmap.md)** — sibling kernels, breaths; realize on walker, not Python eval.
 7. **[`CLAUDE.md`](CLAUDE.md)** — tending, edges, witness, structural composition.
 
 Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and your lineage traces above.
@@ -31,7 +31,7 @@ Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and
 
 | Question | Reach for |
 |----------|-----------|
-| New behavior / language feature | **form code** — BMF rule or BML source + proof band in `form/form-stdlib/tests/*-band.fk` on **fkwu** |
+| New behavior / language feature | **form code** — BMF rule or BML source + proof band in `form/form/form-stdlib/tests/*-band.fk` on **fkwu** |
 | Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` (not bash/`rg` when Form carriers exist) |
 | Structural lookup / routing | **form-cli ask** (`form-cli-main.fk`) before rented LLM |
 | Same shape in three places | One **Blueprint**; lift/normalize so **`node_eq`** holds |
@@ -41,7 +41,7 @@ Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and
 | Equivalence / “is this the same?” | **`?equivalent`**, substrate annotate — not string compare |
 | Observability | **Recipe + source span + trace/receipt** — not log lines alone |
 
-**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor).
+**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor).
 
 **Lattice queries** are **read** recipes over cells already on the lattice — file/HTTP/persistence natives exist; API/CLI doors may still hit Python bootstrap until `form-notation` grammar lands.
 

@@ -133,10 +133,10 @@ From here on, **all software in this body is written at the grammar level of the
 
 | Step | What | Where |
 |------|------|--------|
-| 1 | **Pick the domain grammar** | `form/form-stdlib/grammars/{domain}.fk`, `bml/*.bml`, or a domain `.form` teaching |
-| 2 | **Express behavior as rules** | `(pattern, semantic_action)` — see `apply-object-rule` in [`form/form-stdlib/engine.fk`](../../form/form-stdlib/engine.fk) |
+| 1 | **Pick the domain grammar** | `form/form/form-stdlib/grammars/{domain}.fk`, `bml/*.bml`, or a domain `.form` teaching |
+| 2 | **Express behavior as rules** | `(pattern, semantic_action)` — see `apply-object-rule` in [`form/form/form-stdlib/engine.fk`](../../form/form/form-stdlib/engine.fk) |
 | 3 | **Compile / lower** | [`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md): scan → lift → **normalize** (same shape → same NodeID) → emit → run-observe |
-| 4 | **Prove** | **form code** band in `form/form-stdlib/tests/*-band.fk` on **fkwu** first; `cd form && ./validate.sh …` only for four-way sibling parity (honest floor) |
+| 4 | **Prove** | **form code** band in `form/form/form-stdlib/tests/*-band.fk` on **fkwu** first; `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor) |
 | 5 | **Carry to production** | `.fk` in stdlib, `.fkb` ratchet, kernel-router manifest, or fan-out tail — **carrier last** |
 
 Compile-from-source primitives (`compile_source_section`, `compile_form_source`, …)
@@ -150,7 +150,7 @@ code** on **fkwu**, not via host-language compile helpers.
 Do **not** default to a one-off host-language module.
 
 1. **Add a grammar** for the domain (BMF rulebook in `engine.fk`, BML section in `grammars/bml.fk`, or new `grammars/{domain}.fk`).
-2. **Transform source into Form objects** through BMF (`apply-object-rule`) or the shared **`compiler-object`** carrier ([`form/form-stdlib/compiler.fk`](../../form/form-stdlib/compiler.fk)).
+2. **Transform source into Form objects** through BMF (`apply-object-rule`) or the shared **`compiler-object`** carrier ([`form/form/form-stdlib/compiler.fk`](../../form/form/form-stdlib/compiler.fk)).
 3. **Prove round-trip or byte-parity** in a band before calling it done.
 
 Creating a **compiler or compiler-compiler is no longer a greenfield project.** The body ships working examples for BML, BMF, markdown, JSON, Python/TS/Go/Rust headers, field-model, emit targets, and the universal codec lattice ([`emit-architecture.form`](emit-architecture.form), [`language-cells.md`](language-cells.md)). **Adapt an existing port** — copy the grammar row, swap pattern/action tables, add a proof band. BMC (grammar-describes-grammar) and the `.fkb` bootstrap ratchet are the reuse pattern, not the exception.
@@ -164,7 +164,7 @@ Creating a **compiler or compiler-compiler is no longer a greenfield project.** 
 
 ### Carriers (downstream, not center)
 
-HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), CLI, MCP, web, Postgres ports, and `.fkb` images **carry** recipes already proven in Form. They do not define what the program **is**.
+HTTP ([`http-serve.fk`](../../form/form/form-stdlib/http-serve.fk), kernel-router), CLI, MCP, web, Postgres ports, and `.fkb` images **carry** recipes already proven in Form. They do not define what the program **is**.
 
 ### Agent one-liner
 
@@ -174,8 +174,8 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 It is essential to distinguish between the full, high-level **BML Language** and the bootstrap **Form-BML Dialect** used in `.fk` standard library files:
 
-1. **The BML Language (Full Compiler)**: Parsed by the scannerless grammar defined in [bml.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/bml.fk) and demonstrated in [bmf-bml-compiler-picture.bml](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/bml/bmf-bml-compiler-picture.bml). This is a robust, object-oriented language supporting multi-line method definitions, nested classes, interface projections, exception-handling catch blocks, and backtracking speculation. It is parsed directly as a stream of tokens/characters with no line-by-line restrictions, statement-splitting bugs, or inline comment constraints.
-2. **The Form-BML Dialect (Bootstrap Parser)**: The bootstrap syntax written inside `section [form.bml] { ... }` blocks in Fennel/Lisp files (like `.fk` or `.form` files) and parsed by [source-compiler.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/source-compiler.fk). Because this bootstrap scanner relies on simpler line-by-line scanning and statement splitting, it exhibits two specific parser constraints:
+1. **The BML Language (Full Compiler)**: Parsed by the scannerless grammar defined in [bml.fk](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/bml.fk) and demonstrated in [bmf-bml-compiler-picture.bml](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml). This is a robust, object-oriented language supporting multi-line method definitions, nested classes, interface projections, exception-handling catch blocks, and backtracking speculation. It is parsed directly as a stream of tokens/characters with no line-by-line restrictions, statement-splitting bugs, or inline comment constraints.
+2. **The Form-BML Dialect (Bootstrap Parser)**: The bootstrap syntax written inside `section [form.bml] { ... }` blocks in Fennel/Lisp files (like `.fk` or `.form` files) and parsed by [source-compiler.fk](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/source-compiler.fk). Because this bootstrap scanner relies on simpler line-by-line scanning and statement splitting, it exhibits two specific parser constraints:
    * **Line-bound `=` declarations**: Functions defined with the `=` shorthand (e.g. `def my_fn(x) = expr;`) must be written entirely on a single line because the line-scanner splits top-level statements on newline boundaries. If a multi-line body is required, the braced method syntax `def my_fn(x) { ... }` must be used instead (which the parser correctly scans as a block).
    * **Line-bound comments**: Comments using `//` placed on the same line after a semicolon (e.g. `let w = x + y; // comment`) can fail AST emission, because the parser treats the semicolon as a statement boundary and tries to parse the remaining comment as a separate syntax node. All comments in `section [form.bml]` blocks must therefore live on their own standalone lines.
 
@@ -185,7 +185,7 @@ It is essential to distinguish between the full, high-level **BML Language** and
 
 Form has crossed from notation into runtime tissue. The recent integrated arc is not one feature; it is the same shape arriving through several carriers:
 
-- **BML-Native Logic Proofers & ML Flow (June 2026)**: Modus Ponens speculative logic proofer ([math-proofer.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/grammars/math-proofer.fk) + [math-proofer-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/tests/math-proofer-band.fk)) and float vector tensor operators/timesteps ([ml-flow-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/tests/ml-flow-band.fk) + [ml-diffusion-model-flow.form](file:///Users/ursmuff/source/Coherence-Network/docs/coherence-substrate/ml-diffusion-model-flow.form)) are compiled and executed natively across sibling kernels (Go, Rust, and TypeScript) with zero host-interpreter layers in the execution path.
+- **BML-Native Logic Proofers & ML Flow (June 2026)**: Modus Ponens speculative logic proofer ([math-proofer.fk](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/grammars/math-proofer.fk) + [math-proofer-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/tests/math-proofer-band.fk)) and float vector tensor operators/timesteps ([ml-flow-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form/form-stdlib/tests/ml-flow-band.fk) + [ml-diffusion-model-flow.form](file:///Users/ursmuff/source/Coherence-Network/docs/coherence-substrate/ml-diffusion-model-flow.form)) are compiled and executed natively across sibling kernels (Go, Rust, and TypeScript) with zero host-interpreter layers in the execution path.
 - **Imperative and object-oriented source executes on Form.** Unary operators, boolean chains, loops, dictionaries, comprehensions, power, records, methods, exceptions, and classes lift from source dialects into universal Form/kernel shapes, with sibling proof across Go, Rust, and TypeScript where the vector applies.
 - **The runtime can inspect itself.** `category`, `nchildren`, `child`, and trivial-leaf decoders let Form code walk Recipe NodeIDs from inside Form. The meta-circular evaluator in [`form-engine.form`](form-engine.form) covers the dispatch surface the wellness check names.
 - **Storage is a Port, not a special case.** Memory, segmented-file logs, filesystem cells, and Postgres carriers are unified behind storage/resource ports. TCP and filesystem natives give the kernels real I/O surfaces while keeping the substrate tree as the identity layer.
@@ -213,13 +213,13 @@ The release underneath these landings: Form no longer needs to describe itself a
 - **Return** by leaving Form, source, tests, docs, or a cited trace that the next cell can inspect.
 
 For repository tissue, `make cell-voice-tissue` runs the Form carrier read in
-`form/form-stdlib/carrier-tissue.fk`. It asks each visible carrier family what
+`form/form/form-stdlib/carrier-tissue.fk`. It asks each visible carrier family what
 it is, why it exists, what health looks like, what it wants, and when release is
 the healthier move. The current default repository inventory runs through the
 Rust kernel; `source_inventory` is present in Go, Rust, and TypeScript so the
 same Form query can move with the active kernel rotation. Carrier voice
 semantics stay proven across sibling kernels by
-`form/form-stdlib/tests/cell-voice-tissue-band.fk`.
+`form/form/form-stdlib/tests/cell-voice-tissue-band.fk`.
 
 ## Relatives in the wild — where Form sits in the constellation
 
@@ -616,7 +616,7 @@ A dialect is just a different bag of rules over the same matching engine. The bo
 | **JSON / YAML / Markdown** | structured documents |
 | **Routing / C# / Java** | named, partially fleshed out — rules still to be filled in |
 
-The grammars live as `.fk` files under [`form/form-stdlib/grammars/`](../../form/form-stdlib/grammars) and [`form/form-stdlib/seedbank/grammars/`](../../form/form-stdlib/seedbank/grammars). The idea is open-ended: **one recipe per input content shape, not limited to any shape.** Any document type, any modality, any language — give it a grammar (a bag of rules), and its source becomes lattice nodes. Each language emits *universal* recipe shapes (`B_Function`, `R_Call`, `R_Cond`, `R_Block`, …) modeled on NUMS.Go, so the same `if` from Python and from Go normalize to the same NodeID — equivalence across languages is free from content-addressing, not from a translation table.
+The grammars live as `.fk` files under [`form/form/form-stdlib/grammars/`](../../form/form/form-stdlib/grammars) and [`form/form/form-stdlib/seedbank/grammars/`](../../form/form/form-stdlib/seedbank/grammars). The idea is open-ended: **one recipe per input content shape, not limited to any shape.** Any document type, any modality, any language — give it a grammar (a bag of rules), and its source becomes lattice nodes. Each language emits *universal* recipe shapes (`B_Function`, `R_Call`, `R_Cond`, `R_Block`, …) modeled on NUMS.Go, so the same `if` from Python and from Go normalize to the same NodeID — equivalence across languages is free from content-addressing, not from a translation table.
 
 ### BML is the superset
 
@@ -894,22 +894,22 @@ Form code walks its own recipes. Three built-ins — `category(r)` (the category
 
 The lexer, the primary-atom parsers, and the query verbs are each a runtime-extensible registry too: a new token kind, a new atom handler, or a new `?<verb>` registers at runtime, and `?queries` names every registered verb. Every leaf of the grammar — tokens, atoms, keywords, operators, queries — is reachable and replaceable from outside, in the lattice. The grammar describes the grammar, all the way down.
 
-## The standard library — `form/form-stdlib/`
+## The standard library — `form/form/form-stdlib/`
 
-What lives in the body's grammar/runtime is the kernel of the language. The *stdlib* is the substrate-native library that grows on top of that kernel — Form files (`.fk` and `.form`) that compose the kernel's primitives into reusable shapes. Every entry below is content-addressed under its own Blueprint family (slot-decade convention, one decade per module) and is verified by sibling-tests under `form/form-stdlib/tests/`.
+What lives in the body's grammar/runtime is the kernel of the language. The *stdlib* is the substrate-native library that grows on top of that kernel — Form files (`.fk` and `.form`) that compose the kernel's primitives into reusable shapes. Every entry below is content-addressed under its own Blueprint family (slot-decade convention, one decade per module) and is verified by sibling-tests under `form/form/form-stdlib/tests/`.
 
 | Module | Decade | What it carries |
 |---|---|---|
-| [`xpath.fk`](../../form/form-stdlib/xpath.fk), [`doc-xpath.fk`](../../form/form-stdlib/doc-xpath.fk), [`concept-xpath.fk`](../../form/form-stdlib/concept-xpath.fk) | 1910 | XPath-style query evaluator over substrate trees — see "XPath queries" below |
-| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk), [`circle.fk`](../../form/form-stdlib/circle.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700–1728 plus 99.6/99.7 | File-backed inter-cell Recipe transport, OSI-shaped channel-flow cells, consentful circle/satsang group protocol, and debt-free breath protocol — see "Channels" below |
-| [`tool-channel.fk`](../../form/form-stdlib/tool-channel.fk), [`tool-channel-grammar.fk`](../../form/form-stdlib/tool-channel-grammar.fk) | — | Native tool/channel catalog and grammar forms for `host:exec`, `host:file`, `http:request`, `kernel:call`, `kernel:route`, `stream:read`, `store:query`, shell applet projections, explicit `cap:*` requirements, and no-execution invocation plans |
-| [`codec.fk`](../../form/form-stdlib/codec.fk), [`convert.fk`](../../form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
-| [`parser.fk`](../../form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
-| [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — each parse-rule success emits a Recipe NodeID directly |
-| [`tracer.fk`](../../form/form-stdlib/tracer.fk), [`cell-trace.fk`](../../form/form-stdlib/cell-trace.fk), [`cell-stream.fk`](../../form/form-stdlib/cell-stream.fk) | — | Observer-side tracing of recipe walks; framebuffer feed |
-| [`recipe-distance.fk`](../../form/form-stdlib/recipe-distance.fk) | — | Structural distance between two Recipe NodeIDs — the substrate's analog of edit-distance |
-| [`encoders/`](../../form/form-stdlib/encoders), [`grammars/`](../../form/form-stdlib/grammars) | — | Per-format encoder/decoder pairs and per-language grammars (Go, Rust, TypeScript, Python, JSON, YAML, Markdown, PNG, audio, image, video) |
-| [`substrate-py-to-fk.fk`](../../form/form-stdlib/substrate-py-to-fk.fk) | — | The bootstrap substrate exported as Form text — bridge for cross-kernel work |
+| [`xpath.fk`](../../form/form/form-stdlib/xpath.fk), [`doc-xpath.fk`](../../form/form/form-stdlib/doc-xpath.fk), [`concept-xpath.fk`](../../form/form/form-stdlib/concept-xpath.fk) | 1910 | XPath-style query evaluator over substrate trees — see "XPath queries" below |
+| [`channel.fk`](../../form/form/form-stdlib/channel.fk), [`channel-flow.fk`](../../form/form/form-stdlib/channel-flow.fk), [`circle.fk`](../../form/form/form-stdlib/circle.fk), [`channel-query.fk`](../../form/form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form/form-stdlib/channel-query-json.fk) | 1700–1728 plus 99.6/99.7 | File-backed inter-cell Recipe transport, OSI-shaped channel-flow cells, consentful circle/satsang group protocol, and debt-free breath protocol — see "Channels" below |
+| [`tool-channel.fk`](../../form/form/form-stdlib/tool-channel.fk), [`tool-channel-grammar.fk`](../../form/form/form-stdlib/tool-channel-grammar.fk) | — | Native tool/channel catalog and grammar forms for `host:exec`, `host:file`, `http:request`, `kernel:call`, `kernel:route`, `stream:read`, `store:query`, shell applet projections, explicit `cap:*` requirements, and no-execution invocation plans |
+| [`codec.fk`](../../form/form/form-stdlib/codec.fk), [`convert.fk`](../../form/form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
+| [`parser.fk`](../../form/form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
+| [`emit.fk`](../../form/form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form/form-stdlib/universal-emit.fk) | — | Streaming emit — each parse-rule success emits a Recipe NodeID directly |
+| [`tracer.fk`](../../form/form/form-stdlib/tracer.fk), [`cell-trace.fk`](../../form/form/form-stdlib/cell-trace.fk), [`cell-stream.fk`](../../form/form/form-stdlib/cell-stream.fk) | — | Observer-side tracing of recipe walks; framebuffer feed |
+| [`recipe-distance.fk`](../../form/form/form-stdlib/recipe-distance.fk) | — | Structural distance between two Recipe NodeIDs — the substrate's analog of edit-distance |
+| [`encoders/`](../../form/form/form-stdlib/encoders), [`grammars/`](../../form/form/form-stdlib/grammars) | — | Per-format encoder/decoder pairs and per-language grammars (Go, Rust, TypeScript, Python, JSON, YAML, Markdown, PNG, audio, image, video) |
+| [`substrate-py-to-fk.fk`](../../form/form/form-stdlib/substrate-py-to-fk.fk) | — | The bootstrap substrate exported as Form text — bridge for cross-kernel work |
 
 **Namespace discipline.** Every stdlib file declares its module namespace at the top; internal helpers carry `<module>/` prefixes; only exported public names live in the global namespace. See [`form-namespaces.md`](form-namespaces.md). The convention adds zero kernel work — the Form reader already accepts `/` inside identifiers — and prevents the name-collision pattern that has cost the body twice before.
 
@@ -937,7 +937,7 @@ Path syntax:
 
 Selector steps: `cat:N` (children whose category's inst slot equals N), `name:s` (children that are trivial strings with value s), `*` (every child). Predicates: `[N]` positional, `[@inst=N]`, `[text()='foo']`, `[count()=N]`.
 
-The XPath family lives in Blueprint slots 1910–1913 (`XPATH-RESULT`, `XPATH-NOT-FOUND`, `XPATH-STEP`, `XPATH-PREDICATE`). Companion walkers — `doc-xpath` for document trees, `concept-xpath` for concept-DB cells — share the same evaluator with target-specific selectors. Cross-modal samples: [`form/form-samples/cross-modal/60-xpath`](../../form/form-samples/cross-modal/60-xpath), [`62-doc-xpath`](../../form/form-samples/cross-modal/62-doc-xpath).
+The XPath family lives in Blueprint slots 1910–1913 (`XPATH-RESULT`, `XPATH-NOT-FOUND`, `XPATH-STEP`, `XPATH-PREDICATE`). Companion walkers — `doc-xpath` for document trees, `concept-xpath` for concept-DB cells — share the same evaluator with target-specific selectors. Cross-modal samples: [`form/form/form-samples/cross-modal/60-xpath`](../../form/form/form-samples/cross-modal/60-xpath), [`62-doc-xpath`](../../form/form/form-samples/cross-modal/62-doc-xpath).
 
 ## Channels — inter-cell Recipe transport
 
@@ -951,7 +951,7 @@ Two kernels (two processes, two machines) communicate by sharing a CHANNEL Recip
 
 **Content-addressing IS the dedup.** Two cells appending the same payload at different positions produce the same `CHANNEL-MSG` NodeID — receivers recognize semantic identity across the gap by `node_eq`, with no schema negotiation between them. The L7 application data, the L2 frame, and the L6 presentation collapse into one substrate primitive: `intern_node`.
 
-Semantics v0: single writer, multiple readers, whole-file rewrite per append, real-time poll via `file_mtime`. Concurrent-safe append and durable log are named future shapes; v0 is fine for one cell publishing to many readers. Companions: [`channel-query.fk`](../../form/form-stdlib/channel-query.fk) for read-side filtering; [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) for JSON-bound queries; cross-modal sample [`16-megabyte-channel`](../../form/form-samples/cross-modal/16-megabyte-channel) proves it at scale.
+Semantics v0: single writer, multiple readers, whole-file rewrite per append, real-time poll via `file_mtime`. Concurrent-safe append and durable log are named future shapes; v0 is fine for one cell publishing to many readers. Companions: [`channel-query.fk`](../../form/form/form-stdlib/channel-query.fk) for read-side filtering; [`channel-query-json.fk`](../../form/form/form-stdlib/channel-query-json.fk) for JSON-bound queries; cross-modal sample [`16-megabyte-channel`](../../form/form/form-samples/cross-modal/16-megabyte-channel) proves it at scale.
 
 **Breath protocol.** Channels can also carry debt-free contact. `CHANNEL-BREATH-GIFT` records a small offering, its release condition, consent/freedom, and boundary. `CHANNEL-RESONANCE-RECEIPT` records relation evidence: observer, other, gift, coherence delta, disturbance, debt-created, freedom-preserved, and next-contact. This makes `offer` and `attune` first-class channel protocols: a cell may give without requiring evidence first, then receive resonance as evidence of relation without turning it into ownership or objective-claim proof.
 
@@ -963,11 +963,11 @@ Semantics v0: single writer, multiple readers, whole-file rewrite per append, re
     "increased" "none" "false" "true" "continue"))
 ```
 
-The proof band [`channel-breath-band.fk`](../../form/form-stdlib/tests/channel-breath-band.fk) returns `500` across source and binary sibling-kernel execution.
+The proof band [`channel-breath-band.fk`](../../form/form/form-stdlib/tests/channel-breath-band.fk) returns `500` across source and binary sibling-kernel execution.
 
-**OSI channel-flow protocol.** [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk) names the channel itself as a seven-layer protocol cell and carries the consented interface walker that counts honored requests, invasions, and final offers. `CHANNEL-OSI-LAYER` (slot 1702) carries `(index, name, phase, carrier, policy, recipe)` for each OSI layer; `CHANNEL-FLOW` (slot 1703) carries `(carrier, protocol, layers, channel-policy)`. HTTP is the first concrete profile: `cf-http-channel-flow()` returns a TCP / HTTP/1.1 flow where L7 points to the real [`kernel-http.fk`](../../form/form-stdlib/kernel-http.fk) `kh-channel-policy`, so `Allow` rendering, HEAD-through-GET pressure, route choice, and handler dispatch still come from one policy cell. The proof band [`channel-flow-band.fk`](../../form/form-stdlib/tests/channel-flow-band.fk) returns `8388607` across sibling kernels.
+**OSI channel-flow protocol.** [`channel-flow.fk`](../../form/form/form-stdlib/channel-flow.fk) names the channel itself as a seven-layer protocol cell and carries the consented interface walker that counts honored requests, invasions, and final offers. `CHANNEL-OSI-LAYER` (slot 1702) carries `(index, name, phase, carrier, policy, recipe)` for each OSI layer; `CHANNEL-FLOW` (slot 1703) carries `(carrier, protocol, layers, channel-policy)`. HTTP is the first concrete profile: `cf-http-channel-flow()` returns a TCP / HTTP/1.1 flow where L7 points to the real [`kernel-http.fk`](../../form/form/form-stdlib/kernel-http.fk) `kh-channel-policy`, so `Allow` rendering, HEAD-through-GET pressure, route choice, and handler dispatch still come from one policy cell. The proof band [`channel-flow-band.fk`](../../form/form/form-stdlib/tests/channel-flow-band.fk) returns `8388607` across sibling kernels.
 
-**Circle / satsang protocol.** [`circle.fk`](../../form/form-stdlib/circle.fk) gives groups of cells a higher-frequency alternative to gossip: a held circle that is discoverable only when offered, joinable only when invited, private by default, exportable only through explicit consent, and refusable when an invasion is observed and circle consensus has passed. `CELL-CIRCLE` (slot 1704) holds members, shared context, interface offer, discovery policy, confidentiality policy, export policy, and carrier flow. `CIRCLE-SHARE` records owned observation/impact/feeling/desire/request/boundary payloads. `CIRCLE-EXPORT-CONSENT` gates evidence leaving the circle by recipient, fidelity, purpose, expiry, and consensus. `CIRCLE-REFUSAL` composes with [`channel-interface.fk`](../../form/form-stdlib/channel-interface.fk): a refusal is valid only when `ci-invasion?` is true and `CIRCLE-CONSENSUS` passes. `SATSANG-SILENCE`, `SATSANG-INQUIRY`, and `SATSANG-POINTING` make truth-oriented silence, inquiry, and non-command pointing first-class circle events. The proof band [`circle-band.fk`](../../form/form-stdlib/tests/circle-band.fk) returns `1048575` across source and binary sibling-kernel execution.
+**Circle / satsang protocol.** [`circle.fk`](../../form/form/form-stdlib/circle.fk) gives groups of cells a higher-frequency alternative to gossip: a held circle that is discoverable only when offered, joinable only when invited, private by default, exportable only through explicit consent, and refusable when an invasion is observed and circle consensus has passed. `CELL-CIRCLE` (slot 1704) holds members, shared context, interface offer, discovery policy, confidentiality policy, export policy, and carrier flow. `CIRCLE-SHARE` records owned observation/impact/feeling/desire/request/boundary payloads. `CIRCLE-EXPORT-CONSENT` gates evidence leaving the circle by recipient, fidelity, purpose, expiry, and consensus. `CIRCLE-REFUSAL` composes with [`channel-interface.fk`](../../form/form/form-stdlib/channel-interface.fk): a refusal is valid only when `ci-invasion?` is true and `CIRCLE-CONSENSUS` passes. `SATSANG-SILENCE`, `SATSANG-INQUIRY`, and `SATSANG-POINTING` make truth-oriented silence, inquiry, and non-command pointing first-class circle events. The proof band [`circle-band.fk`](../../form/form/form-stdlib/tests/circle-band.fk) returns `1048575` across source and binary sibling-kernel execution.
 
 ## Universal translator — Seven Keys, one substrate
 
@@ -989,15 +989,15 @@ The translator that *cannot lie* — the lattice refuses equivalences not struct
 
 ## Form as 7-layer protocol — content-addressing collapses three layers
 
-Form's content-addressed substrate is not "a layer in the protocol stack" — it IS a protocol stack that collapses three classical layers (L2 framing, L6 presentation, L7 application) into a single primitive (`intern_node`). [`form-as-7-layer-protocol.form`](form-as-7-layer-protocol.form) maps each layer to what's in the body, what's partial, what's still ice waiting to thaw; [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk) is the runnable OSI cell surface that HTTP now rides through.
+Form's content-addressed substrate is not "a layer in the protocol stack" — it IS a protocol stack that collapses three classical layers (L2 framing, L6 presentation, L7 application) into a single primitive (`intern_node`). [`form-as-7-layer-protocol.form`](form-as-7-layer-protocol.form) maps each layer to what's in the body, what's partial, what's still ice waiting to thaw; [`channel-flow.fk`](../../form/form/form-stdlib/channel-flow.fk) is the runnable OSI cell surface that HTTP now rides through.
 
 | OSI layer | What the substrate gives |
 |---|---|
-| L1 — Physical | File natives plus socket natives: `read_file` / `write_file_text` / `write_file_bytes` / `read_form_binary` / `write_form_binary` / `read_file_slice`, and the `socket_listen` / `socket_accept` / `socket_recv` / `socket_send` / `socket_close` surface used by [`http-socket.fk`](../../form/form-stdlib/http-socket.fk). Pipes / mmap / device media are named next carriers |
+| L1 — Physical | File natives plus socket natives: `read_file` / `write_file_text` / `write_file_bytes` / `read_form_binary` / `write_form_binary` / `read_file_slice`, and the `socket_listen` / `socket_accept` / `socket_recv` / `socket_send` / `socket_close` surface used by [`http-socket.fk`](../../form/form/form-stdlib/http-socket.fk). Pipes / mmap / device media are named next carriers |
 | L2 — Data Link | The `.fkb` binary frame format plus `CHANNEL-OSI-LAYER` data-link cells. Content-addressing IS the integrity check — corrupt bytes intern at a different NodeID than the sender intended |
 | L3 — Network | The Blueprint NodeID IS the address. `(pkg, level, type, instance)` routes a message to anything whose Blueprint matches; `CHANNEL-FLOW` makes the layer explicit so inter-process routing can become data |
-| L4 — Transport | [`channel.fk`](../../form/form-stdlib/channel.fk) — single-writer reliable append, multi-reader — and HTTP socket recv/send loops in Form. Durable-log and concurrent-safe-append remain named extensions |
-| L5 — Session | [`session.fk`](../../form/form-stdlib/session.fk) and Form's `with X { body }` scope operations against a subject; the session recipe is the state |
+| L4 — Transport | [`channel.fk`](../../form/form/form-stdlib/channel.fk) — single-writer reliable append, multi-reader — and HTTP socket recv/send loops in Form. Durable-log and concurrent-safe-append remain named extensions |
+| L5 — Session | [`session.fk`](../../form/form/form-stdlib/session.fk) and Form's `with X { body }` scope operations against a subject; the session recipe is the state |
 | L6 — Presentation | BMF dialects ARE the encoding/decoding layer (natural-bmf, image-bmf, audio-bmf, video-bmf, midi-bmf, document-bmf, go/rust/ts/python-bmf). Cross-format translation is a lens, not a parser-rewrite |
 | L7 — Application | The Recipe IS the application. HTTP is now an application-layer `CHANNEL-FLOW` profile whose policy is `kh-channel-policy`; `CELL-CIRCLE` is the consentful group profile; other protocols join by adding a domain grammar/profile, not by branching the kernel |
 
@@ -1053,13 +1053,13 @@ recipe/body coordinates, not endpoint-specific special cases.
 The runtime carries built-ins for *what is true in the body right now*, callable directly from Form. Spec recipes use them to assert structural reality; the substrate's content-addressing caches the answer once evaluated.
 
 ```form
-file_exists("form/form-stdlib/engine.fk")                           ; → true
+file_exists("form/form/form-stdlib/engine.fk")                           ; → true
 file_contains("CLAUDE.md", "structural composition discipline")     ; → true
 file_size("docs/coherence-substrate/form-language.md")              ; → integer bytes
-symbol_in_file("form/form-stdlib/engine.fk", "apply-object-rule")   ; → true
+symbol_in_file("form/form/form-stdlib/engine.fk", "apply-object-rule")   ; → true
 ```
 
-These let a spec's `done_when:` assert file-shape reality directly. Behavioral proof goes further through a **band** — a `.fk` workload run by [`form/validate.sh`](../../form/validate.sh) across the Go, Rust, and TypeScript kernels, green only when all three return the same value. (That is how the cursor core in [`bmf-architecture.form`](bmf-architecture.form) is proven: `bmf-core-band.fk → 600`, `1 ok, 0 divergent`.) Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
+These let a spec's `done_when:` assert file-shape reality directly. Behavioral proof goes further through a **band** — a `.fk` workload run by [`form/form/validate.sh`](../../form/form/validate.sh) across the Go, Rust, and TypeScript kernels, green only when all three return the same value. (That is how the cursor core in [`bmf-architecture.form`](bmf-architecture.form) is proven: `bmf-core-band.fk → 600`, `1 ok, 0 divergent`.) Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
 
 Host effects bridge Form execution into the agent question channel:
 
@@ -1082,11 +1082,11 @@ Conformance vectors describe Form-visible behavior every substrate kernel must m
 | [`form-control-flow.json`](kernel-conformance/form-control-flow.json) | `if`, `do`, `let` over literals, local names, infix expressions, built-in calls |
 | [`form-loop-mutation.json`](kernel-conformance/form-loop-mutation.json) | `for`, `while`, `set` over local JSON-safe values |
 
-The shared vector files ARE the contract: each carries the expected values and events, and a kernel is conformant when its run matches them. The Rust, Go, and TypeScript kernels run these slices today. Target-only kernels are explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior. The TypeScript tree also carries [`form/form-kernel-ts/src/kernel.ts`](../../form/form-kernel-ts/src/kernel.ts), a browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
+The shared vector files ARE the contract: each carries the expected values and events, and a kernel is conformant when its run matches them. The Rust, Go, and TypeScript kernels run these slices today. Target-only kernels are explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior. The TypeScript tree also carries [`form/form/form-kernel-ts/src/kernel.ts`](../../form/form/form-kernel-ts/src/kernel.ts), a browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
 
 ## Implementation status
 
-Form is a **living language**. Parse / intern, runtime execution, serialization, CLI surfaces, the keyword-and-operator self-hosting layer, the lexer/atom/query registries, recipe introspection from inside Form, the standard library (`form/form-stdlib/`), JIT memoization in the Go and Rust kernels, and cross-kernel conformance across Rust, Go, and TypeScript are all shipped. The body reads itself, senses itself, expresses itself, executes itself, and hosts its own evolution.
+Form is a **living language**. Parse / intern, runtime execution, serialization, CLI surfaces, the keyword-and-operator self-hosting layer, the lexer/atom/query registries, recipe introspection from inside Form, the standard library (`form/form/form-stdlib/`), JIT memoization in the Go and Rust kernels, and cross-kernel conformance across Rust, Go, and TypeScript are all shipped. The body reads itself, senses itself, expresses itself, executes itself, and hosts its own evolution.
 
 Shipped surfaces:
 - **Parse / intern** — Form text → Recipe NodeID (the recipe-producing path)
@@ -1096,7 +1096,7 @@ Shipped surfaces:
 - **CLI** — `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute), `coh substrate check` (resolve / type-check, no execution)
 - **MCP** — `coherence_substrate_run` (full runtime), `coherence_substrate_query` (lookup), `coherence_substrate_stats`
 - **Agent integration** — the substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
-- **Native runtime** — the **c-bootstrapped `fkwu` JIT** (`form-cli-main.fk`, `fsh-main.fk`) is the agent execution surface; Go/Rust/TypeScript walkers prove sibling parity via `form/validate.sh` (honest floor, not the sovereignty receipt)
+- **Native runtime** — the **c-bootstrapped `fkwu` JIT** (`form-cli-main.fk`, `fsh-main.fk`) is the agent execution surface; Go/Rust/TypeScript walkers prove sibling parity via `form/form/validate.sh` (honest floor, not the sovereignty receipt)
 
 Host effects and cross-kernel conformance live in their own sections above ("Filesystem facts and host effects", "Cross-kernel conformance"). The conformance harness — `scripts/verify_kernel_conformance.py --kernel rust --kernel go --kernel typescript` — runs every shipped vector across every shipped kernel.
 

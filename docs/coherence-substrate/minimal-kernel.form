@@ -165,11 +165,11 @@
 #   # The walk loop as recipes over offer (meta-circular, 15/15 arms):
 #   make wellness   # "Form engine" section
 #   # A native family lifted whole into recipes (the figure fold's proof):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/tests/trig-band.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/tests/trig-band.fk
 #   # The lattice port's wire (store/lookup across the membrane):
-#   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
+#   cd form/form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
 #   # Ports as typed (direction, value-shape) cells:
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/tests/resource-port-band.fk
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/tests/resource-port-band.fk
 #   # The census (re-run after native changes):
 #   scripts/minimal_kernel_census.sh
 #

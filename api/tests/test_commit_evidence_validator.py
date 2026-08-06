@@ -136,10 +136,10 @@ def test_kernel_router_dockerfile_changes_are_runtime_evidence() -> None:
 
 def test_form_validate_requires_fourth_arm_or_gap_evidence() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
-        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
+        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
     ]
 
     errors = mod.validate(record, changed_files=changed_files)
@@ -154,13 +154,13 @@ def test_form_gitlink_is_runtime_and_form_evidence_without_matching_similar_name
     assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in runtime_errors
 
     form_record = _record(["form"], "runtime_fix")
-    form_record["local_validation"]["commands"] = ["cd form && ./validate.sh form-stdlib/core.fk"]
+    form_record["local_validation"]["commands"] = ["cd form/form && ./validate.sh form-stdlib/core.fk"]
     form_errors = mod.validate(form_record, changed_files=["form"])
     assert any("Form validate.sh evidence must include fourth-arm proof" in error for error in form_errors)
 
     similar_path = "form-notes/README.md"
     similar_record = _record([similar_path], "docs_only")
-    similar_record["local_validation"]["commands"] = ["cd form && ./validate.sh form-stdlib/core.fk"]
+    similar_record["local_validation"]["commands"] = ["cd form/form && ./validate.sh form-stdlib/core.fk"]
     assert mod.validate(similar_record, changed_files=[similar_path]) == []
 
     aggregate_records = [
@@ -171,10 +171,10 @@ def test_form_gitlink_is_runtime_and_form_evidence_without_matching_similar_name
 
 def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
-        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
+        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
     ]
     record["local_validation"]["notes"] = (
         "3-kernel only; fourth-arm gap: band uses host I/O and is not fourth-covered yet."
@@ -185,10 +185,10 @@ def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
 
 def test_form_validate_accepts_fourth_arm_proof() -> None:
     mod = _load_validator()
-    changed_files = ["form/form-stdlib/example.fk"]
+    changed_files = ["form/form/form-stdlib/example.fk"]
     record = _record(changed_files, "runtime_fix")
     record["local_validation"]["commands"] = [
-        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
+        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
     ]
     record["local_validation"]["evidence"] = [
         "fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)"

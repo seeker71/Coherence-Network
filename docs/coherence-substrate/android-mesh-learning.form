@@ -3,10 +3,10 @@
 (android-mesh-learning
   (lineage
     (rests-on hati-mesh.form channel-loopback.form co-learning-stream.form colearning-retire.form llm-feature-channel-floor.form oracle-catalog.form)
-    (recipe form/form-stdlib/android-mesh-learning.fk)
-    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 131071)
+    (recipe form/form/form-stdlib/android-mesh-learning.fk)
+    (proof form/form/form-stdlib/tests/android-mesh-learning-band.fk -> 131071)
     (witness-receipt witness-state-receipt.form)
-    (physical-receipt form/form-stdlib/android-mesh-learning.fk))
+    (physical-receipt form/form/form-stdlib/android-mesh-learning.fk))
 
   (purpose
     "Use the connected Android phone and the Mac as always-on learning organs."
@@ -30,8 +30,8 @@
     "The mesh ingests ideas, code, feature requests, runtime traces, and physical-world samples; digests them into typed receipts and exemplars; then embodies winning recipes as first-class native choices.")
 
   (receipt-command
-    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk")
-    (four-way "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning")
+    (form-proof "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk")
+    (four-way "cd form/form && bash scripts/fourth-arm-gate.sh android-mesh-learning")
     (host-carrier-gap "adb/process sampling should be a Form resource/process carrier; no Python receipt script stands as authority"))
 
   (organs
@@ -64,7 +64,7 @@
     (android-app "adb shell am start -n com.coherence.sense/.MainActivity")
     (receipt-loop "Form-native receipt cells validate capability/liveness rows; host process/device carrier is the remaining IO gap")
     (oracle-emission-loop "Form-native witness-state receipt validates pass/blocked emission cycles; live HTTP sampling carrier remains host IO")
-    (form-native-receipt "form/form-stdlib/witness-state-receipt.fk")
+    (form-native-receipt "form/form/form-stdlib/witness-state-receipt.fk")
     (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 
   (next-physical-gaps

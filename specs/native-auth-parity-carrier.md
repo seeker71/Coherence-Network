@@ -2,19 +2,19 @@
 idea_id: data-infrastructure
 status: done
 source:
-  - file: form/form-stdlib/auth-port.fk
+  - file: form/form/form-stdlib/auth-port.fk
     symbols: [auth-require-api-key, auth-require-api-key-from-headers, auth-contributor-key-hash, auth-contributor-key-active?, auth-parity-test]
-  - file: form/form-stdlib/tests/auth-port-band.fk
+  - file: form/form/form-stdlib/tests/auth-port-band.fk
     symbols: []
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node, agn-update-node, agn-delete-node]
-  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
-  - file: form/form-stdlib/kernel-http.fk
+  - file: form/form/form-stdlib/kernel-http.fk
     symbols: [kh-request, kh-header, kh-header-value-or]
-  - file: form/form-stdlib/sha256.fk
+  - file: form/form/form-stdlib/sha256.fk
     symbols: []
-  - file: form/form-stdlib/hex.fk
+  - file: form/form/form-stdlib/hex.fk
     symbols: [hex-encode]
   - file: api/app/middleware/auth.py
     symbols: [require_api_key]
@@ -32,10 +32,10 @@ requirements:
   - "The carrier proves allowed, denied, missing, blank, case-insensitive header, and production dev-key misconfiguration cases."
   - "Ideas and specs name auth parity as proven while keeping all-traffic public front-door flips out of scope; bounded mutable method/path routes graduate only after preview, live DB execution, and production default proof."
 done_when:
-  - 'file_contains("form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
-  - 'file_contains("form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
+  - 'file_contains("form/form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
+  - 'file_contains("form/form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
   - 'pytest_passes("api/tests/test_native_auth_parity_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk && cd ../api && python3 -m pytest -q tests/test_native_auth_parity_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk && cd ../../api && python3 -m pytest -q tests/test_native_auth_parity_form.py"
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation routes to native execution for ordinary traffic in this slice."
   - "Do not store live secrets or contributor raw keys in Form source."
@@ -63,14 +63,14 @@ remaining blocker is side-effect proof plus a reversible public gate.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/auth-port.fk` exposes `auth-require-api-key`
+- [ ] **R1**: `form/form/form-stdlib/auth-port.fk` exposes `auth-require-api-key`
   and `auth-require-api-key-from-headers` over `kh-request`/`kh-header` values.
 - [ ] **R2**: `auth-contributor-key-hash` computes `hex(sha256(raw_key))`, so
   Form compares active contributor-key hashes rather than raw source allow-lists.
 - [ ] **R3**: `auth-parity-test` covers shared key allow, case-insensitive
   header lookup, contributor-key allow, missing/wrong/blank 401 denial, and
   production `dev-key` 500 misconfiguration.
-- [ ] **R4**: `form/form-stdlib/tests/auth-port-band.fk` executes the carrier
+- [ ] **R4**: `form/form/form-stdlib/tests/auth-port-band.fk` executes the carrier
   over both direct header lists and a `kh-request` wrapper, with a Python-known
   SHA-256 fixture.
 - [ ] **R5**: ideas/spec Form route readings name auth parity as proven and keep
@@ -82,14 +82,14 @@ remaining blocker is side-effect proof plus a reversible public gate.
 - `api/app/middleware/auth.py::require_api_key` - live FastAPI mutation auth.
 - `api/app/services/contributor_key_store.py::verify` - contributor-key hash
   lookup and revoked-key denial.
-- `form/form-stdlib/kernel-http.fk` - native HTTP request/header value shape.
-- `form/form-stdlib/sha256.fk` and `form/form-stdlib/hex.fk` - hash parity.
+- `form/form/form-stdlib/kernel-http.fk` - native HTTP request/header value shape.
+- `form/form/form-stdlib/sha256.fk` and `form/form/form-stdlib/hex.fk` - hash parity.
 - `2026-06-08` - User direction: keep moving mutable surfaces toward Form native.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/auth-port.fk` - native auth decision carrier.
-- `form/form-stdlib/tests/auth-port-band.fk` - executable auth parity proof.
+- `form/form/form-stdlib/auth-port.fk` - native auth decision carrier.
+- `form/form/form-stdlib/tests/auth-port-band.fk` - executable auth parity proof.
 - `api/tests/test_native_auth_parity_form.py` - repository proof for carrier,
   Python contract links, and Form execution.
 - `docs/coherence-substrate/ideas-router.form` - ideas route boundary update.
@@ -99,7 +99,7 @@ remaining blocker is side-effect proof plus a reversible public gate.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/auth-port-band.fk`
+- `form/form/form-stdlib/tests/auth-port-band.fk`
 - `api/tests/test_native_auth_parity_form.py::test_auth_port_names_fastapi_parity_surface`
 - `api/tests/test_native_auth_parity_form.py::test_auth_band_proves_shared_key_contributor_key_and_denials`
 - `api/tests/test_native_auth_parity_form.py::test_form_auth_band_executes`
@@ -108,7 +108,7 @@ remaining blocker is side-effect proof plus a reversible public gate.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk
 cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md
 ```

@@ -4,7 +4,7 @@ A running agent (Claude, Cursor, another Grok, a human tool) bootstraps a
 persistent, resumable session by POSTing here on session start — no custom
 Python import required. Identities and relationships are durable substrate
 cells; see app/services/substrate/agent_relationship.py for the wiring and
-form/form-stdlib/arrival.fk for the shared protocol shapes.
+form/form/form-stdlib/arrival.fk for the shared protocol shapes.
 
 Mounted at /api/agents.
 """

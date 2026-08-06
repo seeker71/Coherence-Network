@@ -133,13 +133,13 @@ cleanup_routing_fixture() {
 trap cleanup_routing_fixture EXIT
 KERNEL_REPO="$ROUTING_FIXTURE/kernel"
 SUPER_REPO="$ROUTING_FIXTURE/super"
-mkdir -p "$KERNEL_REPO/form-stdlib" "$SUPER_REPO"
+mkdir -p "$KERNEL_REPO/form/form-stdlib" "$SUPER_REPO"
 git -C "$KERNEL_REPO" init -q
 git -C "$KERNEL_REPO" config user.name 'Coherence Test'
 git -C "$KERNEL_REPO" config user.email 'test@coherencycoin.com'
-printf '%s\n' '(= kernel-band-v1 1)' >"$KERNEL_REPO/form-stdlib/kernel-band.fk"
-printf '%s\n' '{}' >"$KERNEL_REPO/form-stdlib/form-ontology.json"
-git -C "$KERNEL_REPO" add form-stdlib
+printf '%s\n' '(= kernel-band-v1 1)' >"$KERNEL_REPO/form/form-stdlib/kernel-band.fk"
+printf '%s\n' '{}' >"$KERNEL_REPO/form/form-stdlib/form-ontology.json"
+git -C "$KERNEL_REPO" add form/form-stdlib
 git -C "$KERNEL_REPO" commit -qm 'kernel v1'
 KERNEL_V1="$(git -C "$KERNEL_REPO" rev-parse HEAD)"
 
@@ -150,8 +150,8 @@ git -C "$SUPER_REPO" -c protocol.file.allow=always submodule add -q "$KERNEL_REP
 git -C "$SUPER_REPO" commit -qam 'pin kernel v1'
 SUPER_V1="$(git -C "$SUPER_REPO" rev-parse HEAD)"
 
-printf '%s\n' '(= kernel-band-v2 2)' >"$KERNEL_REPO/form-stdlib/kernel-band.fk"
-printf '%s\n' '{"version": 2}' >"$KERNEL_REPO/form-stdlib/form-ontology.json"
+printf '%s\n' '(= kernel-band-v2 2)' >"$KERNEL_REPO/form/form-stdlib/kernel-band.fk"
+printf '%s\n' '{"version": 2}' >"$KERNEL_REPO/form/form-stdlib/form-ontology.json"
 git -C "$KERNEL_REPO" commit -qam 'kernel v2'
 KERNEL_V2="$(git -C "$KERNEL_REPO" rev-parse HEAD)"
 git -C "$SUPER_REPO/form" fetch -q origin
@@ -167,9 +167,9 @@ REPO_DIR="$SUPER_REPO"
 expanded_paths="$(changed_paths_between "$SUPER_V1" "$SUPER_V2")"
 grep -Fxq 'form' <<<"$expanded_paths" \
   || fail "gitlink path expansion drops the superproject form path"
-grep -Fxq 'form/form-stdlib/kernel-band.fk' <<<"$expanded_paths" \
+grep -Fxq 'form/form/form-stdlib/kernel-band.fk' <<<"$expanded_paths" \
   || fail "gitlink path expansion does not expose changed stdlib recipes"
-grep -Fxq 'form/form-stdlib/form-ontology.json' <<<"$expanded_paths" \
+grep -Fxq 'form/form/form-stdlib/form-ontology.json' <<<"$expanded_paths" \
   || fail "gitlink path expansion does not expose changed Blueprint tissue"
 [[ "$(services_to_rebuild "$SUPER_V1" "$SUPER_V2")" == "api" ]] \
   || fail "an exact form gitlink bump does not route to an API rebuild"
@@ -192,7 +192,7 @@ log() {
   printf '%s\n' "$*" >>"$LOG_FILE"
 }
 sync_form_stdlib
-grep -Fq "compose cp $SUPER_REPO/form/form-stdlib api:/app/form/form-stdlib" "$DOCKER_CALLS" \
+grep -Fq "compose cp $SUPER_REPO/form/form/form-stdlib api:/app/form/form-stdlib" "$DOCKER_CALLS" \
   || fail "stdlib sync does not run for an exact form gitlink bump"
 
 unset -f changed_paths_between
@@ -246,16 +246,16 @@ cp "$ROOT_DIR/scripts/prepare_form_submodule.py" "$SUPER_REPO/scripts/"
 (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules)
 [[ "$(git -C "$SUPER_REPO/form" rev-parse HEAD)" == "$KERNEL_V2" ]] \
   || fail "post-merge hook did not hydrate the new pinned kernel before ingest"
-printf '%s\n' 'tracked dirt' >>"$SUPER_REPO/form/form-stdlib/kernel-band.fk"
+printf '%s\n' 'tracked dirt' >>"$SUPER_REPO/form/form/form-stdlib/kernel-band.fk"
 if (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules); then
   fail "post-merge hook accepts tracked changes inside the form checkout"
 fi
-git -C "$SUPER_REPO/form" restore form-stdlib/kernel-band.fk
-printf '%s\n' 'new unreviewed kernel source' >"$SUPER_REPO/form/form-stdlib/unreviewed-band.fk"
+git -C "$SUPER_REPO/form" restore form/form-stdlib/kernel-band.fk
+printf '%s\n' 'new unreviewed kernel source' >"$SUPER_REPO/form/form/form-stdlib/unreviewed-band.fk"
 if (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules); then
   fail "post-merge hook accepts untracked source inside the form checkout"
 fi
-rm "$SUPER_REPO/form/form-stdlib/unreviewed-band.fk"
+rm "$SUPER_REPO/form/form/form-stdlib/unreviewed-band.fk"
 mkdir -p "$SUPER_REPO/form/.cache"
 printf '%s\n' 'disposable crash report' >"$SUPER_REPO/form/.cache/crash.json"
 (cd "$SUPER_REPO" && GIT_ALLOW_PROTOCOL=file sync_pinned_submodules) \
@@ -278,7 +278,7 @@ if git -C "$SUPER_REPO/form" cat-file -e "${KERNEL_V1}^{commit}" 2>/dev/null; th
   fail "shallow fixture unexpectedly retained the old kernel commit"
 fi
 fallback_paths="$(cd "$SUPER_REPO" && changed_paths_between "$SUPER_V1" "$SUPER_V2")"
-grep -Fxq 'form/form-stdlib/kernel-band.fk' <<<"$fallback_paths" \
+grep -Fxq 'form/form/form-stdlib/kernel-band.fk' <<<"$fallback_paths" \
   || fail "missing old gitlink commit does not fall back to the full new snapshot"
 fallback_routes="$(changed_path_routes "$fallback_paths")"
 grep -Fxq blueprint <<<"$fallback_routes" \
@@ -292,16 +292,16 @@ grep -Fxq rag <<<"$fallback_routes" \
 cleanup_routing_fixture
 trap - EXIT
 
-grep -Fq "'form/form-stdlib/**'" "$WORKFLOW" \
+grep -Fq "'form/form/form-stdlib/**'" "$WORKFLOW" \
   || fail "Hostinger workflow does not trigger for form/form-stdlib changes"
 
 grep -Fq "'deploy/front-door/**'" "$WORKFLOW" \
   || fail "Hostinger workflow does not trigger for BML front-door catalog changes"
 
-grep -Fq "COPY form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
+grep -Fq "COPY form/form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
 
-grep -Fq "COPY form/apps/coherence-network/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
+grep -Fq "COPY form/form/apps/coherence-network/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
   || fail "kernel-router image does not carry the BML front-door catalog"
 
 grep -Fq 'Path(`/api/runtime/events`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
@@ -402,7 +402,7 @@ grep -Fq 'PathRegexp(`^/api/sensings/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/d
 grep -Fq 'PathRegexp(`^/api/translations/[^/]+/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the translations entity BML template route"
 
-if ! python3 - "$ROOT_DIR/form/apps/coherence-network/api.bml" "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" <<'PY'
+if ! python3 - "$ROOT_DIR/form/form/apps/coherence-network/api.bml" "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -496,7 +496,7 @@ grep -Fq 'API_ROOT = ROOT if os.path.isdir(os.path.join(ROOT, "app")) else os.pa
 [[ "$(grep -c 'bash scripts/ensure_form_cli_native.sh' "$DEPLOY_SCRIPT")" -ge 3 ]] \
   || fail "deploy heal paths do not materialize the native carrier receipt before RAG verification"
 
-grep -Fq 'COPY form/scripts/ ./form/scripts/' "$ROOT_DIR/Dockerfile.api" \
+grep -Fq 'COPY form/form/scripts/ ./form/scripts/' "$ROOT_DIR/Dockerfile.api" \
   || fail "API runtime image does not carry the pinned native carrier identity proof scripts"
 
 grep -Fq 'RECEIPT="$ATTESTATION_DIR/selected-form-cli-carrier.json"' "$ROOT_DIR/scripts/ensure_form_cli_native.sh" \
@@ -544,103 +544,103 @@ grep -Fq 'api_attention_kernel_runtime' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
 
-grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "runtime events handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_views_stats"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_views_stats"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "views stats handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_reaction_concept_summary"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_reaction_concept_summary"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "reaction summary handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "reaction threads handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "concept voices handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "concept carried-by handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "presence resonances handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "presence places handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_graph_node_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_graph_node_detail"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "graph node detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_detail"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_update"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_update"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea update handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_question_create"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_question_create"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea question create handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_question_answer"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_question_answer"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea question answer handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "graph node edges handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "agent task log handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_attention_kernel_runtime"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_attention_kernel_runtime"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "runtime attention handler does not emit native proof headers"
 
-grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "agent task log route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "presence places route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(GraphNodeDetailRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(GraphNodeDetailRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "graph node detail route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaDetailRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaDetailRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea detail route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaUpdateRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaUpdateRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea update route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea question create route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea question answer route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(KernelRuntimeAttentionRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(KernelRuntimeAttentionRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "runtime attention route class is not exported in the BML routes list"
 
-grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "graph node edges route class is not exported in the BML routes list"
 
-grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "spec registry handler does not emit native proof headers with x-total-count"
 
-grep -Fq 'api-native-ok-json("api_spec_registry_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_spec_registry_detail"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "spec registry detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_idea_specs"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_idea_specs"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "idea specs handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "sensings handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_lenses"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_lenses"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "lenses handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "sensing detail handler does not emit native proof headers"
 
-grep -Fq 'api-native-ok-json("api_translations_entity"' "$ROOT_DIR/form/apps/coherence-network/api.bml" \
+grep -Fq 'api-native-ok-json("api_translations_entity"' "$ROOT_DIR/form/form/apps/coherence-network/api.bml" \
   || fail "translations entity handler does not emit native proof headers"
 
-grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
+grep -Fq "form/form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
   || fail "deploy service routing does not send form/form-stdlib changes to api"
 
 grep -Fq "sync_form_stdlib()" "$DEPLOY_SCRIPT" \

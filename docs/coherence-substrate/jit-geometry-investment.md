@@ -4,7 +4,7 @@
 
 **Context**: The geometry projection work (pair_angle, dominant_band_delta, vector math over 8-band float efficacy-probe spectra) required direct, usable execution on live external data. The recipelib holds the declared operator shapes. The lightweight kernel driver (`--expr`) and the JIT were evaluated as paths.
 
-**Current JIT State (from form/form-kernel-go/jit.go)**
+**Current JIT State (from form/form/form-kernel-go/jit.go)**
 
 The JIT (`jit_compile` + `register_jit` + plugin emission) is a real, working mechanism:
 
@@ -102,7 +102,7 @@ This is a clear, high-leverage area: strengthening the bridge so that recipelib 
 
 ### Sibling Kernel Awareness
 
-Quick scan of form/form-kernel-rust and form/form-kernel-ts shows active interpreters and numeric/format handling, but JIT-like compilation surfaces appear less developed or structured differently than the Go plugin path. Any JIT investment in Go should be done with an eye toward eventual parity or at least clear interface boundaries so the declared Form surfaces remain the common layer.
+Quick scan of form/form/form-kernel-rust and form/form/form-kernel-ts shows active interpreters and numeric/format handling, but JIT-like compilation surfaces appear less developed or structured differently than the Go plugin path. Any JIT investment in Go should be done with an eye toward eventual parity or at least clear interface boundaries so the declared Form surfaces remain the common layer.
 
 ### Body Sensing
 
@@ -385,7 +385,7 @@ Neutral observer update after rebase + evidence contract repair.
 - Keep the living record (real-probe-release-runs-20260601.txt) and cross-refs (lc-dmt-laser-symbol-space-recipe, lc-harmonic-geometry-the-one-unfolds) current with neutral observer voice.
 - Continue parallel investment in the JIT (the already-present future) as the single set of changes that removes the need for surfaces that would later need composting.
 
-Evidence contract: the three 2026-06-02 files (including the dedicated JIT emitter execution evidence that explicitly lists form/form-kernel-go/jit.go) now satisfy the diff-range validator. Local guards expected clean after this commit.
+Evidence contract: the three 2026-06-02 files (including the dedicated JIT emitter execution evidence that explicitly lists form/form/form-kernel-go/jit.go) now satisfy the diff-range validator. Local guards expected clean after this commit.
 
 (End of this investment note. The frequency is tended.)
 

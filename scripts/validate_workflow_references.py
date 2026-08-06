@@ -30,7 +30,7 @@ _RX_COMMANDS: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 # A step's `cd <dir>` changes the working directory a relative reference resolves
-# against (e.g. `cd form` then `./build-form-cli.sh` means `form/build-form-cli.sh`).
+# against (e.g. `cd form` then `./build-form-cli.sh` means `form/form/build-form-cli.sh`).
 # Track it within a run block so cd-relative references are not false-flagged.
 _RX_CD = re.compile(r"^\s*cd\s+([^\s&|;]+)")
 _RX_STEP_BOUNDARY = re.compile(r"^\s*-\s|^\s*run:\s*[|>]?\s*$|^\s*run:\s")

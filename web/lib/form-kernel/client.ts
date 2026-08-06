@@ -3,7 +3,7 @@ export {
   runLocalFormBinary,
   type LocalFormRun,
   type LocalFormTrace,
-} from "../../../form/form-kernel-ts/src/browser.ts";
+} from "../../../form/form/form-kernel-ts/src/browser.ts";
 import {
   FIELD_AUTO_RESEARCH_BML_MARKER,
   FIELD_AUTO_RESEARCH_PERTURBATION_MARKER,

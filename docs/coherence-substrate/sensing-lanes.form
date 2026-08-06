@@ -17,7 +17,7 @@
 ; LANE 1 — RECOGNITION ROUTING
 ;   north star  every modality fused into one trusted recognition stream, chosen in the kernel, in parallel.
 ;   ground      recognition-router proven (sound 127, sight 31, compute-paths 63), all three FOUR-WAY in
-;               form/fourth-arm-bands.txt (Go=Rust=TS=fkwu). Modality-blind. Teacher carriers installed-verified on
+;               form/form/fourth-arm-bands.txt (Go=Rust=TS=fkwu). Modality-blind. Teacher carriers installed-verified on
 ;               this host: whisper-cli (whisper.cpp 1.8.6, Metal+BLAS) · sound_classify/vision_classify/shazam_song.swift
 ;               (Apple SoundAnalysis/Vision/ShazamKit) · ollama 0.23.2 (5 local models). Cataloged in oracle-catalog.fk.
 ;   direction   feed real carriers in as readings (lane 10's wiring); each reading is a TEACHER sample, not ground.
@@ -76,7 +76,7 @@
 ;               aarch64-linux-android: "ELF 64-bit LSB pie executable, ARM aarch64 ... interpreter /system/bin/linker64"
 ;               (4.6 MB, the whole engine + tokio-postgres/rustls/ureq, ~70s). Toolchain installed: brew android-ndk (29) +
 ;               cargo-ndk (4.1.2) + rustup aarch64-linux-android std. pyo3 stays OFF (opt-in feature) so NO Python-for-Android.
-;               Reproducible: form/form-kernel-rust/build-android.sh. The gotcha that cost two tries: Homebrew rustc has no
+;               Reproducible: form/form/form-kernel-rust/build-android.sh. The gotcha that cost two tries: Homebrew rustc has no
 ;               cross-std, so the rustup toolchain must be FIRST in PATH (cargo-ndk shells out to cargo, re-resolving PATH).
 ;   direction   [MEASURED 2026-06-09 — THE APP-LOADABLE LIBRARY IS BUILT] the predicted "extract the engine out of main.rs"
 ;               refactor was unnecessary: lib.rs already includes main.rs as a module (for PyO3), so the cdylib only needed a

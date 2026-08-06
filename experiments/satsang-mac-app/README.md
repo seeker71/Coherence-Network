@@ -70,9 +70,9 @@ open "experiments/satsang-mac-app/dist/Satsang Guidance.app"
 
 The GUI does not invoke an external receiver. Pressing Send writes the JSONL
 event, a latest JSON receipt, and a latest `.form` envelope directly. The Form
-protocol proofs live in `form/form-stdlib/satsang-guidance-event.fk`,
-`form/form-stdlib/satsang-host-boundary.fk`, and
-`form/form-stdlib/satsang-listen-route.fk`.
+protocol proofs live in `form/form/form-stdlib/satsang-guidance-event.fk`,
+`form/form/form-stdlib/satsang-host-boundary.fk`, and
+`form/form/form-stdlib/satsang-listen-route.fk`.
 
 Pressing Send also records the offered exchange in the local trusted room memory
 store. Later sends include a compact prior-context summary and speaker-profile
@@ -82,7 +82,7 @@ exists, the app falls back to the visible speaker label and records that as
 channel continuity, not verified identity. The app does not open a separate
 macOS biometric speaker-identification lane; any future acoustic continuity
 sidecar must share the already-open listening stream. The memory proof lives in
-`form/form-stdlib/satsang-room-memory.fk`.
+`form/form/form-stdlib/satsang-room-memory.fk`.
 
 The Health tab imports wearable samples from iPhone HealthKit after Health
 permission is granted. The built-in essential source profiles are Oura Ring 4
@@ -91,7 +91,7 @@ Apple Health sharing. The editable source filter also covers Oura, Oura bundle
 ids, Wellue, O2RingS/O2Ring-S/O2Ring, Viatom, ViHealth, ViHealth bundle ids,
 Oz/O2, oxygen, and oximeter sources. Imported samples are written to local
 health memory and summarized into later guidance context. The health-memory
-proof lives in `form/form-stdlib/satsang-health-memory.fk`.
+proof lives in `form/form/form-stdlib/satsang-health-memory.fk`.
 
 The app boundary is intentionally small. Shared routing and sufficiency logic is
 Form-native; Swift is the current Apple host carrier for GUI, microphone, speech,

@@ -134,9 +134,9 @@ When an agent collects signals, it produces:
 ## Core Architecture — Fully Form-native, channel- and skill-mediated, shared
 
 **Important honesty note on magic numbers**:
-The current implementation uses several new user-range Blueprint numbers (1800–1806). This is exactly the pattern of opaque magic numbers the body is concerned about. These were added during the work that surfaced this discomfort. They are documented in `form/user-blueprint-registry.md` as part of an active healing practice.
+The current implementation uses several new user-range Blueprint numbers (1800–1806). This is exactly the pattern of opaque magic numbers the body is concerned about. These were added during the work that surfaced this discomfort. They are documented in `form/form/user-blueprint-registry.md` as part of an active healing practice.
 
-THIA lives primarily as **Form recipes** in `form/form-stdlib/identity-attribution.fk` and as substrate cells. The same recipes and cells are used by agent cells and human cells. We are actively working to reduce reliance on new opaque numbers through composition and registry practices.
+THIA lives primarily as **Form recipes** in `form/form/form-stdlib/identity-attribution.fk` and as substrate cells. The same recipes and cells are used by agent cells and human cells. We are actively working to reduce reliance on new opaque numbers through composition and registry practices.
 
 - No flags. No environment variables. No per-agent local config.
 - Consent, policy, allowed signal sources, and corrections live in the contributor's identity profile (existing `/api/identity` surfaces) or as substrate cells belonging to that contributor.
@@ -148,15 +148,15 @@ THIA lives primarily as **Form recipes** in `form/form-stdlib/identity-attributi
 Shell entry points remain pure and contain no THIA logic. The capability is invoked when an agent or human cell chooses to use it.
 
 See (state after advancing both the THIA capability and the Blueprint hygiene healing in parallel):
-- `form/form-stdlib/identity-attribution.fk` — basic but real channel collection + initial resonance sensing
-- `form/form-stdlib/skills/identity-attribution-skill.fk` — shared verbs
-- `form/user-blueprint-registry.md` — now contains an explicit composition review of the 1800–1806 range
+- `form/form/form-stdlib/identity-attribution.fk` — basic but real channel collection + initial resonance sensing
+- `form/form/form-stdlib/skills/identity-attribution-skill.fk` — shared verbs
+- `form/form/user-blueprint-registry.md` — now contains an explicit composition review of the 1800–1806 range
 
 The two streams are being moved together without one blocking the other.
 
 A practical, alive pattern (all Form + substrate):
 - Each contributor has dedicated observation channels.
-- Two shared skill verbs (defined in `form/form-stdlib/skills/identity-attribution-skill.fk`):
+- Two shared skill verbs (defined in `form/form/form-stdlib/skills/identity-attribution-skill.fk`):
   - `contribute-observation` — any authorized cell (agent or human tool) appends a `THIA-OBSERVATION` recipe to the channel.
   - `request-attribution` — any cell asks the Form recipes to read the channels and return a living `THIA-COLLECTION`.
 - The Form recipes themselves sense resonance, discomfort, surprise, and produce both substrate cells and a humble, clear telling for the human.
@@ -173,7 +173,7 @@ This makes identity attribution a living field of recognition between cells rath
 
 All of these are welcome to evolve together as the body feels what wants to be next.
 
-**Parallel track note**: While this work continues, a separate but related healing stream is active on the broader Form user-Blueprint magic number pattern (see `form/user-blueprint-registry.md` and `scripts/scan_form_user_blueprints.py`). Insights from one stream are allowed to inform the other without forcing either to stop.
+**Parallel track note**: While this work continues, a separate but related healing stream is active on the broader Form user-Blueprint magic number pattern (see `form/form/user-blueprint-registry.md` and `scripts/scan_form_user_blueprints.py`). Insights from one stream are allowed to inform the other without forcing either to stop.
 
 ---
 
@@ -184,7 +184,7 @@ This document is intended to be living. When new reliable signals appear (or old
 - Agent Self-Orientation Contract
 - docs/presences/ (for named humans and agents)
 - `config/agent_profiles.json`
-- `form/user-blueprint-registry.md` (body-wide practice for healing magic numbers in Form Blueprints)
+- `form/form/user-blueprint-registry.md` (body-wide practice for healing magic numbers in Form Blueprints)
 
 ### Healing the Broader Magic Number Pattern
 
@@ -193,7 +193,7 @@ The recent THIA work (and the body's Form system in general) makes heavy use of 
 This creates exactly the brittleness, opacity, and future maintenance pain the user named.
 
 **Active healing practice being adopted**:
-- All new user-range allocations must be recorded in `form/user-blueprint-registry.md` with semantic meaning and justification.
+- All new user-range allocations must be recorded in `form/form/user-blueprint-registry.md` with semantic meaning and justification.
 - Strong preference for composition over new top-level Blueprints.
 - The registry and scanning tooling become part of the body's proprioception (wellness checks, attunement breaths).
 - Discomfort upon encountering an unexplained number is treated as valid signal of misalignment.

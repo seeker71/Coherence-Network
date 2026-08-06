@@ -2,13 +2,13 @@
 idea_id: idea-realization-engine
 status: draft
 source:
-  - file: form/form-stdlib/i18n.fk
+  - file: form/form/form-stdlib/i18n.fk
     symbols: [i18n-load, i18n-string, i18n-locales-available]
-  - file: form/form-stdlib/grammars/natural-bmf.fk
+  - file: form/form/form-stdlib/grammars/natural-bmf.fk
     symbols: [natural-src-word]
-  - file: form/form-stdlib/intrinsic-cast.fk
+  - file: form/form/form-stdlib/intrinsic-cast.fk
     symbols: [ic-nothing, ic-nothing?]
-  - file: form/form-stdlib/form-ontology.json
+  - file: form/form/form-stdlib/form-ontology.json
     symbols: []
   - file: docs/coherence-substrate/i18n-as-recipe-corpus.form
     symbols: []
@@ -16,7 +16,7 @@ source:
     symbols: []
   - file: docs/coherence-substrate/universal-translator.form
     symbols: []
-  - file: form/validate.sh
+  - file: form/form/validate.sh
     symbols: []
 requirements:
   - "Meaning cells come from the real corpus: word-level translation pairs are drawn from web/messages/{en,fr,de,es,id,pt-br}.json (six locales on disk) through i18n.fk — the meaning identity IS the shared key-path cell. No invented vocabulary, no statistical alignment."
@@ -24,15 +24,15 @@ requirements:
   - "Translation is a structural walk: translate(surface, from-locale, to-locale) = surface -> word cell -> meaning cell -> target-locale word cell -> surface. The pivot is the shared cell, not the symbol — labels can drift, identity holds."
   - "A surface with no word cell in the from-locale realizes to nothing — the core-axioms third state, same carrier intrinsic casting uses for failed casts — never an empty string, never a thrown error."
   - "Round-trip law as counted evidence: for uniquely-mapped surfaces, translate(translate(w, A, B), B, A) = w; the band counts unique vs ambiguous vs missing over the selected corpus subset and reports the counts, hiding nothing."
-  - "The translation lane proves three-way: a root-word-translation-band driven by the real corpus files passes identically in Go, Rust, and TypeScript via form/validate.sh."
+  - "The translation lane proves three-way: a root-word-translation-band driven by the real corpus files passes identically in Go, Rust, and TypeScript via form/form/validate.sh."
 done_when:
-  - 'file_exists("form/form-stdlib/root-word-translation.fk")'
-  - 'file_exists("form/form-stdlib/tests/root-word-translation-band.fk")'
-  - "The band passes three-way (Go, Rust, TypeScript agree) under form/validate.sh."
+  - 'file_exists("form/form/form-stdlib/root-word-translation.fk")'
+  - 'file_exists("form/form/form-stdlib/tests/root-word-translation-band.fk")'
+  - "The band passes three-way (Go, Rust, TypeScript agree) under form/form/validate.sh."
   - "A word-level en surface translates to its de surface through the shared key-path cell, and the same walk returns it home (round-trip identity on a uniquely-mapped surface)."
   - "An unknown surface realizes to nothing in all three kernels; an ambiguous surface returns its sense list as data."
   - "The band reports corpus coverage counts (word-level keys selected, unique mappings, ambiguous surfaces, missing locale surfaces)."
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk"
 constraints:
   - "Real data over mocks: the corpus is web/messages/*.json read through i18n.fk's cache layer; the spec adds no invented word lists."
   - "Translation walks are structural only — no frequency ranking, no fuzzy matching, no statistical fallback in this slice."
@@ -74,15 +74,15 @@ The corpus is not a toy: `web/messages/{en,fr,de,es,id,pt-br}.json` carries 2141
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/root-word-translation.fk` — create: word/meaning cell interning from the i18n corpus, sense lookup, the translation walk, round-trip + coverage counters
-- `form/form-stdlib/tests/root-word-translation-band.fk` — create: the three-way band
+- `form/form/form-stdlib/root-word-translation.fk` — create: word/meaning cell interning from the i18n corpus, sense lookup, the translation walk, round-trip + coverage counters
+- `form/form/form-stdlib/tests/root-word-translation-band.fk` — create: the three-way band
 - `specs/INDEX.md` — regenerate
 
 No ontology rows are needed for the first slice if the word/meaning cells intern as composed recipes over existing categories; if named Blueprint rows earn their place (WORD-CELL, MEANING-CELL), they follow the casts pattern: rows + `gen_bp_table.py` + loader bindings in the same commit.
 
 ## Acceptance Tests
 
-`form/form-stdlib/tests/root-word-translation-band.fk` (single aggregate, distinct weights per group, same discipline as `tests/intrinsic-cast-band.fk`), run three-way via `form/validate.sh`:
+`form/form/form-stdlib/tests/root-word-translation-band.fk` (single aggregate, distinct weights per group, same discipline as `tests/intrinsic-cast-band.fk`), run three-way via `form/form/validate.sh`:
 
 - **Group A — the walk.** A uniquely-mapped en surface reaches its de surface through the meaning cell; same for en→es; the reverse walk returns home (round-trip identity).
 - **Group B — honesty lanes.** Unknown surface → `nothing` (verified via `ic-nothing?`); ambiguous surface → sense list with length > 1, and translating a specific sense (by meaning cell) stays exact.
@@ -92,7 +92,7 @@ No ontology rows are needed for the first slice if the word/meaning cells intern
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/root-word-translation.fk form-stdlib/tests/root-word-translation-band.fk
 python3 scripts/validate_spec_quality.py --file specs/form-root-word-translation.md
 ```
 
@@ -118,7 +118,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-root-word-translation
 ## Task Card
 
 - **goal**: Prove translation by structural mapping through shared meaning cells, three-way, on the body's real parallel corpus.
-- **files_allowed**: `form/form-stdlib/root-word-translation.fk`, `form/form-stdlib/tests/root-word-translation-band.fk`, `specs/form-root-word-translation.md`, `specs/INDEX.md` (+ ontology/bp/loader only if named rows earn their place)
+- **files_allowed**: `form/form/form-stdlib/root-word-translation.fk`, `form/form/form-stdlib/tests/root-word-translation-band.fk`, `specs/form-root-word-translation.md`, `specs/INDEX.md` (+ ontology/bp/loader only if named rows earn their place)
 - **done_when**: band three-way; round-trip identity on unique mappings; nothing on unknown; coverage counts asserted.
 - **commands**: see Verification.
 - **constraints**: real corpus only; structural walks only; nothing on unknown; no parallel service.

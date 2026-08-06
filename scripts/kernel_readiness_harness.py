@@ -34,7 +34,7 @@ them:
     Per-request cost = inject (µs) + subprocess spawn + kernel execute (~ms).
 
   PATH B — "python-bmf on kernel" (the pyfkb-run.sh --kernel rust pipeline)
-    form/scripts/pyfkb-run.sh:
+    form/form/scripts/pyfkb-run.sh:
       source-compiles ~10 BML preludes through the Go kernel, then runs the
       whole python-bmf scanner+grammar+eval pipeline over raw .py bytes.
     This is the "API code → Form-native, no Python in the path" dream, but
@@ -92,10 +92,10 @@ from typing import Any, Callable, Dict, List, Optional
 
 REPO = Path(__file__).resolve().parent.parent
 API = REPO / "api"
-ADAPTER = REPO / "form" / "form-kernel-ts" / "seedbank" / "python-adapter"
+ADAPTER = REPO / "form" / "form" / "form-kernel-ts" / "seedbank" / "python-adapter"
 EXAMPLES = ADAPTER / "examples"
-RUST_BIN = REPO / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
-PYFKB = REPO / "form" / "scripts" / "pyfkb-run.sh"
+RUST_BIN = REPO / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+PYFKB = REPO / "form" / "form" / "scripts" / "pyfkb-run.sh"
 # The persistent-serve route table: registered ONCE into a warm kernel by
 # `form-kernel-rust serve`. Holds the same recipe bodies the live endpoints run.
 SERVE_ROUTES = REPO / "scripts" / "kernel_readiness_routes.fk"
@@ -1169,7 +1169,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if not RUST_BIN.is_file():
         print(f"form-kernel-rust binary not found at {RUST_BIN}", file=sys.stderr)
-        print("build it: cd form/form-kernel-rust && cargo build --release", file=sys.stderr)
+        print("build it: cd form/form/form-kernel-rust && cargo build --release", file=sys.stderr)
         return 2
 
     bridge = _ensure_bridge()

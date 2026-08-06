@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Kernel } from "../../form/form-kernel-ts/src/kernel.ts";
+import { Kernel } from "../../form/form/form-kernel-ts/src/kernel.ts";
 import {
   fieldStep,
   intervene,

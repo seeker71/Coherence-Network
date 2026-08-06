@@ -38,15 +38,15 @@ from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 API_DIR = ROOT / "api"
-ADAPTER_DIR = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter"
+ADAPTER_DIR = ROOT / "form" / "form" / "form-kernel-ts" / "seedbank" / "python-adapter"
 EXAMPLES_DIR = ADAPTER_DIR / "examples"
 PY_DEMO = EXAMPLES_DIR / "endpoint_grounded_cost_demo.py"
 FK_RECIPE = EXAMPLES_DIR / "endpoint_grounded_cost_demo.fk"
-BML_HANDLER = ROOT / "form" / "form-stdlib" / "tests" / "grounded-cost-record-handler-band.fk"
-RUST_BIN = ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
-GO_BIN = ROOT / "form" / "form-kernel-go" / "bin-go"
+BML_HANDLER = ROOT / "form" / "form" / "form-stdlib" / "tests" / "grounded-cost-record-handler-band.fk"
+RUST_BIN = ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+GO_BIN = ROOT / "form" / "form" / "form-kernel-go" / "bin-go"
 PRODUCTION_ROUTES = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
-FORM_STDLIB = ROOT / "form" / "form-stdlib"
+FORM_STDLIB = ROOT / "form" / "form" / "form-stdlib"
 
 
 @dataclass

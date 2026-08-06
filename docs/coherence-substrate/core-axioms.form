@@ -110,7 +110,7 @@
     (trust        trust-envelope)                     # specs/native-mutation-trust-envelope.md: residual,
                                                        # reversible-gate-state, side-effect-intents, silence/stop/fail/BMA
     (reversible   rollback-receipts)                  # the crossing can be un-crossed (axiom-3 made concrete)
-    (observed     satsang-flip-witness)               # form/form-stdlib/satsang-flip-witness.fk: dissent + silence visible
+    (observed     satsang-flip-witness)               # form/form/form-stdlib/satsang-flip-witness.fk: dissent + silence visible
     (sovereign    canary-failures-are-signal-not-gates)  # the canary informs the decision; never overrides it
     (membrane     the-rollout-boundary)               # scripts/verify_web_api_deploy.sh:109; deploy/hostinger/auto-deploy.sh:713
     (contract     native-invitation-contract)         # auto-deploy.sh checks "state":"native-invitation-contract" crossed

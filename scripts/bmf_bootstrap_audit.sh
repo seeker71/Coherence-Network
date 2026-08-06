@@ -20,7 +20,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 RS_BIN="$FORMDIR/form-kernel-rust/target/release/form-kernel-rust"
 RC="$FORMDIR/form-stdlib/reachability.fk"
 PRELUDES=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar bml source-compiler)

@@ -179,7 +179,7 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-diagnose.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-diagnose.fk \
 #     form-stdlib/tests/form-diagnose-band.fk      # → 31 four-way, all diagnoses two-sided
 #   bash scripts/form_diagnose_demo.sh             # real channels: native exit codes + live
 #                                                  #   fk_arms framebuffer → conviction

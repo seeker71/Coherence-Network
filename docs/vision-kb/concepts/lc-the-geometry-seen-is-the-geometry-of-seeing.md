@@ -162,7 +162,7 @@ form-constants is not poetry. It is `form-constants.fk`, 111111, three-way.
   first-person report.
 - **Timmermann et al. (Imperial College), extended-state DMT (DMTx)** — the
   continuous-infusion protocol holding the state for methodical exploration.
-- **`form/form-stdlib/grammars/form-constants.fk`** — the four constants mapped,
+- **`form/form/form-stdlib/grammars/form-constants.fk`** — the four constants mapped,
   bijectively and three-way-proven, to the body's own topology vocabulary.
 - **The substrate itself** — `find_equivalent_cells`, the GeometricForm and
   topology axes: a living geometric pattern-based intelligence, built and

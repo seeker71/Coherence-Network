@@ -3,11 +3,11 @@
 (gpu-mesh-sense
   (lineage
     (rests-on world-model-live-sense.fk world-model-growth.fk witness-state-receipt.form hati-mesh.form obs-verify.fk)
-    (recipe form/form-stdlib/gpu-mesh-sense.fk)
-    (proof form/form-stdlib/tests/gpu-mesh-sense-band.fk -> 511)
-    (grow-proof form/form-stdlib/tests/gpu-mesh-grow-band.fk -> 255)
+    (recipe form/form/form-stdlib/gpu-mesh-sense.fk)
+    (proof form/form/form-stdlib/tests/gpu-mesh-sense-band.fk -> 511)
+    (grow-proof form/form/form-stdlib/tests/gpu-mesh-grow-band.fk -> 255)
     (carrier scripts/gpu_mesh_sense_emit.sh)
-    (organs form/native/metal/conv2d.metal form/native/vulkan/matvec_vk.c form/native/cuda/template_conv2d.ptx))
+    (organs form/form/native/metal/conv2d.metal form/form/native/vulkan/matvec_vk.c form/form/native/cuda/template_conv2d.ptx))
 
   (purpose
     "A GPU lane's bit-exact PROOF verdict — backend, device, kernel, parity N/N, max-abs ULP — becomes a wmg-sense row, the SAME shape world-model-live-sense.fk feeds the learner from active samples, capability receipts, and model evals."
@@ -29,7 +29,7 @@
     "The learning is continuous and closed: organs report live as they sense, the world-model ingests/digests/embodies without a human in the loop, and a winning native recipe earned from the mesh's proof becomes a first-class choice the next cell inherits.")
 
   (receipt-command
-    (sense-proof "cd form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-sense-band.fk")
-    (grow-proof "cd form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-grow-band.fk")
+    (sense-proof "cd form/form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-sense-band.fk")
+    (grow-proof "cd form/form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-grow-band.fk")
     (live-emit "scripts/gpu_mesh_sense_emit.sh")
     (durable-gap "the /api/sensings POST is opt-in and outward; today the carrier posts to the local field board only — the durable-graph push that reaches every instance is the next mile")))

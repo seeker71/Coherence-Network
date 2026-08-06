@@ -61,7 +61,7 @@ def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path,
             "local_validation": {"status": "pass", "commands": ["pytest focused"]},
             "e2e_validation": {"status": "pass", "summary": "Proof floor is readable."},
             "phase_gate": {"state": "local-proof-pass", "next": "Attach weight receipts."},
-            "evidence_refs": ["form/form-stdlib/model-vitality.fk"],
+            "evidence_refs": ["form/form/form-stdlib/model-vitality.fk"],
         },
     )
     _write_json(
@@ -111,8 +111,8 @@ def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: 
             "artifact_kind": "nearest-shape-prototype",
             "model_family": "Form-native nearest-shape",
             "status": "active",
-            "recipe_path": "form/form-stdlib/native-training-receipt.fk",
-            "proof_band_path": "form/form-stdlib/tests/native-training-receipt-band.fk",
+            "recipe_path": "form/form/form-stdlib/native-training-receipt.fk",
+            "proof_band_path": "form/form/form-stdlib/tests/native-training-receipt-band.fk",
             "observed_at": "2026-06-14T00:00:00Z",
             "continuous_cycle_count": 3,
             "cycle_receipts": [

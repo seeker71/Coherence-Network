@@ -3,7 +3,7 @@
 These are the engine the form-cli north star describes, exposed inside an agent
 (Claude Code, codex, ...) as MCP tools and an auto response-hook:
 
-  route      run the four-way-proven routing formula (form/form-stdlib/
+  route      run the four-way-proven routing formula (form/form/form-stdlib/
              form-cli-router.fk: fcr-route) on the kernel — form-native or the
              subscription agent CLI, never a metered REST API.
   capture    record a (request, raw, transmuted) pair in the training catalog
@@ -29,9 +29,9 @@ from pathlib import Path
 
 # repo root: mcp-server/coherence_mcp_server/form_cli_tools.py -> parents[2]
 _REPO = Path(__file__).resolve().parents[2]
-_ROUTER_FK = _REPO / "form" / "form-stdlib" / "form-cli-router.fk"
+_ROUTER_FK = _REPO / "form" / "form" / "form-stdlib" / "form-cli-router.fk"
 _KERNEL = Path(
-    os.environ.get("FORM_KERNEL_GO_BIN") or (_REPO / "form" / "form-kernel-go" / "bin-go")
+    os.environ.get("FORM_KERNEL_GO_BIN") or (_REPO / "form" / "form" / "form-kernel-go" / "bin-go")
 )
 # the persistent training corpus (shared with form_cli capture); grows with use.
 _CATALOG = Path(
@@ -58,7 +58,7 @@ def kernel_route(form_native: dict, agent_cli: dict) -> dict:
     the real four-way-proven recipe decides, not this carrier."""
     if not (_KERNEL.is_file() and os.access(_KERNEL, os.X_OK)):
         return {"error": f"kernel not built at {_KERNEL} — run: "
-                         f"(cd {_REPO}/form/form-kernel-go && go build -o bin-go .)"}
+                         f"(cd {_REPO}/form/form/form-kernel-go && go build -o bin-go .)"}
 
     def axes(b: dict) -> tuple[int, int, int, int]:
         return (int(b.get("sovereignty", 0)), int(b.get("trust", 0)),

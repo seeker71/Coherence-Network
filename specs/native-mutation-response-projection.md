@@ -2,17 +2,17 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/application-graph-response-projection.fk
+  - file: form/form/form-stdlib/application-graph-response-projection.fk
     symbols: [agrp-idea-with-score-json, agrp-spec-entry-json, agrp-project-idea-row, agrp-project-spec-row, agrp-free-energy-score, agrp-marginal-cc-score]
-  - file: form/form-stdlib/tests/application-graph-response-projection-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-response-projection-band.fk
     symbols: []
-  - file: form/form-stdlib/integration/application-graph-response-projection-live.fk
+  - file: form/form/form-stdlib/integration/application-graph-response-projection-live.fk
     symbols: []
-  - file: form/scripts/application-graph-response-projection-test.sh
+  - file: form/form/scripts/application-graph-response-projection-test.sh
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_response_projection_names_idea_and_spec_response_shapes, test_response_projection_band_executes_across_sibling_kernels, test_response_projection_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_response_projection_after_bounded_flip]
-  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+  - file: form/form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
@@ -26,10 +26,10 @@ requirements:
   - "The proof does not perform the public front-door flip or claim route-bound side-effect parity."
   - "The remaining side-effect boundary is carried by the native mutation trust envelope until the separate native side-effect carrier proof binds to route execution."
 done_when:
-  - 'file_exists("form/form-stdlib/application-graph-response-projection.fk")'
-  - 'file_exists("form/scripts/application-graph-response-projection-test.sh")'
+  - 'file_exists("form/form/form-stdlib/application-graph-response-projection.fk")'
+  - 'file_exists("form/form/scripts/application-graph-response-projection-test.sh")'
   - 'pytest_passes("api/tests/test_application_graph_response_projection.py")'
-test: "form/scripts/application-graph-response-projection-test.sh && cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py"
+test: "form/form/scripts/application-graph-response-projection-test.sh && cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -74,13 +74,13 @@ Python service code.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/application-graph-response-projection.fk` - response
+- `form/form/form-stdlib/application-graph-response-projection.fk` - response
   projection recipes.
-- `form/form-stdlib/tests/application-graph-response-projection-band.fk` -
+- `form/form/form-stdlib/tests/application-graph-response-projection-band.fk` -
   three-kernel projection band.
-- `form/form-stdlib/integration/application-graph-response-projection-live.fk`
+- `form/form/form-stdlib/integration/application-graph-response-projection-live.fk`
   - live DB projection integration.
-- `form/scripts/application-graph-response-projection-test.sh` - throwaway
+- `form/form/scripts/application-graph-response-projection-test.sh` - throwaway
   Postgres harness.
 - `api/tests/test_application_graph_response_projection.py` - repository proof.
 - `docs/coherence-substrate/ideas-router.form` - ideas route state.
@@ -93,13 +93,13 @@ Python service code.
 - `api/tests/test_application_graph_response_projection.py::test_response_projection_band_executes_across_sibling_kernels`
 - `api/tests/test_application_graph_response_projection.py::test_response_projection_live_db_script_runs_or_skips_when_pg_missing`
 - `api/tests/test_application_graph_response_projection.py::test_route_forms_name_response_projection_after_bounded_flip`
-- Manual validation: `form/scripts/application-graph-response-projection-test.sh`
+- Manual validation: `form/form/scripts/application-graph-response-projection-test.sh`
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk
-form/scripts/application-graph-response-projection-test.sh
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk
+form/form/scripts/application-graph-response-projection-test.sh
 cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md
 ```

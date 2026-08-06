@@ -17,7 +17,7 @@
 # Run:  scripts/metal_arch_search_audit.sh   (the d=4 reversal dataset, widths 1..4, lr 0.05, 150 epochs)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 
 if [[ "$(uname -s)" != "Darwin" ]] || ! command -v swiftc >/dev/null; then

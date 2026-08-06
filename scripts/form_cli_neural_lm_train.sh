@@ -20,14 +20,14 @@
 #   on multi-modal successors; kept for comparison.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
+STD="$ROOT/form/form/form-stdlib"; GO="$ROOT/form/form/form-kernel-go/bin-go"
 # deterministic walk: the bespoke Go float JIT is not bit-identical (see
 # docs/coherence-substrate/one-acceleration-engine.form); FORM_JIT_HOT forces the
 # walk so the reported accuracy is reproducible until the unified pipeline lands.
 export FORM_JIT_HOT=100000000
 CORPUS="${1:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
 VOCAB="${2:-24}"; DIM="${3:-8}"; EPOCHS="${4:-300}"; CAP="${5:-600}"; EMB="${6:-onehot}"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
 echo "── train the Form-native neural LM on the REAL lawful corpus (logic is four-way Form) ──"

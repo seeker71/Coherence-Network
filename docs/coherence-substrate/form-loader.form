@@ -14,8 +14,8 @@
 
   (lineage
     (kin form-first-router.fk source-compiler.fk form-bml.fk lc-cognitive-sovereignty)
-    (recipe form/form-stdlib/form-loader.fk)
-    (proof  form/form-stdlib/tests/form-loader-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (recipe form/form/form-stdlib/form-loader.fk)
+    (proof  form/form/form-stdlib/tests/form-loader-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
     (named-with urs sema))
 
   ; the wrappers each re-do this loading by hand — and one got it wrong (the silent ask+ break)

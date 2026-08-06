@@ -9,8 +9,8 @@
 # RUNS in the kernels). walk_parallel is the compute-parallel leaf — this
 # is the offer-level closure, and it now RUNS three-way:
 #
-#   form/form-stdlib/offers-in-flight.fk           — the recipe
-#   form/form-stdlib/tests/offers-in-flight-band.fk — the proof (255)
+#   form/form/form-stdlib/offers-in-flight.fk           — the recipe
+#   form/form/form-stdlib/tests/offers-in-flight-band.fk — the proof (255)
 #
 # Concurrency here is NOT a thread-pool abstraction ported from a host
 # language. It is axiom-5 closed over plurality: many offers
@@ -75,7 +75,7 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
 #     form-stdlib/sha256.fk form-stdlib/channel-query.fk \
 #     form-stdlib/offers-in-flight.fk form-stdlib/tests/offers-in-flight-band.fk
 #   # → 255, three-way: four offers A,B,C,D launch onto a channel; acks

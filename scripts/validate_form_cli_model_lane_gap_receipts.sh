@@ -262,8 +262,8 @@ receipt = {
         "sampler_min_p": {
             "verdict": "pass" if sampler_min_p_ok else "fail",
             "observed": sampler_min_p_ok,
-            "recipe": "form/form-stdlib/sampling.fk",
-            "band": "form/form-stdlib/tests/sampling-band.fk",
+            "recipe": "form/form/form-stdlib/sampling.fk",
+            "band": "form/form/form-stdlib/tests/sampling-band.fk",
             "boundary": "Temperature, softmax, top-k, top-p, llama.cpp-style min-p, MINSTD seeded draw, and inverse-CDF token selection are four-way; this is the sampler primitive that can consume real logits once full hidden-state logits are bound.",
         },
         "autoregressive_loop_binding": {

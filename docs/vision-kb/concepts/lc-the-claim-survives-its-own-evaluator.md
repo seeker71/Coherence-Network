@@ -137,10 +137,10 @@ asserted with confidence.
 
 ## Sources to walk further
 
-- **`form/form-stdlib/grammars/equivalence-fitness.fk`** — the frozen evaluator:
+- **`form/form/form-stdlib/grammars/equivalence-fitness.fk`** — the frozen evaluator:
   computed yield, reciprocity, holdout recovery, table penalty, collapse penalty;
   the fitness that scores a claimed equivalence and cannot be tuned by the author.
-- **`form/form-stdlib/tests/equivalence-fitness-band.fk`** — the three candidates
+- **`form/form/form-stdlib/tests/equivalence-fitness-band.fk`** — the three candidates
   scored (PURE-COMPUTED +74, AUTHOR-ACTUAL +61, PURE-TABLE −63), band 111111,
   three-way.
 - **[`lc-autoresearch-as-honesty-runtime`](lc-autoresearch-as-honesty-runtime.md)** —

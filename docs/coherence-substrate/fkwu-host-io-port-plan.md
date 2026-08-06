@@ -18,7 +18,7 @@ This doc scopes: **(A) Windows 11**, **(B) HTTP client methods**.
 
 There is no Windows toolchain in the dev container (no mingw / cl / wine), so any
 Windows code is unverifiable here. All Windows shims go in
-`form/form-stdlib/hati-os-kernel-emit.fk`, **`_WIN32`-guarded** so Linux/macOS
+`form/form/form-stdlib/hati-os-kernel-emit.fk`, **`_WIN32`-guarded** so Linux/macOS
 emit is untouched (zero regression by construction, as with the Darwin fallback).
 
 1. **File I/O** (tags 55–63, 104, 107): map POSIX → MSVCRT — `open/read/write/close/lseek` → `_open/_read/_write/_close/_lseeki64` (`<io.h>`), add `O_BINARY`; `mkdir(p,mode)` → `_mkdir(p)` (no mode arg); `unlink`→`_unlink`, `rmdir`→`_rmdir`; `file_mtime` via `_stat64`. `<fcntl.h>` already included provides O_* on MinGW.
@@ -39,10 +39,10 @@ This is a **four-kernel** feature (http_get already exists in all four), and the
 via a table (discovered the hard way: a fkwu-only op panics the Go flattener with
 `trivialValue: ... is composite`). Edit points:
 
-1. `form/form-stdlib/form-flatten.fk` — op-list `(list "http_request" 3 114)` + add to the `flt-do-let-effect-op` recognizer. *(drafted)*
-2. `form/form-stdlib/hati-os-kernel-emit.fk` — `fk_http_request_native(method, url, body)` (mirror `fk_http_get_plain` + method in the request line + `Content-Length`/body append) and a tag-114 dispatch arm. *(drafted — compiles clean, no regression; http:// path; https pending)*
-3. `form/form-kernel-go/server.go` — `registerNative("http_request", ...)` + an `externalHTTPRequestValue(method,url,body)` mirroring `externalHTTPGetValue` (net/http). **Required even to flatten+run on fkwu.**
-4. `form/form-kernel-rust/src/main.rs` + `form/form-kernel-ts/src/kernel.ts` — equivalents for execution parity on those kernels.
+1. `form/form/form-stdlib/form-flatten.fk` — op-list `(list "http_request" 3 114)` + add to the `flt-do-let-effect-op` recognizer. *(drafted)*
+2. `form/form/form-stdlib/hati-os-kernel-emit.fk` — `fk_http_request_native(method, url, body)` (mirror `fk_http_get_plain` + method in the request line + `Content-Length`/body append) and a tag-114 dispatch arm. *(drafted — compiles clean, no regression; http:// path; https pending)*
+3. `form/form/form-kernel-go/server.go` — `registerNative("http_request", ...)` + an `externalHTTPRequestValue(method,url,body)` mirroring `externalHTTPGetValue` (net/http). **Required even to flatten+run on fkwu.**
+4. `form/form/form-kernel-rust/src/main.rs` + `form/form/form-kernel-ts/src/kernel.ts` — equivalents for execution parity on those kernels.
 
 **Test path** (once Go + fkwu land): local http echo server → flatten a `(do (_get (http_request "POST" "http://127.0.0.1:PORT/p" "body") "status_code"))` band through the Go kernel (`fks-table-file` via the `FOURTH_CHAIN` flatten driver) → run `$FKWU table 0` → assert the echo server logged method+body and fkwu returned the status. (The plain-http path was drafted and compiles; the table run needs step 3 first.)
 

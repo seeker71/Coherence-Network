@@ -1,7 +1,7 @@
 # Our learning rate vs SOTA — the honest comparison
 
 **What this measures.** A sample-efficiency curve of the Coherence Network's *actual*
-Form-native learner — `form/form-stdlib/nearest-shape.fk`, run on the Go kernel — on a
+Form-native learner — `form/form/form-stdlib/nearest-shape.fk`, run on the Go kernel — on a
 real speech task built from a real public corpus (LibriSpeech dev-clean, CC-BY-4.0).
 Task: 40-way **speaker identification** from a coarse 13-band quantized log-mel
 fingerprint (extracted by the ffmpeg+numpy carrier `extract_fingerprints.py`; the
@@ -46,7 +46,7 @@ commensurable at one end of the axis:
   nothing after 128 samples. Our **slope** wins early.
 - *At the fidelity end this nearest-shape recipe is coarse* — 54% vs near-human. But the
   fix is **not** a learner we lack. `nearest-shape.fk` is only the **router tier**. The
-  **transformer tier already exists and is proven**: `form/form-stdlib/transformer-block.fk`
+  **transformer tier already exists and is proven**: `form/form/form-stdlib/transformer-block.fk`
   (M4 of `form-native-models.form`) is a whisper-shaped pre-LN attention+FFN block whose
   *architecture and weights are recipe data*, verified bit-exact against the PyTorch fp64
   reference — **band verdict 511, re-run live on the Go kernel here** — and emitted to six
@@ -114,7 +114,7 @@ in *kind* of transformer:
 >
 > **Update (the training loop over it is no longer just a seed):** the backward pass over
 > the transformer's affine node is now built and proven —
-> `form/form-stdlib/transformer-backprop.fk` → **127 three-way** (Go=Rust=TS): the chain
+> `form/form/form-stdlib/transformer-backprop.fk` → **127 three-way** (Go=Rust=TS): the chain
 > rule `dx = Wᵀ·gy` bit-exact, `dW = outer(gy,x)` bit-exact, SGD generalized from the
 > one-weight atom to a weight matrix, training a 2→2 affine to fit a target with strictly
 > decreasing loss. That affine node is the workhorse of every projection and FFN layer in

@@ -234,7 +234,7 @@ with Bytes terminals over a DB carrier.
 - [`lc-tools-as-form-cells`](../vision-kb/concepts/lc-tools-as-form-cells.md) — a
   tool/process as a cell with call/response halves; the Process carrier gap is
   this concept at the kernel floor.
-- [`channel.fk`](../../form/form-stdlib/channel.fk) — inter-cell transport;
+- [`channel.fk`](../../form/form/form-stdlib/channel.fk) — inter-cell transport;
   resources talk through channels.
 - [`OBJECT_MODEL_BML_NUMS.md`](../../kernels/OBJECT_MODEL_BML_NUMS.md) — the
   `native_flag` floor where a value is host-native; the carrier boundary.

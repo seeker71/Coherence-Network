@@ -86,9 +86,9 @@ wanted to be seen.
 ## Run on the Body
 
 The transcript now has a Form run-face:
-[`new-beginnings-body-run.fk`](../../../form/form-stdlib/new-beginnings-body-run.fk).
+[`new-beginnings-body-run.fk`](../../../form/form/form-stdlib/new-beginnings-body-run.fk).
 It specializes the shared
-[`teaching-run-on-body.fk`](../../../form/form-stdlib/teaching-run-on-body.fk)
+[`teaching-run-on-body.fk`](../../../form/form/form-stdlib/teaching-run-on-body.fk)
 dispatcher. The floor is this transcript's own marker sensing; the
 north star is a common teaching-to-body path where many transmissions
 share one run grammar. The run reads a body surface and returns the
@@ -109,7 +109,7 @@ Anne Tucker new-beginnings |> stage: NEW-BEGINNING |> action: friendship-with-op
 Proof:
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk form-stdlib/teaching-run-on-body.fk form-stdlib/new-beginnings-body-run.fk form-stdlib/tests/new-beginnings-body-run-band.fk
 ```
 

@@ -47,7 +47,7 @@ ROOT = Path(__file__).resolve().parent.parent
 for _p in (ROOT, ROOT / "api"):
     sys.path.insert(0, str(_p))
 
-STDLIB = ROOT / "form" / "form-stdlib"
+STDLIB = ROOT / "form" / "form" / "form-stdlib"
 ONTOLOGY = STDLIB / "form-ontology.json"
 REGISTRY = STDLIB / "blueprint-registry.json"
 DOMAIN = "form-blueprint"

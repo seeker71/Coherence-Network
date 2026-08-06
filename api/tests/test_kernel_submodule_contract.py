@@ -46,10 +46,10 @@ def _run_script(path: str, *args: str) -> subprocess.CompletedProcess[str]:
 
 def _blueprint_source_bytes() -> dict[Path, bytes]:
     paths = (
-        REPO_ROOT / "form" / "form-stdlib" / "blueprint-registry.json",
-        REPO_ROOT / "form" / "form-kernel-go" / "bp_table.go",
-        REPO_ROOT / "form" / "form-kernel-rust" / "src" / "bp_table.rs",
-        REPO_ROOT / "form" / "form-kernel-ts" / "src" / "bp_table.ts",
+        REPO_ROOT / "form" / "form" / "form-stdlib" / "blueprint-registry.json",
+        REPO_ROOT / "form" / "form" / "form-kernel-go" / "bp_table.go",
+        REPO_ROOT / "form" / "form" / "form-kernel-rust" / "src" / "bp_table.rs",
+        REPO_ROOT / "form" / "form" / "form-kernel-ts" / "src" / "bp_table.ts",
     )
     return {path: path.read_bytes() for path in paths}
 
@@ -68,11 +68,14 @@ def test_form_is_pinned_path_preserving_kernel_submodule() -> None:
         == "form-submodule"
     )
 
-    # The split branch keeps the historic consumer paths (no form/form level).
-    assert (REPO_ROOT / "form" / "validate.sh").is_file()
-    assert (REPO_ROOT / "form" / "form-stdlib" / "core.fk").is_file()
+    # The split branch nests the historic consumer paths one level deeper,
+    # under form/form/ (form-stdlib, form-cli, form-kernel-*, apps, scripts,
+    # validate.sh); runtime/ and bootstrap/ remain at the submodule root.
+    assert (REPO_ROOT / "form" / "form" / "validate.sh").is_file()
+    assert (REPO_ROOT / "form" / "form" / "form-stdlib" / "core.fk").is_file()
     assert (
         REPO_ROOT
+        / "form"
         / "form"
         / "form-stdlib"
         / "tests"
@@ -80,6 +83,7 @@ def test_form_is_pinned_path_preserving_kernel_submodule() -> None:
     ).is_file()
     astro = (
         REPO_ROOT
+        / "form"
         / "form"
         / "form-kernel-ts"
         / "seedbank"
@@ -90,7 +94,7 @@ def test_form_is_pinned_path_preserving_kernel_submodule() -> None:
     assert astro.with_suffix(".fk").is_file()
     assert astro.with_suffix(".py").is_file()
     assert not any((REPO_ROOT / "form").rglob("form-gen.fk"))
-    assert not (REPO_ROOT / "form" / "form" / "form-stdlib").exists()
+    assert (REPO_ROOT / "form" / "form" / "form-stdlib").exists()
 
 
 def test_kernel_regeneration_is_owned_by_submodule() -> None:
@@ -103,7 +107,7 @@ def test_kernel_regeneration_is_owned_by_submodule() -> None:
     }
 
     for name in regen_scripts:
-        canonical = REPO_ROOT / "form" / "scripts" / name
+        canonical = REPO_ROOT / "form" / "form" / "scripts" / name
         assert canonical.is_file()
         assert canonical.stat().st_mode & 0o111
         assert not (REPO_ROOT / "scripts" / name).exists()
@@ -163,6 +167,7 @@ def test_network_endpoint_recipes_are_owned_by_the_api() -> None:
         assert (REPO_ROOT / "api" / "app" / "form_recipes" / name).is_file()
         assert not (
             REPO_ROOT
+            / "form"
             / "form"
             / "form-kernel-ts"
             / "seedbank"

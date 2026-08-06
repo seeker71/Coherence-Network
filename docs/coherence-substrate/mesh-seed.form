@@ -61,7 +61,7 @@
 ;   privacy, power cost, and trace.
 ;
 ; PROOF
-;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/device-heartbeat.fk \
+;   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/device-heartbeat.fk \
 ;     form-stdlib/provisioning.fk form-stdlib/mesh-relay.fk \
 ;     form-stdlib/friend-node.fk form-stdlib/mesh-health.fk \
 ;     form-stdlib/hati-mesh.fk form-stdlib/mesh-seed.fk \

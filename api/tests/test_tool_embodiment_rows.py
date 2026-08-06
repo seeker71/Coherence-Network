@@ -1,7 +1,7 @@
 """Real tool telemetry groups into the rows the Form embodiment gate consumes.
 
 The verdict — which lane holds a tool's body — is proven four-way by
-form/form-stdlib/tests/tool-embodiment-band.fk. This test proves the other
+form/form/form-stdlib/tests/tool-embodiment-band.fk. This test proves the other
 half: the Python fan-out turns real RuntimeEvents into the exact
 [lane, locality, completed, failed, runtime_ms] rows te-embody-lanes reads,
 grouped by (tool, lane), with no embodiment logic on the carrier side.

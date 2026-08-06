@@ -91,7 +91,7 @@ changed_paths_between() {
 
 changed_path_routes() {
     local changed="$1"
-    if grep -Eq '^(form/form-stdlib/form-ontology\.json|form/form-stdlib/blueprint-registry\.json)$' <<< "$changed"; then
+    if grep -Eq '^(form/form/form-stdlib/form-ontology\.json|form/form/form-stdlib/blueprint-registry\.json)$' <<< "$changed"; then
         printf '%s\n' blueprint
     fi
     if grep -Fxq 'api/app/services/substrate/category.py' <<< "$changed"; then
@@ -100,7 +100,7 @@ changed_path_routes() {
     if grep -E '\.(fk|form)$' <<< "$changed" | grep -Ev '^form/' >/dev/null; then
         printf '%s\n' training
     fi
-    if grep -Eq '^(form/form-stdlib/.*\.fk|specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md)$' <<< "$changed"; then
+    if grep -Eq '^(form/form/form-stdlib/.*\.fk|specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md)$' <<< "$changed"; then
         printf '%s\n' rag
     fi
     if grep -Fxq 'form/.gitlink-diff-unavailable' <<< "$changed"; then
@@ -122,7 +122,7 @@ done || true)
 # routers, services), plus substrate-native shape-files (.form) and
 # stdlib/kernel sources (.fk) so the substrate sees its own teaching tissue.
 CHANGED_CODE=$(printf '%s\n' "$ALL_CHANGED" \
-    | grep -E '^(web/app/(.*/)?(page|layout)\.tsx|web/components/.*\.tsx|web/lib/.*\.ts|api/app/routers/[^/]*\.py|api/app/services/[^/]*\.py|docs/coherence-substrate/[^/]*\.form|docs/shared/[^/]*\.md|form/form-stdlib/.*\.fk)$' \
+    | grep -E '^(web/app/(.*/)?(page|layout)\.tsx|web/components/.*\.tsx|web/lib/.*\.ts|api/app/routers/[^/]*\.py|api/app/services/[^/]*\.py|docs/coherence-substrate/[^/]*\.form|docs/shared/[^/]*\.md|form/form/form-stdlib/.*\.fk)$' \
     | while IFS= read -r path; do
         [[ -f "$path" ]] && printf '%s\n' "$path"
       done \

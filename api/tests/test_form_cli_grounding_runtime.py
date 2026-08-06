@@ -667,7 +667,7 @@ def test_native_observer_rejects_digest_matched_but_behaviorally_fake_carrier(
 
 def test_native_observer_uses_receipted_host_carrier_outside_submodule(tmp_path):
     root = tmp_path
-    bootstrap = root / "form" / "form-stdlib" / "bootstrap"
+    bootstrap = root / "form" / "form" / "form-stdlib" / "bootstrap"
     carrier = root / ".cache" / "form-cli-native" / "linux-amd64" / "form-cli"
     bootstrap.mkdir(parents=True)
     carrier.parent.mkdir(parents=True)
@@ -777,7 +777,7 @@ def test_image_built_carrier_is_proven_and_never_replaced_by_standard_lane(tmp_p
     form_scripts.mkdir(parents=True)
     bootstrap.mkdir(parents=True)
     (form_scripts / "form_cli_bootstrap_proof.sh").write_bytes(
-        (ROOT / "form" / "scripts" / "form_cli_bootstrap_proof.sh").read_bytes()
+        (ROOT / "form" / "form" / "scripts" / "form_cli_bootstrap_proof.sh").read_bytes()
     )
     ensure = scripts / "ensure_form_cli_native.sh"
     ensure.write_bytes((ROOT / "scripts" / "ensure_form_cli_native.sh").read_bytes())
@@ -828,7 +828,7 @@ def test_missing_platform_bootstrap_links_once_then_reuses_verified_native_carri
     form_scripts.mkdir(parents=True)
     bootstrap.mkdir(parents=True)
     (form_scripts / "form_cli_bootstrap_proof.sh").write_bytes(
-        (ROOT / "form" / "scripts" / "form_cli_bootstrap_proof.sh").read_bytes()
+        (ROOT / "form" / "form" / "scripts" / "form_cli_bootstrap_proof.sh").read_bytes()
     )
     ensure = scripts / "ensure_form_cli_native.sh"
     ensure.write_bytes((ROOT / "scripts" / "ensure_form_cli_native.sh").read_bytes())
@@ -888,7 +888,7 @@ def test_missing_platform_bootstrap_links_once_then_reuses_verified_native_carri
 
 def test_bootstrap_corpus_includes_every_native_answer_family():
     relative = {path.relative_to(ROOT).as_posix() for path in coh.form_first_source_paths()}
-    assert any(path.startswith("form/form-stdlib/") for path in relative)
+    assert any(path.startswith("form/form/form-stdlib/") for path in relative)
     assert any(path.startswith("specs/") for path in relative)
     assert any(path.startswith("docs/vision-kb/concepts/") for path in relative)
     assert any(path.startswith("docs/coherence-substrate/") for path in relative)
@@ -897,8 +897,8 @@ def test_bootstrap_corpus_includes_every_native_answer_family():
 
 def test_rag_source_identity_is_platform_independent():
     assert (
-        rag._canonical_source_path(r"form\form-stdlib\rag-ask.fk")
-        == "form/form-stdlib/rag-ask.fk"
+        rag._canonical_source_path(r"form\form\form-stdlib\rag-ask.fk")
+        == "form/form/form-stdlib/rag-ask.fk"
     )
 
 
@@ -906,6 +906,7 @@ def test_real_native_carrier_identity_challenge_and_embedding(tmp_path):
     binary = _ensure_host_native_carrier()
     stamp_path = (
         ROOT
+        / "form"
         / "form"
         / "form-stdlib"
         / "bootstrap"
@@ -973,6 +974,7 @@ def test_real_native_request_hmac_replay_query_and_expiry_gates(tmp_path):
     binary = _ensure_host_native_carrier()
     source_digest = (
         ROOT
+        / "form"
         / "form"
         / "form-stdlib"
         / "bootstrap"

@@ -3036,7 +3036,7 @@ def _parse_failure_hint_from_output(output: str) -> dict[str, Any]:
 def _io_match_sig(content: str) -> str:
     """Content-address a call's input or output — the bootstrap host-native
     execution of io-match.fk's `iom-capture` (sha256, FIPS 180-4: the same bytes
-    the canonical Form recipe form/form-stdlib/sha256.fk defines). Identity comes
+    the canonical Form recipe form/form/form-stdlib/sha256.fk defines). Identity comes
     for free — identical inputs share a sig, so repeat calls group and dedup; the
     digest reveals nothing of the content, so a secret in a command never leaks.
     The native form-cli binary will run iom-capture directly; this feeds the same

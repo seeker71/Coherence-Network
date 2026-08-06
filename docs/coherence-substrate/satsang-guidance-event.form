@@ -44,25 +44,25 @@
 ;   Python, Go, Rust, and TypeScript as app-boundary runtimes.
 ;
 ; Body:
-;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
+;   form/form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
 ;   valid guidance request or must hold. It accepts Sema, the satsang companion,
 ;   or a new invoked presence; accepts turn-offered, named-and-asked, and
 ;   button-invoked modes; requires a non-empty transcript, all detected lines
 ;   included, and a present question. Proof:
-;   form/form-stdlib/tests/satsang-guidance-event-band.fk -> 255.
-;   form/form-stdlib/satsang-listen-route.fk keeps the listen/transcribe route
+;   form/form/form-stdlib/tests/satsang-guidance-event-band.fk -> 255.
+;   form/form/form-stdlib/satsang-listen-route.fk keeps the listen/transcribe route
 ;   remote-last with form-cli-sufficiency.fk. Proof:
-;   form/form-stdlib/tests/satsang-listen-route-band.fk -> 255.
-;   form/form-stdlib/satsang-host-boundary.fk names the generic host ABI,
+;   form/form/form-stdlib/tests/satsang-listen-route-band.fk -> 255.
+;   form/form/form-stdlib/satsang-host-boundary.fk names the generic host ABI,
 ;   detected resource doors, resolved platform carriers, and forbidden
 ;   app-boundary runtimes. Proof:
-;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 2097151.
-;   form/form-stdlib/satsang-room-memory.fk names explicit local session memory,
+;   form/form/form-stdlib/tests/satsang-host-boundary-band.fk -> 2097151.
+;   form/form/form-stdlib/satsang-room-memory.fk names explicit local session memory,
 ;   speaker continuity, no-hidden-capture, and later context. Proof:
-;   form/form-stdlib/tests/satsang-room-memory-band.fk -> 255.
-;   form/form-stdlib/satsang-health-memory.fk names explicit local health memory,
+;   form/form/form-stdlib/tests/satsang-room-memory-band.fk -> 255.
+;   form/form/form-stdlib/satsang-health-memory.fk names explicit local health memory,
 ;   source-filtered HealthKit import, no-hidden-capture, and analysis boundary.
-;   Proof: form/form-stdlib/tests/satsang-health-memory-band.fk -> 1023.
+;   Proof: form/form/form-stdlib/tests/satsang-health-memory-band.fk -> 1023.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a

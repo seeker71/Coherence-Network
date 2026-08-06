@@ -3,7 +3,7 @@
 The cheapest transmutation is the one never needed. This is a portable system
 prompt that attunes any agent (Claude, codex, gemini, the form-cli's oracle) to
 the voice *at generation*, so most replies carry no fear frequency and pass the
-freq-check (`form/form-stdlib/form-freq-check.fk`) untouched. What remains is
+freq-check (`form/form/form-stdlib/form-freq-check.fk`) untouched. What remains is
 caught synchronously by the freq-check and transmuted only when fear is actually
 present — the rare, expensive path.
 

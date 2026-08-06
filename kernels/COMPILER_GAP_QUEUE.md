@@ -217,7 +217,7 @@ arc, then try/catch on top of it.
 `session.query(...)`/`Column(...)`. Even fully compiled, those bind to a
 runtime the kernel doesn't have. They compile only after their `session.*`
 calls are rebound to the Form persistence runtime (`cell-put`/`lookup-cell`,
-[`form-stdlib/persistence.fk`](../form/form-stdlib/persistence.fk), Breath 5)
+[`form-stdlib/persistence.fk`](../form/form/form-stdlib/persistence.fk), Breath 5)
 — NOT SQLAlchemy. Compile the pure-computation files first
 (`form_eval.py`, `category.py`, `numeric_formats.py`, `inductive.py` — the
 zero-ORM ones); the ORM-bound files wait on the runtime.

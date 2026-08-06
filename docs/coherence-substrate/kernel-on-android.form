@@ -25,7 +25,7 @@
 ;   its on-device dispatch is the next increment.
 ;
 ; ── WHAT IS ALREADY TRUE (the ground this stands on) ── [MEASURED — in the body]
-;   form/validate.sh proves three kernels identical: form/form-kernel-rust, form-kernel-go,
+;   form/form/validate.sh proves three kernels identical: form/form/form-kernel-rust, form-kernel-go,
 ;   form-kernel-ts. The recipes that would run on the phone — recognition-router.fk,
 ;   shared-sensing.fk, self-grounding-classifier.fk, satsang.fk — are SHIPPED and four-way green
 ;   (recognition-router-band -> 127, shared-sensing.fk -> 127). So "the kernel on Android" is not
@@ -138,7 +138,7 @@
 ;
 ;   STANDALONE CLI BINARY — the gen-conductor arm  [MEASURED 2026-06-21: bionic build, ELF-checked, carries-conductor]:
 ;     A SECOND, simpler Go->Android path than gomobile: a standalone ARM64 binary, no app, no JNI.
-;     form/form-kernel-go/build-android.sh builds best-first:
+;     form/form/form-kernel-go/build-android.sh builds best-first:
 ;       · BIONIC (NDK present, the default on a Mac with `brew install android-ndk`): GOOS=android
 ;         GOARCH=arm64 CGO_ENABLED=1 CC=<ndk aarch64 clang> -> "ELF ... ARM aarch64 ... interpreter
 ;         /system/bin/linker64" — the GENUINE Android binary, same class PATH A's Rust build produces,

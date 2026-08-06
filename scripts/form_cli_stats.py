@@ -17,8 +17,8 @@ Records (under ~/.coherence-network/):
 import json, os, subprocess, sys, collections
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GO = os.path.join(ROOT, "form", "form-kernel-go", "bin-go")
-STATS_FK = os.path.join(ROOT, "form", "form-stdlib", "form-cli-stats.fk")
+GO = os.path.join(ROOT, "form", "form", "form-kernel-go", "bin-go")
+STATS_FK = os.path.join(ROOT, "form", "form", "form-stdlib", "form-cli-stats.fk")
 CN = os.path.expanduser("~/.coherence-network")
 CORPUS = f"{CN}/form-cli-corpus/corpus.jsonl"
 CATALOG = f"{CN}/form-cli-catalog.jsonl"

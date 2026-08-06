@@ -14,7 +14,7 @@
 # Run:  scripts/metal_backprop_audit.sh [rows cols steps]   (defaults 1280 1280 200)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 ROWS="${1:-1280}"; COLS="${2:-1280}"; STEPS="${3:-200}"
 

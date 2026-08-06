@@ -20,8 +20,8 @@ hypothesis can stay visible without becoming a health claim.
 
   (lineage
     (derives-from evidence-grounding.form whole-lifecycle-fitness.form value-execution-as-recipe.form)
-    (runnable form/form-stdlib/health-impact-receipt.fk)
-    (proof form/form-stdlib/tests/health-impact-receipt-band.fk)
+    (runnable form/form/form-stdlib/health-impact-receipt.fk)
+    (proof form/form/form-stdlib/tests/health-impact-receipt-band.fk)
     (claim-shape subject-exposure-preparation-evidence-safety-witness-verdict))
 
   (subject
@@ -97,8 +97,8 @@ hypothesis can stay visible without becoming a health claim.
 
 # SHIPPED
 #
-# `form/form-stdlib/health-impact-receipt.fk` carries the executable receipt
-# and verdict policy. `form/form-stdlib/tests/health-impact-receipt-band.fk`
+# `form/form/form-stdlib/health-impact-receipt.fk` carries the executable receipt
+# and verdict policy. `form/form/form-stdlib/tests/health-impact-receipt-band.fk`
 # proves eight claims three-way: food benefit, preparation benefit, substance
 # benefit, risk-only, mixed benefit+risk, mechanism-only unknown, missing
 # exposure refusal, and universal-health/cure refusal.

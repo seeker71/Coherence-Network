@@ -21,6 +21,21 @@ _LOCK = threading.Lock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 
 
+def _classic_form_root(root: Path) -> Path:
+    """The classic kernel tree base (form-stdlib, form-cli, bootstrap/...).
+
+    Dockerfile.api's COPY destinations deliberately keep this flat under the
+    deployed image (``root/form/...``); a source checkout of the restructured
+    coherence-kernel submodule nests one level deeper (``form/form/...``).
+    The image always ships ``form/form-cli.sha256`` as a build artifact
+    (never committed in the submodule at any depth), so its presence
+    reliably tells the two apart.
+    """
+    if (root / "form" / "form-cli.sha256").is_file():
+        return root / "form"
+    return root / "form" / "form"
+
+
 def _host_native_carrier(root: Path) -> Path | None:
     """The carrier this host can actually execute, from the bootstrap receipt.
 
@@ -33,7 +48,7 @@ def _host_native_carrier(root: Path) -> Path | None:
     a carrier built elsewhere and getting ``Exec format error``.
     """
     if (root / "form" / "form-cli.sha256").is_file():
-        return root / "form" / "form-cli"
+        return _classic_form_root(root) / "form-cli"
 
     receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
     if not receipt_path.is_file():

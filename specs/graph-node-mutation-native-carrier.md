@@ -2,17 +2,17 @@
 idea_id: data-infrastructure
 status: done
 source:
-  - file: form/form-stdlib/graph-node-port.fk
+  - file: form/form/form-stdlib/graph-node-port.fk
     symbols: [gn-create-node, gn-replace-node, gn-delete-node, gn-node-active?, gn-mutation-test]
-  - file: form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
+  - file: form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
     symbols: []
-  - file: form/form-stdlib/auth-port.fk
+  - file: form/form/form-stdlib/auth-port.fk
     symbols: [auth-require-api-key]
-  - file: form/form-stdlib/tests/auth-port-band.fk
+  - file: form/form/form-stdlib/tests/auth-port-band.fk
     symbols: []
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node, agn-update-node, agn-delete-node]
-  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+  - file: form/form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [mutate_idea_recipe, ideas_router_structure]
@@ -29,10 +29,10 @@ requirements:
   - "The mutation carrier is proven over memory and durable file storage with one shared Form band, including recreate after tombstone."
   - "Ideas and specs name the native mutation carrier while keeping the live execution and side-effect front-door gap explicit."
 done_when:
-  - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-create-node")'
-  - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-delete-node")'
+  - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-create-node")'
+  - 'file_contains("form/form/form-stdlib/graph-node-port.fk", "defn gn-delete-node")'
   - 'pytest_passes("api/tests/test_graph_node_mutation_carrier_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk && cd ../api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk && cd ../../api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py"
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation paths in this slice."
   - "Do not introduce a parallel public mutation store for live users."
@@ -54,10 +54,10 @@ default public mutation route still waits for side effects.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/graph-node-port.fk` declares `gn-create-node`, `gn-replace-node`, `gn-delete-node`, and `gn-node-active?`.
+- [ ] **R1**: `form/form/form-stdlib/graph-node-port.fk` declares `gn-create-node`, `gn-replace-node`, `gn-delete-node`, and `gn-node-active?`.
 - [ ] **R2**: `gn-create-node` refuses an already-active node and `gn-replace-node` refuses a missing or tombstoned node.
 - [ ] **R3**: `gn-delete-node` tombstones a node and removes it from active counts and typed indexes; a later `gn-create-node` on that tombstoned id restores active counts.
-- [ ] **R4**: `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` proves the same mutation contract over memory and file carriers, including tombstone restore and reopen persistence.
+- [ ] **R4**: `form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` proves the same mutation contract over memory and file carriers, including tombstone restore and reopen persistence.
 - [ ] **R5**: `docs/coherence-substrate/ideas-router.form` and `docs/coherence-substrate/spec-registry-router.form` name the native mutation carrier and the remaining live-front-door boundary.
 
 ## Research Inputs
@@ -66,13 +66,13 @@ default public mutation route still waits for side effects.
 - `api/app/routers/ideas.py` - live idea create/update routes and auth boundary.
 - `api/app/routers/spec_registry.py` - live spec create/update/delete routes and auth boundary.
 - `api/app/services/graph_service.py` - application graph-node create/update/delete semantics.
-- `form/form-stdlib/graph-node-port.fk` - native graph-node storage port surface.
-- `form/form-stdlib/storage-port.fk` - carrier abstraction for memory/file/db storage.
+- `form/form/form-stdlib/graph-node-port.fk` - native graph-node storage port surface.
+- `form/form/form-stdlib/storage-port.fk` - carrier abstraction for memory/file/db storage.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/graph-node-port.fk` - native create, replace, delete, active-state, and mutation proof functions.
-- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - carrier-agnostic mutation proof.
+- `form/form/form-stdlib/graph-node-port.fk` - native create, replace, delete, active-state, and mutation proof functions.
+- `form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - carrier-agnostic mutation proof.
 - `docs/coherence-substrate/ideas-router.form` - ideas mutation carrier reading.
 - `docs/coherence-substrate/spec-registry-router.form` - spec registry route and mutation carrier reading.
 - `api/tests/test_graph_node_mutation_carrier_form.py` - repository proof for native mutation carrier naming.
@@ -82,7 +82,7 @@ default public mutation route still waits for side effects.
 
 ## Acceptance Tests
 
-- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk`
+- `form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk`
 - `api/tests/test_graph_node_mutation_carrier_form.py::test_graph_node_port_exposes_create_replace_delete_mutations`
 - `api/tests/test_graph_node_mutation_carrier_form.py::test_graph_node_mutation_band_proves_memory_file_and_reopen`
 - `api/tests/test_graph_node_mutation_carrier_form.py::test_ideas_and_specs_name_the_native_mutation_carrier`
@@ -92,7 +92,7 @@ default public mutation route still waits for side effects.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk
 cd api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native-carrier.md
 ```

@@ -2,11 +2,11 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/application-graph-node-port.fk
+  - file: form/form/form-stdlib/application-graph-node-port.fk
     symbols: [agn-create-node, agn-update-node, agn-delete-node, agn-create-node-sql, agn-update-node-sql, agn-delete-node-sql]
-  - file: form/form-stdlib/integration/application-graph-live-db.fk
+  - file: form/form/form-stdlib/integration/application-graph-live-db.fk
     symbols: []
-  - file: form/scripts/application-graph-live-db-test.sh
+  - file: form/form/scripts/application-graph-live-db-test.sh
     symbols: []
   - file: api/tests/test_application_graph_live_db_trial.py
     symbols: [test_live_db_trial_form_uses_application_graph_pg_wrappers, test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing, test_route_forms_name_live_db_trial_after_bounded_flip]
@@ -20,10 +20,10 @@ requirements:
   - "The trial reads back concrete DB state after each mutation and drops fixture tables before closing."
   - "The proof does not perform or authorize the public front-door mutation flip."
 done_when:
-  - 'file_exists("form/form-stdlib/integration/application-graph-live-db.fk")'
-  - 'file_exists("form/scripts/application-graph-live-db-test.sh")'
+  - 'file_exists("form/form/form-stdlib/integration/application-graph-live-db.fk")'
+  - 'file_exists("form/form/scripts/application-graph-live-db-test.sh")'
   - 'pytest_passes("api/tests/test_application_graph_live_db_trial.py")'
-test: "form/scripts/application-graph-live-db-test.sh && cd api && python3 -m pytest -q tests/test_application_graph_live_db_trial.py"
+test: "form/form/scripts/application-graph-live-db-test.sh && cd api && python3 -m pytest -q tests/test_application_graph_live_db_trial.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -41,7 +41,7 @@ the resulting graph rows.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/integration/application-graph-live-db.fk`
+- [ ] **R1**: `form/form/form-stdlib/integration/application-graph-live-db.fk`
   connects through `pg_connect` and creates rollback-safe fixture tables for
   `graph_nodes`, `graph_node_revisions`, and `graph_edges`.
 - [ ] **R2**: The live trial calls `agn-create-node`, then reads back the node
@@ -55,18 +55,18 @@ the resulting graph rows.
 
 ## Research Inputs
 
-- `form/form-stdlib/integration/pg-carrier-integration.fk` - existing Rust
+- `form/form/form-stdlib/integration/pg-carrier-integration.fk` - existing Rust
   Postgres carrier proof pattern.
-- `form/scripts/pg-carrier-test.sh` - existing throwaway Postgres harness.
-- `form/form-stdlib/application-graph-node-port.fk` - native application graph
+- `form/form/scripts/pg-carrier-test.sh` - existing throwaway Postgres harness.
+- `form/form/form-stdlib/application-graph-node-port.fk` - native application graph
   mutation wrappers and SQL builders.
 - `2026-06-08` - User direction: keep walking toward releasing the Python
   dependency rather than stopping at observation.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/integration/application-graph-live-db.fk` - live DB trial.
-- `form/scripts/application-graph-live-db-test.sh` - throwaway Postgres harness.
+- `form/form/form-stdlib/integration/application-graph-live-db.fk` - live DB trial.
+- `form/form/scripts/application-graph-live-db-test.sh` - throwaway Postgres harness.
 - `api/tests/test_application_graph_live_db_trial.py` - local proof.
 - `docs/coherence-substrate/ideas-router.form` - ideas route state names the
   live DB trial.
@@ -79,12 +79,12 @@ the resulting graph rows.
 - `api/tests/test_application_graph_live_db_trial.py::test_live_db_trial_form_uses_application_graph_pg_wrappers`
 - `api/tests/test_application_graph_live_db_trial.py::test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing`
 - `api/tests/test_application_graph_live_db_trial.py::test_route_forms_name_live_db_trial_after_bounded_flip`
-- Manual validation: `form/scripts/application-graph-live-db-test.sh`
+- Manual validation: `form/form/scripts/application-graph-live-db-test.sh`
 
 ## Verification
 
 ```bash
-form/scripts/application-graph-live-db-test.sh
+form/form/scripts/application-graph-live-db-test.sh
 cd api && python3 -m pytest -q tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py
 python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live-db-proof.md
 ```

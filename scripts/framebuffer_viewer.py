@@ -28,7 +28,7 @@ from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-GO_BIN = REPO / "form" / "form-kernel-go" / "bin-go"
+GO_BIN = REPO / "form" / "form" / "form-kernel-go" / "bin-go"
 
 # NodeID textual form from the Go kernel: @pkg.level.type.instance
 NID_RE = re.compile(r"@(\d+)\.(\d+)\.(\d+)\.(\d+)")
@@ -159,7 +159,7 @@ def main() -> int:
         print(f"no such file: {args.form_file}", file=sys.stderr)
         return 1
     if not GO_BIN.exists():
-        print(f"go kernel not built — run: cd form && ./validate.sh", file=sys.stderr)
+        print(f"go kernel not built — run: cd form/form && ./validate.sh", file=sys.stderr)
         return 1
 
     out = run_kernel(args.form_file, args.core)

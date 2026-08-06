@@ -93,7 +93,7 @@ point.
 The body has the primitives for shape-as-identity-cluster as
 gas-in-the-substrate, sitting unwired for arithmetic:
 
-- **TRANSMUTE** ([`RBasic.TRANSMUTE`](../../form/form-kernel-ts/src/kernel.ts), type=76)
+- **TRANSMUTE** ([`RBasic.TRANSMUTE`](../../form/form/form-kernel-ts/src/kernel.ts), type=76)
   — present a value through a different Blueprint without changing
   identity. The mechanism for *same NodeID, viewed through another lens*.
 - **PROJECT** (RBasic.PROJECT, type=81) — holographic projection. The

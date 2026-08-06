@@ -9,7 +9,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FORM = os.path.join(ROOT, "form")
+FORM = os.path.join(ROOT, "form", "form")
 GO = os.path.join(FORM, "form-kernel-go", "bin-go")
 DM = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 if DM != 4:

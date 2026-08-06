@@ -106,8 +106,8 @@ jobs:
           echo "node:  $(node --version 2>&1 || echo MISSING)"
           echo "npx:   $(npx --version 2>&1 || echo MISSING)"
           echo "clang: $(clang --version 2>&1 | head -1 || echo MISSING)"
-          cd form
-          # validate.sh requires cwd=form. Derive its path from $(pwd), a unix
+          cd form/form
+          # validate.sh requires cwd=form/form. Derive its path from $(pwd), a unix
           # path in Git Bash; $GITHUB_WORKSPACE is a Windows backslash path the
           # bash shell cannot execute directly.
           VALIDATE="$(pwd)/validate.sh"
@@ -127,7 +127,7 @@ jobs:
         # loop) -> the same verdict. The standalone run prints the windows trace
         # that flips the receipt's windows row pending->observed.
         run: |
-          cd form
+          cd form/form
           VALIDATE="$(pwd)/validate.sh"
           declare -A want=( [field-identity]=511 [field-relay]=127 [field-queue]=127 )
           for body in field-identity field-relay field-queue; do
@@ -162,7 +162,7 @@ jobs:
           .\scripts\verify_windows_fkwu_http_response_socket.ps1
           .\scripts\verify_windows_fkwu_self_jit.ps1
           .\scripts\verify_windows_form_cli_native.ps1
-          Push-Location form\form-kernel-go
+          Push-Location form\form\form-kernel-go
           go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1
           Pop-Location
 
@@ -206,7 +206,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
         shell: bash
         run: |
-          cd form
+          cd form/form
           ./build-form-cli.sh .cache/form-cli-win.exe
           test -s .cache/form-cli-win.exe || { echo "::error::form-cli-win.exe not produced"; exit 1; }
           # Prove the kept binary still answers with no toolchain on PATH.
@@ -217,7 +217,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
         shell: pwsh
         run: |
-          $cache = "form/.cache"
+          $cache = "form/form/.cache"
           Copy-Item -LiteralPath "$cache/form-cli-win.exe" -Destination "$cache/form-cli.exe" -Force
           $zip = "$cache/hati-os-windows-amd64.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
@@ -236,8 +236,8 @@ jobs:
           tag="${{ inputs.release_tag }}"
           echo "Uploading hati-os-windows-amd64.zip(+.sha256) to release $tag"
           gh release upload "$tag" \
-            form/.cache/hati-os-windows-amd64.zip \
-            form/.cache/hati-os-windows-amd64.zip.sha256 \
+            form/form/.cache/hati-os-windows-amd64.zip \
+            form/form/.cache/hati-os-windows-amd64.zip.sha256 \
             --clobber --repo "$GITHUB_REPOSITORY"
           echo "Published:"
           gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \

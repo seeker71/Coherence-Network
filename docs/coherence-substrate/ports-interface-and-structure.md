@@ -216,13 +216,13 @@ already computes with `intern_node`. Testing is the payoff: unit tests run
 
 ### BML/native declaration metadata floor
 
-`form/form-stdlib/bml-native-interface-package-import.fk` now carries a narrow
+`form/form/form-stdlib/bml-native-interface-package-import.fk` now carries a narrow
 declaration floor for package, import, and interface metadata. The row shape
 keeps the source receipt, import selector, interface member list, and optional
 port-shape linkage as executable Form data. This does not claim namespace
 resolution, symbol import execution, or interface method dispatch; it gives
 those lowerers a native cell target and names the next exact code point:
-`form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native
+`form/form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native
 namespace/import/interface lowering`.
 
 ## The carrier is a thin door, not a script
@@ -279,9 +279,9 @@ because much more is sensed, proven, and learned once it is Form.
 - [`lc-tools-as-form-cells`](../vision-kb/concepts/lc-tools-as-form-cells.md) —
   the carrier model (`shell|http|in_process`), here generalized from tools to
   all resources.
-- [`engine.fk`](../../form/form-stdlib/engine.fk) §capability — the
+- [`engine.fk`](../../form/form/form-stdlib/engine.fk) §capability — the
   `form-capability-contract` structure (the contract half of a Port).
 - [`ORM_TO_FORM_NATIVE.md`](../../kernels/ORM_TO_FORM_NATIVE.md) — the storage
   port's concrete schema/migration engine and the open carrier leaves.
-- [`emits/sql.fk`](../../form/form-stdlib/emits/sql.fk) — SQL as one emit-target
+- [`emits/sql.fk`](../../form/form/form-stdlib/emits/sql.fk) — SQL as one emit-target
   in the universal codec (the DML/interface half of the SQL carrier).

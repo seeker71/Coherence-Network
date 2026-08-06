@@ -21,9 +21,9 @@ framebuffer/JIT compression, and list/string/JSON-native JIT coverage.
 
 | Kernel | Source | Built with | Entry binary |
 |---|---|---|---|
-| Rust | [`form/form-kernel-rust/`](../form/form-kernel-rust/) | `cargo build --release` | `target/release/form-kernel-rust` |
-| Go | [`form/form-kernel-go/`](../form/form-kernel-go/) | `go build -o bin-go .` | `bin-go` |
-| TypeScript | [`form/form-kernel-ts/`](../form/form-kernel-ts/) | `npm install` | `npm run kernel` (via `tsx`) |
+| Rust | [`form/form/form-kernel-rust/`](../form/form/form-kernel-rust/) | `cargo build --release` | `target/release/form-kernel-rust` |
+| Go | [`form/form/form-kernel-go/`](../form/form/form-kernel-go/) | `go build -o bin-go .` | `bin-go` |
+| TypeScript | [`form/form/form-kernel-ts/`](../form/form/form-kernel-ts/) | `npm install` | `npm run kernel` (via `tsx`) |
 The `form/` tree is the stable runtime address.
 
 ## What makes them different
@@ -34,7 +34,7 @@ Most language runtimes carry execution state in opaque host-language objects. Fr
 
 #### 1. Cross-kernel structural identity
 
-Every kernel agrees on NodeIDs. `(add 1 2)` interns to the same `@1.2.12.N` Blueprint in Rust, Go, and TypeScript. Sibling parity is verified continuously by [`form/validate.sh`](../form/validate.sh). When all three kernels return identical values for every workload in the suite, they are saying the same thing structurally — not just behaviorally.
+Every kernel agrees on NodeIDs. `(add 1 2)` interns to the same `@1.2.12.N` Blueprint in Rust, Go, and TypeScript. Sibling parity is verified continuously by [`form/form/validate.sh`](../form/form/validate.sh). When all three kernels return identical values for every workload in the suite, they are saying the same thing structurally — not just behaviorally.
 
 This is unusual. Most polyglot runtimes share serialization formats; these share *identity*.
 
@@ -76,7 +76,7 @@ Python interpreter in the runtime (`cee6a26a2`). The path is open for every
 useful source surface: domain grammar or legacy source → recipe tree → sibling
 kernel walker → real-time observation.
 
-The **emit direction** closed end-to-end on 2026-05-27: a Form recipe walks through `form/form-stdlib/emits/python-native.fk` and produces idiomatic native Python that CPython runs to the same values the Form kernel computes. See [`UNIVERSAL_TRANSLATOR_ROUNDTRIP.md`](UNIVERSAL_TRANSLATOR_ROUNDTRIP.md) for the proof-of-shape and the gap-map from "one recipe" to "the BMF compiler-compiler itself".
+The **emit direction** closed end-to-end on 2026-05-27: a Form recipe walks through `form/form/form-stdlib/emits/python-native.fk` and produces idiomatic native Python that CPython runs to the same values the Form kernel computes. See [`UNIVERSAL_TRANSLATOR_ROUNDTRIP.md`](UNIVERSAL_TRANSLATOR_ROUNDTRIP.md) for the proof-of-shape and the gap-map from "one recipe" to "the BMF compiler-compiler itself".
 
 Companion: [`lc-form-perceptron`](../docs/vision-kb/concepts/lc-form-perceptron.md), [`lc-parsers-as-recipes`](../docs/vision-kb/concepts/lc-parsers-as-recipes.md).
 
@@ -101,7 +101,7 @@ The runnable heart is proven three-way: `host-kernel-cell.fk` (hosts as measured
 
 ```bash
 # Rust
-cd form/form-kernel-rust && cargo build --release
+cd form/form/form-kernel-rust && cargo build --release
 ./target/release/form-kernel-rust --expr '(add 1 2)'                # → 3
 ./target/release/form-kernel-rust trace --expr '(add 1 2)'          # JSON with arm counts
 
@@ -131,7 +131,7 @@ cd ..
 
 Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1–2× native for many workloads. This is not the headline. The headline is that the same recipe in any of the three kernels produces the same NodeID for every intermediate state — the substrate is what you measure, not the host. Hot-path benchmarks are honest about that trade.
 
-**A fourth carrier runs in the suite** — [`hati-os.form`](../docs/coherence-substrate/hati-os.form): a standalone native CLI whose every source byte is emitted by Form recipes (`form-stdlib/hati-os-native-cli-emit.fk`, proven three-way), measured by `scripts/hati_os_kernel_audit.sh` with value parity gating the rows. First rows (arm64 Darwin, full invocations): the Form-emitted native answers fib 28 in ~2 ms at 1.3 MB max RSS from a 33 KB binary; the walkers answer the same recursive recipe in 461–1696 ms at 53–139 MB from 4–21 MB carriers. fkwu has two faces, not one. As **proof-walker** (`fkc-emit-universal`) it IS `validate.sh`'s fourth arm: every band in [`form/fourth-arm-bands.txt`](../form/fourth-arm-bands.txt) flattens through `form-flatten.fk`'s multi-source door (`fourth-shim.fk` carrying core vocabulary and the string stones) and must answer the three walkers' own verdict byte-for-byte on every suite run — four-way agreement (Go=Rust=TS=fkwu). As **self-JIT** (`fkc-emit-jit2` / `fkc-walk-jit-text`) the SAME recipe crystallizes to native when a pure function runs hot and melts back to walking when it cools, re-earned champion-challenger — the gas-ice cycle closes both ways (`scripts/hati_os_kernel_audit.sh` §20/§21; `champion-challenger`→127). The walker stays authoritative for semantics; the crystallized form is native = recipe bit-for-bit. The native target is Form→asm **bytes**, not C: `jit-lower`(15)/`full-jit-lower`(63) → `form-lower`(31) → `form-asm`(31, arm64 bytes) → `form-macho`(31)/`form-elf`(31) → `recipe-dylib`(787349) → `codesign`(632490), every stage a Form recipe proven four-way. clang is dropped from the native path by `form-asm`'s `fa-conviction` byte-identity gate (`form/form-stdlib/form-asm.fk`); it survives only as an oracle (teacher, not master) and the bootstrap C-emit lane. fkc-nat-expr / jit-shape-table cover the pure-compute family (tags 1-7,12) today; impure ops (ports/organs/strings) stay walked, named — one generic mechanism, growing op coverage. The standing walls — the remaining node/substrate family, host io, higher-order calls — are named in the manifest header; the milestones still run toward a native BMF compiler and a native API host.
+**A fourth carrier runs in the suite** — [`hati-os.form`](../docs/coherence-substrate/hati-os.form): a standalone native CLI whose every source byte is emitted by Form recipes (`form-stdlib/hati-os-native-cli-emit.fk`, proven three-way), measured by `scripts/hati_os_kernel_audit.sh` with value parity gating the rows. First rows (arm64 Darwin, full invocations): the Form-emitted native answers fib 28 in ~2 ms at 1.3 MB max RSS from a 33 KB binary; the walkers answer the same recursive recipe in 461–1696 ms at 53–139 MB from 4–21 MB carriers. fkwu has two faces, not one. As **proof-walker** (`fkc-emit-universal`) it IS `validate.sh`'s fourth arm: every band in [`form/form/fourth-arm-bands.txt`](../form/form/fourth-arm-bands.txt) flattens through `form-flatten.fk`'s multi-source door (`fourth-shim.fk` carrying core vocabulary and the string stones) and must answer the three walkers' own verdict byte-for-byte on every suite run — four-way agreement (Go=Rust=TS=fkwu). As **self-JIT** (`fkc-emit-jit2` / `fkc-walk-jit-text`) the SAME recipe crystallizes to native when a pure function runs hot and melts back to walking when it cools, re-earned champion-challenger — the gas-ice cycle closes both ways (`scripts/hati_os_kernel_audit.sh` §20/§21; `champion-challenger`→127). The walker stays authoritative for semantics; the crystallized form is native = recipe bit-for-bit. The native target is Form→asm **bytes**, not C: `jit-lower`(15)/`full-jit-lower`(63) → `form-lower`(31) → `form-asm`(31, arm64 bytes) → `form-macho`(31)/`form-elf`(31) → `recipe-dylib`(787349) → `codesign`(632490), every stage a Form recipe proven four-way. clang is dropped from the native path by `form-asm`'s `fa-conviction` byte-identity gate (`form/form/form-stdlib/form-asm.fk`); it survives only as an oracle (teacher, not master) and the bootstrap C-emit lane. fkc-nat-expr / jit-shape-table cover the pure-compute family (tags 1-7,12) today; impure ops (ports/organs/strings) stay walked, named — one generic mechanism, growing op coverage. The standing walls — the remaining node/substrate family, host io, higher-order calls — are named in the manifest header; the milestones still run toward a native BMF compiler and a native API host.
 
 **Serving the API from the kernel** is a distinct, measured question — see [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md). The recipe *executes* in ~0.15 ms (competitive); the readiness gap for the transmuted `/api/utils/*` endpoints is the per-request **process spawn** (~5 ms via subprocess), not compute. The evidence (value parity ✓ on all four, p50/p95/p99 under replay, the spawn-vs-compute split) says the flip needs a **persistent/inline (PyO3) kernel**, not a per-call shell-out. Run it: `python3 scripts/kernel_readiness_harness.py`.
 
@@ -159,11 +159,11 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 
 ## Roadmap
 
-The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.
+The roadmap in [`form/form/kernel-roadmap.md`](../form/form/kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.
 
 [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The Python parity suite now compares CPython, `kernel-bmf-compile` + Rust execution, and `kernel-bmf-run`; `make wellness` surfaces the remaining bootstrap weight each breath.
 
-[`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, the executable Form proof, the BML source body at [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml), the current source-lowering proofs that carry parsed BML declarations into `compiler-object` sections and execute a concrete BML-owned source lowerer, the `.fkb` bootstrap-image ratchet that keeps BML source authoritative while preserving a recoverable compiler image, and the first source-derived `BML-COMPILER-IMAGE` `.fkb` checkpoint.
+[`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, the executable Form proof, the BML source body at [`form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form/form-stdlib/bml/bmf-bml-compiler-picture.bml), the current source-lowering proofs that carry parsed BML declarations into `compiler-object` sections and execute a concrete BML-owned source lowerer, the `.fkb` bootstrap-image ratchet that keeps BML source authoritative while preserving a recoverable compiler image, and the first source-derived `BML-COMPILER-IMAGE` `.fkb` checkpoint.
 
 [`UNIVERSAL_TRANSLATOR_AUDIT.md`](UNIVERSAL_TRANSLATOR_AUDIT.md) walks the body's current artifacts against the highest goal (universal translator across media, recipe orchestration in pure numeric space, less ice / more gas, minimize bootstrap surface). It names where the body is heavy in ice, heavy in bootstrap, heavy in dependencies, already light, and the top-ten concrete next breaths.
 

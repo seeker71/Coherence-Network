@@ -161,11 +161,11 @@ to tune.
 ## Boundary repair proof
 
 A silence is the pulse witness's stop receipt. The reusable rule now lives
-in Form as `form/form-stdlib/sovereign-boundary-protocol.fk`: boundary
+in Form as `form/form/form-stdlib/sovereign-boundary-protocol.fk`: boundary
 evidence chooses `allow`, `stop`, `witness`, or `re_enter`, and the choice
 is carried by a traceable `CHOICE-RECEIPT`. Pulse maps open silence evidence
 into that generic protocol through
-`form/form-stdlib/pulse-boundary-repair.fk`.
+`form/form/form-stdlib/pulse-boundary-repair.fk`.
 
 The deployed pulse service is still the Python carrier. Re-entry is not a
 hidden state flip: when the witness has at least three consecutive breathing

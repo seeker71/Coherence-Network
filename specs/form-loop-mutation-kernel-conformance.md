@@ -10,7 +10,7 @@ source:
     symbols: []
   - file: seedbank/form-question-kernels/go/question_kernel.go
     symbols: []
-  - file: form/form-kernel-ts/src/conformance.ts
+  - file: form/form/form-kernel-ts/src/conformance.ts
     symbols: []
   - file: api/tests/test_kernel_conformance_harness.py
     symbols: [test_python_kernel_passes_loop_mutation_vector(), test_rust_go_and_typescript_kernels_pass_loop_mutation_vector()]
@@ -85,7 +85,7 @@ python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/k
 - `docs/coherence-substrate/kernel-conformance/form-loop-mutation.json` - shared loop/mutation vector.
 - `seedbank/form-question-kernels/rust/src/main.rs` - add the narrow local loop/mutation evaluator.
 - `seedbank/form-question-kernels/go/question_kernel.go` - add the narrow local loop/mutation evaluator.
-- `form/form-kernel-ts/src/conformance.ts` - add the narrow local loop/mutation evaluator.
+- `form/form/form-kernel-ts/src/conformance.ts` - add the narrow local loop/mutation evaluator.
 - `api/tests/test_kernel_conformance_harness.py` - assert Python/Rust/Go/TypeScript pass the loop/mutation vector.
 - `docs/coherence-substrate/kernel-conformance/README.md` - document the vector.
 - `docs/coherence-substrate/form-language.md` - state the widened but bounded conformance surface.
@@ -140,7 +140,7 @@ files_allowed:
   - docs/coherence-substrate/form-language.md
   - seedbank/form-question-kernels/rust/src/main.rs
   - seedbank/form-question-kernels/go/question_kernel.go
-  - form/form-kernel-ts/src/conformance.ts
+  - form/form/form-kernel-ts/src/conformance.ts
   - api/tests/test_kernel_conformance_harness.py
   - specs/form-control-flow-kernel-conformance.md
   - specs/form-loop-mutation-kernel-conformance.md

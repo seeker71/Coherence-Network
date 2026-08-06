@@ -32,9 +32,9 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
-BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
-BML_ROUTES = REPO_ROOT / "form" / "apps" / "coherence-network" / "api.bml"
-STDLIB = REPO_ROOT / "form" / "form-stdlib"
+BIN = REPO_ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+BML_ROUTES = REPO_ROOT / "form" / "form" / "apps" / "coherence-network" / "api.bml"
+STDLIB = REPO_ROOT / "form" / "form" / "form-stdlib"
 BML_ROUTER_STARTUP_TIMEOUT_SECONDS = 60.0
 BML_ROUTER_FAILURE_DRAIN_SECONDS = 10.0
 

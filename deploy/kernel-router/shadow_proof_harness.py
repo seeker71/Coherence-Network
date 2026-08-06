@@ -15,7 +15,7 @@ valid list, not an error), so the shadow manifest is a transparent proxy.
 It uses a MOCK upstream (an http.server standin) so it touches NO production
 routing — both processes run on throwaway loopback ports and are torn down.
 
-Run from the repo root (after `cargo build --release` in form/form-kernel-rust):
+Run from the repo root (after `cargo build --release` in form/form/form-kernel-rust):
     python3 deploy/kernel-router/shadow_proof_harness.py
 """
 from __future__ import annotations
@@ -34,7 +34,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 # deploy/kernel-router -> deploy -> repo root
 REPO_ROOT = HERE.parent.parent
-BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
+BIN = REPO_ROOT / "form" / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 SHADOW_ROUTES = HERE / "shadow-routes.fk"
 
 

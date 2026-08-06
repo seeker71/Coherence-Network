@@ -181,11 +181,11 @@ function Invoke-Watch {
 # once falsely reported a divergence that the direct run did not; an instrument that can lie about
 # its own trust is worse than none. Verification stays one honest, named command away.
 function Invoke-SelfWatch {
-    $band = "form/form-stdlib/tests/session-self-watch-band.fk"
+    $band = "form/form/form-stdlib/tests/session-self-watch-band.fk"
     "proof band: $band   (verdict 4095 = 2^12 - 1, every claim landed)"
     "proven:     four-way -- Go/Rust/TS/fkwu agree on 4095 (honest floor: via validate.sh's"
     "            build toolchain, below the toolchain-free c-bootstrap sovereignty receipt)"
-    "verify:     bash form/validate.sh form-stdlib/tests/session-self-watch-band.fk"
+    "verify:     bash form/form/validate.sh form-stdlib/tests/session-self-watch-band.fk"
     ""
     "native-trust readout -- this session, computed by the kernels (verdict 4095):"
     "  surprise-count = 4 of 6 steps   predictions that missed -- the learning signal"

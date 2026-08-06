@@ -4,7 +4,7 @@
 # proves that four-way), it actually RUNS correctly on this arm64 host.
 #
 # Path, zero rustc/clang in the COMPUTE (clang here is only the dumb loader-harness
-# carrier, like form/native/bootstrap/form_bootstrap_host.c — the bytes it calls are
+# carrier, like form/form/native/bootstrap/form_bootstrap_host.c — the bytes it calls are
 # Form's):
 #   1. Form kernel emits fam-dot2's 8-instruction (32-byte) arm64 program, then wraps
 #      it via form-macho's mo-object-sym into a Mach-O .o exporting `_recipe`.
@@ -30,12 +30,12 @@ command -v ld >/dev/null || { echo "need ld (the linker); skipping"; exit 0; }
 command -v clang >/dev/null || { echo "need clang for the loader harness; skipping"; exit 0; }
 work="$(mktemp -d "${TMPDIR:-/tmp}/fmatvec.XXXXXX")"; trap 'rm -rf "$work"' EXIT
 
-# The matvec recipe lives at form/form-stdlib/form-asm-matvec.fk. If this checkout's
+# The matvec recipe lives at form/form/form-stdlib/form-asm-matvec.fk. If this checkout's
 # branch predates it, read it from the commit that shipped it.
 MATVEC="$FORM/form-stdlib/form-asm-matvec.fk"
 if [[ ! -f "$MATVEC" ]]; then
-    if git -C "$ROOT" cat-file -e 245b0c8f0:form/form-stdlib/form-asm-matvec.fk 2>/dev/null; then
-        git -C "$ROOT" show 245b0c8f0:form/form-stdlib/form-asm-matvec.fk > "$work/form-asm-matvec.fk"
+    if git -C "$ROOT" cat-file -e 245b0c8f0:form/form/form-stdlib/form-asm-matvec.fk 2>/dev/null; then
+        git -C "$ROOT" show 245b0c8f0:form/form/form-stdlib/form-asm-matvec.fk > "$work/form-asm-matvec.fk"
         MATVEC="$work/form-asm-matvec.fk"
     else
         echo "FAIL: form-asm-matvec.fk not found in tree or commit 245b0c8f0"; exit 1

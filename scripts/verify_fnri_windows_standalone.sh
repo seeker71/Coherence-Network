@@ -2,7 +2,7 @@
 # verify_fnri_windows_standalone.sh — platform receipt row (windows on CI/host, mac cross-check locally).
 set -eu
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 WANT=32767
 cd "$FORM"
 bash ./validate.sh \
@@ -16,7 +16,7 @@ grep -q "$WANT" fnri-platform.out || { echo "FAIL: missing $WANT" >&2; exit 1; }
 "$ROOT/scripts/fnri_fkwu_witness.sh" || exit 1
 case "$(uname -s 2>/dev/null || echo unknown)" in
   Darwin)
-    if [ -x "${FORM_CLI:-$ROOT/form/form-cli}" ]; then
+    if [ -x "${FORM_CLI:-$ROOT/form/form/form-cli}" ]; then
       "$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
       "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
     else
@@ -26,7 +26,7 @@ case "$(uname -s 2>/dev/null || echo unknown)" in
     ;;
   MINGW*|MSYS*|CYGWIN*|Windows*)
     # The Windows workflow proves native form-cli in the next step. This step is
-    # the standalone fkwu/FNRI floor and must not require form/form-cli first.
+    # the standalone fkwu/FNRI floor and must not require form/form/form-cli first.
     PLATFORM=windows
     ;;
   *)

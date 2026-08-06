@@ -10,7 +10,7 @@
 # Exit 0 when verdict is 16383 on fkwu; prints JSON receipt line on stdout.
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORM="$ROOT/form"
+FORM="$ROOT/form/form"
 CACHE="$FORM/form-stdlib/.cache/fourth"
 VERDICT_EXPECT=16383
 

@@ -4,7 +4,7 @@
 # The steps and the queries (total / open / next) are roadmap.fk on the kernel
 # (four-way); this carrier formats AND reconciles each rung's claimed status
 # against the manifest. roadmap.fk stays pure Form data + query logic; reading
-# form/fourth-arm-bands.txt is host-io, so it lives here, not in the recipe. Each
+# form/form/fourth-arm-bands.txt is host-io, so it lives here, not in the recipe. Each
 # rung carries a `band` stem (the fourth-arm-bands.txt row that PROVES it); the
 # carrier checks the stem's presence in the manifest and surfaces any drift
 # between the recipe's claim and the manifest reality, so the recipe's status can
@@ -18,9 +18,9 @@
 # Usage: form_cli_roadmap.sh            # the whole tower, done + open, next named
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
-MANIFEST="$ROOT/form/fourth-arm-bands.txt"
-[ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+GO="$ROOT/form/form/form-kernel-go/bin-go"; STD="$ROOT/form/form/form-stdlib"
+MANIFEST="$ROOT/form/form/fourth-arm-bands.txt"
+[ -x "$GO" ] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 # manifest_has STEM -> 0 if a band row `<STEM> <emitter> <verdict>` is present.
 # host-io: the recipe names the stem, the carrier reads the manifest floor.
@@ -42,7 +42,7 @@ out="$("$GO" "$prog" 2>/dev/null | sed '/^null$/d')"; rm -f "$prog"
 
 echo "── floor → north-star (roadmap.fk on the kernel, status reconciled vs manifest) ──"
 # steps: 5 lines each (id, phase, status, band, title) until the === marker.
-# the carrier reconciles each rung's claimed status against form/fourth-arm-bands.txt:
+# the carrier reconciles each rung's claimed status against form/form/fourth-arm-bands.txt:
 #   band present in manifest  -> proven   (drift flagged if recipe claims open)
 #   band absent from manifest -> unproven (drift flagged if recipe claims done)
 #   band "-"                  -> recipe-asserted (axiom floor / multi-band phase)
@@ -86,5 +86,5 @@ printf "  spec: %s\n" "$nspec"
 printf "  build it offline:  form-cli close \"%s\" \"<recipe-spec>\" \"<assert>\" \"<expected>\" \"ollama run coder\"\n" "$nid"
 
 if [ "$drift" -gt 0 ]; then
-  printf "\n  ⚠ %d rung(s) drift from the manifest — reconcile roadmap.fk status with form/fourth-arm-bands.txt.\n" "$drift"
+  printf "\n  ⚠ %d rung(s) drift from the manifest — reconcile roadmap.fk status with form/form/fourth-arm-bands.txt.\n" "$drift"
 fi

@@ -2,7 +2,7 @@
 
 The body of this endpoint runs as a Form recipe through the kernel. The source
 example and kernel siblings return the same integer for the same inputs — guaranteed by
-form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh.
+form/form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh.
 
 The test verifies:
   - the route is wired and returns 200 with the expected shape

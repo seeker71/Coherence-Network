@@ -7,7 +7,7 @@ events) and shows it all on a live dashboard you open in a browser — so you ca
 doing, what state it is in, which organs are active, and the surprise events as they happen.
 
 It puts NO body in Python: there is no recognition logic here. The BODY is the Form recipes proven
-three-way under form/form-stdlib (recognition-router, perception-pipeline, active-inference,
+three-way under form/form/form-stdlib (recognition-router, perception-pipeline, active-inference,
 device-heartbeat, body-state, ...). The recognition / prediction / inference-error panel is an honest
 placeholder until those recipes are wired into the live loop through a persistent kernel eval server
 (the recipes are done; the live data door is the next carrier step).

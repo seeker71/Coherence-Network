@@ -2,17 +2,17 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/native-mutation-route-side-effects.fk
+  - file: form/form/form-stdlib/native-mutation-route-side-effects.fk
     symbols: [nmrs-bind-common-side-effects, nmrs-run-idea-create-with-side-effects, nmrs-run-spec-update-with-side-effects, nmrs-route-side-effects-binding-test]
-  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+  - file: form/form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-run-idea-update-with-valuation-audit]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
-  - file: form/form-stdlib/tests/native-mutation-route-side-effects-band.fk
+  - file: form/form/form-stdlib/tests/native-mutation-route-side-effects-band.fk
     symbols: []
-  - file: form/form-stdlib/integration/native-mutation-route-side-effects-live.fk
+  - file: form/form/form-stdlib/integration/native-mutation-route-side-effects-live.fk
     symbols: []
-  - file: form/scripts/native-mutation-route-side-effects-test.sh
+  - file: form/form/scripts/native-mutation-route-side-effects-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_route_side_effect_binding.py
     symbols: [test_route_side_effect_binding_band_executes_across_sibling_kernels, test_route_side_effect_binding_live_script_runs_or_skips_when_pg_missing, test_ab_gate_next_evidence_is_deployed_canary_after_public_gate]
@@ -32,10 +32,10 @@ requirements:
   - "The route binding consumes only source-classified side effects; side-effect proof does not justify side effects."
   - "Idea update route-runner audit parity is carried by native-idea-valuation-audit-ledger.fk."
 done_when:
-  - 'file_exists("form/form-stdlib/native-mutation-route-side-effects.fk")'
-  - 'file_exists("form/scripts/native-mutation-route-side-effects-test.sh")'
+  - 'file_exists("form/form/form-stdlib/native-mutation-route-side-effects.fk")'
+  - 'file_exists("form/form/scripts/native-mutation-route-side-effects-test.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_route_side_effect_binding.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk && cd .. && form/scripts/native-mutation-route-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk && cd ../.. && form/form/scripts/native-mutation-route-side-effects-test.sh && cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
@@ -87,13 +87,13 @@ carried before ordinary no-header movement.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/native-mutation-route-side-effects.fk` - route-runner binding
+- `form/form/form-stdlib/native-mutation-route-side-effects.fk` - route-runner binding
   recipes.
-- `form/form-stdlib/tests/native-mutation-route-side-effects-band.fk` -
+- `form/form/form-stdlib/tests/native-mutation-route-side-effects-band.fk` -
   sibling-kernel proof.
-- `form/form-stdlib/integration/native-mutation-route-side-effects-live.fk` -
+- `form/form/form-stdlib/integration/native-mutation-route-side-effects-live.fk` -
   live Postgres route-runner integration.
-- `form/scripts/native-mutation-route-side-effects-test.sh` - throwaway Postgres
+- `form/form/scripts/native-mutation-route-side-effects-test.sh` - throwaway Postgres
   harness.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
   source-classified keep/delete ledger for mutable side effects.
@@ -114,13 +114,13 @@ carried before ordinary no-header movement.
 - `api/tests/test_native_mutation_route_side_effect_binding.py::test_ab_gate_next_evidence_is_public_gate_after_route_binding`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_recommends_live_db_trial_after_full_confidence`
-- Manual validation: `form/scripts/native-mutation-route-side-effects-test.sh`
+- Manual validation: `form/form/scripts/native-mutation-route-side-effects-test.sh`
 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk
-cd .. && form/scripts/native-mutation-route-side-effects-test.sh
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/tests/native-mutation-route-side-effects-band.fk
+cd .. && form/form/scripts/native-mutation-route-side-effects-test.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-route-side-effect-binding.md
 ```

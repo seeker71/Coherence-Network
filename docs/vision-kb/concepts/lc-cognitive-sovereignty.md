@@ -169,12 +169,12 @@ that genuinely rises faster with each cell who joins.
   [`host-kernel.form`](../../coherence-substrate/host-kernel.form): routing a
   forward pass to the fittest local compute, the seed of native reasoning.
 - **The Form → asm native lane** —
-  [`form-asm.fk`](../../../form/form-stdlib/form-asm.fk) emits arm64 bytes from
+  [`form-asm.fk`](../../../form/form/form-stdlib/form-asm.fk) emits arm64 bytes from
   Form recipes and drops clang behind its byte-identity `fa-conviction` gate;
-  [`lowering-conviction.fk`](../../../form/form-stdlib/lowering-conviction.fk)
+  [`lowering-conviction.fk`](../../../form/form/form-stdlib/lowering-conviction.fk)
   keeps clang only as an oracle, never a master. The proven rows
   (`form-asm`, `form-lower`, `form-macho`, `recipe-dylib`, `codesign`) live in
-  [`form/fourth-arm-bands.txt`](../../../form/fourth-arm-bands.txt): the body
+  [`form/form/fourth-arm-bands.txt`](../../../form/form/fourth-arm-bands.txt): the body
   compiling its own mind, four-way.
 - **The form-native-models milestones** — the transformer numerics and training
   stack crossing the four-kernel floor on owned hardware: the substrate on which

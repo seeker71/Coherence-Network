@@ -7,7 +7,7 @@ instead of a claim.
 
 ## What runs
 
-The learner is the body's own — `form/form-stdlib/nearest-shape.fk`, executed on the
+The learner is the body's own — `form/form/form-stdlib/nearest-shape.fk`, executed on the
 Go form-kernel. The task is real: speaker identification on **LibriSpeech** (CC-BY-4.0,
 mounted under `~/.cache/coherence-corpora/librispeech`), from a coarse 13-band
 quantized log-mel fingerprint. Recognition is Form; only feature extraction and
@@ -51,8 +51,8 @@ Honest long-running shape is **live accumulation**, not spinning a fixed task:
   --seed-fingerprints fingerprints-dev-clean.jsonl \
   --corpus-root ~/.cache/coherence-corpora/librispeech/LibriSpeech/train-clean-100 \
   --speakers ~/.cache/coherence-corpora/librispeech/LibriSpeech/SPEAKERS.TXT \
-  --kernel ../../form/form-kernel-go/bin-go \
-  --nearest-shape ../../form/form-stdlib/nearest-shape.fk \
+  --kernel ../../form/form/form-kernel-go/bin-go \
+  --nearest-shape ../../form/form/form-stdlib/nearest-shape.fk \
   --whisper-model ~/whisper-models/ggml-large-v3-turbo.bin \
   --receipt-script ../../scripts/real_mesh_training_emitters.sh \
   --out learning_curve.jsonl --duration-hours 8
@@ -61,7 +61,7 @@ Honest long-running shape is **live accumulation**, not spinning a fixed task:
 ## North star — and what is already built
 
 `nearest-shape` here is the **router tier**, the floor — not the whole body. The
-**transformer tier is already built and proven**: `form/form-stdlib/transformer-block.fk`
+**transformer tier is already built and proven**: `form/form/form-stdlib/transformer-block.fk`
 (M4 of `form-native-models.form`) is a whisper-shaped attention+FFN block with architecture
 and weights as recipe data, bit-exact against the PyTorch fp64 reference (band verdict
 **511**, re-run live on the Go kernel), emitted to six instruction sets and runnable on the

@@ -1,7 +1,7 @@
 ; shadow-routes.fk — the kernel-router SHADOW-MODE manifest.
 ;
 ; Loaded by `form-kernel-rust serve --routes shadow-routes.fk --upstream <api>`
-; (see cli_serve / build_route_pairs in form/form-kernel-rust/src/main.rs).
+; (see cli_serve / build_route_pairs in form/form/form-kernel-rust/src/main.rs).
 ;
 ; SHADOW MODE: the `routes` list is EMPTY. build_route_pairs maps over the list
 ; and yields ZERO native (path closure) pairs — an empty list is accepted, it is

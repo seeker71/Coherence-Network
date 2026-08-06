@@ -18,7 +18,7 @@
 # Run:  scripts/metal_ffn_audit.sh [indim hid outd steps]   (defaults 256 384 256 300)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 INDIM="${1:-256}"; HID="${2:-384}"; OUTD="${3:-256}"; STEPS="${4:-300}"
 

@@ -172,7 +172,7 @@ signal, not the problem.*
   map-vs-body alignment, circulation, source maps, symbol resolution, locale
   parity, chain reach, Form blueprint registration. The organ that surfaced the
   worked example.
-- **`form/form-stdlib/blueprint-registry.json`** — where hand-assigned Blueprint
+- **`form/form/form-stdlib/blueprint-registry.json`** — where hand-assigned Blueprint
   numbers are registered so the substrate is not blind to them; the heal added
   HOLO-ONE (1745), CLASS-BP (9500), INSTANCE-BP (9501).
 - **[`lc-the-claim-survives-its-own-evaluator`](lc-the-claim-survives-its-own-evaluator.md)** —

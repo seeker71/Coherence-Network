@@ -3,10 +3,10 @@
 (text-summary-learning
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
-    (recipe form/form-stdlib/text-summary-learning.fk)
-    (proof form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way)
-    (proof form/form-stdlib/tests/text-summary-real-source-band.fk -> 8191 three-kernel-host-io)
-    (proof form/form-stdlib/tests/text-summary-multi-source-band.fk -> 65535 three-kernel-host-io))
+    (recipe form/form/form-stdlib/text-summary-learning.fk)
+    (proof form/form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way)
+    (proof form/form/form-stdlib/tests/text-summary-real-source-band.fk -> 8191 three-kernel-host-io)
+    (proof form/form/form-stdlib/tests/text-summary-multi-source-band.fk -> 65535 three-kernel-host-io))
 
   (purpose
     "Make summarization a native learning lane instead of an opaque LLM side effect."

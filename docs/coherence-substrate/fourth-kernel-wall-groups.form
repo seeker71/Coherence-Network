@@ -28,20 +28,20 @@
     (core-axiom-package-receipt "core-axiom-package-receipt now proves the same Mac+Android native pair has package/install evidence: script/source/binary/channel-receipt SHA-256s, channel duration, sample window, and remote Android cleanup.")
     (core-axiom-apk-receipt "core-axiom-apk-receipt now proves an Android APK can carry the native core-axiom receipt code as an arm64-v8a shared library: the generated .so is staged into Coherence Sense for a Gradle build, the APK contains lib/arm64-v8a/libcoherence_core_axiom_receipt.so, and the extracted entry SHA matches the generated library SHA. JNI load/call and installed-app execution are not claimed.")
     (core-axiom-wifi-transport-blocker "The receipt helper can attempt direct wifi-tcp with adb used only for provisioning/launch, but the 2026-06-15 live attempts are blocked: first Mac en0 and Android wlan0 both reported 192.168.0.7 and Android connected to itself/refused; after Android moved to 192.168.0.4, the bounded client timed out against the Mac listener at 192.168.0.7; the IPv6 link-local probe timed out too. This is evidence for the next mesh carrier wall, not a floor ratchet.")
-    (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/model-data-sharing-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/model-slice-chunk-range-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/optimizer-delta-slice-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/optimizer-step-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/autodiff-gradient.fk + tests/autodiff-gradient-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/adam-step-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/adam-bias-correction-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
-    (four-way-proof "form/form-stdlib/tensor-autodiff-verifier.fk + tests/tensor-autodiff-verifier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/tensor_autodiff_native_verifier.sh 4096 8 -> native receipt pass.")
-    (four-way-proof "form/form-stdlib/core-axiom-native-receipt.fk + tests/core-axiom-native-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> macOS arm64 + Android arm64 native channel receipt pass.")
-    (four-way-proof "form/form-stdlib/core-axiom-package-receipt.fk + tests/core-axiom-package-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> package-latest.json with SHA-256 and remote cleanup receipt pass.")
-    (four-way-proof "form/form-stdlib/core-axiom-apk-receipt.fk + tests/core-axiom-apk-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_core_axiom_apk_receipt.sh 2048 8 -> APK native-lib entry SHA receipt pass.")
+    (four-way-proof "form/form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/model-data-sharing.fk + tests/model-data-sharing-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/model-data-sharing.fk + tests/model-slice-chunk-range-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/model-data-sharing.fk + tests/optimizer-delta-slice-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/optimizer-step.fk + tests/optimizer-step-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/autodiff-gradient.fk + tests/autodiff-gradient-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/optimizer-step.fk + tests/adam-step-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/optimizer-step.fk + tests/adam-bias-correction-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form/form-stdlib/tensor-autodiff-verifier.fk + tests/tensor-autodiff-verifier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/tensor_autodiff_native_verifier.sh 4096 8 -> native receipt pass.")
+    (four-way-proof "form/form/form-stdlib/core-axiom-native-receipt.fk + tests/core-axiom-native-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> macOS arm64 + Android arm64 native channel receipt pass.")
+    (four-way-proof "form/form/form-stdlib/core-axiom-package-receipt.fk + tests/core-axiom-package-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> package-latest.json with SHA-256 and remote cleanup receipt pass.")
+    (four-way-proof "form/form/form-stdlib/core-axiom-apk-receipt.fk + tests/core-axiom-apk-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_core_axiom_apk_receipt.sh 2048 8 -> APK native-lib entry SHA receipt pass.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
@@ -52,7 +52,7 @@
     (next-walls general-break-continue-source-lowering general-try/throw-catch-source-lowering arbitrary-while for switch source-restore-spelling)
     (parallel-card
       (goal "Lower remaining source-level BML control blocks into the proven Form-native control/backtracking primitives.")
-      (files_allowed form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/grammars/bml.fk form/form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "one source-level control family runs four-way and the north star names the new floor"))))
 
   (group
@@ -64,7 +64,7 @@
     (next-walls host-file-config-plugin-loading source-to-parser-table richer-rule-patterns lowering-back-to-form runtime-grammar-selector-fourth-admission)
     (parallel-card
       (goal "Add a fourth-kernel grammar carrier receipt for one dynamic rule extension and its parse/lower trace.")
-      (files_allowed form/form-stdlib/grammar*.fk form/form-stdlib/field-*.fk form/form-stdlib/tests/*grammar*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/grammar*.fk form/form/form-stdlib/field-*.fk form/form/form-stdlib/tests/*grammar*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "one dynamic grammar extension is data-carried and validated by a four-way or bounded native receipt"))))
 
   (group
@@ -75,7 +75,7 @@
     (next-walls namespace-resolution import-symbol-resolution interface-method-dispatch full-constructor-syntax generic-specialization arrays general-calls source-mutable-local-lowering)
     (parallel-card
       (goal "Ratchet one BML source family from metadata/floor into executable fourth-kernel lowering.")
-      (files_allowed form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/grammars/bml.fk form/form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "the chosen BML source family has a four-way band and is moved from unsupported to current-supported"))))
 
   (group
@@ -87,7 +87,7 @@
     (next-walls tensor-autodiff-gradient-cells large-tensor-policy full-safetensors-header full-mlx-package-ingest jit-buffer-bridge jni-load-call-receipt installed-app-native-execution conformance-ledger)
     (parallel-card
       (goal "Promote one ML model data or execution wall into a receipt-bearing Form-native floor.")
-      (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*tensor*.fk form/form-stdlib/tests/*model*-band.fk form/form-stdlib/tests/*tensor*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/*model*.fk form/form/form-stdlib/*tensor*.fk form/form/form-stdlib/tests/*model*-band.fk form/form/form-stdlib/tests/*tensor*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "the ML wall has a focused proof and model north-star floor text names the exact carrier boundary"))))
 
   (group
@@ -98,7 +98,7 @@
     (next-walls tokenizer-carrier android-audio-detection-receipt audio-frame-carrier streaming-decode-loop backpressure-receipt route-confidence-choice tts-stt-envelope)
     (parallel-card
       (goal "Add one bounded token/audio/router carrier receipt whose routing decision is readable in Form.")
-      (files_allowed form/form-stdlib/*audio*.fk form/form-stdlib/*model*.fk form/form-stdlib/*route*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-llm.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/*audio*.fk form/form/form-stdlib/*model*.fk form/form/form-stdlib/*route*.fk form/form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-llm.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "one router/NL/audio receipt runs on the supported kernels and documents its native carrier boundary"))))
 
   (group
@@ -110,7 +110,7 @@
     (next-walls durable-eval-query live-mesh-slice-transport conflict-policy privacy-boundary chunk-range-merkle-proof)
     (parallel-card
       (goal "Turn one model-data sharing wall into a substrate receipt with provenance and rehash proof.")
-      (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*store*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/*model*.fk form/form/form-stdlib/*store*.fk form/form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "a stored/shared slice can be re-read, rehashed, and routed without treating a file cache as source of truth"))))
 
   (group
@@ -123,5 +123,5 @@
     (next-walls peer-handshake android-audio-copresence-capture paste-archive-rendezvous-fallback non-adb-transport-receipt live-subscription conflict-resolution streaming-slice-transfer retry-backoff transport-authority-ledger)
     (parallel-card
       (goal "Add one live mesh transport receipt that returns a Form-readable trace and bounded authority row.")
-      (files_allowed form/form-stdlib/*mesh*.fk form/form-stdlib/*channel*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (files_allowed form/form/form-stdlib/*mesh*.fk form/form/form-stdlib/*channel*.fk form/form/form-stdlib/tests/*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
       (done_when "one mesh receipt proves peer/transport/authority shape without a hidden Python/source-of-truth carrier")))))

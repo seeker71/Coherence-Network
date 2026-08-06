@@ -4,7 +4,7 @@ import Foundation
 /// carries the friend's name into the first message.
 ///
 /// The consent law travels with the link (coherence-kernel `plugin/chatgpt-plugin.fk`,
-/// `form/form-stdlib/circle-recognition.fk`): introduction opens the DOOR — the friend arrives
+/// `form/form/form-stdlib/circle-recognition.fk`): introduction opens the DOOR — the friend arrives
 /// recognized, greeted by the introducer's name — and never the friend's MEMORY; only their own
 /// yes at the door writes a row. Nobody consents for another.
 ///

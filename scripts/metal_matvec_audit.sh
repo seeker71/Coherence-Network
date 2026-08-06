@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine +
-# format rows in form/form-stdlib/jit-tensor-emit.fk): the kernel's mouth prints the Form-emitted
+# format rows in form/form/form-stdlib/jit-tensor-emit.fk): the kernel's mouth prints the Form-emitted
 # MSL per precision lane (f32, f16, bf16), the host Metal runtime compiles it (mathMode safe —
 # IEEE, no fast-math), one thread per output row dispatches over deterministic input cells, and
 # VALUE PARITY against a CPU reference COMPUTED IN THE SAME FORMAT SEMANTICS gates the timing
@@ -25,7 +25,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 ROWS="${1:-1280}"; COLS="${2:-1280}"; ITERS="${3:-30}"
 

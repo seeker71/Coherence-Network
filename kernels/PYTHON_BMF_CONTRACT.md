@@ -1,7 +1,7 @@
 # Python-BMF driven parse — what works now, what the next breath needs
 
 This doc names the surface contract for parsing Python via Form-native BMF
-rules in `form/form-stdlib/grammars/python-bmf.fk`. It lives next to
+rules in `form/form/form-stdlib/grammars/python-bmf.fk`. It lives next to
 `PYTHON_PIPELINE_STATUS.md` so the Python adapter's compost trajectory is
 legible from one place.
 
@@ -19,12 +19,12 @@ source text  →  python-source-scan-text     →  BMF object stream
 
 Proved by:
 
-- `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` (returns `25304`
+- `form/form/form-stdlib/tests/python-bmf-arithmetic-band.fk` (returns `25304`
   on all three kernels) — flat-rule arithmetic recipes are content-
   addressed and round-trip to source.
-- `form/form-stdlib/tests/python-bmf-eval-band.fk` (returns `28000`) —
+- `form/form/form-stdlib/tests/python-bmf-eval-band.fk` (returns `28000`) —
   recipe-walker (G4) covers the 9 arms.
-- `form/form-stdlib/tests/python-bmf-lift-band.fk` (returns `21000`) —
+- `form/form/form-stdlib/tests/python-bmf-lift-band.fk` (returns `21000`) —
   source-string → PY-BMF recipe → value round-trip across six cells,
   including factorial(6) = 720.
 - `kernel-bmf-run examples/python_bridge_demo.py` returns `720` — three-way
@@ -47,7 +47,7 @@ What's already in `python-bmf.fk` and reachable today:
 
 ## What is still bootstrap-dependent
 
-The pieces below currently live in `form/form-kernel-ts/seedbank/python-adapter/`
+The pieces below currently live in `form/form/form-kernel-ts/seedbank/python-adapter/`
 (TS) and have no Form-native equivalent yet. Each is one focused breath
 the body has not yet taken.
 
@@ -59,7 +59,7 @@ rules, the bridge dispatches over the **statement-tree** that
 groups tokens by indent and exposes each statement's `kind` (first-token
 classifier) and `cpython-rule` (rule-name based on token shape).
 
-Lives at `form/form-stdlib/python-bmf-lift.fk`. The `lift-statement` arm
+Lives at `form/form/form-stdlib/python-bmf-lift.fk`. The `lift-statement` arm
 dispatches by both:
 
 ```form
@@ -117,7 +117,7 @@ slices `xs[a:b:c]`, walrus `:=`, lambdas, comprehensions, f-strings.
 ### G4 — Closure/scope at the recipe layer — **CLOSED 2026-05-27**
 
 Closure shape: **Form-side interpreter with alist-scope and self-named
-closures.** Lives at `form/form-stdlib/python-bmf-eval.fk` (~270 LOC).
+closures.** Lives at `form/form/form-stdlib/python-bmf-eval.fk` (~270 LOC).
 Three-way sibling parity (Go, Rust, TypeScript) on `python-bmf-eval-band.fk`
 returns `28000`.
 
@@ -181,7 +181,7 @@ G1's dispatcher can now be written. G5 is no longer a blocker.
 
 Closure shape: **wrapper script** (the first of the three reachable shapes
 named below). Lives at
-`form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run`.
+`form/form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run`.
 The script pre-compiles each surface-syntax prelude through the Go kernel
 (`form-source-compile-file`), then invokes the Rust kernel with the
 compiled artifacts plus an inline driver that calls
@@ -229,7 +229,7 @@ no further orchestration breath is needed.
 **Repro of the closure:**
 
 ```bash
-cd form
+cd form/form
 form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run \
     form-kernel-ts/seedbank/python-adapter/examples/python_demo.py
 # → 15  (top-level statement count, sibling-parity ✓)
@@ -285,7 +285,7 @@ into `kernel-bmf-run`, then greening every `PARITY_FILES` row.
 ## How to run the proof
 
 ```bash
-cd form
+cd form/form
 ./validate.sh form-stdlib/core.fk \
               form-stdlib/json.fk form-stdlib/cache.fk \
               form-stdlib/form-ontology-loader.fk \

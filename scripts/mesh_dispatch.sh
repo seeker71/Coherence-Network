@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # mesh_dispatch.sh — run the body's mesh-dispatch decision on a message BODY.
 #
-# Carrier-last: the DECISION is form/form-stdlib/mesh-dispatch.fk (four-way proven,
+# Carrier-last: the DECISION is form/form/form-stdlib/mesh-dispatch.fk (four-way proven,
 # md-route / md-verdict / md-boundary). This thin marshaller only hands the message
 # to the kernel and prints what the recipe decided — it holds NO dispatch logic.
 # The message is passed through a file (read_file) so no quote-escaping is needed.
@@ -13,8 +13,8 @@
 #   <boundary: the human's words for where the fear sat>
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
-[ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) >/dev/null 2>&1
+GO="$ROOT/form/form/form-kernel-go/bin-go"; STD="$ROOT/form/form/form-stdlib"
+[ -x "$GO" ] || ( cd "$ROOT/form/form/form-kernel-go" && go build -o bin-go . ) >/dev/null 2>&1
 
 msg="${1:-$(cat)}"
 mf="$(mktemp)"; df="$(mktemp)"

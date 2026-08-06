@@ -161,14 +161,14 @@
       (canonical-runtime form-bml)
       (forward-reverse-field-step form-bml go rust typescript)
       (host-adapter-runtime typescript browser-typescript))
-    (shared-proof "form/form-stdlib/tests/field-model-form-band.fk")
-    (bml-runtime "form/form-stdlib/field-model-form-runtime.fk")
-    (bml-runtime-proof "form/form-stdlib/tests/field-model-form-runtime-band.fk")
+    (shared-proof "form/form/form-stdlib/tests/field-model-form-band.fk")
+    (bml-runtime "form/form/form-stdlib/field-model-form-runtime.fk")
+    (bml-runtime-proof "form/form/form-stdlib/tests/field-model-form-runtime-band.fk")
     (bml-runtime-expected-result 63)
-    (auto-research-runtime "form/form-stdlib/field-auto-research.fk")
-    (auto-research-proof "form/form-stdlib/tests/field-auto-research-band.fk")
+    (auto-research-runtime "form/form/form-stdlib/field-auto-research.fk")
+    (auto-research-proof "form/form/form-stdlib/tests/field-auto-research-band.fk")
     (auto-research-expected-result 127)
-    (auto-research-perturbation-proof "form/form-stdlib/tests/field-auto-research-perturbation-band.fk")
+    (auto-research-perturbation-proof "form/form/form-stdlib/tests/field-auto-research-perturbation-band.fk")
     (auto-research-perturbation-expected-result 255)
     (browser-local-playground-proof "web/lib/form-kernel/field-model-form.ts")
     (browser-runtime-proof "web/tests/form-kernel-field-runtime.test.ts")
@@ -182,7 +182,7 @@
     (evidence-cell ResearchEvidenceCell)
     (residual-cell ResearchResidual)
     (answer-cell ResearchAnswer)
-    (runtime "form/form-stdlib/field-auto-research.fk")
+    (runtime "form/form/form-stdlib/field-auto-research.fk")
     (proof "field-auto-research-bml-proof:127")
     (example
       (domain "DNA/RNA sequence-field")
@@ -198,7 +198,7 @@
 
   (observation-to-perturbation-loop
     (shape observe contrast intervene observe-again reverse-receipt sharpen-question)
-    (runtime "form/form-stdlib/field-auto-research.fk")
+    (runtime "form/form/form-stdlib/field-auto-research.fk")
     (proof "field-auto-research-perturbation-proof:255")
     (example
       (source "NCBI:NM_000518.5:HBB-demo-prefix")

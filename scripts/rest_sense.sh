@@ -11,8 +11,8 @@
 # Usage: scripts/rest_sense.sh ["since"]   (default: 24 hours ago)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"
-[ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) >/dev/null 2>&1
+GO="$ROOT/form/form/form-kernel-go/bin-go"
+[ -x "$GO" ] || ( cd "$ROOT/form/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) >/dev/null 2>&1
 [ -x "$GO" ] || { echo "rest_sense: no Form kernel (bin-go)"; exit 1; }
 SINCE="${1:-24 hours ago}"
 git -C "$ROOT" fetch -q origin main 2>/dev/null || true
@@ -20,7 +20,7 @@ subjects="$(git -C "$ROOT" log origin/main --since="$SINCE" --pretty='%s' 2>/dev
 ext=$(printf '%s\n' "$subjects" | grep -cE '^feat')
 dig=$(printf '%s\n' "$subjects" | grep -cE '^(tend|attune|compost|release|fix|refactor|docs)')
 run="$(mktemp)"; printf '(do (print (rs-phase %d %d)) 0)\n' "$ext" "$dig" > "$run"
-phase="$("$GO" "$ROOT/form/form-stdlib/rest-sense.fk" "$run" 2>/dev/null | grep -vE '^0$' | head -1)"
+phase="$("$GO" "$ROOT/form/form/form-stdlib/rest-sense.fk" "$run" 2>/dev/null | grep -vE '^0$' | head -1)"
 rm -f "$run"
 printf '── breath-sense (origin/main, since: %s) ──\n' "$SINCE"
 printf '  extended (feat):   %s\n  digested (settle): %s\n  fullness:          %s\n  phase:             %s\n' \

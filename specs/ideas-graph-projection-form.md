@@ -2,11 +2,11 @@
 idea_id: idea-realization-engine
 status: done
 source:
-  - file: form/form-stdlib/ideas-graph-projection.fk
+  - file: form/form/form-stdlib/ideas-graph-projection.fk
     symbols: []
-  - file: form/form-stdlib/tests/ideas-graph-projection-band.fk
+  - file: form/form/form-stdlib/tests/ideas-graph-projection-band.fk
     symbols: []
-  - file: form/form-stdlib/graph-node-port.fk
+  - file: form/form/form-stdlib/graph-node-port.fk
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
@@ -20,12 +20,12 @@ requirements:
   - "A Form band proves the projection over memory and durable file carriers."
   - "The production kernel-router manifest binds a fixture-backed native preview route that returns the same portfolio response shape."
 done_when:
-  - 'file_exists("form/form-stdlib/ideas-graph-projection.fk")'
-  - 'file_contains("form/form-stdlib/ideas-graph-projection.fk", "defn igp-portfolio-json")'
-  - 'file_contains("form/form-stdlib/tests/ideas-graph-projection-band.fk", "Band verdict: 11111")'
+  - 'file_exists("form/form/form-stdlib/ideas-graph-projection.fk")'
+  - 'file_contains("form/form/form-stdlib/ideas-graph-projection.fk", "defn igp-portfolio-json")'
+  - 'file_contains("form/form/form-stdlib/tests/ideas-graph-projection-band.fk", "Band verdict: 11111")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/graph-projection\"    route_ideas_graph_projection)")'
   - 'pytest_passes("api/tests/test_ideas_graph_projection_form.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk"
+test: "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk"
 constraints:
   - "Do not change existing /api/ideas response behavior in this slice."
   - "Bind only a fixture-backed native preview route until a live graph storage carrier is available."
@@ -45,7 +45,7 @@ same response shape, and preserves the live FastAPI `/api/ideas` behavior.
 
 ## Requirements
 
-- [ ] **R1**: `form/form-stdlib/ideas-graph-projection.fk` declares `igp-field`, `igp-idea-json`, `igp-portfolio-json-from-nodes`, and `igp-portfolio-json`.
+- [ ] **R1**: `form/form/form-stdlib/ideas-graph-projection.fk` declares `igp-field`, `igp-idea-json`, `igp-portfolio-json-from-nodes`, and `igp-portfolio-json`.
 - [ ] **R2**: The projection reads ideas through `gn-list-nodes carrier store "idea"` so non-idea graph nodes do not enter the portfolio response.
 - [ ] **R3**: The idea JSON includes the required `IdeaWithScore` fields with conservative defaults when graph properties are absent.
 - [ ] **R4**: The summary JSON carries `total_ideas`, `unvalidated_ideas`, `validated_ideas`, and value totals.
@@ -55,14 +55,14 @@ same response shape, and preserves the live FastAPI `/api/ideas` behavior.
 ## Research Inputs
 
 - `2026-06-08` - User confirmation to continue moving toward Form-native graph reads.
-- `form/form-stdlib/graph-node-port.fk` - carrier-agnostic graph-node get/list/count port.
+- `form/form/form-stdlib/graph-node-port.fk` - carrier-agnostic graph-node get/list/count port.
 - `api/app/models/idea.py` - `IdeaPortfolioResponse`, `IdeaWithScore`, `IdeaSummary`, and `PaginationInfo` field requirements.
 - `api/app/services/idea_graph_adapter.py` - current Python projection from graph nodes into ideas.
 
 ## Files to Create/Modify
 
-- `form/form-stdlib/ideas-graph-projection.fk` - Form graph-node-to-idea read projection.
-- `form/form-stdlib/tests/ideas-graph-projection-band.fk` - memory/file/reopen proof.
+- `form/form/form-stdlib/ideas-graph-projection.fk` - Form graph-node-to-idea read projection.
+- `form/form/form-stdlib/tests/ideas-graph-projection-band.fk` - memory/file/reopen proof.
 - `deploy/kernel-router/production-routes.fk` - native fixture-backed graph projection route.
 - `api/tests/test_ideas_graph_projection_form.py` - repository-level contract proof.
 - `docs/coherence-substrate/INDEX.md` - substrate map entry.
@@ -79,8 +79,8 @@ same response shape, and preserves the live FastAPI `/api/ideas` behavior.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk
-cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19184 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
+cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk
+cd form/form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19184 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 curl -i http://127.0.0.1:19184/api/ideas/graph-projection
 cd api && python3 -m pytest -q tests/test_ideas_graph_projection_form.py
 python3 scripts/validate_spec_quality.py --file specs/ideas-graph-projection-form.md

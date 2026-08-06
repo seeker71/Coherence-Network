@@ -99,7 +99,7 @@ result
 
 **Run it:**
 ```bash
-cd form/form-kernel-ts
+cd form/form/form-kernel-ts
 ./scripts/parity_suite.sh
 ```
 
@@ -204,7 +204,7 @@ The substrate-talking Python (api/app/services/substrate/*.py) uses classes, imp
 
 ```bash
 # Build the native binary once
-cd form/form-kernel-rust
+cd form/form/form-kernel-rust
 cargo build --release
 
 # Compile + run a Python file
@@ -272,7 +272,7 @@ Discipline docs that practice these teachings:
 
 ## kernels/python_bmf — the Form→native-Python emitter arc
 
-Sibling track to the TS pipeline above. The `kernels/python_bmf/` package is the destination shape for `form/form-stdlib/emits/python-native.fk`. Status as of 2026-05-25:
+Sibling track to the TS pipeline above. The `kernels/python_bmf/` package is the destination shape for `form/form/form-stdlib/emits/python-native.fk`. Status as of 2026-05-25:
 
 | Surface | Status |
 |---|---|

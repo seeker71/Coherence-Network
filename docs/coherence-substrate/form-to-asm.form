@@ -242,8 +242,8 @@
     (next     "branches (cmp + jcc) and CALL/recursion for the full fib shape, the x64 twin of form-lower's COND/bl; then general register allocation beyond single-accumulator"))
 
   (bootstrap-exe-realized
-    (source "form/native/bootstrap/form_bootstrap_host.c is the minimal cross-platform host exe source: LoadLibraryA/GetProcAddress on Windows, dlopen/dlsym on macOS/Linux/Android, call i64->i64, print result")
-    (abi    "form/form-stdlib/bootstrap-host.fk names the contract four-way at tests/bootstrap-host-band.fk -> 4095: form-bootstrap-host + swappable Form dynamic libraries")
+    (source "form/form/native/bootstrap/form_bootstrap_host.c is the minimal cross-platform host exe source: LoadLibraryA/GetProcAddress on Windows, dlopen/dlsym on macOS/Linux/Android, call i64->i64, print result")
+    (abi    "form/form/form-stdlib/bootstrap-host.fk names the contract four-way at tests/bootstrap-host-band.fk -> 4095: form-bootstrap-host + swappable Form dynamic libraries")
     (measure "FORM_BOOTSTRAP_MEASURE=1 emits boundary=form-native-to-host-os-loader, primitive=dynamic-library-call, loader, load_ns, resolve_ns, call_ns, total_ns")
     (prove  "scripts/verify_cross_platform_bootstrap_host_no_go.ps1 compiles the exe on Windows without Go, links three PE/COFF recipe DLLs, proves the exe can load/swap them behind the same recipe symbol, and checks measurement fields")
     (prove-posix "scripts/verify_bootstrap_host_posix.sh is the POSIX twin: compiles the exe on macOS/Linux/Android(Termux), builds three swappable recipe dylib/.so, proves dlopen/dlsym load/swap behind the same recipe symbol, and checks the same measurement fields (loader=dlopen/dlsym)")
@@ -305,6 +305,6 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk \
+#   cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk \
 #     form-stdlib/tests/form-asm-band.fk        # → 31 four-way (encoder + conviction gate)
 #   bash scripts/form_asm_conviction_demo.sh    # Form bytes == clang bytes, byte-for-byte -> gate opens

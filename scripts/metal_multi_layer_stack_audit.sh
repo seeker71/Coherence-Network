@@ -42,7 +42,7 @@
 # Run:  scripts/metal_multi_layer_stack_audit.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FORMDIR="$ROOT/form"
+FORMDIR="$ROOT/form/form"
 GO_BIN="$FORMDIR/form-kernel-go/bin-go"
 
 if [[ "$(uname -s)" != "Darwin" ]] || ! command -v swiftc >/dev/null; then

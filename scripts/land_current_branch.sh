@@ -138,10 +138,10 @@ ensure_native_land_cli() {
     return
   fi
   bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
-  if [ ! -x "$ROOT/form/form-cli" ]; then
+  if [ ! -x "$ROOT/form/form/form-cli" ]; then
     die "native form-cli unavailable; cannot compute non-host landing readiness in Form"
   fi
-  FORM_NATIVE_CLI="$ROOT/form/form-cli"
+  FORM_NATIVE_CLI="$ROOT/form/form/form-cli"
   printf '%s\n' "$FORM_NATIVE_CLI"
 }
 
@@ -153,9 +153,9 @@ native_land_readiness() {
 }
 
 form_plan_probe() {
-  printf 'form-native-plan: form/form-stdlib/current-branch-landing.fk\n'
+  printf 'form-native-plan: form/form/form-stdlib/current-branch-landing.fk\n'
   printf 'trust path:native grounded:yes freq:yes suffic:yes -> form-plan-band\n'
-  run bash form/validate.sh form-stdlib/core.fk form-stdlib/current-branch-landing.fk form-stdlib/tests/current-branch-landing-band.fk
+  run bash form/form/validate.sh form-stdlib/core.fk form-stdlib/current-branch-landing.fk form-stdlib/tests/current-branch-landing-band.fk
 }
 
 current_branch() {
@@ -442,7 +442,7 @@ print_plan() {
   printf 'branch=%s\n' "$branch"
   printf 'repo=%s\n' "$repo"
   printf 'base=origin/%s\n' "$BASE"
-  printf 'plan=form/form-stdlib/current-branch-landing.fk\n'
+  printf 'plan=form/form/form-stdlib/current-branch-landing.fk\n'
   printf 'boundary=host-effects-explicit-git-gh-network-passthrough\n'
   printf 'would: require clean worktree\n'
   if [ "$SKIP_LOCAL_GATES" -eq 0 ]; then

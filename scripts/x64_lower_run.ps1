@@ -12,6 +12,9 @@ param([string]$WorkRoot = "")
 $ErrorActionPreference = "Stop"
 $repo = Resolve-Path (Join-Path $PSScriptRoot "..")
 $form = Join-Path $repo "form"
+# native/ stays at the submodule root; form-stdlib/form-kernel-* nest one
+# level deeper under form/form/.
+$formTree = Join-Path $form "form"
 if (-not $WorkRoot) { $WorkRoot = Join-Path $repo ".cache/x64-lower-run" }
 if (Test-Path $WorkRoot) { Remove-Item -Recurse -Force $WorkRoot }
 New-Item -ItemType Directory -Force -Path $WorkRoot | Out-Null
@@ -26,15 +29,15 @@ $cc = Find-Tool @("gcc.exe","gcc","clang.exe","clang")
 $linker = Find-Tool @("lld-link.exe","lld-link","link.exe","link")
 
 $kernel = Join-Path $WorkRoot "bin-go.exe"
-Copy-Item (Join-Path $form "form-kernel-go/bin-go") $kernel -Force
+Copy-Item (Join-Path $formTree "form-kernel-go/bin-go") $kernel -Force
 $hostExe = Join-Path $WorkRoot "form-bootstrap-host.exe"
 & $cc (Join-Path $form "native/bootstrap/form_bootstrap_host.c") -O2 -o $hostExe | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "host compile failed" }
 
 $preludes = @(
-    (Join-Path $form "form-stdlib/form-pe-coff.fk"),
-    (Join-Path $form "form-stdlib/form-asm-x64.fk"),
-    (Join-Path $form "form-stdlib/form-lower-x64.fk"))
+    (Join-Path $formTree "form-stdlib/form-pe-coff.fk"),
+    (Join-Path $formTree "form-stdlib/form-asm-x64.fk"),
+    (Join-Path $formTree "form-stdlib/form-lower-x64.fk"))
 $seq = 0
 # lower the tree, wrap the COFF object, link a DLL exporting `recipe` -- zero clang
 function Lower-Link($name, $progExpr, $root) {

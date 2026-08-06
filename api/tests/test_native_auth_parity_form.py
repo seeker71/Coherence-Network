@@ -7,8 +7,8 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-AUTH_PORT_PATH = ROOT / "form" / "form-stdlib" / "auth-port.fk"
-AUTH_BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "auth-port-band.fk"
+AUTH_PORT_PATH = ROOT / "form" / "form" / "form-stdlib" / "auth-port.fk"
+AUTH_BAND_PATH = ROOT / "form" / "form" / "form-stdlib" / "tests" / "auth-port-band.fk"
 PY_AUTH_PATH = ROOT / "api" / "app" / "middleware" / "auth.py"
 CONTRIBUTOR_KEY_STORE_PATH = ROOT / "api" / "app" / "services" / "contributor_key_store.py"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
@@ -64,7 +64,7 @@ def test_form_auth_band_executes():
             "form-stdlib/auth-port.fk",
             "form-stdlib/tests/auth-port-band.fk",
         ],
-        cwd=ROOT / "form",
+        cwd=ROOT / "form" / "form",
         text=True,
         capture_output=True,
         check=False,
@@ -76,7 +76,7 @@ def test_form_auth_band_executes():
 
 def test_idea_and_spec_forms_name_auth_carrier_before_front_door_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
-        assert "form/form-stdlib/auth-port.fk::auth-require-api-key" in text
+        assert "form/form/form-stdlib/auth-port.fk::auth-require-api-key" in text
         assert "auth-port-band.fk" in text
         assert "public mutable" in text
         assert "method-specific route binding" in text

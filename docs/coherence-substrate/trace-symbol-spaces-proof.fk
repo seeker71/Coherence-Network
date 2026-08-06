@@ -3,7 +3,7 @@
 ; Build the native kernel CLI, then execute this Form recipe object:
 ;
 ;   mkdir -p .cache
-;   cd form/form-kernel-go && go build -o ../../.cache/form-cli .
+;   cd form/form/form-kernel-go && go build -o ../../.cache/form-cli .
 ;   cd ../.. && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
 
 (do

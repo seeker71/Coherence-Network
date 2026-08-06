@@ -40,7 +40,7 @@ export default function SenseSurfacePage() {
         <p className="text-sm text-muted-foreground">
           The body:{" "}
           <Link
-            href="https://github.com/seeker71/Coherence-Network/blob/main/form/form-stdlib/world-perception.fk"
+            href="https://github.com/seeker71/Coherence-Network/blob/main/form/form/form-stdlib/world-perception.fk"
             className="underline hover:text-amber-400/80"
           >
             world-perception.fk

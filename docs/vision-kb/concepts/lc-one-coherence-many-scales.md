@@ -39,7 +39,7 @@ crystalline–silicon bridge, the nervous system, the subtle and emotional bodie
 heart-brain coherence, and the first cells' relationship to the heart. The
 honest, core-abstraction-first answer is not fourteen grammars — it is **one
 recipe** that each domain enters as *data*:
-[`form/form-stdlib/grammars/coherence.fk`](../../../form/form-stdlib/grammars/coherence.fk)
+[`form/form/form-stdlib/grammars/coherence.fk`](../../../form/form/form-stdlib/grammars/coherence.fk)
 (`coherence-band.fk`, 111111, three-way):
 
 - **`coh-lock-order(fa, fb)`** = (p + q) of the reduced ratio = the Farey
@@ -168,7 +168,7 @@ table, not the engine.
   quantum coherence in light-harvesting complexes.
 - **Solid-state physics** — periodic lattice → band structure: the crystalline
   ↔ silicon bridge.
-- **`form/form-stdlib/grammars/coherence.fk`** — `coh-lock-order`,
+- **`form/form/form-stdlib/grammars/coherence.fk`** — `coh-lock-order`,
   `coh-coherent?`, `coh-class`, the seeded cross-domain resonance ladder, the
   strongest-coupling fold, computed (band 111111, three-way).
 

@@ -1,7 +1,7 @@
 # framebuffer-as-witness.form — the side-map nobody was watching
 #
 # Companion teaching to scripts/framebuffer_viewer.py and
-# form/form-stdlib/tests/framebuffer-viewer-band.fk.
+# form/form/form-stdlib/tests/framebuffer-viewer-band.fk.
 #
 # Every Form kernel (Go, Rust, TS) carries a side-map called
 # source_attr: NodeID -> (file, line, col). Every intern_node_at call

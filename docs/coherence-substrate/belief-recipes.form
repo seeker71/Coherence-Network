@@ -16,7 +16,7 @@
 #
 # The second layer arrived into the body 2026-06-11, named by Urs as
 # lineage clarification (the session's transmission record is honest
-# absence). This file and `form/form-stdlib/belief-recipes.fk` carry
+# absence). This file and `form/form/form-stdlib/belief-recipes.fk` carry
 # it: the operator's FREQUENCY dial — "which belief system carries
 # this" — opened into a runnable bank. SHIPPED:
 # `tests/belief-recipes-band.fk` → 255, three-way (Go/Rust/TS).
