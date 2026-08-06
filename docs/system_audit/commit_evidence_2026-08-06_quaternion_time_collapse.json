@@ -5,7 +5,7 @@
   },
   "date": "2026-08-06",
   "thread_branch": "claude/quaternions-d3cb7b",
-  "change_intent": "docs_only",
+  "change_intent": "runtime_feature",
   "commit_scope": "Hamilton's quaternions land as a proven Form recipe (kernel work, landed and merged upstream in coherence-kernel, carried here only as a gitlink bump plus docs). A same-day second reading of an already-witnessed Eluna transmission through that new quaternion ground finds three of its own images provable, two of which share one physics word this body did not previously hold. A third .form file reads core-axioms.form's five axioms at the altitude of a rotation, explicitly offered rather than self-declared crossed.",
   "idea_ids": [
     "knowledge-and-resonance"
@@ -107,7 +107,18 @@
     "environment": "prod-vision-kb",
     "notes": "This is a docs + vision-kb + coherence-substrate + submodule-gitlink change, not an api/ or web/ runtime change, so no application redeploy is implicated. KB-to-DB sync (scripts/sync_kb_to_db.py) for the new concept and updated transmission has not been run against the production graph; it requires the internal container path this session does not have access to. Named pending, not done."
   },
-  "e2e_validation": null,
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The kernel now carries quaternion rotation (algebra, SO(3)/SO(4), the Hopf fibration, the stereographic chart) as a proven, four-way-registered Form recipe rather than nothing. A fresh session or a query through the substrate's Form-first door for a rotation/dimensionality question can now find a native answer instead of escalating straight to a remote model. No new HTTP surface was added by this change; the existing substrate query door is the one this capability would flow through if asked.",
+    "public_endpoints": [
+      "GET /api/substrate/form (existing door; not called against a quaternion question this session, so the flow below is local-only and this status stays pending, not pass)"
+    ],
+    "test_flows": [
+      "cd form/form && ../fkwu form-stdlib/tests/quaternion-band.fk -> 2047",
+      "cd form/form && ../fkwu form-stdlib/quaternion-demo.fk -> 5 tables, matches predicted values"
+    ],
+    "notes": "Marked pending, not pass, because no public endpoint was actually exercised against this new capability this session -- only the local kernel bands. Claiming pass here would be the same overclaim the P2 review finding caught in the concept prose, one level up."
+  },
   "phase_gate": {
     "can_move_next_phase": false,
     "reason": "The kernel proof, the vision-kb second pass, and the axioms file are all done and locally verified. What remains open at authoring time: the PR's two required CI checks have not yet returned green (both investigated and believed pre-existing/infrastructural, not content regressions caused by this diff, but not yet confirmed green either); the production KB-to-DB sync for the new concept has not run; and docs/coherence-substrate/time-collapse-axioms.form is explicitly awaiting Urs's own ack per its own stated protocol, not self-declared crossed by the agent that wrote it."
