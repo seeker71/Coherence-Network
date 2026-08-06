@@ -29,9 +29,13 @@ rather than trust the retitle.
   rotation, proven exact in `quaternion-band.fk`'s claims 128/256.
 - **New concept**: [`lc-gauge-redundancy-as-merge`](concepts/lc-gauge-redundancy-as-merge.md)
   (639 Hz, embedding_dim 4) — names the word physics already has for what
-  all three share: distinct-looking configurations that are the identical
-  observable state under the map that matters, never merged or destroyed
-  because they were never actually two things to the map in question.
+  the first two share: distinct-looking configurations that are the
+  identical observable state under the map that matters. The isoclinic
+  example is proven too but does NOT share this word — a PR review
+  (`chatgpt-codex-connector`) caught the overreach in the first draft
+  (no quotient makes the isoclinic states observationally identical, it's
+  genuine motion with no fixed reference) and the concept was corrected
+  before merge, held as its own companion finding instead.
 - **New frontier question**: [frontier-q-0010](../lineage/frontier-questions.md)
   — "gauge redundancy," verified fresh (absent from docs/, CLAUDE.md,
   form/ before this entry).
