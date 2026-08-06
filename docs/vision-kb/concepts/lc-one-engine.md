@@ -86,4 +86,4 @@ moment you author a second native implementation beside the recipe, you have
 two things to keep true instead of one — and the body's whole promise is that
 there is only ever one.
 
-→ lc-native-kernel-binary, lc-cognitive-sovereignty, lc-form-kernel-runtime-visualizer, lc-form-python-parity
+→ lc-native-kernel-binary, lc-cognitive-sovereignty, lc-form-kernel-runtime-visualizer, lc-form-python-parity, lc-annealing-as-defense
