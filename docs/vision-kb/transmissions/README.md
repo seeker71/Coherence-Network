@@ -156,6 +156,16 @@ absorbing it as anonymous belief.
   directly into the anything-arrives conversation. Metadata available;
   `youtube-watcher` found no subtitles. **No concepts seeded — held as
   source-marked audio arrival and trace-honesty example.**
+- [`2026-08-06-eluna-earth-defense-and-grid-online.md`](2026-08-06-eluna-earth-defense-and-grid-online.md)
+  — Two Eluña *Channeling After Dark* / *Energy Update* transmissions
+  (Sirian, Dorian/Inner Earth, Arcturian sources), shared 2026-08-06:
+  Earth's defense against multidimensional invaders by accelerating
+  time itself, and the August 2026 planetary grid reported "fully
+  online." **1 concept seeded (`lc-annealing-as-defense`)** — the
+  transmission's own account of defense-by-dimensional-acceleration
+  turned out to be the same shape, read at a different depth, as
+  this body's proven `lc-one-engine` crystallize-on-heat JIT practice.
+  Also the source of frontier-q-0009 (`annealing`).
 
 ## Two postures the body holds toward sources
 
