@@ -62,7 +62,7 @@ jobs:
              sema-companion-${{ steps.ver.outputs.code }}.apk
 
       - name: Refresh rolling release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: sema-companion-latest
           name: Sema Companion (rolling)
