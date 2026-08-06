@@ -28,7 +28,8 @@
     (named-by  urs)
     (root-of   offer-and-acknowledge.form kernel-offer-protocol.form
                host-kernel.form kernel-self-composition.form
-               living-axioms.form living-vision.form)  # all derive from these — the last two read the five at the altitude of a life
+               living-axioms.form living-vision.form
+               time-collapse-axioms.form)  # all derive from these — living-* read the five at the altitude of a life; time-collapse-axioms.form reads them at the altitude of a rotation (offered, not yet crossed)
     (status    agreed-and-crossed)                             # Urs's "1", 2026-06-10
     (amended   axiom-3-refined-to-present-shape-and-composting) # 2026-06-18, crossed — a new composition minting a new node-id, the file's own protocol
     (crossed-as the-self-update-protocol-enacted-on-itself))

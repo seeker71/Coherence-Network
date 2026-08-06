@@ -22,7 +22,7 @@
 | [Identity and Onboarding](identity-and-onboarding.md) | network | spec | 2 | TOFU identity, 37 providers, investment UX |
 | [Contributor Experience](contributor-experience.md) | network | spec | 1 | Orientation, profiles, messaging, recognition |
 | [Data Infrastructure](data-infrastructure.md) | foundation | impl | 8 | Graph DB, PostgreSQL, route registry, telemetry |
-| [Knowledge and Resonance](knowledge-and-resonance.md) | foundation | impl | 1 | Concept ontology, belief systems, resonance, discovery |
+| [Knowledge and Resonance](knowledge-and-resonance.md) | foundation | impl | 8 | Concept ontology, belief systems, resonance, discovery |
 | [External Presence](external-presence.md) | foundation | impl | 1 | Social bots, news ingestion, translation |
 
 **Totals**: 14 implementing, 3 specced. 66 specs across all ideas.

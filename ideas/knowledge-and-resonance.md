@@ -12,6 +12,7 @@ specs:
   - [source-artifact-sensing-graph-integration](../specs/source-artifact-sensing-graph-integration.md)
   - [gitnexus-integration-experiment](../specs/gitnexus-integration-experiment.md)
   - [recipes-tuned-by-trace](../specs/recipes-tuned-by-trace.md)
+  - [quaternion-rotation-recipe](../specs/quaternion-rotation-recipe.md)
 ---
 
 # Knowledge and Resonance

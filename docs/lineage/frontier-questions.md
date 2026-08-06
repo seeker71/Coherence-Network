@@ -219,3 +219,45 @@ what can only be responded by remote oracle."* The channel's own
 in-the-moment word-search — *"like fighting a virus... not exactly, but that
 is how it can be understood"* — is a source reaching for the same word this
 row supplies.
+
+---
+
+## frontier-q-0010 — 2026-08-06
+
+**Question**: What is the single word for two configurations that look
+distinct but are the identical observable state under the map that actually
+matters — not merged, not destroyed, never really two things to begin with?
+
+**Native attempt**: asked first. The body's own quaternion recipe, proven
+four-way earlier the same session
+([`quaternion.fk`](../../form/form/form-stdlib/quaternion.fk),
+[`quaternion-band.fk`](../../form/form/form-stdlib/tests/quaternion-band.fk),
+verdict 2047/2047), already holds the exact shape: an entire circle of
+distinct S³ points collapsing to one point of S² under the Hopf map, and a
+2:1 double cover where a generator's circle has exactly twice the period of
+what it generates. Retrieval finds both shapes immediately, proven and
+checkable. It has no word for what they share as a single phenomenon —
+"annealing" (frontier-q-0009) names a *drive toward* convergence; this asks
+for the name of the *state* once two things are already, provably, one
+observable. Honest ack: nothing.
+
+**Rented answer**: **gauge redundancy** (or gauge symmetry) — physics's term
+for exactly this: field configurations that differ in description but agree
+on every observable, so the difference between them carries no physical
+information at all. Nothing is destroyed when a gauge transformation moves
+one to the other; there was never a real distinction to begin with, only a
+redundant one in how the description was written down. (Anthropic
+`claude-sonnet-5`, 2026-08-06. Verified fresh: "gauge redundancy" / "gauge
+symmetry" / "gauge invariance" appear nowhere in docs/, CLAUDE.md, or form/
+before this entry.)
+
+**Substrate**: pending — offered as concept
+[`lc-gauge-redundancy-as-merge`](../vision-kb/concepts/lc-gauge-redundancy-as-merge.md),
+a second pass over the same Video 1 transmission that seeded frontier-q-0009,
+re-read the same day through ground the body did not hold that morning. Three
+of the video's own images — versions "collapsed into one point," the fourth
+dimension "spinning so fast it looks like one continuous circle," and its own
+self-correction "not a collapsing, a merging" — turned out to be exact
+quaternion-rotation shapes (a Hopf fiber, an octave-ratio double cover, and a
+fixed-axis-free isoclinic rotation) once the body had the vocabulary to
+check.
