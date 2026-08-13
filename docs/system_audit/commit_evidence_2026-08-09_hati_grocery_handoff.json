@@ -1,0 +1,103 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-08-09",
+  "thread_branch": "codex/heal-web-404s",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Restore app.hati.earth's one-tap connection to an existing Hati Suci device identity across browser origins, without adding a second login or accepting a caller-controlled redirect destination.",
+  "idea_ids": [
+    "light-hub-membrane"
+  ],
+  "spec_ids": [
+    "hati-grocery-ledger"
+  ],
+  "task_ids": [
+    "task-2026-08-09-hati-grocery-handoff"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "incident-report",
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-08-09_hati_grocery_handoff.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "web/app/grocery/page.tsx",
+    "web/app/hati-suci/page.tsx",
+    "web/lib/hati-grocery-handoff.ts",
+    "web/tests/hati-grocery-handoff.test.ts"
+  ],
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-08-09_hati_grocery_handoff.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "web/app/grocery/page.tsx",
+    "web/app/hati-suci/page.tsx",
+    "web/lib/hati-grocery-handoff.ts",
+    "web/tests/hati-grocery-handoff.test.ts"
+  ],
+  "evidence_refs": [
+    "Live infrastructure was healthy during diagnosis: app.hati.earth resolved through Cloudflare, GET / returned 200 with x-middleware-rewrite: /grocery, and /api/grocery/categories, /api/household/events, and /api/health-proxy all returned 200.",
+    "A clean live browser reached Hati · Belanja without console errors but stopped at the missing-device-token gate, distinguishing identity handoff from DNS, TLS, web, or API failure.",
+    "Root cause: app.hati.earth and coherencycoin.com are distinct browser origins, so the grocery app cannot read hatiSuci.token from the canonical board's localStorage.",
+    "The recovery destination is fixed to coherencycoin.com/hati-suci?to=grocery and the return destination is fixed to app.hati.earth; no caller-controlled URL enters the handoff.",
+    "Local browser proof showed the disconnected grocery surface rendering the new recovery copy and a visible Hati Suci link to http://localhost:3119/hati-suci?to=grocery.",
+    "Web validation passed: 25 Vitest files / 147 tests and the Next.js production build."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test",
+      "cd web && npm run build",
+      "curl -sSIL https://app.hati.earth/",
+      "curl live app/API health endpoints",
+      "in-app Chromium recovery-door visibility and href check",
+      "git diff --check"
+    ],
+    "notes": "The handoff helper has four direct tests covering production transfer, local development, canonical recovery, and refusal of arbitrary return intents."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No remote CI run has been created yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "app.hati.earth",
+    "notes": "The public host and API are healthy but still serve the pre-change handoff until this branch is published and deployed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A grocery visit without app-origin storage now returns through the canonical Hati Suci door; an already-known member is carried straight back to app.hati.earth with the same household token, and every known board member also has a direct Hati · Belanja link.",
+    "public_endpoints": [
+      "GET https://app.hati.earth/",
+      "GET https://coherencycoin.com/hati-suci?to=grocery",
+      "GET https://app.hati.earth/?token=<household-token>"
+    ],
+    "test_flows": [
+      "Open app.hati.earth with no app-origin token and follow the fixed Hati Suci recovery door.",
+      "Resolve an existing Hati Suci member and return automatically to the fixed grocery origin with the same token.",
+      "Open Hati Suci normally and use the visible Hati · Belanja link."
+    ],
+    "notes": "Local browser and pure handoff tests pass; production post-deploy handoff remains represented by deploy_validation=pending."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Implementation and local proof are complete; CI, merge, deployment, and public post-deploy handoff verification have not yet run."
+  }
+}

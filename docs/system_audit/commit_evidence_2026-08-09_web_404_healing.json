@@ -1,0 +1,108 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-08-09",
+  "thread_branch": "codex/heal-web-404s",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Heal every reproducible internal web 404 by routing the two unshipped ontology child URLs to their existing working contribution and statistics surfaces, then guard the complete literal and localized-markdown link corpus against future route drift.",
+  "idea_ids": [
+    "user-surfaces",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "web-ideas-specs-usage-pages",
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "task-2026-08-09-web-404-healing"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "framing",
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "route-audit",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-08-09_web_404_healing.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "web/app/concepts/garden/ConceptGardenClient.tsx",
+    "web/app/ontology/page.tsx",
+    "web/next.config.ts",
+    "web/tests/e2e/links.spec.ts",
+    "web/tests/internal-page-links.test.ts"
+  ],
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-08-09_web_404_healing.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "web/app/concepts/garden/ConceptGardenClient.tsx",
+    "web/app/ontology/page.tsx",
+    "web/next.config.ts",
+    "web/tests/e2e/links.spec.ts",
+    "web/tests/internal-page-links.test.ts"
+  ],
+  "evidence_refs": [
+    "Public breadth-first crawl: 1,200 reachable HTML pages checked; the only 404 was Cloudflare's synthetic /cdn-cgi/l/email-protection endpoint, while direct probes confirmed /ontology/contribute and /ontology/stats were the two genuine application 404s.",
+    "Static route inventory: all 133 concrete App Router pages returned below 400 in production; repository-wide literal href/navigation analysis isolated exactly the two ontology misses; all localized markdown links resolved against the route tree.",
+    "Local production build: npm run build passed and emitted the full Next.js route manifest.",
+    "Local tests: npm test passed 24 files and 143 tests, including the new repository-wide internal-page-links band (3/3).",
+    "Local HTTP proof: both retired ontology URLs return 308 and their final targets return 200; the rendered ontology page emits /concepts/garden#share directly.",
+    "In-app Chromium proof: the Share an idea CTA navigated to /concepts/garden#share with the contribution form visible; both retired URLs landed on their named, visible anchor targets."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test",
+      "cd web && npm run build",
+      "curl -sSIL http://localhost:3119/ontology/contribute",
+      "curl -sSIL http://localhost:3119/ontology/stats",
+      "browser navigation and visible-target checks for both redirects and the ontology CTA",
+      "git diff --check"
+    ],
+    "notes": "All implementation and route checks pass. The standalone Playwright suite could not launch because its separately cached Chromium binary was absent; downloading that optional 171 MiB binary stalled at 0%, so equivalent local browser behavior was proven through the available in-app Chromium surface."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No remote CI run has been created yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "production-web",
+    "notes": "The public site still carries the pre-change deployment until this branch lands and the normal deployment flow completes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Visitors and old bookmarks no longer receive 404 for /ontology/contribute or /ontology/stats; both converge on the already-working contribution form or ontology statistics, and current ontology links point directly to those canonical targets.",
+    "public_endpoints": [
+      "GET /ontology/contribute",
+      "GET /ontology/stats",
+      "GET /ontology",
+      "GET /concepts/garden"
+    ],
+    "test_flows": [
+      "Open /ontology and follow Share an idea to a visible #share contribution form.",
+      "Open each retired ontology child URL and observe permanent redirect plus visible named target.",
+      "Scan literal application navigation and localized markdown links against App Router pages, route handlers, public assets, and declared redirects."
+    ],
+    "notes": "Local browser and HTTP flows pass; public post-deploy verification remains represented by deploy_validation=pending."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Implementation and local proof are complete; CI, merge, deployment, and public post-deploy verification have not yet run."
+  }
+}
