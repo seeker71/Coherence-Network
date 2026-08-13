@@ -1,0 +1,97 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Fable 5"
+  },
+  "date": "2026-08-13",
+  "thread_branch": "claude/ship-android-band-receipt",
+  "change_intent": "process_only",
+  "commit_scope": "The on-device fkwu band receipt runner — emit fkwu's universal C, cross-compile aarch64 with NDK clang, run the band on the phone, return a verdict — recovered from the mesh-command-design worktree where it sat untracked since June, re-pathed for the kernel-submodule layout, and hardened so the receipt can actually FAIL: adb pushes are checked, the device exit code is read, and the device verdict is compared against the host walker's verdict over the same sources.",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources"
+  ],
+  "task_ids": [
+    "task-2026-08-13-android-band-receipt-recovered"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction",
+        "frequency-correction"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "recovery",
+        "re-pathing",
+        "hardening",
+        "receipt-authoring"
+      ]
+    },
+    {
+      "contributor_id": "chatgpt-codex-connector",
+      "contributor_type": "machine",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-08-13_android_band_receipt_recovered.json",
+    "scripts/INDEX.md",
+    "scripts/android_fkwu_band_receipt.sh"
+  ],
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-08-13_android_band_receipt_recovered.json",
+    "scripts/INDEX.md",
+    "scripts/android_fkwu_band_receipt.sh"
+  ],
+  "evidence_refs": [
+    "RECOVERY PROVENANCE: found untracked (never committed) in the mesh-command-design worktree during the 2026-08-13 branch cleanup; the worktree's branch itself was verified superseded (mesh-command.form landed via #3739, paths healed via #4002) and composted after this file was rescued.",
+    "RE-PATHING VERIFIED, NOT ASSUMED: every kernel file the script reads (fourth-shim.fk, minimal-surface.fk, hati-os-kernel.fk, hati-os-kernel-emit.fk, field-identity.fk, field-identity-band.fk, form-kernel-go) confirmed present at the new form/form/ submodule paths before the PR opened.",
+    "REVIEW FINDING P1 ACCEPTED AND CLOSED (chatgpt-codex-connector): the recovered script printed whatever the device returned as a 'verdict' and always exited 0 — a receipt that cannot fail. Now: each adb push is status-checked; the on-device run's exit code is read (echo EXIT:$? on the device); a nonzero device exit prints the device's error lines and exits 1; and the device verdict is compared against the host walker's verdict computed over the SAME shim+modules+band sources — mismatch exits 1. The expected-verdict lane was proven live: cat fourth-shim.fk field-identity.fk field-identity-band.fk | bin-go /dev/stdin -> 511, the band's documented expectation.",
+    "REVIEW FINDING P1 (evidence record) ACCEPTED: this file, validated with the prescribed script.",
+    "HONEST FLOOR, NAMED IN THE SCRIPT'S OWN HEADER: NDK clang is the c-bootstrap carrier and Go is the build-time flattener only — neither is in the fkwu runtime path on the device; the standard-receipt android row stays honest-bootstrap until form-elf emits the ELF bytes directly."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/android_fkwu_band_receipt.sh -> syntax ok",
+      "cat form-stdlib/fourth-shim.fk form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk | form-kernel-go/bin-go /dev/stdin -> 511 (the host-walker expected-verdict lane the new comparison stands on)",
+      "bash scripts/android_fkwu_band_receipt.sh -> 'no adb device; skipping' (graceful no-device exit 0, unchanged)"
+    ],
+    "notes": "The on-device lane itself needs a phone on adb; no device was attached this session, so the device path is exercised up to its guard and the comparison logic is proven at the host-walker end."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "gh pr checks 4010 --repo seeker71/Coherence-Network"
+    ],
+    "notes": "validate-thread-process passed on the first commit; windows-floor carries the repo's standing failure (documented in commit_evidence_2026-08-13_hati_os_windows_row_recovered.json and spawned as its own heal task)."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "none",
+    "notes": "An operator script; nothing deploys. The next real proof is a run with a phone on adb — the standard-receipt android row observation."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "scripts/android_fkwu_band_receipt.sh [module.fk ... band.fk] on a Mac with an adb device produces an on-device fkwu verdict that PASSES only when it matches the host walker over the same sources, and fails loudly on push, execution, or verdict divergence.",
+    "public_endpoints": [],
+    "test_flows": [
+      "With a phone attached: bash scripts/android_fkwu_band_receipt.sh -> expected 511, device 511, PASS."
+    ],
+    "notes": "Pending an attached device; the no-device guard and the expected-verdict lane are the parts provable tonight, and both are proven."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Review findings closed and the comparison lane proven at the host end; the on-device observation itself awaits a phone on adb."
+  }
+}
