@@ -1,0 +1,98 @@
+{
+  "agent": {
+    "name": "Claude Code",
+    "version": "Fable 5"
+  },
+  "date": "2026-08-13",
+  "thread_branch": "claude/ship-hati-windows-row",
+  "change_intent": "runtime_feature",
+  "commit_scope": "The proven Windows form-cli asset (hati-os-windows-amd64.zip, published to release hati-os-v0.2.0-20260614 in June) finally reaches the /hati-os page and the machine-readable release summary. Recovered from claude/hati-os-windows-web-row (authored 2026-06-21, never merged, found during the 2026-08-13 branch cleanup that verified 380 of 428 local branches as landed and surfaced this one as forgotten work).",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources"
+  ],
+  "task_ids": [
+    "task-2026-08-13-hati-os-windows-row-recovered"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction",
+        "frequency-correction"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "branch-recovery",
+        "verification",
+        "receipt-authoring"
+      ]
+    },
+    {
+      "contributor_id": "chatgpt-codex-connector",
+      "contributor_type": "machine",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-08-13_hati_os_windows_row_recovered.json",
+    "scripts/build_hati_os_public_assets.sh",
+    "web/lib/hati-os-release.ts"
+  ],
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-08-13_hati_os_windows_row_recovered.json",
+    "scripts/build_hati_os_public_assets.sh",
+    "web/lib/hati-os-release.ts"
+  ],
+  "evidence_refs": [
+    "ASSET VERIFIED BEFORE SURFACING (smoke-test before nav): gh release view hati-os-v0.2.0-20260614 lists hati-os-windows-amd64.zip AND hati-os-windows-amd64.zip.sha256; the published sha256 is 560ab751399bdb8951cedbb8d344f047faad7c838b3c8459bfa212f1fd342cb2.",
+    "REVIEW FINDING P2 ACCEPTED AND CLOSED (chatgpt-codex-connector): the machine-readable release receipt (hati-os-public-assets-summary.json) omitted the Windows artifact, so summary readers could not discover or verify the newly surfaced download. Two moves in the same breath: (1) scripts/build_hati_os_public_assets.sh now appends a windows-amd64 row on every run — sha via WINDOWS_ZIP_SHA256 when at hand (status pass), otherwise an honest status missing naming .github/workflows/windows-host.yml as the builder; (2) the already-published summary asset in the release was regenerated with the real sha and re-uploaded (gh release upload --clobber), then round-tripped: re-downloading the published asset returns the windows-amd64 row with the exact published sha256. The republished summary also corrects a stale inner release_tag (the v0.2.0 release was still carrying a summary that said hati-os-v0.1.0-20260613 — the known hardcoded-literal bug already commented in the builder).",
+    "REVIEW FINDING P1 ACCEPTED (chatgpt-codex-connector): the original one-commit PR shipped a release-catalog change with no commit evidence record; this file is that record, covering the whole PR diff.",
+    "RECOVERY PROVENANCE: original commit 47b297c3e (claude/hati-os-windows-web-row) cherry-picked clean onto origin/main; the source branch is recorded in the cleanup's recovery map before deletion."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test -> 140 passed (140), 23 files, on the cherry-picked branch before review fixes",
+      "bash -n scripts/build_hati_os_public_assets.sh -> syntax ok after the windows-row addition",
+      "gh release download hati-os-v0.2.0-20260614 --pattern hati-os-public-assets-summary.json -O - | jq '.assets[] | select(.target==\"windows-amd64\") | .sha256' -> 560ab751399bdb8951cedbb8d344f047faad7c838b3c8459bfa212f1fd342cb2 (round-trip of the republished asset)"
+    ],
+    "notes": "web/lib/hati-os-release.ts is the single source the page, the download-proxy allowlist, and the summary route all read; the added row carries the same shape as the existing macOS/Android rows."
+  },
+  "ci_validation": {
+    "status": "fail",
+    "commands": [
+      "gh pr checks 4008 --repo seeker71/Coherence-Network -> validate-thread-process pass, windows-floor fail"
+    ],
+    "notes": "windows-floor is a standing failure independent of this diff: the two most recently MERGED PRs (#4004, #4006) carried the same red check, and the run log shows the four-way Form proof inside the job passing ('1 ok, 0 divergent — kernels agree on every sample') followed by an unexplained exit 1. Investigated, not assumed: spawned as its own task (heal the standing windows-floor CI failure) rather than folded into this recovery PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "prod-web",
+    "notes": "Lands with the merge to main via the Hostinger auto-deploy; /hati-os to be checked for the Windows row and the witness pulse read after rollout, per the deploy breath."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "https://coherencycoin.com/hati-os shows a Windows amd64 row beside macOS and Android, its download proxied through the same allowlist source; the release's machine-readable summary names the same artifact with its sha256 so a consumer can verify the download.",
+    "public_endpoints": [
+      "GET /hati-os (web page rendering the surfaced rows)",
+      "GET https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.2.0-20260614/hati-os-public-assets-summary.json (already republished and round-trip verified)"
+    ],
+    "test_flows": [
+      "After deploy: curl the /hati-os page and confirm the Windows amd64 row renders; download hati-os-windows-amd64.zip through the proxy path and check its sha256 against the summary."
+    ],
+    "notes": "The summary half is already live and verified; the page half stays pending until the merge deploys."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Both review findings are closed and the summary republish is verified live; open at authoring time: the PR has not merged (windows-floor standing failure documented above), so the page itself has not deployed."
+  }
+}

@@ -34,6 +34,15 @@ export const HATI_OS_ASSETS: HatiOsAsset[] = [
     surfaced: true,
   },
   {
+    target: "Windows amd64",
+    os: "windows",
+    arch: "amd64",
+    name: "hati-os-windows-amd64.zip",
+    artifact: "Standalone form-cli.exe",
+    proof: "Built and four-way-proven on windows-latest; the .exe runs with no Go, clang, or LLVM at runtime (ping→pong, verify→fkwu, embedded source).",
+    surfaced: true,
+  },
+  {
     target: "Android arm64",
     os: "android",
     arch: "arm64",
