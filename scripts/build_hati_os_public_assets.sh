@@ -203,9 +203,18 @@ if [[ -f "$RELEASE_APK_SRC" ]]; then
     release_apk_status="pass"
 fi
 
-python3 - "$OUT/hati-os-public-assets-summary.json" "$STAMP" "$mac_sha" "$android_status" "$android_sha" "$android_reason" "$mac_file" "$android_file_bin" "$android_file_so" "$apk_status" "$apk_sha" "$apk_version_code" "$apk_version_name" "$release_apk_status" "$release_apk_sha" <<'PY'
+# The Windows zip is built by .github/workflows/windows-host.yml, not by this
+# script. Its sha256 reaches the summary via WINDOWS_ZIP_SHA256 (set when the
+# published hati-os-windows-amd64.zip.sha256 is at hand); without it the row
+# still appears, honestly marked missing, so summary readers always see the
+# Windows target exists.
+windows_sha="${WINDOWS_ZIP_SHA256:-}"
+windows_status="missing"
+[[ -n "$windows_sha" ]] && windows_status="pass"
+
+python3 - "$OUT/hati-os-public-assets-summary.json" "$STAMP" "$mac_sha" "$android_status" "$android_sha" "$android_reason" "$mac_file" "$android_file_bin" "$android_file_so" "$apk_status" "$apk_sha" "$apk_version_code" "$apk_version_name" "$release_apk_status" "$release_apk_sha" "$windows_status" "$windows_sha" <<'PY'
 import json, pathlib, sys
-summary_path, stamp, mac_sha, android_status, android_sha, android_reason, mac_file, android_file_bin, android_file_so, apk_status, apk_sha, apk_version_code, apk_version_name, release_apk_status, release_apk_sha = sys.argv[1:]
+summary_path, stamp, mac_sha, android_status, android_sha, android_reason, mac_file, android_file_bin, android_file_so, apk_status, apk_sha, apk_version_code, apk_version_name, release_apk_status, release_apk_sha, windows_status, windows_sha = sys.argv[1:]
 assets = [
     {
         "target": "macos-arm64",
@@ -252,6 +261,17 @@ assets.append({
     "proof": "Android app release APK built by Gradle with a local non-committed signing key and verified by apksigner.",
     "note": "First migration from a debug-signed install requires uninstall/reinstall because Android rejects updates signed by a different key.",
 })
+windows = {
+    "target": "windows-amd64",
+    "name": "hati-os-windows-amd64.zip",
+    "sha256": windows_sha or None,
+    "status": windows_status,
+    "proof": "Standalone form-cli.exe built and four-way-proven on windows-latest; the .exe runs with no Go, clang, or LLVM at runtime.",
+    "builder": ".github/workflows/windows-host.yml",
+}
+if windows_status != "pass":
+    windows["reason"] = "built by the Windows Host Floor workflow; sha256 not provided to this run (set WINDOWS_ZIP_SHA256)"
+assets.append(windows)
 import os
 data = {
     "stamp": stamp,
