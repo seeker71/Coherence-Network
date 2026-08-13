@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 405
+**Total files**: 406
 
 | File | Purpose |
 |---|---|
@@ -16,6 +16,7 @@
 | [agent_tooluse_featurize.py](agent_tooluse_featurize.py) | agent_tooluse_featurize.py — CARRIER (data prep only). Turns the real agent corpus |
 | [agent_tooluse_train.sh](agent_tooluse_train.sh) | agent_tooluse_train.sh — a REAL model on REAL data at full scale, natively. |
 | [android_core_axiom_apk_receipt.sh](android_core_axiom_apk_receipt.sh) | Build a native arm64 core-axiom receipt library into the Android APK and |
+| [android_fkwu_band_receipt.sh](android_fkwu_band_receipt.sh) | android_fkwu_band_receipt.sh — the standard-receipt ANDROID row for fkwu: emit the universal |
 | [android_mac_core_axiom_receipt.sh](android_mac_core_axiom_receipt.sh) | Build and run a native Mac + Android core-axiom receipt pair. |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
