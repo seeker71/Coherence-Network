@@ -10,6 +10,8 @@ const PAGES_TO_CHECK = [
   '/vitality',
   '/governance',
   '/cc',
+  '/ontology',
+  '/concepts/garden',
 ];
 
 // Allow generous time: each page may link to 20+ routes and the app is SSR,

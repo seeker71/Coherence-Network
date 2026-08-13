@@ -222,7 +222,10 @@ export default async function OntologyGardenPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div
+        id="contribution-stats"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 scroll-mt-24"
+      >
         {[
           { label: "Contributions", value: stats.total_contributions },
           { label: "Placed in graph", value: stats.placed_count },
@@ -245,7 +248,7 @@ export default async function OntologyGardenPage() {
           </p>
         </div>
         <Link
-          href="/ontology/contribute"
+          href="/concepts/garden#share"
           className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
         >
           Share an idea →
@@ -288,7 +291,7 @@ export default async function OntologyGardenPage() {
         <Link href="/concepts" className="hover:text-gray-700">
           Technical graph view →
         </Link>
-        <Link href="/ontology/stats" className="hover:text-gray-700">
+        <Link href="#contribution-stats" className="hover:text-gray-700">
           Contribution stats →
         </Link>
       </div>

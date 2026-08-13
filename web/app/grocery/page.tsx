@@ -17,6 +17,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { hatiSuciRecoveryHref } from "@/lib/hati-grocery-handoff";
+
 type Shop = {
   id: string;
   name: string;
@@ -118,7 +120,7 @@ const T = {
     offline: "No signal — held on this phone, will send itself.",
     identify: "Open your Hati Suci link on this phone first.",
     identifyBody:
-      "This ledger uses the same door as the house board. Tap your invite link, then come back here.",
+      "This ledger uses the same door as the house board. Open Hati Suci once and it will bring you straight back here.",
     add: "Save shop",
     cancel: "Cancel",
     where: "Where",
@@ -167,7 +169,7 @@ const T = {
     offline: "Tidak ada sinyal — disimpan di HP, akan terkirim sendiri.",
     identify: "Buka tautan Hati Suci Anda di HP ini dulu.",
     identifyBody:
-      "Buku belanja ini memakai pintu yang sama dengan papan rumah. Ketuk tautan undangan Anda, lalu kembali ke sini.",
+      "Buku belanja ini memakai pintu yang sama dengan papan rumah. Buka Hati Suci sekali dan Anda akan dibawa langsung kembali ke sini.",
     add: "Simpan toko",
     cancel: "Batal",
     where: "Di mana",
@@ -596,12 +598,16 @@ export default function GroceryPage() {
   }
 
   if (!token) {
+    const recoveryHref =
+      typeof window === "undefined"
+        ? "/hati-suci?to=grocery"
+        : hatiSuciRecoveryHref(window.location);
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 text-neutral-200">
         <div className="text-xs uppercase tracking-[0.2em] text-amber-500">Hati · {t.title}</div>
         <h1 className="mt-3 text-2xl font-semibold text-neutral-50">{t.identify}</h1>
         <p className="mt-3 text-sm text-neutral-400">{t.identifyBody}</p>
-        <a href="/hati-suci" className="mt-6 rounded-xl border border-amber-500/50 bg-amber-500/5 px-5 py-3 text-center text-amber-300">
+        <a href={recoveryHref} className="mt-6 rounded-xl border border-amber-500/50 bg-amber-500/5 px-5 py-3 text-center text-amber-300">
           Hati Suci →
         </a>
       </main>

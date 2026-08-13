@@ -56,6 +56,20 @@ const nextConfig: NextConfig = {
       { source: "/runtime", destination: "/pipeline", permanent: true },
       { source: "/remote-ops", destination: "/pipeline", permanent: true },
       { source: "/explore/concept", destination: "/vision", permanent: true },
+      // The ontology landing page used to point at two child pages that were
+      // never shipped. Keep those remembered URLs alive while converging on
+      // the working contribution form and the stats already rendered by the
+      // ontology garden.
+      {
+        source: "/ontology/contribute",
+        destination: "/concepts/garden#share",
+        permanent: true,
+      },
+      {
+        source: "/ontology/stats",
+        destination: "/ontology#contribution-stats",
+        permanent: true,
+      },
       // The body holds urs across two graph nodes that the migration
       // did not collapse: `contributor:urs` carries the woven story
       // (presence_content + the static /people/urs page); `contributor:

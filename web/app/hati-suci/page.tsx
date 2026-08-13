@@ -9,6 +9,10 @@ import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useT } from "@/components/MessagesProvider";
+import {
+  groceryHandoffHref,
+  requestsGroceryReturn,
+} from "@/lib/hati-grocery-handoff";
 import { DEFAULT_LOCALE, LOCALES, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 type Role = "resident" | "staff" | "member";
@@ -438,6 +442,16 @@ export default function HatiSuciPage() {
   const needsName = !!member && /^New (resident|staff|member)$/i.test(member.name);
 
   const pick = useCallback((x: L) => x[lang] ?? x.en, [lang]);
+
+  // app.hati.earth is its own browser origin, so it cannot read the device
+  // token stored by this board. A grocery recovery visit returns here with a
+  // fixed `to=grocery` intent; once the member is validated, carry that same
+  // identity straight to the ledger. The target is fixed in the helper — no
+  // caller-provided return URL and therefore no open redirect.
+  useEffect(() => {
+    if (!token || !requestsGroceryReturn(window.location.search)) return;
+    window.location.replace(groceryHandoffHref(token, window.location));
+  }, [token]);
 
   const toggleItem = useCallback((id: string, start: number) => {
     setCart((c) => {
@@ -882,7 +896,15 @@ export default function HatiSuciPage() {
               </button>
             </p>
           </div>
-          {langToggle}
+          <div className="flex items-center gap-2">
+            <a
+              href={groceryHandoffHref(token, window.location)}
+              className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+            >
+              Hati · Belanja
+            </a>
+            {langToggle}
+          </div>
         </header>
 
         {/* New arrival names themselves (the invite carried only a role) */}

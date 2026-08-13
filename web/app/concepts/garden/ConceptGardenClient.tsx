@@ -218,7 +218,10 @@ export default function ConceptGardenClient({
   return (
     <div className="space-y-8">
       {/* Submission form */}
-      <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-6">
+      <div
+        id="share"
+        className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 scroll-mt-24"
+      >
         <h2 className="text-base font-semibold mb-1">Share an idea</h2>
         <p className="text-xs text-muted-foreground mb-4">
           {hint ||
