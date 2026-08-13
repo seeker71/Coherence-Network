@@ -48,16 +48,36 @@ printf '(print (fks-table-file (flt-band-sources-fns (list%s) (read_file "%s")) 
 printf '' > "$d/bundle"
 echo "flattened table: $(wc -c < "$d/table.txt") bytes"
 
-# 4. push to the phone and run fkwu ON THE DEVICE
+# 4. the expected verdict, computed by the host walker over the SAME sources —
+#    the receipt is a comparison, so a device failure or a wrong number FAILS.
+EXPECT="$(cat "$FOURTH_SHIM" "${mods[@]}" "$last" | "$GO_BIN" /dev/stdin 2>/dev/null | head -1 | tr -d '\r')"
+case "$EXPECT" in
+    ''|*[!0-9-]*) echo "FAIL: host walker produced no numeric verdict for $last (got: ${EXPECT:-<empty>})"; exit 1 ;;
+esac
+echo "expected verdict (host walker): $EXPECT"
+
+# 5. push to the phone and run fkwu ON THE DEVICE
 R="/data/local/tmp/fkwu-recv-$$"
-adb -s "$DEV" push "$d/fkwu-android" "${R}.bin" >/dev/null 2>&1
-adb -s "$DEV" push "$d/table.txt" "${R}.tbl" >/dev/null 2>&1
-adb -s "$DEV" push "$d/bundle" "${R}.bun" >/dev/null 2>&1
-V="$(adb -s "$DEV" shell "chmod 755 ${R}.bin; cd /data/local/tmp; ./fkwu-recv-$$.bin ${R}.tbl 0 ${R}.bun" 2>&1 | head -1 | tr -d '\r')"
+adb -s "$DEV" push "$d/fkwu-android" "${R}.bin" >/dev/null || { echo "FAIL: adb push binary"; exit 1; }
+adb -s "$DEV" push "$d/table.txt" "${R}.tbl" >/dev/null || { echo "FAIL: adb push table"; exit 1; }
+adb -s "$DEV" push "$d/bundle" "${R}.bun" >/dev/null || { echo "FAIL: adb push bundle"; exit 1; }
+DEVOUT="$(adb -s "$DEV" shell "chmod 755 ${R}.bin && cd /data/local/tmp && ./fkwu-recv-$$.bin ${R}.tbl 0 ${R}.bun; echo EXIT:\$?" 2>&1 | tr -d '\r')"
+V="$(echo "$DEVOUT" | head -1)"
+DEVEXIT="$(echo "$DEVOUT" | sed -n 's/^EXIT://p' | tail -1)"
 DEVMODEL="$(adb -s "$DEV" shell getprop ro.product.model 2>/dev/null | tr -d '\r')"
 ABI="$(adb -s "$DEV" shell getprop ro.product.cpu.abi 2>/dev/null | tr -d '\r')"
 adb -s "$DEV" shell "rm -f ${R}.bin ${R}.tbl ${R}.bun" >/dev/null 2>&1
 echo
 echo "ON-DEVICE fkwu run — $DEVMODEL ($ABI), device $DEV"
 echo "  band: $last"
-echo "  verdict on the phone's fkwu: $V"
+echo "  verdict on the phone's fkwu: $V (device exit ${DEVEXIT:-unknown})"
+if [ "${DEVEXIT:-1}" != "0" ]; then
+    echo "FAIL: on-device fkwu exited nonzero; first output line above is the error, not a verdict"
+    echo "$DEVOUT" | sed -n '1,8p' | sed 's/^/    /'
+    exit 1
+fi
+if [ "$V" != "$EXPECT" ]; then
+    echo "FAIL: device verdict $V != host walker verdict $EXPECT"
+    exit 1
+fi
+echo "  PASS: device verdict matches the host walker ($EXPECT)"
