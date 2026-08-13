@@ -25,6 +25,21 @@ describe("Hati grocery identity handoff", () => {
     ).toBe("http://localhost:3119/grocery?token=local");
   });
 
+  it("keeps a LAN or preview host on its own grocery route", () => {
+    expect(
+      groceryHandoffHref("phone", {
+        hostname: "192.168.1.20",
+        origin: "http://192.168.1.20:3000",
+      }),
+    ).toBe("http://192.168.1.20:3000/grocery?token=phone");
+    expect(
+      groceryHandoffHref("v6", {
+        hostname: "[::1]",
+        origin: "http://[::1]:3000",
+      }),
+    ).toBe("http://[::1]:3000/grocery?token=v6");
+  });
+
   it("returns a disconnected app visit through the canonical Hati Suci door", () => {
     expect(
       hatiSuciRecoveryHref({

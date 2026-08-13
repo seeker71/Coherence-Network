@@ -6,23 +6,33 @@ type HandoffLocation = {
   origin: string;
 };
 
-function isLocalHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+const PRODUCTION_HOSTS = new Set([
+  "coherencycoin.com",
+  "www.coherencycoin.com",
+  "hati.earth",
+  "www.hati.earth",
+  "app.hati.earth",
+]);
+
+function isProductionHost(hostname: string): boolean {
+  return PRODUCTION_HOSTS.has(hostname.toLowerCase());
 }
 
 /**
  * Carry an already-validated Hati Suci device identity to the grocery origin.
  * The destination is fixed rather than caller-controlled, so the household
- * token can never be turned into an open-redirect payload.
+ * token can never be turned into an open-redirect payload. Only the known
+ * production hosts hand off to app.hati.earth; every other host — localhost,
+ * a LAN IP a phone is pointed at, a preview deploy — stays on its own
+ * same-origin /grocery route.
  */
 export function groceryHandoffHref(
   token: string,
   location: HandoffLocation,
 ): string {
-  const target = isLocalHost(location.hostname)
-    ? new URL("/grocery", location.origin)
-    : new URL("/", HATI_GROCERY_ORIGIN);
+  const target = isProductionHost(location.hostname)
+    ? new URL("/", HATI_GROCERY_ORIGIN)
+    : new URL("/grocery", location.origin);
   target.searchParams.set("token", token);
   return target.toString();
 }

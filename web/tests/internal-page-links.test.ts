@@ -38,7 +38,7 @@ function routePattern(file: string): RegExp {
 }
 
 const routePatterns = walk(APP_ROOT)
-  .filter((file) => /\/(?:page\.tsx|route\.ts)$/.test(file))
+  .filter((file) => /[\\/](?:page\.tsx|route\.ts)$/.test(file))
   .map(routePattern);
 
 const redirectSources = new Set(
