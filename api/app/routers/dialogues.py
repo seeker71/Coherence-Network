@@ -7,6 +7,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 
 from app.services import dialogue_service
 
@@ -52,7 +53,8 @@ async def start_dialogue(body: DialogueCreate, request: Request, response: Respo
     """Persist a turn immediately; the singleton CPU worker attends asynchronously."""
     response.headers["Cache-Control"] = "no-store"
     try:
-        return dialogue_service.submit_dialogue(
+        return await run_in_threadpool(
+            dialogue_service.submit_dialogue,
             **body.model_dump(),
             network_peer=_public_origin(request),
         )

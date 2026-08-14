@@ -118,6 +118,65 @@ def _admission_lock(session: Any) -> None:
         )
 
 
+def _check_admission(
+    session: Any,
+    *,
+    network_peer_sha256: str,
+    parent_dialogue_id: str | None,
+    max_active: int,
+    starts_per_window: int,
+    start_window_seconds: int,
+) -> None:
+    active = session.scalar(
+        select(func.count()).select_from(PublicDialogueRecord).where(
+            PublicDialogueRecord.state.in_(ACTIVE_STATES)
+        )
+    )
+    if int(active or 0) >= max_active:
+        raise RuntimeError("the public dialogue queue is presently full")
+    now = _now()
+    recent_starts = session.scalar(
+        select(func.count()).select_from(PublicDialogueRecord).where(
+            PublicDialogueRecord.network_peer_sha256 == network_peer_sha256,
+            PublicDialogueRecord.created_at
+            > now - timedelta(seconds=start_window_seconds),
+        )
+    )
+    if int(recent_starts or 0) >= starts_per_window:
+        raise PublicDialogueRateLimitError(start_window_seconds)
+    if parent_dialogue_id:
+        parent = session.get(PublicDialogueRecord, parent_dialogue_id)
+        if parent is None or parent.state == "tombstoned":
+            raise ValueError(
+                "parent_dialogue_id does not name an available public dialogue"
+            )
+
+
+def preflight_dialogue_admission(
+    *,
+    network_peer_sha256: str,
+    parent_dialogue_id: str | None,
+    max_active: int,
+    starts_per_window: int,
+    start_window_seconds: int,
+) -> None:
+    """Reject an already-full peer or queue before native Form work begins.
+
+    The locked check inside ``create_dialogue`` remains authoritative; this
+    first read keeps known refusals from consuming a native admission process.
+    """
+    ensure_schema()
+    with unified_db.session() as session:
+        _check_admission(
+            session,
+            network_peer_sha256=network_peer_sha256,
+            parent_dialogue_id=parent_dialogue_id,
+            max_active=max_active,
+            starts_per_window=starts_per_window,
+            start_window_seconds=start_window_seconds,
+        )
+
+
 def create_dialogue(
     *,
     question: str,
@@ -136,27 +195,15 @@ def create_dialogue(
     ensure_schema()
     with _ADMISSION_LOCK, unified_db.session() as session:
         _admission_lock(session)
-        active = session.scalar(
-            select(func.count()).select_from(PublicDialogueRecord).where(
-                PublicDialogueRecord.state.in_(ACTIVE_STATES)
-            )
+        _check_admission(
+            session,
+            network_peer_sha256=network_peer_sha256,
+            parent_dialogue_id=parent_dialogue_id,
+            max_active=max_active,
+            starts_per_window=starts_per_window,
+            start_window_seconds=start_window_seconds,
         )
-        if int(active or 0) >= max_active:
-            raise RuntimeError("the public dialogue queue is presently full")
         now = _now()
-        recent_starts = session.scalar(
-            select(func.count()).select_from(PublicDialogueRecord).where(
-                PublicDialogueRecord.network_peer_sha256 == network_peer_sha256,
-                PublicDialogueRecord.created_at
-                > now - timedelta(seconds=start_window_seconds),
-            )
-        )
-        if int(recent_starts or 0) >= starts_per_window:
-            raise PublicDialogueRateLimitError(start_window_seconds)
-        if parent_dialogue_id:
-            parent = session.get(PublicDialogueRecord, parent_dialogue_id)
-            if parent is None or parent.state == "tombstoned":
-                raise ValueError("parent_dialogue_id does not name an available public dialogue")
         dialogue_id = "dlg_" + secrets.token_urlsafe(18)
         removal_token = secrets.token_urlsafe(32)
 

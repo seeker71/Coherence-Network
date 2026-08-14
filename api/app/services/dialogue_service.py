@@ -255,6 +255,19 @@ def submit_dialogue(
         )
     if parent_dialogue_id is not None and len(parent_dialogue_id) > 80:
         raise ValueError("parent_dialogue_id exceeds the public dialogue envelope")
+    network_peer_sha256 = hashlib.sha256(
+        (network_peer or "unknown")[:200].encode("utf-8")
+    ).hexdigest()
+    try:
+        store.preflight_dialogue_admission(
+            network_peer_sha256=network_peer_sha256,
+            parent_dialogue_id=parent_dialogue_id,
+            max_active=MAX_ACTIVE_DIALOGUES,
+            starts_per_window=STARTS_PER_WINDOW,
+            start_window_seconds=START_WINDOW_SECONDS,
+        )
+    except store.PublicDialogueRateLimitError as exc:
+        raise DialogueRateLimitError(exc.retry_after) from exc
     if not _admit_dialogue_envelope(
         locale_length=len(requested_locale),
         point_length=len(point_of_view),
@@ -265,9 +278,6 @@ def submit_dialogue(
     ):
         raise RuntimeError("native Form declined the public dialogue envelope")
     question_sha256 = hashlib.sha256(question.encode("utf-8")).hexdigest()
-    network_peer_sha256 = hashlib.sha256(
-        (network_peer or "unknown")[:200].encode("utf-8")
-    ).hexdigest()
     expires_at = datetime.now(timezone.utc) + timedelta(days=DEFAULT_RETENTION_DAYS)
     try:
         row, removal_token = store.create_dialogue(

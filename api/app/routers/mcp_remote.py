@@ -12,6 +12,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from app.config_loader import get_str
 from app.services.mcp_tool_registry import TOOL_MAP, TOOLS
@@ -332,7 +333,7 @@ def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
-def _handle_jsonrpc(
+async def _handle_jsonrpc(
     payload: dict[str, Any],
     *,
     public_origin: str = "unknown",
@@ -368,7 +369,11 @@ def _handle_jsonrpc(
         if name == "fetch":
             return _jsonrpc_result(request_id, _content_result(_fetch(arguments)))
         if name == "start_dialogue":
-            result = _start_dialogue(arguments, public_origin=public_origin)
+            result = await run_in_threadpool(
+                _start_dialogue,
+                arguments,
+                public_origin=public_origin,
+            )
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),
@@ -419,17 +424,18 @@ async def mcp_jsonrpc(request: Request, response: Response) -> Any:
 
     if isinstance(payload, list):
         public_origin = request.client.host if request.client else "unknown"
-        replies = [
-            _handle_jsonrpc(item, public_origin=public_origin)
-            for item in payload
-            if isinstance(item, dict)
-        ]
+        replies = []
+        for item in payload:
+            if isinstance(item, dict):
+                replies.append(
+                    await _handle_jsonrpc(item, public_origin=public_origin)
+                )
         return [reply for reply in replies if reply is not None]
     if not isinstance(payload, dict):
         return _jsonrpc_error(None, -32600, "Invalid Request")
 
     public_origin = request.client.host if request.client else "unknown"
-    reply = _handle_jsonrpc(payload, public_origin=public_origin)
+    reply = await _handle_jsonrpc(payload, public_origin=public_origin)
     if reply is None:
         response.status_code = 202
         return None

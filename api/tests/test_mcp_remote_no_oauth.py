@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -161,6 +163,58 @@ async def test_mcp_start_and_get_dialogue(monkeypatch):
     assert get_payload == {"id": "task_dialogue", "state": "miss"}
     assert release_payload == {"id": "task_dialogue", "state": "tombstoned", "released": True}
     assert observed.json()["result"]["structuredContent"] == get_payload
+
+
+@pytest.mark.asyncio
+async def test_mcp_start_keeps_the_event_loop_available(monkeypatch):
+    from app.services import dialogue_service
+
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def submit(**_):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "id": "dlg_concurrent",
+            "state": "pending" if read_completed.is_set() else "blocked-loop",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        start_task = asyncio.create_task(
+            client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "start-concurrent",
+                    "method": "tools/call",
+                    "params": {
+                        "name": "start_dialogue",
+                        "arguments": {
+                            "question": "What does the river see?",
+                            "point_of_view": "river",
+                            "locale": "en",
+                            "public_disclosure_ack": "public-unlisted-v1",
+                        },
+                    },
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await start_task
+        finally:
+            read_completed.set()
+            if not start_task.done():
+                await start_task
+
+    payload = response.json()["result"]["structuredContent"]
+    assert info.status_code == 200
+    assert payload["state"] == "pending"
 
 
 @pytest.mark.asyncio

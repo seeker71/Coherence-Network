@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import hashlib
 import os
 import sys
+import threading
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -103,6 +105,7 @@ def dialogue_store(monkeypatch):
         return carrier_pgid if carrier_pgid is not None else True
 
     monkeypatch.setattr(store, "tombstone_dialogue", tombstone)
+    monkeypatch.setattr(store, "preflight_dialogue_admission", lambda **_: None)
     monkeypatch.setattr(dialogue_service, "ensure_dialogue_worker", lambda: None)
     monkeypatch.setattr(dialogue_service._WORKER_WAKE, "set", lambda: None)
     monkeypatch.setattr(
@@ -276,6 +279,25 @@ def test_form_receives_the_real_dialogue_envelope_before_persistence(
         "parent_length": 0,
         "timeout_seconds": 60,
     }
+
+
+def test_known_pacing_refusal_happens_before_form(dialogue_store, monkeypatch):
+    monkeypatch.setattr(
+        store,
+        "preflight_dialogue_admission",
+        lambda **_: (_ for _ in ()).throw(store.PublicDialogueRateLimitError(17)),
+    )
+
+    def form_must_not_run(**_):
+        raise AssertionError("known refusal spent a native Form admission process")
+
+    monkeypatch.setattr(dialogue_service, "_admit_dialogue_envelope", form_must_not_run)
+
+    with pytest.raises(dialogue_service.DialogueRateLimitError) as refused:
+        _offer()
+
+    assert refused.value.retry_after == 17
+    assert dialogue_store == {}
 
 
 def test_form_dialogue_refusal_persists_nothing(dialogue_store, monkeypatch):
@@ -572,6 +594,51 @@ async def test_http_membrane_starts_reads_releases_and_has_no_public_list(monkey
     assert observed.json()["state"] == "miss"
     assert released.json()["state"] == "tombstoned"
     assert no_list.status_code in (404, 405)
+
+
+@pytest.mark.asyncio
+async def test_http_start_keeps_the_event_loop_available(monkeypatch):
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def submit(**_):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "id": "dlg_concurrent",
+            "state": "pending" if read_completed.is_set() else "blocked-loop",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        post_task = asyncio.create_task(
+            client.post(
+                "/api/dialogues",
+                json={
+                    "question": "What does the river see?",
+                    "point_of_view": "river",
+                    "locale": "en",
+                    "public_disclosure_ack": "public-unlisted-v1",
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await post_task
+        finally:
+            read_completed.set()
+            if not post_task.done():
+                await post_task
+
+    assert info.status_code == 200
+    assert response.status_code == 202
+    assert response.json()["state"] == "pending"
 
 
 @pytest.mark.asyncio
