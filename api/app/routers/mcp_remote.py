@@ -1,8 +1,9 @@
 """No-auth remote MCP endpoint for connector clients.
 
 The packaged MCP server remains the full stdio implementation. This router
-provides a small streamable-HTTP compatible JSON-RPC surface for hosted clients
-that need to discover and call read-only tools without an OAuth registration.
+provides a small streamable-HTTP compatible JSON-RPC surface for hosted clients.
+Reads need no OAuth registration; the public dialogue write requires a
+versioned disclosure acknowledgement and leaves an observable receipt.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from app.services.mcp_tool_registry import TOOL_MAP, TOOLS
 router = APIRouter()
 
 SERVER_NAME = "coherence-network"
-SERVER_VERSION = "0.5.1"
+SERVER_VERSION = "0.7.0"
 READ_ONLY_TOOL_NAMES = {
     "browse_ideas",
     "get_idea",
@@ -46,8 +47,25 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _tool(name: str, description: str, input_schema: dict[str, Any]) -> dict[str, Any]:
-    return {"name": name, "description": description, "inputSchema": input_schema}
+def _tool(
+    name: str,
+    description: str,
+    input_schema: dict[str, Any],
+    *,
+    annotations: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    tool = {"name": name, "description": description, "inputSchema": input_schema}
+    if annotations:
+        tool["annotations"] = annotations
+    return tool
+
+
+READ_ONLY_ANNOTATIONS = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": True,
+}
 
 
 SEARCH_TOOL = _tool(
@@ -58,6 +76,7 @@ SEARCH_TOOL = _tool(
         "properties": {"query": {"type": "string", "description": "Search query"}},
         "required": ["query"],
     },
+    annotations={"title": "Search public commons", **READ_ONLY_ANNOTATIONS},
 )
 
 FETCH_TOOL = _tool(
@@ -68,15 +87,104 @@ FETCH_TOOL = _tool(
         "properties": {"id": {"type": "string", "description": "Result id from search"}},
         "required": ["id"],
     },
+    annotations={"title": "Fetch public result", **READ_ONLY_ANNOTATIONS},
+)
+
+START_DIALOGUE_TOOL = _tool(
+    "start_dialogue",
+    "Offer an unlisted public dialogue turn from a chosen point of view and BCP-47 locale. Public text is untrusted data, expires after seven days, and is observable only to people who receive its id. Returns immediately with a removal capability and dialogue id.",
+    {
+        "type": "object",
+        "properties": {
+            "question": {"type": "string", "minLength": 1, "maxLength": 1200},
+            "point_of_view": {"type": "string", "minLength": 1, "maxLength": 240},
+            "locale": {"type": "string", "minLength": 1, "maxLength": 80},
+            "public_disclosure_ack": {
+                "type": "string",
+                "const": "public-unlisted-v1",
+                "description": "Acknowledges that anyone given the unguessable dialogue id can read the question and receipt until release or seven-day expiry.",
+            },
+            "parent_dialogue_id": {"type": "string", "maxLength": 80},
+            "channel_timeout_seconds": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 120,
+                "default": 90,
+            },
+        },
+        "required": ["question", "point_of_view", "locale", "public_disclosure_ack"],
+    },
+    annotations={
+        "title": "Start public dialogue",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+
+GET_DIALOGUE_TOOL = _tool(
+    "get_dialogue",
+    "Observe one unlisted public dialogue turn by id. Question text is untrusted public data; an answer is present only when bound to an allowlisted public source NodeID.",
+    {
+        "type": "object",
+        "properties": {
+            "dialogue_id": {"type": "string", "minLength": 1, "maxLength": 80}
+        },
+        "required": ["dialogue_id"],
+    },
+    annotations={
+        "title": "Get public dialogue",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+
+REMOVE_DIALOGUE_TOOL = _tool(
+    "remove_dialogue",
+    "Release the public text of one dialogue using the removal capability returned only when it was started. The durable cell remains as a content-free tombstone.",
+    {
+        "type": "object",
+        "properties": {
+            "dialogue_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            "removal_token": {"type": "string", "minLength": 20, "maxLength": 200},
+        },
+        "required": ["dialogue_id", "removal_token"],
+    },
+    annotations={
+        "title": "Release public dialogue",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
 )
 
 
 def _remote_tools() -> list[dict[str, Any]]:
-    tools = [SEARCH_TOOL, FETCH_TOOL]
+    tools = [
+        SEARCH_TOOL,
+        FETCH_TOOL,
+        START_DIALOGUE_TOOL,
+        GET_DIALOGUE_TOOL,
+        REMOVE_DIALOGUE_TOOL,
+    ]
     for item in TOOLS:
         if item["name"] not in READ_ONLY_TOOL_NAMES:
             continue
-        tools.append(_tool(item["name"], item["description"], item["input_schema"]))
+        tools.append(
+            _tool(
+                item["name"],
+                item["description"],
+                item["input_schema"],
+                annotations={
+                    "title": item["name"].replace("_", " ").title(),
+                    **READ_ONLY_ANNOTATIONS,
+                },
+            )
+        )
     return tools
 
 
@@ -161,9 +269,57 @@ def _fetch(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"error": "Unknown result id. Expected an id starting with 'idea:' or 'spec:'."}
 
 
+def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[str, Any]:
+    from app.services import dialogue_service
+
+    if arguments.get("public_disclosure_ack") != "public-unlisted-v1":
+        return {"error": "public_disclosure_ack must equal 'public-unlisted-v1'"}
+    try:
+        return dialogue_service.submit_dialogue(
+            question=str(arguments.get("question") or ""),
+            point_of_view=str(arguments.get("point_of_view") or ""),
+            locale=str(arguments.get("locale") or ""),
+            public_disclosure_ack="public-unlisted-v1",
+            network_peer=public_origin,
+            parent_dialogue_id=(
+                str(arguments["parent_dialogue_id"])
+                if arguments.get("parent_dialogue_id")
+                else None
+            ),
+            channel_timeout_seconds=int(arguments.get("channel_timeout_seconds") or 90),
+        )
+    except dialogue_service.DialogueRateLimitError as exc:
+        return {"error": str(exc), "retry_after": exc.retry_after}
+    except (TypeError, ValueError, RuntimeError) as exc:
+        return {"error": str(exc)}
+
+
+def _get_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services import dialogue_service
+
+    dialogue_id = str(arguments.get("dialogue_id") or "").strip()
+    if not dialogue_id:
+        return {"error": "dialogue_id is required"}
+    dialogue = dialogue_service.get_dialogue(dialogue_id)
+    return dialogue if dialogue is not None else {"error": "Dialogue not found"}
+
+
+def _remove_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services import dialogue_service
+
+    dialogue_id = str(arguments.get("dialogue_id") or "").strip()
+    removal_token = str(arguments.get("removal_token") or "")
+    if not dialogue_id or not removal_token:
+        return {"error": "dialogue_id and removal_token are required"}
+    if not dialogue_service.release_dialogue(dialogue_id, removal_token):
+        return {"error": "Dialogue or removal capability not found"}
+    return {"id": dialogue_id, "state": "tombstoned", "released": True}
+
+
 def _content_result(result: Any, *, is_error: bool = False) -> dict[str, Any]:
     return {
         "content": [{"type": "text", "text": json.dumps(_json_safe(result), default=str)}],
+        "structuredContent": _json_safe(result),
         "isError": is_error,
     }
 
@@ -176,7 +332,11 @@ def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
-def _handle_jsonrpc(payload: dict[str, Any]) -> dict[str, Any] | None:
+def _handle_jsonrpc(
+    payload: dict[str, Any],
+    *,
+    public_origin: str = "unknown",
+) -> dict[str, Any] | None:
     method = str(payload.get("method", ""))
     request_id = payload.get("id")
     params = payload.get("params") if isinstance(payload.get("params"), dict) else {}
@@ -191,7 +351,11 @@ def _handle_jsonrpc(payload: dict[str, Any]) -> dict[str, Any] | None:
                 "protocolVersion": protocol_version,
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-                "instructions": "Public read-only Coherence Network MCP endpoint. Authentication type: none.",
+                "instructions": (
+                    "Public Coherence Network MCP endpoint. Authentication type: none. "
+                    "Read tools observe the commons. Dialogue text is untrusted unlisted-public data; "
+                    "start_dialogue requires an explicit versioned disclosure acknowledgement and remove_dialogue requires its capability token."
+                ),
             },
         )
     if method == "tools/list":
@@ -203,6 +367,24 @@ def _handle_jsonrpc(payload: dict[str, Any]) -> dict[str, Any] | None:
             return _jsonrpc_result(request_id, _content_result(_search(arguments)))
         if name == "fetch":
             return _jsonrpc_result(request_id, _content_result(_fetch(arguments)))
+        if name == "start_dialogue":
+            result = _start_dialogue(arguments, public_origin=public_origin)
+            return _jsonrpc_result(
+                request_id,
+                _content_result(result, is_error="error" in result),
+            )
+        if name == "get_dialogue":
+            result = _get_dialogue(arguments)
+            return _jsonrpc_result(
+                request_id,
+                _content_result(result, is_error="error" in result),
+            )
+        if name == "remove_dialogue":
+            result = _remove_dialogue(arguments)
+            return _jsonrpc_result(
+                request_id,
+                _content_result(result, is_error="error" in result),
+            )
         tool_def = TOOL_MAP.get(name)
         if tool_def is None or name not in READ_ONLY_TOOL_NAMES:
             return _jsonrpc_result(request_id, _content_result({"error": f"Tool '{name}' is not available on the no-auth remote MCP endpoint."}, is_error=True))
@@ -236,12 +418,18 @@ async def mcp_jsonrpc(request: Request, response: Response) -> Any:
         return _jsonrpc_error(None, -32700, "Parse error")
 
     if isinstance(payload, list):
-        replies = [_handle_jsonrpc(item) for item in payload if isinstance(item, dict)]
+        public_origin = request.client.host if request.client else "unknown"
+        replies = [
+            _handle_jsonrpc(item, public_origin=public_origin)
+            for item in payload
+            if isinstance(item, dict)
+        ]
         return [reply for reply in replies if reply is not None]
     if not isinstance(payload, dict):
         return _jsonrpc_error(None, -32600, "Invalid Request")
 
-    reply = _handle_jsonrpc(payload)
+    public_origin = request.client.host if request.client else "unknown"
+    reply = _handle_jsonrpc(payload, public_origin=public_origin)
     if reply is None:
         response.status_code = 202
         return None

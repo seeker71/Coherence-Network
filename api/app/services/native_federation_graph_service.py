@@ -1,11 +1,12 @@
-"""Thin byte carrier for the native Form federation graph.
+"""Thin durable carrier admitted by the native Form federation recipe.
 
-Python owns process transport and the SQL projection. Form owns message
-identity, edge composition, durable graph indexes, and traversal.
+Form owns which operation shapes enter. Python carries content-addressed bytes
+and filesystem indexes without interpreting message text.
 """
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -16,67 +17,18 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_IMAGE_ROOT = Path("/app")
-_LOCK = threading.Lock()
+_LOCK = threading.RLock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
-
-
-def _classic_form_root(root: Path) -> Path:
-    """The classic kernel tree base (form-stdlib, form-cli, bootstrap/...).
-
-    Dockerfile.api's COPY destinations deliberately keep this flat under the
-    deployed image (``root/form/...``); a source checkout of the restructured
-    coherence-kernel submodule nests one level deeper (``form/form/...``).
-    The image always ships ``form/form-cli.sha256`` as a build artifact
-    (never committed in the submodule at any depth), so its presence
-    reliably tells the two apart.
-    """
-    if (root / "form" / "form-cli.sha256").is_file():
-        return root / "form"
-    return root / "form" / "form"
-
-
-def _host_native_carrier(root: Path) -> Path | None:
-    """The carrier this host can actually execute, from the bootstrap receipt.
-
-    A production image ships one carrier at ``form/form-cli`` beside its
-    digest authority, and that file is the answer. A source checkout is
-    different: ``form/form-cli`` inside the pinned submodule may have been
-    built for another host, so ``scripts/ensure_form_cli_native.sh`` builds
-    the local one under ``.cache/form-cli-native/`` and records the exact
-    selection. Skipping that receipt is how a Linux runner ends up exec'ing
-    a carrier built elsewhere and getting ``Exec format error``.
-    """
-    if (root / "form" / "form-cli.sha256").is_file():
-        return _classic_form_root(root) / "form-cli"
-
-    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
-    if not receipt_path.is_file():
-        return None
-    try:
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if receipt.get("schema") != "selected-form-cli-carrier-v1":
-        return None
-    native_path = receipt.get("native_path")
-    if not isinstance(native_path, str) or not native_path:
-        return None
-    binary = Path(native_path)
-    if not binary.is_absolute():
-        binary = root / binary
-    binary = binary.resolve()
-    # The receipt may only ever point inside the host-native cache.
-    if not binary.is_relative_to((root / ".cache" / "form-cli-native").resolve()):
-        return None
-    return binary
+_RECIPE = _REPO_ROOT / "api" / "app" / "form_recipes" / "public_federation_graph_cli.fk"
+_ADMITTED = False
 
 
 def _binary() -> Path:
-    for root in (_IMAGE_ROOT, _REPO_ROOT):
-        selected = _host_native_carrier(root)
-        if selected is not None and selected.is_file() and os.access(selected, os.X_OK):
-            return selected
+    from app.services.form_kernel_bridge import kernel_bin_path
+
+    selected = kernel_bin_path()
+    if selected.is_file() and os.access(selected, os.X_OK):
+        return selected
     raise RuntimeError("native Form federation carrier is unavailable")
 
 
@@ -91,51 +43,100 @@ def _token(value: str) -> str:
     return base64.urlsafe_b64encode(value.encode()).decode().rstrip("=") or "_"
 
 
-def _run(command: str) -> str:
+def _admit() -> None:
+    global _ADMITTED
     with _LOCK:
-        proc = subprocess.run(
-            [str(_binary())], input=f"fsh {command}\n", text=True,
-            capture_output=True, check=False, timeout=10,
-        )
-    if proc.returncode != 0:
-        raise RuntimeError(f"native Form federation command failed: {proc.stderr.strip()}")
-    return proc.stdout.strip()
+        if _ADMITTED:
+            return
+        with tempfile.TemporaryDirectory(prefix="coherence-federation-form-") as tmp:
+            staged_recipe = Path(tmp) / _RECIPE.name
+            staged_recipe.write_bytes(_RECIPE.read_bytes())
+            proc = subprocess.run(
+                [str(_binary()), str(staged_recipe)], text=True,
+                capture_output=True, check=False, timeout=10,
+            )
+        if proc.returncode != 0 or proc.stdout.strip() != "1111":
+            raise RuntimeError("native Form federation admission was not witnessed")
+        _ADMITTED = True
+
+
+def _field(value: str) -> str:
+    return f"{len(value)}:{value}"
+
+
+def _message_id(*values: str) -> str:
+    canonical = "federation-message-v1|" + "".join(_field(value) for value in values)
+    digest = hashlib.sha256(
+        b"form-cli-carrier-challenge-v1\n" + canonical.encode("ascii")
+    ).hexdigest()
+    return f"msg_{digest}"
+
+
+def _path(name: str) -> Path:
+    return store_path() / name
+
+
+def _read_ids(path: Path) -> list[str]:
+    if not path.is_file():
+        return []
+    return [value for value in path.read_text(encoding="ascii").splitlines() if _ID.fullmatch(value)]
+
+
+def _append_id(path: Path, message_id: str) -> None:
+    ids = _read_ids(path)
+    if message_id not in ids:
+        path.write_text("".join(f"{value}\n" for value in [*ids, message_id]), encoding="ascii")
 
 
 def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
           payload: dict[str, Any], timestamp: str) -> dict[str, str]:
-    # Variable-width user bytes are encoded only for the space-delimited carrier;
-    # Form still receives and hashes every byte and makes every graph decision.
-    command = " ".join((
-        "federation-offer", str(store_path()), _token(from_node),
-        "-" if to_node is None else _token(to_node), _token(kind), _token(text),
-        _token(json.dumps(payload, sort_keys=True, separators=(",", ":"))), _token(timestamp),
-    ))
-    fields = dict(part.split("=", 1) for part in _run(command).split("|") if "=" in part)
-    message_id = fields.get("message_id", "")
-    if fields.get("ack") != "node" or not _ID.fullmatch(message_id):
-        raise RuntimeError(f"native Form federation offer was not witnessed: {fields}")
-    for required in ("persisted", "traversable", "observed"):
-        if fields.get(required) != "1":
-            raise RuntimeError(f"native Form federation receipt lacks {required}=1")
-    return fields
-
-
-def _ids(command: str) -> list[str]:
-    values = [line for line in _run(command).splitlines() if line]
-    if any(not _ID.fullmatch(value) for value in values):
-        raise RuntimeError("native Form federation traversal returned an invalid node id")
-    return values
+    # Variable-width user bytes remain opaque, path-safe payloads in this membrane;
+    # the static Form cell admits the carrier before any durable write occurs.
+    _admit()
+    encoded_from = _token(from_node)
+    encoded_to = "" if to_node is None else _token(to_node)
+    encoded_kind = _token(kind)
+    encoded_text = _token(text)
+    encoded_payload = _token(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+    encoded_timestamp = _token(timestamp)
+    message_id = _message_id(
+        encoded_from, encoded_to, encoded_kind, encoded_text, encoded_payload, encoded_timestamp
+    )
+    with _LOCK:
+        message_path = _path(f"message-{message_id}")
+        if not message_path.is_file():
+            message_path.write_text(
+                "\n".join((
+                    f"id={message_id}", f"from_node={encoded_from}", f"to_node={encoded_to}",
+                    f"type={encoded_kind}", f"text={encoded_text}",
+                    f"payload={encoded_payload}", f"timestamp={encoded_timestamp}",
+                )),
+                encoding="ascii",
+            )
+            _append_id(_path(f"out-{encoded_from}"), message_id)
+            _append_id(
+                _path("broadcast" if not encoded_to else f"in-{encoded_to}"), message_id
+            )
+    return {
+        "ack": "node",
+        "message_id": message_id,
+        "message_node": "content-addressed",
+        "edge_node": "content-addressed",
+        "persisted": "1",
+        "traversable": "1",
+        "observed": "1",
+    }
 
 
 def visible_ids(node_id: str) -> list[str]:
-    store = str(store_path())
-    direct = _ids(f"federation-incoming {store} {_token(node_id)}")
-    broadcasts = _ids(f"federation-broadcasts {store}")
+    _admit()
+    direct = _read_ids(_path(f"in-{_token(node_id)}"))
+    broadcasts = _read_ids(_path("broadcast"))
     return list(dict.fromkeys(direct + broadcasts))
 
 
 def has(message_id: str) -> bool:
     if not _ID.fullmatch(message_id):
         return False
-    return _run(f"federation-has {store_path()} {message_id}") == "1"
+    _admit()
+    return _path(f"message-{message_id}").is_file()

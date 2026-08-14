@@ -1,0 +1,35 @@
+(do
+  (defn dialogue-envelope (locale point question disclosure parent timeout)
+    (list locale point question disclosure parent timeout))
+
+  (defn dialogue-locale (envelope) (nth envelope 0))
+  (defn dialogue-point (envelope) (nth envelope 1))
+  (defn dialogue-question (envelope) (nth envelope 2))
+  (defn dialogue-disclosure (envelope) (nth envelope 3))
+  (defn dialogue-parent (envelope) (nth envelope 4))
+  (defn dialogue-timeout (envelope) (nth envelope 5))
+
+  (defn dialogue-offered (envelope)
+    (if (eq (dialogue-disclosure envelope) 1)
+        (if (gt (dialogue-locale envelope) 0)
+            (if (gt (dialogue-point envelope) 0)
+                (if (gt (dialogue-question envelope) 0)
+                    (if (gt (dialogue-timeout envelope) 0) 1 0)
+                    0)
+                0)
+            0)
+        0))
+
+  (let first-turn (dialogue-envelope 6 7 8 1 0 120))
+  (let next-turn (dialogue-envelope 6 7 8 1 1 120))
+  (add
+    (if (eq (dialogue-offered first-turn) 1) 1 0)
+    (add
+      (if (eq (dialogue-locale first-turn) 6) 2 0)
+      (add
+        (if (eq (dialogue-point first-turn) 7) 4 0)
+        (add
+          (if (eq (dialogue-question first-turn) 8) 8 0)
+          (add
+            (if (eq (dialogue-disclosure first-turn) 1) 16 0)
+            (if (eq (dialogue-parent next-turn) 1) 32 0)))))))

@@ -141,3 +141,6 @@ from app.services.deployment_observer_service import (  # noqa: F401
     DeploymentObserverChallengeORM,
     DeploymentObserverTokenUseORM,
 )
+
+# Unlisted public dialogue computation receipts
+from app.services.public_dialogue_store import PublicDialogueRecord  # noqa: F401

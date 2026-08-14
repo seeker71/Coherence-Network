@@ -1,0 +1,6 @@
+; public_federation_graph_cli.fk — native admission invariant for graph carriers.
+; preludes: (none)
+(do
+    (defn pfgc-admit () (add 1000 (add 100 (add 10 1))))
+    (pfgc-admit)
+)

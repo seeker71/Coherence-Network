@@ -1,0 +1,122 @@
+{
+  "date": "2026-08-15T00:00:00+08:00",
+  "thread_branch": "codex/light-code-commons-network",
+  "commit_scope": "Add a bounded unlisted-public Form-grounded dialogue CPU lane with persistent receipts, crash recovery, source disclosure gates, MCP access, expiry, and removal.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/form_recipes/public_dialogue_envelope.fk",
+    "api/app/form_recipes/public_federation_graph_cli.fk",
+    "api/app/main.py",
+    "api/app/models/accessible_ontology.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/dialogues.py",
+    "api/app/routers/mcp_remote.py",
+    "api/app/routers/substrate.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/dialogue_service.py",
+    "api/app/services/event_sources/ical_source.py",
+    "api/app/services/native_federation_graph_service.py",
+    "api/app/services/public_dialogue_store.py",
+    "api/app/services/unified_models.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_federation_carrier_selection.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-15_public-dialogue-cpu-organ.json",
+    "scripts/ensure_form_cli_native.sh",
+    "specs/INDEX.md",
+    "specs/public-dialogue-cpu-organ.md",
+    "web/lib/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Form source preflight returned zero errors, warnings, and unresolved calls; Go/Rust/TypeScript returned 63; direct fkwu returned 63; 44 focused dialogue/MCP/carrier tests and 51 shared grounding/MCP-substrate regression tests passed with Python warnings promoted to errors. The full local PR guard passed 403 API tests, the production web build, and the live worktree runtime check; strict spec, evidence, index, maintainability, and git diff gates passed. Two independent AI review rounds were run after local proof; the second round's one launch blocker and four hardening signals were embodied and re-witnessed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "GitHub PR checks have not run yet; local CI-equivalent focused gates pass."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Production deployment and live 202/poll/health/release witness will run only after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "public-dialogue-cpu-organ"
+  ],
+  "task_ids": [
+    "public-dialogue-cpu-organ-2026-08-15"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "adversarial-validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "specs/public-dialogue-cpu-organ.md",
+    "api/app/form_recipes/public_dialogue_envelope.fk",
+    "api/app/form_recipes/public_federation_graph_cli.fk",
+    "api/tests/test_public_dialogues.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_mcp_substrate_tools.py"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/form_recipes/public_dialogue_envelope.fk",
+    "api/app/form_recipes/public_federation_graph_cli.fk",
+    "api/app/main.py",
+    "api/app/models/accessible_ontology.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/dialogues.py",
+    "api/app/routers/mcp_remote.py",
+    "api/app/routers/substrate.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/dialogue_service.py",
+    "api/app/services/event_sources/ical_source.py",
+    "api/app/services/native_federation_graph_service.py",
+    "api/app/services/public_dialogue_store.py",
+    "api/app/services/unified_models.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_federation_carrier_selection.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-15_public-dialogue-cpu-organ.json",
+    "scripts/ensure_form_cli_native.sh",
+    "specs/INDEX.md",
+    "specs/public-dialogue-cpu-organ.md",
+    "web/lib/INDEX.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A public caller or MCP connector receives an immediate unlisted dialogue receipt, observes one serialized native CPU attempt reach answered/miss/failed, and can release its content with the creation-time capability.",
+    "public_endpoints": [
+      "POST /api/dialogues",
+      "GET /api/dialogues/{dialogue_id}",
+      "DELETE /api/dialogues/{dialogue_id}",
+      "POST /mcp tools: start_dialogue, get_dialogue, remove_dialogue"
+    ],
+    "test_flows": [
+      "offer and poll a Form-grounded dialogue without holding the request path",
+      "recover an interrupted running turn and reap its recorded native process group",
+      "reject private source publication and preserve rented retrieval only as an empty miss",
+      "pace HTTP and MCP through the same network-peer cell and release content into a tombstone"
+    ]
+  }
+}

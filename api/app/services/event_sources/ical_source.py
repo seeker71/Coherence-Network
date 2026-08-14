@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from .base import EventSource, ImportedEvent
+from .base import ImportedEvent
 
 log = logging.getLogger(__name__)
 
@@ -54,12 +54,12 @@ def _strip_params(key_with_params: str) -> str:
 
 
 def _decode_value(raw: str) -> str:
-    """Reverse the iCal text escapes: ``\\,`` ``\;`` ``\\n`` ``\\\\``."""
+    """Reverse the iCal text escapes: ``\\,`` ``\\;`` ``\\n`` ``\\\\``."""
     return (
         raw.replace("\\N", "\n")
         .replace("\\n", "\n")
         .replace("\\,", ",")
-        .replace("\;", ";")
+        .replace("\\;", ";")
         .replace("\\\\", "\\")
     )
 
