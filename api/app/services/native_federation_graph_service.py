@@ -10,26 +10,18 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import tempfile
 import threading
 from pathlib import Path
 from typing import Any
 
+from app.services import form_kernel_bridge
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _LOCK = threading.RLock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 _RECIPE = _REPO_ROOT / "api" / "app" / "form_recipes" / "public_federation_graph_cli.fk"
-_ADMITTED = False
-
-
-def _binary() -> Path:
-    from app.services.form_kernel_bridge import kernel_bin_path
-
-    selected = kernel_bin_path()
-    if selected.is_file() and os.access(selected, os.X_OK):
-        return selected
-    raise RuntimeError("native Form federation carrier is unavailable")
+_BAND_ENTRY = "(pfgc-band))"
 
 
 def store_path() -> Path:
@@ -43,21 +35,20 @@ def _token(value: str) -> str:
     return base64.urlsafe_b64encode(value.encode()).decode().rstrip("=") or "_"
 
 
-def _admit() -> None:
-    global _ADMITTED
-    with _LOCK:
-        if _ADMITTED:
-            return
-        with tempfile.TemporaryDirectory(prefix="coherence-federation-form-") as tmp:
-            staged_recipe = Path(tmp) / _RECIPE.name
-            staged_recipe.write_bytes(_RECIPE.read_bytes())
-            proc = subprocess.run(
-                [str(_binary()), str(staged_recipe)], text=True,
-                capture_output=True, check=False, timeout=10,
-            )
-        if proc.returncode != 0 or proc.stdout.strip() != "1111":
-            raise RuntimeError("native Form federation admission was not witnessed")
-        _ADMITTED = True
+def _admit(operation: int, *shape: int) -> None:
+    """Offer the actual operation and encoded message shape to Form."""
+    if len(shape) != 6 or any(value < 0 for value in shape):
+        raise RuntimeError("native Form federation admission shape is invalid")
+    source = _RECIPE.read_text(encoding="utf-8")
+    if source.count(_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form federation admission entry is unavailable")
+    invocation = f"(pfgc-admit {operation} {' '.join(str(value) for value in shape)}))"
+    admitted = form_kernel_bridge.run_recipe(
+        source.replace(_BAND_ENTRY, invocation),
+        timeout=10,
+    )
+    if admitted != "1":
+        raise RuntimeError("native Form federation admission was not witnessed")
 
 
 def _field(value: str) -> str:
@@ -85,38 +76,63 @@ def _read_ids(path: Path) -> list[str]:
 def _append_id(path: Path, message_id: str) -> None:
     ids = _read_ids(path)
     if message_id not in ids:
-        path.write_text("".join(f"{value}\n" for value in [*ids, message_id]), encoding="ascii")
+        _atomic_write_ascii(
+            path,
+            "".join(f"{value}\n" for value in [*ids, message_id]),
+        )
+
+
+def _atomic_write_ascii(path: Path, content: str) -> None:
+    """Publish one complete carrier file or leave the previous value intact."""
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary_path = Path(temporary)
+    try:
+        with os.fdopen(fd, "w", encoding="ascii", newline="\n") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
           payload: dict[str, Any], timestamp: str) -> dict[str, str]:
     # Variable-width user bytes remain opaque, path-safe payloads in this membrane;
-    # the static Form cell admits the carrier before any durable write occurs.
-    _admit()
+    # Form receives the concrete operation and encoded field widths before a write.
     encoded_from = _token(from_node)
     encoded_to = "" if to_node is None else _token(to_node)
     encoded_kind = _token(kind)
     encoded_text = _token(text)
     encoded_payload = _token(json.dumps(payload, sort_keys=True, separators=(",", ":")))
     encoded_timestamp = _token(timestamp)
+    _admit(
+        1,
+        len(encoded_from),
+        len(encoded_to),
+        len(encoded_kind),
+        len(encoded_text),
+        len(encoded_payload),
+        len(encoded_timestamp),
+    )
     message_id = _message_id(
         encoded_from, encoded_to, encoded_kind, encoded_text, encoded_payload, encoded_timestamp
     )
     with _LOCK:
         message_path = _path(f"message-{message_id}")
         if not message_path.is_file():
-            message_path.write_text(
+            _atomic_write_ascii(
+                message_path,
                 "\n".join((
                     f"id={message_id}", f"from_node={encoded_from}", f"to_node={encoded_to}",
                     f"type={encoded_kind}", f"text={encoded_text}",
                     f"payload={encoded_payload}", f"timestamp={encoded_timestamp}",
                 )),
-                encoding="ascii",
             )
-            _append_id(_path(f"out-{encoded_from}"), message_id)
-            _append_id(
-                _path("broadcast" if not encoded_to else f"in-{encoded_to}"), message_id
-            )
+        _append_id(_path(f"out-{encoded_from}"), message_id)
+        _append_id(
+            _path("broadcast" if not encoded_to else f"in-{encoded_to}"), message_id
+        )
     return {
         "ack": "node",
         "message_id": message_id,
@@ -129,8 +145,9 @@ def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
 
 
 def visible_ids(node_id: str) -> list[str]:
-    _admit()
-    direct = _read_ids(_path(f"in-{_token(node_id)}"))
+    encoded_node = _token(node_id)
+    _admit(2, len(encoded_node), 0, 0, 0, 0, 0)
+    direct = _read_ids(_path(f"in-{encoded_node}"))
     broadcasts = _read_ids(_path("broadcast"))
     return list(dict.fromkeys(direct + broadcasts))
 
@@ -138,5 +155,5 @@ def visible_ids(node_id: str) -> list[str]:
 def has(message_id: str) -> bool:
     if not _ID.fullmatch(message_id):
         return False
-    _admit()
+    _admit(3, len(message_id), 0, 0, 0, 0, 0)
     return _path(f"message-{message_id}").is_file()

@@ -19,12 +19,13 @@ import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Iterator
 
 from fastapi import HTTPException
 from sqlalchemy import text
 
+from app.services import form_kernel_bridge
 from app.services import public_dialogue_store as store
 from app.services import unified_db
 
@@ -47,6 +48,12 @@ PUBLIC_SOURCE_PREFIXES = (
     "specs/",
 )
 PUBLIC_SOURCE_FILES = {"README.md", "WELCOME.md", "HOMECOMING.md"}
+_DIALOGUE_ENVELOPE_RECIPE = (
+    Path(__file__).resolve().parent.parent
+    / "form_recipes"
+    / "public_dialogue_envelope.fk"
+)
+_DIALOGUE_BAND_ENTRY = "(dialogue-band))"
 
 _BCP47_RE = re.compile(
     r"^(?:"
@@ -108,6 +115,34 @@ def set_grounded_ask_runner(runner: Callable[..., Any]) -> None:
     """Join the native carrier to this organ at the application boundary."""
     global _GROUNDED_ASK_RUNNER
     _GROUNDED_ASK_RUNNER = runner
+
+
+def _admit_dialogue_envelope(
+    *,
+    locale_length: int,
+    point_length: int,
+    question_length: int,
+    disclosure: int,
+    parent_length: int,
+    timeout_seconds: int,
+) -> bool:
+    """Offer the real six-field envelope to Form before persistence."""
+    source = _DIALOGUE_ENVELOPE_RECIPE.read_text(encoding="utf-8")
+    if source.count(_DIALOGUE_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form dialogue admission entry is unavailable")
+    invocation = (
+        "(dialogue-offered (dialogue-envelope "
+        f"{locale_length} {point_length} {question_length} {disclosure} "
+        f"{parent_length} {timeout_seconds}))"
+        ")"
+    )
+    admitted = form_kernel_bridge.run_recipe(
+        source.replace(_DIALOGUE_BAND_ENTRY, invocation),
+        timeout=10,
+    )
+    if admitted not in {"0", "1"}:
+        raise RuntimeError("native Form dialogue admission returned an invalid verdict")
+    return admitted == "1"
 
 
 def _contains_control(value: str) -> bool:
@@ -220,6 +255,15 @@ def submit_dialogue(
         )
     if parent_dialogue_id is not None and len(parent_dialogue_id) > 80:
         raise ValueError("parent_dialogue_id exceeds the public dialogue envelope")
+    if not _admit_dialogue_envelope(
+        locale_length=len(requested_locale),
+        point_length=len(point_of_view),
+        question_length=len(question),
+        disclosure=int(public_disclosure_ack == store.PUBLIC_DISCLOSURE_ACK),
+        parent_length=len(parent_dialogue_id or ""),
+        timeout_seconds=channel_timeout_seconds,
+    ):
+        raise RuntimeError("native Form declined the public dialogue envelope")
     question_sha256 = hashlib.sha256(question.encode("utf-8")).hexdigest()
     network_peer_sha256 = hashlib.sha256(
         (network_peer or "unknown")[:200].encode("utf-8")

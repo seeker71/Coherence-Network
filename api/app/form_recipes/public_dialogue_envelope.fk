@@ -9,27 +9,60 @@
   (defn dialogue-parent (envelope) (nth envelope 4))
   (defn dialogue-timeout (envelope) (nth envelope 5))
 
-  (defn dialogue-offered (envelope)
-    (if (eq (dialogue-disclosure envelope) 1)
-        (if (gt (dialogue-locale envelope) 0)
-            (if (gt (dialogue-point envelope) 0)
-                (if (gt (dialogue-question envelope) 0)
-                    (if (gt (dialogue-timeout envelope) 0) 1 0)
-                    0)
+  (defn dialogue-timeout-ok (envelope)
+    (if (ge (dialogue-timeout envelope) 10)
+        (if (le (dialogue-timeout envelope) 120) 1 0)
+        0))
+
+  (defn dialogue-parent-ok (envelope)
+    (if (ge (dialogue-parent envelope) 0)
+        (if (le (dialogue-parent envelope) 80)
+            (dialogue-timeout-ok envelope)
+            0)
+        0))
+
+  (defn dialogue-question-ok (envelope)
+    (if (gt (dialogue-question envelope) 0)
+        (if (le (dialogue-question envelope) 1200)
+            (if (le (add (dialogue-point envelope) (dialogue-question envelope)) 1499)
+                (dialogue-parent-ok envelope)
                 0)
             0)
         0))
 
-  (let first-turn (dialogue-envelope 6 7 8 1 0 120))
-  (let next-turn (dialogue-envelope 6 7 8 1 1 120))
-  (add
-    (if (eq (dialogue-offered first-turn) 1) 1 0)
-    (add
-      (if (eq (dialogue-locale first-turn) 6) 2 0)
+  (defn dialogue-point-ok (envelope)
+    (if (gt (dialogue-point envelope) 0)
+        (if (le (dialogue-point envelope) 240)
+            (dialogue-question-ok envelope)
+            0)
+        0))
+
+  (defn dialogue-locale-ok (envelope)
+    (if (gt (dialogue-locale envelope) 0)
+        (if (le (dialogue-locale envelope) 80)
+            (dialogue-point-ok envelope)
+            0)
+        0))
+
+  (defn dialogue-offered (envelope)
+    (if (eq (dialogue-disclosure envelope) 1)
+        (dialogue-locale-ok envelope)
+        0))
+
+  (defn dialogue-band ()
+    (do
+      (let first-turn (dialogue-envelope 6 7 8 1 0 120))
+      (let next-turn (dialogue-envelope 6 7 8 1 1 120))
       (add
-        (if (eq (dialogue-point first-turn) 7) 4 0)
+        (if (eq (dialogue-offered first-turn) 1) 1 0)
         (add
-          (if (eq (dialogue-question first-turn) 8) 8 0)
+          (if (eq (dialogue-locale first-turn) 6) 2 0)
           (add
-            (if (eq (dialogue-disclosure first-turn) 1) 16 0)
-            (if (eq (dialogue-parent next-turn) 1) 32 0)))))))
+            (if (eq (dialogue-point first-turn) 7) 4 0)
+            (add
+              (if (eq (dialogue-question first-turn) 8) 8 0)
+              (add
+                (if (eq (dialogue-disclosure first-turn) 1) 16 0)
+                (if (eq (dialogue-parent next-turn) 1) 32 0))))))))
+
+  (dialogue-band))

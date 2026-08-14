@@ -107,6 +107,11 @@ def dialogue_store(monkeypatch):
     monkeypatch.setattr(dialogue_service._WORKER_WAKE, "set", lambda: None)
     monkeypatch.setattr(
         dialogue_service,
+        "_admit_dialogue_envelope",
+        lambda **_: True,
+    )
+    monkeypatch.setattr(
+        dialogue_service,
         "_GROUNDED_ASK_RUNNER",
         lambda *_, **__: _receipt(answer=""),
     )
@@ -241,6 +246,47 @@ def test_disclosure_ack_is_versioned_and_persists_zero_rows_when_absent(dialogue
             public_disclosure_ack="",
             network_peer="test-peer",
         )
+    assert dialogue_store == {}
+
+
+def test_form_receives_the_real_dialogue_envelope_before_persistence(
+    dialogue_store, monkeypatch
+):
+    observed = {}
+
+    def admit(**shape):
+        observed.update(shape)
+        return True
+
+    monkeypatch.setattr(dialogue_service, "_admit_dialogue_envelope", admit)
+    offered = _offer(
+        question="Apa yang dirasakan akar bakau?",
+        point_of_view="akar bakau",
+        locale="id",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=60,
+    )
+
+    assert offered["state"] == "pending"
+    assert observed == {
+        "locale_length": 2,
+        "point_length": len("akar bakau"),
+        "question_length": len("Apa yang dirasakan akar bakau?"),
+        "disclosure": 1,
+        "parent_length": 0,
+        "timeout_seconds": 60,
+    }
+
+
+def test_form_dialogue_refusal_persists_nothing(dialogue_store, monkeypatch):
+    monkeypatch.setattr(
+        dialogue_service,
+        "_admit_dialogue_envelope",
+        lambda **_: False,
+    )
+
+    with pytest.raises(RuntimeError, match="native Form declined"):
+        _offer()
     assert dialogue_store == {}
 
 

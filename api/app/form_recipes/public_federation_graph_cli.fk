@@ -1,6 +1,46 @@
-; public_federation_graph_cli.fk — native admission invariant for graph carriers.
+; public_federation_graph_cli.fk — operation-sensitive native graph admission.
 ; preludes: (none)
 (do
-    (defn pfgc-admit () (add 1000 (add 100 (add 10 1))))
-    (pfgc-admit)
-)
+    (defn pfgc-offer (from-len to-len kind-len text-len payload-len timestamp-len)
+        (if (gt from-len 0)
+        (if (le from-len 4096)
+        (if (ge to-len 0)
+        (if (le to-len 4096)
+        (if (gt kind-len 0)
+        (if (le kind-len 1024)
+        (if (gt text-len 0)
+        (if (le text-len 262144)
+        (if (gt payload-len 0)
+        (if (le payload-len 1048576)
+        (if (gt timestamp-len 0)
+        (if (le timestamp-len 256) 1 0)
+        0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0))
+
+    (defn pfgc-zero-tail (b c d e f)
+        (if (eq b 0)
+        (if (eq c 0)
+        (if (eq d 0)
+        (if (eq e 0)
+        (if (eq f 0) 1 0)
+        0) 0) 0) 0))
+
+    (defn pfgc-admit (operation a b c d e f)
+        (if (eq operation 1) (pfgc-offer a b c d e f)
+        (if (eq operation 2)
+            (if (gt a 0)
+                (if (le a 4096) (pfgc-zero-tail b c d e f) 0)
+                0)
+        (if (eq operation 3)
+            (if (eq a 68) (pfgc-zero-tail b c d e f) 0)
+            0))))
+
+    (defn pfgc-band ()
+        (add
+            (if (eq (pfgc-admit 1 8 0 4 12 16 20) 1) 1 0)
+            (add
+                (if (eq (pfgc-admit 2 8 0 0 0 0 0) 1) 10 0)
+                (add
+                    (if (eq (pfgc-admit 3 68 0 0 0 0 0) 1) 100 0)
+                    (if (eq (pfgc-admit 9 0 0 0 0 0 0) 0) 1000 0)))))
+
+    (pfgc-band))
