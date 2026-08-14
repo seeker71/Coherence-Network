@@ -276,6 +276,13 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
     if arguments.get("public_disclosure_ack") != "public-unlisted-v1":
         return {"error": "public_disclosure_ack must equal 'public-unlisted-v1'"}
     try:
+        raw_timeout = (
+            arguments["channel_timeout_seconds"]
+            if "channel_timeout_seconds" in arguments
+            else 90
+        )
+        if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, int):
+            raise ValueError("channel_timeout_seconds must be an integer")
         return dialogue_service.submit_dialogue(
             question=str(arguments.get("question") or ""),
             point_of_view=str(arguments.get("point_of_view") or ""),
@@ -287,11 +294,7 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
                 if arguments.get("parent_dialogue_id")
                 else None
             ),
-            channel_timeout_seconds=int(
-                arguments["channel_timeout_seconds"]
-                if "channel_timeout_seconds" in arguments
-                else 90
-            ),
+            channel_timeout_seconds=raw_timeout,
         )
     except dialogue_service.DialogueRateLimitError as exc:
         return {"error": str(exc), "retry_after": exc.retry_after}

@@ -362,6 +362,38 @@ async def test_mcp_start_dialogue_refuses_explicit_zero_timeout_before_admission
 
 
 @pytest.mark.asyncio
+async def test_mcp_start_dialogue_returns_structured_error_for_nonfinite_timeout():
+    body = """{
+      "jsonrpc":"2.0",
+      "id":"start-infinite-timeout",
+      "method":"tools/call",
+      "params":{
+        "name":"start_dialogue",
+        "arguments":{
+          "question":"hello",
+          "point_of_view":"river",
+          "locale":"en",
+          "public_disclosure_ack":"public-unlisted-v1",
+          "channel_timeout_seconds":1e309
+        }
+      }
+    }"""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post(
+            "/mcp",
+            content=body,
+            headers={"Content-Type": "application/json"},
+        )
+
+    result = response.json()["result"]
+    assert response.status_code == 200
+    assert result["isError"] is True
+    assert result["structuredContent"] == {
+        "error": "channel_timeout_seconds must be an integer"
+    }
+
+
+@pytest.mark.asyncio
 async def test_mcp_start_dialogue_uses_the_shared_peer_pacing_gate(monkeypatch):
     from app.services import dialogue_service
 
