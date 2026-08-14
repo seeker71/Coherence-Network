@@ -86,8 +86,6 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
     config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
     captured = {}
 
-    monkeypatch.setattr(server, "get_str", lambda *args: "0.0.0.0")
-    monkeypatch.setattr(server, "get_int", lambda *args: 8000)
     monkeypatch.setattr(
         server,
         "get_list",
@@ -109,6 +107,8 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
         "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
     }
     assert 'CMD ["python", "-m", "app.server"]' in dockerfile
+    assert "EXPOSE 8000" in dockerfile
+    assert "http://127.0.0.1:8000/api/health" in dockerfile
     assert "FORWARDED_ALLOW_IPS" not in dockerfile
     assert "--forwarded-allow-ips=*" not in dockerfile
 
