@@ -389,7 +389,6 @@ def _tombstone(row: PublicDialogueRecord, *, now: datetime | None = None) -> Non
         {"outcome": "tombstoned", "detail": "public content released"},
         separators=(",", ":"),
     )
-    row.removal_token_sha256 = ""
     row.claimed_by = None
     row.carrier_pgid = None
     row.updated_at = witnessed

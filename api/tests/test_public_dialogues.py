@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import hashlib
 import os
 import sys
 import threading
@@ -994,8 +993,9 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     observed = store.get_dialogue(row["id"])
     assert observed["state"] == "miss"
     assert observed["output"]["outcome"] == "miss"
-    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    assert store.tombstone_dialogue(row["id"], token_hash) is True
+    assert dialogue_service.release_dialogue(row["id"], token) is True
+    assert dialogue_service.release_dialogue(row["id"], token) is True
+    assert dialogue_service.release_dialogue(row["id"], "different-capability-token-long-enough") is False
     released = store.get_dialogue(row["id"])
     assert released["state"] == "tombstoned"
     assert released["question"] == "[released]"
