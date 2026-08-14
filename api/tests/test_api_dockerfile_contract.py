@@ -78,6 +78,14 @@ def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
     assert sorted(project_dependencies - docker_requirements) == []
 
 
+def test_api_server_trusts_only_the_internal_proxy_network_for_forwarded_peers() -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+
+    assert "FORWARDED_ALLOW_IPS=127.0.0.1,172.16.0.0/12" in dockerfile
+    assert "FORWARDED_ALLOW_IPS=*" not in dockerfile
+    assert "--forwarded-allow-ips=*" not in dockerfile
+
+
 def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
     """Shared endpoint .fk files live in the populated kernel gitlink.
 

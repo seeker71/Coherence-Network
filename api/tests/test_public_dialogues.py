@@ -16,6 +16,7 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.routers import substrate as substrate_router
 from app.routers.dialogues import DialogueCreate
@@ -658,6 +659,87 @@ async def test_http_membrane_starts_reads_releases_and_has_no_public_list(monkey
     assert observed.json()["state"] == "miss"
     assert released.json()["state"] == "tombstoned"
     assert no_list.status_code in (404, 405)
+
+
+@pytest.mark.asyncio
+async def test_http_membrane_preserves_distinct_public_peers_through_trusted_proxies(monkeypatch):
+    origins: list[str] = []
+
+    def submit(**values):
+        origins.append(values["network_peer"])
+        return {
+            "id": f"dlg_proxy_{len(origins)}",
+            "state": "pending",
+            "removal_token": "release-token-long-enough",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+    proxy_app = ProxyHeadersMiddleware(
+        app,
+        trusted_hosts="127.0.0.1,172.16.0.0/12",
+    )
+    body = {
+        "question": "What does the river see?",
+        "point_of_view": "river",
+        "locale": "en",
+        "public_disclosure_ack": "public-unlisted-v1",
+    }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=proxy_app, client=("172.19.0.8", 41000)),
+        base_url="http://test",
+    ) as client:
+        first = await client.post(
+            "/api/dialogues",
+            headers={"X-Forwarded-For": "203.0.113.10, 172.19.0.2"},
+            json=body,
+        )
+        second = await client.post(
+            "/api/dialogues",
+            headers={"X-Forwarded-For": "198.51.100.11, 172.19.0.2"},
+            json=body,
+        )
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert origins == ["203.0.113.10", "198.51.100.11"]
+
+
+@pytest.mark.asyncio
+async def test_http_membrane_ignores_forwarded_identity_from_an_untrusted_peer(monkeypatch):
+    origins: list[str] = []
+
+    def submit(**values):
+        origins.append(values["network_peer"])
+        return {
+            "id": "dlg_direct",
+            "state": "pending",
+            "removal_token": "release-token-long-enough",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+    proxy_app = ProxyHeadersMiddleware(
+        app,
+        trusted_hosts="127.0.0.1,172.16.0.0/12",
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=proxy_app, client=("198.51.100.50", 41000)),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/api/dialogues",
+            headers={"X-Forwarded-For": "203.0.113.99"},
+            json={
+                "question": "What does the river see?",
+                "point_of_view": "river",
+                "locale": "en",
+                "public_disclosure_ack": "public-unlisted-v1",
+            },
+        )
+
+    assert response.status_code == 202
+    assert origins == ["198.51.100.50"]
 
 
 @pytest.mark.asyncio
