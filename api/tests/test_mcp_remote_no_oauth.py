@@ -335,6 +335,33 @@ async def test_mcp_start_dialogue_refuses_implicit_public_disclosure_ack():
 
 
 @pytest.mark.asyncio
+async def test_mcp_start_dialogue_refuses_explicit_zero_timeout_before_admission():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": "start-zero-timeout",
+                "method": "tools/call",
+                "params": {
+                    "name": "start_dialogue",
+                    "arguments": {
+                        "question": "hello",
+                        "point_of_view": "river",
+                        "locale": "en",
+                        "public_disclosure_ack": "public-unlisted-v1",
+                        "channel_timeout_seconds": 0,
+                    },
+                },
+            },
+        )
+
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert "channel_timeout_seconds must be between 10" in result["structuredContent"]["error"]
+
+
+@pytest.mark.asyncio
 async def test_mcp_start_dialogue_uses_the_shared_peer_pacing_gate(monkeypatch):
     from app.services import dialogue_service
 

@@ -287,7 +287,11 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
                 if arguments.get("parent_dialogue_id")
                 else None
             ),
-            channel_timeout_seconds=int(arguments.get("channel_timeout_seconds") or 90),
+            channel_timeout_seconds=int(
+                arguments["channel_timeout_seconds"]
+                if "channel_timeout_seconds" in arguments
+                else 90
+            ),
         )
     except dialogue_service.DialogueRateLimitError as exc:
         return {"error": str(exc), "retry_after": exc.retry_after}
