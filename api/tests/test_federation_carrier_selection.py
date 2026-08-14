@@ -57,6 +57,20 @@ def test_federation_admission_recipe_is_static_and_present():
     assert "1111" not in source
 
 
+def test_federation_recipe_path_follows_the_application_package():
+    package_root = Path(carrier.__file__).resolve().parent.parent
+    assert carrier._RECIPE == (
+        package_root / "form_recipes" / "public_federation_graph_cli.fk"
+    )
+
+    deployed_module = Path("/app/app/services/native_federation_graph_service.py")
+    assert (
+        deployed_module.parent.parent
+        / "form_recipes"
+        / "public_federation_graph_cli.fk"
+    ) == Path("/app/app/form_recipes/public_federation_graph_cli.fk")
+
+
 def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monkeypatch):
     monkeypatch.setenv("COHERENCE_FORM_GRAPH_STORE", str(tmp_path))
     monkeypatch.setattr(carrier, "_admit", lambda *_, **__: None)

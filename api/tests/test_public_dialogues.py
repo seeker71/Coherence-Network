@@ -6,6 +6,7 @@ import hashlib
 import os
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -105,7 +106,12 @@ def dialogue_store(monkeypatch):
         return carrier_pgid if carrier_pgid is not None else True
 
     monkeypatch.setattr(store, "tombstone_dialogue", tombstone)
-    monkeypatch.setattr(store, "preflight_dialogue_admission", lambda **_: None)
+
+    @contextlib.contextmanager
+    def admission(**_):
+        yield None
+
+    monkeypatch.setattr(store, "serialized_dialogue_admission", admission)
     monkeypatch.setattr(dialogue_service, "ensure_dialogue_worker", lambda: None)
     monkeypatch.setattr(dialogue_service._WORKER_WAKE, "set", lambda: None)
     monkeypatch.setattr(
@@ -282,11 +288,12 @@ def test_form_receives_the_real_dialogue_envelope_before_persistence(
 
 
 def test_known_pacing_refusal_happens_before_form(dialogue_store, monkeypatch):
-    monkeypatch.setattr(
-        store,
-        "preflight_dialogue_admission",
-        lambda **_: (_ for _ in ()).throw(store.PublicDialogueRateLimitError(17)),
-    )
+    @contextlib.contextmanager
+    def refuse(**_):
+        raise store.PublicDialogueRateLimitError(17)
+        yield None
+
+    monkeypatch.setattr(store, "serialized_dialogue_admission", refuse)
 
     def form_must_not_run(**_):
         raise AssertionError("known refusal spent a native Form admission process")
@@ -298,6 +305,63 @@ def test_known_pacing_refusal_happens_before_form(dialogue_store, monkeypatch):
 
     assert refused.value.retry_after == 17
     assert dialogue_store == {}
+
+
+def test_concurrent_burst_is_bounded_before_form(monkeypatch, tmp_path):
+    engine = create_engine(f"sqlite+pysqlite:///{tmp_path / 'admission.db'}")
+    store.PublicDialogueRecord.__table__.create(bind=engine, checkfirst=True)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    @contextlib.contextmanager
+    def session():
+        value = factory()
+        try:
+            yield value
+            value.commit()
+        except Exception:
+            value.rollback()
+            raise
+        finally:
+            value.close()
+
+    monkeypatch.setattr(store.unified_db, "ensure_schema", lambda: None)
+    monkeypatch.setattr(store.unified_db, "session", session)
+    monkeypatch.setattr(dialogue_service, "MAX_ACTIVE_DIALOGUES", 1)
+    monkeypatch.setattr(dialogue_service, "ensure_dialogue_worker", lambda: None)
+    monkeypatch.setattr(dialogue_service._WORKER_WAKE, "set", lambda: None)
+    form_entered = threading.Event()
+    release_form = threading.Event()
+    second_started = threading.Event()
+    form_calls = []
+
+    def admit(**_):
+        form_calls.append(True)
+        form_entered.set()
+        assert release_form.wait(2)
+        return True
+
+    def second_offer():
+        second_started.set()
+        return _offer(question="second", network_peer="peer-two")
+
+    monkeypatch.setattr(dialogue_service, "_admit_dialogue_envelope", admit)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(_offer, question="first", network_peer="peer-one")
+        assert form_entered.wait(1)
+        second = executor.submit(second_offer)
+        assert second_started.wait(1)
+        try:
+            assert not second.done()
+            assert len(form_calls) == 1
+        finally:
+            release_form.set()
+
+        assert first.result(timeout=2)["state"] == "pending"
+        with pytest.raises(RuntimeError, match="queue is presently full"):
+            second.result(timeout=2)
+
+    assert len(form_calls) == 1
+    engine.dispose()
 
 
 def test_form_dialogue_refusal_persists_nothing(dialogue_store, monkeypatch):

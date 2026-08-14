@@ -258,42 +258,42 @@ def submit_dialogue(
     network_peer_sha256 = hashlib.sha256(
         (network_peer or "unknown")[:200].encode("utf-8")
     ).hexdigest()
-    try:
-        store.preflight_dialogue_admission(
-            network_peer_sha256=network_peer_sha256,
-            parent_dialogue_id=parent_dialogue_id,
-            max_active=MAX_ACTIVE_DIALOGUES,
-            starts_per_window=STARTS_PER_WINDOW,
-            start_window_seconds=START_WINDOW_SECONDS,
-        )
-    except store.PublicDialogueRateLimitError as exc:
-        raise DialogueRateLimitError(exc.retry_after) from exc
-    if not _admit_dialogue_envelope(
-        locale_length=len(requested_locale),
-        point_length=len(point_of_view),
-        question_length=len(question),
-        disclosure=int(public_disclosure_ack == store.PUBLIC_DISCLOSURE_ACK),
-        parent_length=len(parent_dialogue_id or ""),
-        timeout_seconds=channel_timeout_seconds,
-    ):
-        raise RuntimeError("native Form declined the public dialogue envelope")
     question_sha256 = hashlib.sha256(question.encode("utf-8")).hexdigest()
     expires_at = datetime.now(timezone.utc) + timedelta(days=DEFAULT_RETENTION_DAYS)
     try:
-        row, removal_token = store.create_dialogue(
-            question=question,
-            question_sha256=question_sha256,
-            point_of_view=point_of_view,
-            requested_locale=requested_locale,
-            canonical_locale=canonical_locale,
-            parent_dialogue_id=parent_dialogue_id,
-            channel_timeout_seconds=channel_timeout_seconds,
+        with store.serialized_dialogue_admission(
             network_peer_sha256=network_peer_sha256,
-            expires_at=expires_at,
+            parent_dialogue_id=parent_dialogue_id,
             max_active=MAX_ACTIVE_DIALOGUES,
             starts_per_window=STARTS_PER_WINDOW,
             start_window_seconds=START_WINDOW_SECONDS,
-        )
+        ) as admission_session:
+            if not _admit_dialogue_envelope(
+                locale_length=len(requested_locale),
+                point_length=len(point_of_view),
+                question_length=len(question),
+                disclosure=int(
+                    public_disclosure_ack == store.PUBLIC_DISCLOSURE_ACK
+                ),
+                parent_length=len(parent_dialogue_id or ""),
+                timeout_seconds=channel_timeout_seconds,
+            ):
+                raise RuntimeError("native Form declined the public dialogue envelope")
+            row, removal_token = store.create_dialogue(
+                question=question,
+                question_sha256=question_sha256,
+                point_of_view=point_of_view,
+                requested_locale=requested_locale,
+                canonical_locale=canonical_locale,
+                parent_dialogue_id=parent_dialogue_id,
+                channel_timeout_seconds=channel_timeout_seconds,
+                network_peer_sha256=network_peer_sha256,
+                expires_at=expires_at,
+                max_active=MAX_ACTIVE_DIALOGUES,
+                starts_per_window=STARTS_PER_WINDOW,
+                start_window_seconds=START_WINDOW_SECONDS,
+                admission_session=admission_session,
+            )
     except store.PublicDialogueRateLimitError as exc:
         raise DialogueRateLimitError(exc.retry_after) from exc
     ensure_dialogue_worker()

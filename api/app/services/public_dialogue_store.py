@@ -11,6 +11,7 @@ import json
 import hashlib
 import secrets
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -25,7 +26,7 @@ PUBLIC_DISCLOSURE_ACK = "public-unlisted-v1"
 ACTIVE_STATES = ("pending", "running")
 TERMINAL_STATES = ("answered", "miss", "failed", "tombstoned")
 _ADMISSION_LOCK_KEY = 0x434F484449414C47  # "COHDIALG"
-_ADMISSION_LOCK = threading.Lock()
+_ADMISSION_LOCK = threading.RLock()
 
 
 class PublicDialogueRateLimitError(RuntimeError):
@@ -111,11 +112,15 @@ def ensure_schema() -> None:
 
 
 def _admission_lock(session: Any) -> None:
-    if session.bind is not None and session.bind.dialect.name == "postgresql":
+    if session.bind is None:
+        return
+    if session.bind.dialect.name == "postgresql":
         session.execute(
             text("SELECT pg_advisory_xact_lock(:lock_key)"),
             {"lock_key": _ADMISSION_LOCK_KEY},
         )
+    elif session.bind.dialect.name == "sqlite":
+        session.execute(text("BEGIN IMMEDIATE"))
 
 
 def _check_admission(
@@ -152,21 +157,19 @@ def _check_admission(
             )
 
 
-def preflight_dialogue_admission(
+@contextmanager
+def serialized_dialogue_admission(
     *,
     network_peer_sha256: str,
     parent_dialogue_id: str | None,
     max_active: int,
     starts_per_window: int,
     start_window_seconds: int,
-) -> None:
-    """Reject an already-full peer or queue before native Form work begins.
-
-    The locked check inside ``create_dialogue`` remains authoritative; this
-    first read keeps known refusals from consuming a native admission process.
-    """
+) -> Any:
+    """Hold the cross-process capacity gate through Form and persistence."""
     ensure_schema()
-    with unified_db.session() as session:
+    with _ADMISSION_LOCK, unified_db.session() as session:
+        _admission_lock(session)
         _check_admission(
             session,
             network_peer_sha256=network_peer_sha256,
@@ -175,6 +178,7 @@ def preflight_dialogue_admission(
             starts_per_window=starts_per_window,
             start_window_seconds=start_window_seconds,
         )
+        yield session
 
 
 def create_dialogue(
@@ -191,48 +195,62 @@ def create_dialogue(
     max_active: int,
     starts_per_window: int,
     start_window_seconds: int,
+    admission_session: Any | None = None,
 ) -> tuple[dict[str, Any], str]:
     ensure_schema()
-    with _ADMISSION_LOCK, unified_db.session() as session:
-        _admission_lock(session)
-        _check_admission(
-            session,
+    if admission_session is None:
+        with serialized_dialogue_admission(
             network_peer_sha256=network_peer_sha256,
             parent_dialogue_id=parent_dialogue_id,
             max_active=max_active,
             starts_per_window=starts_per_window,
             start_window_seconds=start_window_seconds,
-        )
-        now = _now()
-        dialogue_id = "dlg_" + secrets.token_urlsafe(18)
-        removal_token = secrets.token_urlsafe(32)
+        ) as session:
+            return create_dialogue(
+                question=question,
+                question_sha256=question_sha256,
+                point_of_view=point_of_view,
+                requested_locale=requested_locale,
+                canonical_locale=canonical_locale,
+                parent_dialogue_id=parent_dialogue_id,
+                channel_timeout_seconds=channel_timeout_seconds,
+                network_peer_sha256=network_peer_sha256,
+                expires_at=expires_at,
+                max_active=max_active,
+                starts_per_window=starts_per_window,
+                start_window_seconds=start_window_seconds,
+                admission_session=session,
+            )
 
-        record = PublicDialogueRecord(
-            id=dialogue_id,
-            state="pending",
-            question=question,
-            question_sha256=question_sha256,
-            point_of_view=point_of_view,
-            requested_locale=requested_locale,
-            canonical_locale=canonical_locale,
-            parent_dialogue_id=parent_dialogue_id,
-            channel_timeout_seconds=channel_timeout_seconds,
-            disclosure_ack=PUBLIC_DISCLOSURE_ACK,
-            visibility="unlisted-public",
-            network_peer_sha256=network_peer_sha256,
-            removal_token_sha256=hashlib.sha256(removal_token.encode("utf-8")).hexdigest(),
-            output_json=None,
-            claimed_by=None,
-            carrier_pgid=None,
-            attempt=0,
-            created_at=now,
-            updated_at=now,
-            expires_at=expires_at,
-            tombstoned_at=None,
-        )
-        session.add(record)
-        session.flush()
-        return _row(record), removal_token
+    now = _now()
+    dialogue_id = "dlg_" + secrets.token_urlsafe(18)
+    removal_token = secrets.token_urlsafe(32)
+    record = PublicDialogueRecord(
+        id=dialogue_id,
+        state="pending",
+        question=question,
+        question_sha256=question_sha256,
+        point_of_view=point_of_view,
+        requested_locale=requested_locale,
+        canonical_locale=canonical_locale,
+        parent_dialogue_id=parent_dialogue_id,
+        channel_timeout_seconds=channel_timeout_seconds,
+        disclosure_ack=PUBLIC_DISCLOSURE_ACK,
+        visibility="unlisted-public",
+        network_peer_sha256=network_peer_sha256,
+        removal_token_sha256=hashlib.sha256(removal_token.encode("utf-8")).hexdigest(),
+        output_json=None,
+        claimed_by=None,
+        carrier_pgid=None,
+        attempt=0,
+        created_at=now,
+        updated_at=now,
+        expires_at=expires_at,
+        tombstoned_at=None,
+    )
+    admission_session.add(record)
+    admission_session.flush()
+    return _row(record), removal_token
 
 
 def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:

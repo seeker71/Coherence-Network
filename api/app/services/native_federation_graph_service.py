@@ -19,10 +19,13 @@ from typing import Any
 
 from app.services import form_kernel_bridge
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
 _LOCK = threading.RLock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
-_RECIPE = _REPO_ROOT / "api" / "app" / "form_recipes" / "public_federation_graph_cli.fk"
+_RECIPE = (
+    Path(__file__).resolve().parent.parent
+    / "form_recipes"
+    / "public_federation_graph_cli.fk"
+)
 _BAND_ENTRY = "(pfgc-band))"
 
 if sys.platform == "win32":
