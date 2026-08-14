@@ -1,10 +1,30 @@
 """Selection and recovery witnesses for Form federation admission."""
 from __future__ import annotations
 
+import multiprocessing
+import os
+import time
+from pathlib import Path
+
 import pytest
 
 from app.services import form_kernel_bridge
 from app.services import native_federation_graph_service as carrier
+
+
+def _append_from_process(store: str, message_id: str, ready, start) -> None:
+    os.environ["COHERENCE_FORM_GRAPH_STORE"] = store
+    atomic_write = carrier._atomic_write_ascii
+
+    def delayed_write(path, content):
+        time.sleep(0.2)
+        atomic_write(path, content)
+
+    carrier._atomic_write_ascii = delayed_write
+    ready.put(True)
+    if not start.wait(5):
+        raise RuntimeError("concurrent index witness did not start")
+    carrier._append_id(Path(store) / "broadcast", message_id)
 
 
 def test_federation_offers_the_actual_operation_shape_to_form(monkeypatch):
@@ -72,3 +92,28 @@ def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monk
     assert retried["message_id"] == message_id
     assert message_id in carrier.visible_ids("Ariel")
     assert message_id in carrier._read_ids(tmp_path / f"out-{carrier._token('Giles')}")
+
+
+def test_index_updates_are_serialized_across_processes(tmp_path):
+    context = multiprocessing.get_context("spawn")
+    ready = context.Queue()
+    start = context.Event()
+    message_ids = [f"msg_{'a' * 64}", f"msg_{'b' * 64}"]
+    processes = [
+        context.Process(
+            target=_append_from_process,
+            args=(str(tmp_path), message_id, ready, start),
+        )
+        for message_id in message_ids
+    ]
+
+    for process in processes:
+        process.start()
+    for _ in processes:
+        assert ready.get(timeout=5) is True
+    start.set()
+    for process in processes:
+        process.join(timeout=10)
+        assert process.exitcode == 0
+
+    assert set(carrier._read_ids(tmp_path / "broadcast")) == set(message_ids)

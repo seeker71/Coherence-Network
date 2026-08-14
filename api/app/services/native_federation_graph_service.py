@@ -10,8 +10,10 @@ import hashlib
 import json
 import os
 import re
+import sys
 import tempfile
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,25 @@ _LOCK = threading.RLock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 _RECIPE = _REPO_ROOT / "api" / "app" / "form_recipes" / "public_federation_graph_cli.fk"
 _BAND_ENTRY = "(pfgc-band))"
+
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock_file(stream: Any) -> None:
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock_file(stream: Any) -> None:
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+else:
+    import fcntl
+
+    def _lock_file(stream: Any) -> None:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+
+    def _unlock_file(stream: Any) -> None:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def store_path() -> Path:
@@ -73,13 +94,29 @@ def _read_ids(path: Path) -> list[str]:
     return [value for value in path.read_text(encoding="ascii").splitlines() if _ID.fullmatch(value)]
 
 
+@contextmanager
+def _index_transaction():
+    """Serialize one index mutation across threads and API processes."""
+    lock_path = _path(".index.lock")
+    with _LOCK, lock_path.open("a+b") as stream:
+        if stream.seek(0, os.SEEK_END) == 0:
+            stream.write(b"\0")
+            stream.flush()
+        _lock_file(stream)
+        try:
+            yield
+        finally:
+            _unlock_file(stream)
+
+
 def _append_id(path: Path, message_id: str) -> None:
-    ids = _read_ids(path)
-    if message_id not in ids:
-        _atomic_write_ascii(
-            path,
-            "".join(f"{value}\n" for value in [*ids, message_id]),
-        )
+    with _index_transaction():
+        ids = _read_ids(path)
+        if message_id not in ids:
+            _atomic_write_ascii(
+                path,
+                "".join(f"{value}\n" for value in [*ids, message_id]),
+            )
 
 
 def _atomic_write_ascii(path: Path, content: str) -> None:
