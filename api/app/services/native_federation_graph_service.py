@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_str
 from app.services import form_kernel_bridge
 
 _LOCK = threading.RLock()
@@ -49,8 +50,16 @@ else:
 
 
 def store_path() -> Path:
-    raw = os.environ.get("COHERENCE_FORM_GRAPH_STORE")
-    path = Path(raw).expanduser() if raw else Path(tempfile.gettempdir()) / "coherence-federation-graph"
+    raw = get_str(
+        "federation",
+        "form_graph_store_path",
+        "~/.coherence-network/federation-graph",
+    )
+    path = (
+        Path(raw).expanduser()
+        if raw
+        else Path(tempfile.gettempdir()) / "coherence-federation-graph"
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 

@@ -77,7 +77,7 @@ async def start_dialogue(body: DialogueCreate, request: Request, response: Respo
 @router.get("/{dialogue_id}", summary="Observe one unlisted public dialogue turn")
 async def read_dialogue(dialogue_id: str, response: Response) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    dialogue = dialogue_service.get_dialogue(dialogue_id)
+    dialogue = await run_in_threadpool(dialogue_service.get_dialogue, dialogue_id)
     if dialogue is None:
         raise HTTPException(status_code=404, detail="Dialogue not found")
     return dialogue

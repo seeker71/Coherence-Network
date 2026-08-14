@@ -358,9 +358,21 @@ def _organism_worker_lease() -> Iterator[bool]:
 
 
 def _reap_recorded_process_group(pgid: Any) -> None:
-    if os.name == "nt" or not isinstance(pgid, int) or pgid <= 1:
+    if not isinstance(pgid, int) or pgid <= 1:
         return
     if not _recorded_process_group_is_native(pgid):
+        return
+    if _windows_host():
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(pgid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
         return
     try:
         os.killpg(pgid, 0)
@@ -383,11 +395,28 @@ def _reap_recorded_process_group(pgid: Any) -> None:
         pass
 
 
+def _windows_host() -> bool:
+    return os.name == "nt"
+
+
 def _recorded_process_group_is_native(pgid: int) -> bool:
     """Refuse delayed signals when a recycled process group is not our carrier."""
+    if _windows_host():
+        command = [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            (
+                "$p = Get-CimInstance Win32_Process -Filter \"ProcessId = "
+                f"{pgid}\"; if ($null -ne $p) {{ [Console]::Out.Write($p.CommandLine) }}"
+            ),
+        ]
+    else:
+        command = ["ps", "-axo", "pgid=,command="]
     try:
         observed = subprocess.run(
-            ["ps", "-axo", "pgid=,command="],
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
@@ -396,11 +425,14 @@ def _recorded_process_group_is_native(pgid: int) -> bool:
         )
     except (OSError, subprocess.TimeoutExpired):
         return False
-    rows = []
-    for line in observed.stdout.splitlines():
-        pieces = line.strip().split(maxsplit=1)
-        if len(pieces) == 2 and pieces[0].isdigit() and int(pieces[0]) == pgid:
-            rows.append(pieces[1].lower())
+    if _windows_host():
+        rows = [observed.stdout.lower()] if observed.stdout else []
+    else:
+        rows = []
+        for line in observed.stdout.splitlines():
+            pieces = line.strip().split(maxsplit=1)
+            if len(pieces) == 2 and pieces[0].isdigit() and int(pieces[0]) == pgid:
+                rows.append(pieces[1].lower())
     markers = ("form-cli", "fkwu", "form_cli_rag.py")
     return bool(rows) and any(any(marker in row for marker in markers) for row in rows)
 

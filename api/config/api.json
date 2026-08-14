@@ -67,6 +67,9 @@
     "_doc": "Server behavior.",
     "environment": "development",
     "enable_hsts": false,
+    "host": "0.0.0.0",
+    "port": 8000,
+    "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
     "_environment_doc": "development or production. Production enforces real API keys."
   },
   "agent_tasks": {
@@ -304,7 +307,8 @@
   "federation": {
     "_doc": "Federation service configuration.",
     "stats_window_days": 7,
-    "bridge_token": null
+    "bridge_token": null,
+    "form_graph_store_path": "~/.coherence-network/federation-graph"
   },
   "github": {
     "_doc": "GitHub integration settings.",

@@ -13,7 +13,7 @@ import secrets
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Iterator
 
 from sqlalchemy import DateTime, Integer, String, Text, case, func, select, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -33,6 +33,11 @@ class PublicDialogueRateLimitError(RuntimeError):
     def __init__(self, retry_after: int):
         super().__init__("this network peer has filled its present dialogue interval")
         self.retry_after = retry_after
+
+
+class PublicDialogueAdmissionBusyError(RuntimeError):
+    def __init__(self):
+        super().__init__("the public dialogue admission lane is presently attending another offer")
 
 
 class PublicDialogueRecord(Base):
@@ -59,6 +64,16 @@ class PublicDialogueRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     tombstoned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+@contextmanager
+def _admission_slot() -> Iterator[None]:
+    if not _ADMISSION_LOCK.acquire(blocking=False):
+        raise PublicDialogueAdmissionBusyError()
+    try:
+        yield
+    finally:
+        _ADMISSION_LOCK.release()
 
 
 def _now() -> datetime:
@@ -115,10 +130,12 @@ def _admission_lock(session: Any) -> None:
     if session.bind is None:
         return
     if session.bind.dialect.name == "postgresql":
-        session.execute(
-            text("SELECT pg_advisory_xact_lock(:lock_key)"),
+        acquired = session.scalar(
+            text("SELECT pg_try_advisory_xact_lock(:lock_key)"),
             {"lock_key": _ADMISSION_LOCK_KEY},
         )
+        if not acquired:
+            raise PublicDialogueAdmissionBusyError()
     elif session.bind.dialect.name == "sqlite":
         session.execute(text("BEGIN IMMEDIATE"))
 
@@ -168,17 +185,18 @@ def serialized_dialogue_admission(
 ) -> Any:
     """Hold the cross-process capacity gate through Form and persistence."""
     ensure_schema()
-    with _ADMISSION_LOCK, unified_db.session() as session:
-        _admission_lock(session)
-        _check_admission(
-            session,
-            network_peer_sha256=network_peer_sha256,
-            parent_dialogue_id=parent_dialogue_id,
-            max_active=max_active,
-            starts_per_window=starts_per_window,
-            start_window_seconds=start_window_seconds,
-        )
-        yield session
+    with _admission_slot():
+        with unified_db.session() as session:
+            _admission_lock(session)
+            _check_admission(
+                session,
+                network_peer_sha256=network_peer_sha256,
+                parent_dialogue_id=parent_dialogue_id,
+                max_active=max_active,
+                starts_per_window=starts_per_window,
+                start_window_seconds=start_window_seconds,
+            )
+            yield session
 
 
 def create_dialogue(

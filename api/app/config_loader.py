@@ -386,7 +386,13 @@ def _default_config() -> dict[str, Any]:
             "idea_portfolio_path": None,
             "value_lineage_path": None,
         },
-        "server": {"environment": "development", "enable_hsts": False},
+        "server": {
+            "environment": "development",
+            "enable_hsts": False,
+            "host": "0.0.0.0",
+            "port": 8000,
+            "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
+        },
         "data_retention": {
             "hot_days": 7,
             "warm_days": 30,
@@ -400,7 +406,11 @@ def _default_config() -> dict[str, Any]:
             "internal_email_prefixes": None,
         },
         "governance": {"min_approvals": 1},
-        "federation": {"stats_window_days": 7, "bridge_token": None},
+        "federation": {
+            "stats_window_days": 7,
+            "bridge_token": None,
+            "form_graph_store_path": "~/.coherence-network/federation-graph",
+        },
         "github": {"token": None, "api_token": None},
     }
     for section_defaults in (

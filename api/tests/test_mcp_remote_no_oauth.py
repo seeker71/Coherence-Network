@@ -218,6 +218,53 @@ async def test_mcp_start_keeps_the_event_loop_available(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mcp_poll_keeps_the_event_loop_available(monkeypatch):
+    from app.services import dialogue_service
+
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def get_dialogue(dialogue_id):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "id": dialogue_id,
+            "state": "miss" if read_completed.is_set() else "blocked-loop",
+        }
+
+    monkeypatch.setattr(dialogue_service, "get_dialogue", get_dialogue)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        poll_task = asyncio.create_task(
+            client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "poll-concurrent",
+                    "method": "tools/call",
+                    "params": {
+                        "name": "get_dialogue",
+                        "arguments": {"dialogue_id": "dlg_concurrent"},
+                    },
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await poll_task
+        finally:
+            read_completed.set()
+            if not poll_task.done():
+                await poll_task
+
+    payload = response.json()["result"]["structuredContent"]
+    assert info.status_code == 200
+    assert payload["state"] == "miss"
+
+
+@pytest.mark.asyncio
 async def test_mcp_remove_keeps_the_event_loop_available(monkeypatch):
     from app.services import dialogue_service
 

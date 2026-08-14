@@ -379,7 +379,7 @@ async def _handle_jsonrpc(
                 _content_result(result, is_error="error" in result),
             )
         if name == "get_dialogue":
-            result = _get_dialogue(arguments)
+            result = await run_in_threadpool(_get_dialogue, arguments)
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),

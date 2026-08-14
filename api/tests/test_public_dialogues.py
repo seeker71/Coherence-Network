@@ -352,17 +352,39 @@ def test_concurrent_burst_is_bounded_before_form(monkeypatch, tmp_path):
         second = executor.submit(second_offer)
         assert second_started.wait(1)
         try:
-            assert not second.done()
+            with pytest.raises(store.PublicDialogueAdmissionBusyError, match="presently attending"):
+                second.result(timeout=1)
             assert len(form_calls) == 1
         finally:
             release_form.set()
 
         assert first.result(timeout=2)["state"] == "pending"
-        with pytest.raises(RuntimeError, match="queue is presently full"):
-            second.result(timeout=2)
 
     assert len(form_calls) == 1
     engine.dispose()
+
+
+def test_postgres_admission_contention_is_nonblocking_and_explicit():
+    observed = {}
+
+    def scalar(statement, params):
+        observed.update(statement=str(statement), params=params)
+        return False
+
+    session = SimpleNamespace(
+        bind=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")),
+        scalar=scalar,
+    )
+
+    with pytest.raises(store.PublicDialogueAdmissionBusyError, match="presently attending"):
+        store._admission_lock(session)
+
+    assert "pg_try_advisory_xact_lock" in observed["statement"]
+    assert "pg_advisory_xact_lock" not in observed["statement"].replace(
+        "pg_try_advisory_xact_lock",
+        "",
+    )
+    assert observed["params"] == {"lock_key": store._ADMISSION_LOCK_KEY}
 
 
 def test_form_dialogue_refusal_persists_nothing(dialogue_store, monkeypatch):
@@ -579,6 +601,29 @@ def test_release_of_running_turn_reaps_its_recorded_process(dialogue_store, monk
     assert dialogue_store[offered["id"]]["state"] == "tombstoned"
 
 
+def test_windows_release_verifies_and_terminates_the_native_process_tree(monkeypatch):
+    calls = []
+
+    def run(command, **_):
+        calls.append(command)
+        if command[0] == "powershell.exe":
+            return SimpleNamespace(stdout="python form_cli_rag.py --native form-cli")
+        return SimpleNamespace(stdout="")
+
+    monkeypatch.setattr(dialogue_service, "_windows_host", lambda: True)
+    monkeypatch.setattr(dialogue_service.subprocess, "run", run)
+
+    dialogue_service._reap_recorded_process_group(31337)
+
+    assert calls[0][0:4] == [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+    ]
+    assert calls[1] == ["taskkill", "/PID", "31337", "/T", "/F"]
+
+
 def test_failure_receipt_and_logs_do_not_carry_question_canary(dialogue_store, monkeypatch, caplog):
     canary = "ZXQ-SENTINEL-91"
 
@@ -785,6 +830,41 @@ async def test_http_start_keeps_the_event_loop_available(monkeypatch):
     assert info.status_code == 200
     assert response.status_code == 202
     assert response.json()["state"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_http_poll_keeps_the_event_loop_available(monkeypatch):
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def get_dialogue(dialogue_id):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "id": dialogue_id,
+            "state": "miss" if read_completed.is_set() else "blocked-loop",
+        }
+
+    monkeypatch.setattr(dialogue_service, "get_dialogue", get_dialogue)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        poll_task = asyncio.create_task(client.get("/api/dialogues/dlg_concurrent"))
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await poll_task
+        finally:
+            read_completed.set()
+            if not poll_task.done():
+                await poll_task
+
+    assert info.status_code == 200
+    assert response.status_code == 200
+    assert response.json()["state"] == "miss"
 
 
 @pytest.mark.asyncio

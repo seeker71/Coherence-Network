@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import multiprocessing
-import os
 import time
 from pathlib import Path
 
@@ -13,7 +12,6 @@ from app.services import native_federation_graph_service as carrier
 
 
 def _append_from_process(store: str, message_id: str, ready, start) -> None:
-    os.environ["COHERENCE_FORM_GRAPH_STORE"] = store
     atomic_write = carrier._atomic_write_ascii
 
     def delayed_write(path, content):
@@ -71,8 +69,25 @@ def test_federation_recipe_path_follows_the_application_package():
     ) == Path("/app/app/form_recipes/public_federation_graph_cli.fk")
 
 
+def test_federation_store_path_uses_file_backed_configuration(tmp_path, monkeypatch):
+    observed = {}
+
+    def get_str(section, key, default):
+        observed.update(section=section, key=key, default=default)
+        return str(tmp_path)
+
+    monkeypatch.setattr(carrier, "get_str", get_str)
+
+    assert carrier.store_path() == tmp_path
+    assert observed == {
+        "section": "federation",
+        "key": "form_graph_store_path",
+        "default": "~/.coherence-network/federation-graph",
+    }
+
+
 def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monkeypatch):
-    monkeypatch.setenv("COHERENCE_FORM_GRAPH_STORE", str(tmp_path))
+    monkeypatch.setattr(carrier, "get_str", lambda *_, **__: str(tmp_path))
     monkeypatch.setattr(carrier, "_admit", lambda *_, **__: None)
     real_append = carrier._append_id
     interrupted = False

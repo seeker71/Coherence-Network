@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
 import tomllib
+
+from app import server
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -78,12 +81,42 @@ def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
     assert sorted(project_dependencies - docker_requirements) == []
 
 
-def test_api_server_trusts_only_the_internal_proxy_network_for_forwarded_peers() -> None:
+def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypatch) -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+    captured = {}
+
+    monkeypatch.setattr(server, "get_str", lambda *args: "0.0.0.0")
+    monkeypatch.setattr(server, "get_int", lambda *args: 8000)
+    monkeypatch.setattr(
+        server,
+        "get_list",
+        lambda *args: config["server"]["forwarded_allow_ips"],
+    )
+    monkeypatch.setattr(
+        server.uvicorn,
+        "run",
+        lambda app, **values: captured.update(app=app, **values),
+    )
+    server.main()
+
+    assert config["server"]["forwarded_allow_ips"] == ["127.0.0.1", "172.16.0.0/12"]
+    assert captured == {
+        "app": "app.main:app",
+        "host": "0.0.0.0",
+        "port": 8000,
+        "proxy_headers": True,
+        "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
+    }
+    assert 'CMD ["python", "-m", "app.server"]' in dockerfile
+    assert "FORWARDED_ALLOW_IPS" not in dockerfile
+    assert "--forwarded-allow-ips=*" not in dockerfile
+
+
+def test_api_runtime_carries_the_process_inspector_used_by_dialogue_reaping() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
 
-    assert "FORWARDED_ALLOW_IPS=127.0.0.1,172.16.0.0/12" in dockerfile
-    assert "FORWARDED_ALLOW_IPS=*" not in dockerfile
-    assert "--forwarded-allow-ips=*" not in dockerfile
+    assert re.search(r"^\s+procps \\$", dockerfile, re.MULTILINE) is not None
 
 
 def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
