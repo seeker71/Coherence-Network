@@ -218,6 +218,53 @@ async def test_mcp_start_keeps_the_event_loop_available(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mcp_remove_keeps_the_event_loop_available(monkeypatch):
+    from app.services import dialogue_service
+
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def release(*_):
+        started.set()
+        read_completed.wait(2)
+        return read_completed.is_set()
+
+    monkeypatch.setattr(dialogue_service, "release_dialogue", release)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        remove_task = asyncio.create_task(
+            client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "remove-concurrent",
+                    "method": "tools/call",
+                    "params": {
+                        "name": "remove_dialogue",
+                        "arguments": {
+                            "dialogue_id": "dlg_concurrent",
+                            "removal_token": "release-token-long-enough",
+                        },
+                    },
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await remove_task
+        finally:
+            read_completed.set()
+            if not remove_task.done():
+                await remove_task
+
+    payload = response.json()["result"]["structuredContent"]
+    assert info.status_code == 200
+    assert payload["released"] is True
+
+
+@pytest.mark.asyncio
 async def test_mcp_start_dialogue_refuses_implicit_public_disclosure_ack():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
         response = await client.post(

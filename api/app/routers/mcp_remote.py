@@ -385,7 +385,7 @@ async def _handle_jsonrpc(
                 _content_result(result, is_error="error" in result),
             )
         if name == "remove_dialogue":
-            result = _remove_dialogue(arguments)
+            result = await run_in_threadpool(_remove_dialogue, arguments)
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),

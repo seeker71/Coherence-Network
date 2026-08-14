@@ -642,6 +642,44 @@ async def test_http_start_keeps_the_event_loop_available(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_http_release_keeps_the_event_loop_available(monkeypatch):
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def release(*_):
+        started.set()
+        read_completed.wait(2)
+        return read_completed.is_set()
+
+    monkeypatch.setattr(dialogue_service, "release_dialogue", release)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        release_task = asyncio.create_task(
+            client.request(
+                "DELETE",
+                "/api/dialogues/dlg_concurrent",
+                json={"removal_token": "release-token-long-enough"},
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await release_task
+        finally:
+            read_completed.set()
+            if not release_task.done():
+                await release_task
+
+    assert info.status_code == 200
+    assert response.status_code == 200
+    assert response.json()["released"] is True
+
+
+@pytest.mark.asyncio
 async def test_http_membrane_maps_pacing_and_capacity_with_retry_after(monkeypatch):
     async with AsyncClient(
         transport=ASGITransport(app=app),

@@ -90,6 +90,11 @@ async def release_dialogue(
     response: Response,
 ) -> dict:
     response.headers["Cache-Control"] = "no-store"
-    if not dialogue_service.release_dialogue(dialogue_id, body.removal_token):
+    released = await run_in_threadpool(
+        dialogue_service.release_dialogue,
+        dialogue_id,
+        body.removal_token,
+    )
+    if not released:
         raise HTTPException(status_code=404, detail="Dialogue or removal capability not found")
     return {"id": dialogue_id, "state": "tombstoned", "released": True}
