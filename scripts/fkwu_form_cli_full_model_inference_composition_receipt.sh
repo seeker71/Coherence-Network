@@ -21,6 +21,12 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FORM_RUNTIME_DIR="$ROOT/form"
+[[ -x "$FORM_RUNTIME_DIR/validate.sh" ]] || FORM_RUNTIME_DIR="$ROOT/form/form"
+if [[ ! -x "$FORM_RUNTIME_DIR/validate.sh" ]]; then
+    echo "form runtime checkout does not expose validate.sh" >&2
+    exit 2
+fi
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 DEFAULT_RECEIPT="$ROOT/.cache/body-test-receipts/fkwu-full-model-inference-composition-$STAMP/receipt.json"
 RECEIPT_PATH="${1:-$DEFAULT_RECEIPT}"
@@ -281,27 +287,27 @@ run_step decoded_answer current-host "native decoded answer binding" true \
 
 run_step gguf_find_four_way current-host "GGUF find-by-name and absolute offset four-way" true \
     "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk"
 
 run_step real_gguf_tensor_math_four_way current-host "named real GGUF tensor bytes into native math four-way" true \
     "cd form/form && ./validate.sh ... real-gguf-tensor-math-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk form-stdlib/tests/real-gguf-tensor-math-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk form-stdlib/tests/real-gguf-tensor-math-band.fk"
 
 run_step tokenizer_compose_four_way current-host "BPE tokenizer carrier four-way" true \
     "cd form/form && ./validate.sh ... tokenize-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk"
 
 run_step llama3_pretokenizer_four_way current-host "Llama 3 pretokenizer four-way" true \
     "cd form/form && ./validate.sh ... llama3-pretokenize-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk form-stdlib/tests/llama3-pretokenize-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk form-stdlib/tests/llama3-pretokenize-band.fk"
 
 run_step autoregressive_loop_four_way current-host "Form autoregressive generation loop four-way" true \
     "cd form/form && ./validate.sh ... llama-generate-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/tests/llama-generate-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/tests/llama-generate-band.fk"
 
 run_step sampler_min_p_four_way current-host "Form sampler min-p and seeded draw four-way" true \
     "cd form/form && ./validate.sh ... sampling-band.fk" \
-    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk"
+    bash -lc "cd '$FORM_RUNTIME_DIR' && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk"
 
 if command -v python3 >/dev/null 2>&1; then
     run_step real_gguf_weight_map current-host "optional real GGUF tensor map witness" false \
