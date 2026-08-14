@@ -49,7 +49,10 @@ from app import config_loader
 
 
 router = APIRouter()
-_KERNEL_CORE_BML_RELATIVE = Path("form") / "form-stdlib" / "bml" / "kernel-core.bml"
+_KERNEL_CORE_BML_RELATIVES = (
+    Path("form") / "form" / "form-stdlib" / "bml" / "kernel-core.bml",
+    Path("form") / "form-stdlib" / "bml" / "kernel-core.bml",
+)
 _KERNEL_CORE_COUNTS = {
     "primitive_count": "RequiredPrimitiveCount",
     "dispatch_count": "RequiredDispatchCount",
@@ -1627,9 +1630,10 @@ def _sha256_text(value: str) -> str:
 def _read_kernel_core_source() -> str | None:
     here = Path(__file__).resolve()
     for root in (*here.parents, Path.cwd()):
-        candidate = root / _KERNEL_CORE_BML_RELATIVE
-        if candidate.is_file():
-            return candidate.read_text(encoding="utf-8")
+        for relative in _KERNEL_CORE_BML_RELATIVES:
+            candidate = root / relative
+            if candidate.is_file():
+                return candidate.read_text(encoding="utf-8")
     return None
 
 

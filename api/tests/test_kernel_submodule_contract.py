@@ -21,6 +21,8 @@ APP_RECIPES = {
     "endpoint_placeholder_name.fk",
     "endpoint_reaction_resonance.fk",
     "endpoint_request_progress.fk",
+    "public_dialogue_envelope.fk",
+    "public_federation_graph_cli.fk",
 }
 
 
