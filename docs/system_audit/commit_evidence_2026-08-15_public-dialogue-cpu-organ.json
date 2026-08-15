@@ -13,6 +13,7 @@
     "api/app/routers/INDEX.md",
     "api/app/routers/dialogues.py",
     "api/app/routers/federation.py",
+    "api/app/routers/field_relay.py",
     "api/app/routers/mcp_remote.py",
     "api/app/routers/substrate.py",
     "api/app/server.py",
@@ -25,6 +26,7 @@
     "api/app/services/unified_models.py",
     "api/config/api.json",
     "api/pyproject.toml",
+    "api/pytest.ini",
     "api/requirements.txt",
     "api/scripts/local_runner.py",
     "api/tests/INDEX.md",
@@ -33,6 +35,7 @@
     "api/tests/test_deployment_observer_oidc.py",
     "api/tests/test_federation_carrier_selection.py",
     "api/tests/test_federation_layer.py",
+    "api/tests/test_field_relay.py",
     "api/tests/test_flow_cli.py",
     "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_inductive.py",
@@ -40,6 +43,7 @@
     "api/tests/test_kernel_submodule_contract.py",
     "api/tests/test_mcp_remote_no_oauth.py",
     "api/tests/test_modality_blueprints.py",
+    "api/tests/test_models_learning_dashboard.py",
     "api/tests/test_numeric_formats.py",
     "api/tests/test_public_dialogues.py",
     "api/tests/test_quotient.py",
@@ -49,6 +53,8 @@
     "api/tests/test_substrate_kernel_parity.py",
     "api/tests/test_substrate_resonance.py",
     "api/tests/test_substrate_spec_idea_structured.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
     "docs/system_audit/commit_evidence_2026-08-15_public-dialogue-cpu-organ.json",
     "form",
     "scripts/fnri_fkwu_witness.sh",
@@ -77,9 +83,17 @@
     "status": "pass",
     "details": "The following exact-head GitHub AI review extended the embodied review set to thirty-four threads and found that Windows dialogue retrieval still launched the Bash form-cli wrapper directly through CreateProcess. On Windows, grounded ask now prefixes the wrapper command with the same Git Bash executable selected through shared file-backed Form runtime configuration; POSIX keeps direct wrapper execution. The isolated process launcher and on-process-start callback are unchanged, so the recorded PID continues to identify the Bash process group whose native descendants are reaped together. A simulated supported-Windows witness observed configured bash.exe, bin/form-cli, ask-file, and the staged query path in that order, preserved the PID callback, and returned the native protocol answer. The warning-strict grounding/MCP-substrate band passed 52 tests, and the full CI-equivalent API body passed all 2132 tests in 255.35 seconds with every Python warning promoted to an error."
   },
+  "windows_grounding_receipt_rewitness": {
+    "status": "pass",
+    "details": "The exact-head Windows composition run reached the native grounded ask and exposed a CRLF transport seam: Windows Python emitted the authenticated trace receipt with CRLF, Bash removed LF while retaining CR, and the Form trust gate correctly rejected the altered final HMAC field. The wrapper now removes only that terminal transport CR before restaging the receipt; the authenticated payload remains otherwise byte-for-byte unchanged. A direct CRLF witness returned alpha|omega without the carrier CR, the wrapper source/manifest fail-closed contract passed, and all 45 native grounding runtime tests passed. Linux CI was already green on the preceding exact head; the repaired exact-head Windows composition receipt is pending remote re-witness."
+  },
+  "whole_body_healing_rewitness": {
+    "status": "pass",
+    "details": "Warning-strict full-body observation surfaced three previously latent lifecycle seams and each was repaired before release. The JSON heartbeat relay now preserves one pending receive across keepalive boundaries, arms the next receive before acknowledging the current envelope, retrieves or cancels that task on exit, converts a recipient disconnect during delivery into the defined queue outcome, and prevents an old connection's cleanup from marking a newer socket offline. A heartbeat-boundary regression completes in 0.05 seconds instead of losing or delaying the offered envelope. Pytest's active configuration now gives all asyncio-only tests and fixtures one function-scoped event-loop owner, and the learning-dashboard tests await their async routers inside that lifecycle instead of nesting asyncio.run loops. Forced garbage collection passed the targeted 5-test plugin-transition band, the 16-test economics/exchange band, and the 21-test modality/dashboard neighborhood; the 405-test core passed. After the final relay cleanup and disconnect-race repair, the exact CI-equivalent full API body passed all 2133 tests in 193.98 seconds with every Python warning promoted to an error."
+  },
   "ci_validation": {
     "status": "pending",
-    "details": "GitHub PR checks have not run yet; local CI-equivalent focused gates pass."
+    "details": "Linux and GitGuardian passed on ab5ce4ece. The Windows composition receipt then exposed the authenticated-receipt CRLF seam described above; its exact-head rerun is pending after this repair is pushed."
   },
   "deploy_validation": {
     "status": "pending",
@@ -132,6 +146,7 @@
     "api/app/routers/INDEX.md",
     "api/app/routers/dialogues.py",
     "api/app/routers/federation.py",
+    "api/app/routers/field_relay.py",
     "api/app/routers/mcp_remote.py",
     "api/app/routers/substrate.py",
     "api/app/server.py",
@@ -144,6 +159,7 @@
     "api/app/services/unified_models.py",
     "api/config/api.json",
     "api/pyproject.toml",
+    "api/pytest.ini",
     "api/requirements.txt",
     "api/scripts/local_runner.py",
     "api/tests/INDEX.md",
@@ -152,6 +168,7 @@
     "api/tests/test_deployment_observer_oidc.py",
     "api/tests/test_federation_carrier_selection.py",
     "api/tests/test_federation_layer.py",
+    "api/tests/test_field_relay.py",
     "api/tests/test_flow_cli.py",
     "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_inductive.py",
@@ -159,6 +176,7 @@
     "api/tests/test_kernel_submodule_contract.py",
     "api/tests/test_mcp_remote_no_oauth.py",
     "api/tests/test_modality_blueprints.py",
+    "api/tests/test_models_learning_dashboard.py",
     "api/tests/test_numeric_formats.py",
     "api/tests/test_public_dialogues.py",
     "api/tests/test_quotient.py",
@@ -168,6 +186,8 @@
     "api/tests/test_substrate_kernel_parity.py",
     "api/tests/test_substrate_resonance.py",
     "api/tests/test_substrate_spec_idea_structured.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
     "docs/system_audit/commit_evidence_2026-08-15_public-dialogue-cpu-organ.json",
     "form",
     "scripts/fnri_fkwu_witness.sh",

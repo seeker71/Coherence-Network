@@ -778,6 +778,7 @@ def test_wrapper_manifest_and_fail_closed_native_flow_are_current():
     assert "native grounding attestation failed" in source
     assert "Observed callers enforce the stronger all-four-axis row" in source
     assert "first_line=\"${first_line%$'\\r'}\"" in source
+    assert "verified_receipt=\"${verified_receipt%$'\\r'}\"" in source
     assert "trust_line=\"${trust_line%$'\\r'}\"" in source
     assert '"$receipt_file.consuming"' in source
     assert "attempt=1" in source and '"$attempt" -le 2' in source

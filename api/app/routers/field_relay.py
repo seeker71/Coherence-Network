@@ -29,6 +29,7 @@ import asyncio
 import logging
 from typing import Any
 
+from anyio import BrokenResourceError, ClosedResourceError
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class _Cell:
 
 # In-memory registry: NodeID -> _Cell. Breath 2 backs the offline queue with the append-only board.
 _REGISTRY: dict[str, _Cell] = {}
+_HEARTBEAT_SECONDS = 30.0
 
 
 def _decide(to: str, kind: str) -> str:
@@ -95,14 +97,26 @@ async def field_relay(websocket: WebSocket, node_id: str) -> None:
     """
     await websocket.accept()
     _REGISTRY[node_id] = _Cell(websocket=websocket, interface=set(), connected=True)
+    receive_task: asyncio.Task[dict[str, Any]] | None = None
     try:
         await websocket.send_json({"type": "connected", "node_id": node_id})
         while True:
-            try:
-                frame: dict[str, Any] = await asyncio.wait_for(websocket.receive_json(), timeout=30.0)
-            except asyncio.TimeoutError:
+            if receive_task is None:
+                receive_task = asyncio.create_task(websocket.receive_json())
+            received, _ = await asyncio.wait(
+                {receive_task}, timeout=_HEARTBEAT_SECONDS
+            )
+            if not received:
+                # Keep the same pending receive alive.  Cancelling and replacing
+                # it at the timeout boundary can consume an arriving envelope
+                # without ever routing it.
                 await websocket.send_json({"type": "heartbeat"})
                 continue
+            frame = receive_task.result()
+            # Arm the next receive before an acknowledgement releases the
+            # sender.  This keeps a fast follow-up envelope from waiting for a
+            # later timer tick on synchronous or cross-thread ASGI carriers.
+            receive_task = asyncio.create_task(websocket.receive_json())
 
             ftype = frame.get("type")
             if ftype == "hello":
@@ -120,15 +134,37 @@ async def field_relay(websocket: WebSocket, node_id: str) -> None:
                     dest = _REGISTRY[to].websocket
                     if dest is not None:
                         # body passed through opaquely — never read, never logged
-                        await dest.send_json(
-                            {"type": "envelope", "from": node_id, "kind": kind, "body": frame.get("body")}
-                        )
+                        try:
+                            await dest.send_json(
+                                {
+                                    "type": "envelope",
+                                    "from": node_id,
+                                    "kind": kind,
+                                    "body": frame.get("body"),
+                                }
+                            )
+                        except (
+                            BrokenResourceError,
+                            ClosedResourceError,
+                            OSError,
+                            RuntimeError,
+                            WebSocketDisconnect,
+                        ):
+                            stale = _REGISTRY.get(to)
+                            if stale is not None and stale.websocket is dest:
+                                stale.connected = False
+                                stale.websocket = None
+                            decision = QUEUE
                 await websocket.send_json({"type": "routed", "to": to, "kind": kind, "decision": decision})
             # unknown frame types are ignored — the relay stays permissive
     except WebSocketDisconnect:
         pass
     finally:
+        if receive_task is not None:
+            if not receive_task.done():
+                receive_task.cancel()
+            await asyncio.gather(receive_task, return_exceptions=True)
         cell = _REGISTRY.get(node_id)
-        if cell is not None:
+        if cell is not None and cell.websocket is websocket:
             cell.connected = False
             cell.websocket = None
