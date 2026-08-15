@@ -1103,6 +1103,44 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     assert released["tombstoned_at"] == first_release.isoformat()
     monkeypatch.setattr(store, "_now", real_now)
 
+    expiry_boundary = datetime(2026, 8, 22, 1, 2, 3, tzinfo=timezone.utc)
+    expiring_row, _ = store.create_dialogue(
+        question="What remains visible at the expiry boundary?",
+        question_sha256="e" * 64,
+        point_of_view="river",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=30,
+        network_peer_sha256="c" * 64,
+        expires_at=expiry_boundary,
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    claimed = store.claim_next_dialogue("expiry-test-run")
+    assert claimed["id"] == expiring_row["id"]
+    assert store.finish_dialogue(
+        expiring_row["id"],
+        "expiry-test-run",
+        state="miss",
+        output={"outcome": "miss", "answer": ""},
+    )
+    monkeypatch.setattr(store, "_now", lambda: expiry_boundary)
+    expired = store.get_dialogue(expiring_row["id"])
+    assert expired["state"] == "tombstoned"
+    assert expired["question"] == "[released]"
+    assert expired["question_sha256"] == "0" * 64
+    assert expired["point_of_view"] == "[released]"
+    assert expired["tombstoned_at"] == expiry_boundary.isoformat()
+    monkeypatch.setattr(
+        store,
+        "_now",
+        lambda: expiry_boundary + timedelta(minutes=5),
+    )
+    assert store.get_dialogue(expiring_row["id"])["tombstoned_at"] == expired["tombstoned_at"]
+    monkeypatch.setattr(store, "_now", real_now)
+
     for index in range(5):
         store.create_dialogue(
             question=f"question {index}",

@@ -274,8 +274,20 @@ def create_dialogue(
 def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:
     ensure_schema()
     with unified_db.session() as session:
-        row = session.get(PublicDialogueRecord, dialogue_id)
-        return _row(row) if row is not None else None
+        row = session.scalar(
+            select(PublicDialogueRecord)
+            .where(PublicDialogueRecord.id == dialogue_id)
+            .with_for_update()
+        )
+        if row is None:
+            return None
+        now = _now()
+        expires_at = row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if row.state != "tombstoned" and expires_at <= now:
+            _tombstone(row, now=now)
+        return _row(row)
 
 
 def _locked_dialogue(session: Any, dialogue_id: str) -> PublicDialogueRecord | None:
