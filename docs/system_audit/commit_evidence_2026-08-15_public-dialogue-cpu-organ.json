@@ -34,6 +34,7 @@
     "api/tests/test_federation_carrier_selection.py",
     "api/tests/test_federation_layer.py",
     "api/tests/test_flow_cli.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_inductive.py",
     "api/tests/test_intern_count_stone.py",
     "api/tests/test_kernel_submodule_contract.py",
@@ -71,6 +72,10 @@
   "content_bound_form_rewitness": {
     "status": "pass",
     "details": "The next exact-head GitHub AI review extended the embodied review set to thirty-three threads and identified that dialogue admission still reduced the six offered values to lengths. Each locale, point of view, question, disclosure acknowledgement, and parent identity is now encoded as its exact UTF-8 hex value and staged into the Form invocation with the numeric timeout. Form validates the encoded envelope, constructs a SHA-256 content receipt over a length-framed six-field wire value, and returns that receipt; Python independently computes the same digest and refuses any valid-looking receipt that is not bound to the offered content. Same-length en/river/hello and fr/ocean/world offers produced different staged Form programs and independently matching receipts. Form preflight reported balanced parentheses with zero errors, warnings, and unresolved calls; Go, Rust, and TypeScript returned 63, and direct fkwu returned 63. The broadened Docker/config/dialogue/MCP/federation band passed 109 tests, and the full CI-equivalent API body passed all 2131 tests in 228.31 seconds with every Python warning promoted to an error."
+  },
+  "windows_dialogue_carrier_rewitness": {
+    "status": "pass",
+    "details": "The following exact-head GitHub AI review extended the embodied review set to thirty-four threads and found that Windows dialogue retrieval still launched the Bash form-cli wrapper directly through CreateProcess. On Windows, grounded ask now prefixes the wrapper command with the same Git Bash executable selected through shared file-backed Form runtime configuration; POSIX keeps direct wrapper execution. The isolated process launcher and on-process-start callback are unchanged, so the recorded PID continues to identify the Bash process group whose native descendants are reaped together. A simulated supported-Windows witness observed configured bash.exe, bin/form-cli, ask-file, and the staged query path in that order, preserved the PID callback, and returned the native protocol answer. The warning-strict grounding/MCP-substrate band passed 52 tests, and the full CI-equivalent API body passed all 2132 tests in 255.35 seconds with every Python warning promoted to an error."
   },
   "ci_validation": {
     "status": "pending",
@@ -148,6 +153,7 @@
     "api/tests/test_federation_carrier_selection.py",
     "api/tests/test_federation_layer.py",
     "api/tests/test_flow_cli.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
     "api/tests/test_inductive.py",
     "api/tests/test_intern_count_stone.py",
     "api/tests/test_kernel_submodule_contract.py",

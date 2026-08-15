@@ -46,6 +46,7 @@ from app.services.substrate import (
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.unified_db import session as session_scope
 from app import config_loader
+from app.services import form_kernel_bridge
 
 
 router = APIRouter()
@@ -279,6 +280,17 @@ def _grounded_ask_root() -> Path:
     if (api_root / "bin" / "form-cli").is_file():
         return api_root
     return api_root.parent
+
+
+def _windows_host() -> bool:
+    return os.name == "nt"
+
+
+def _grounded_ask_command(wrapper: Path, query_path: str) -> list[str]:
+    command = [str(wrapper), "ask-file", query_path]
+    if _windows_host():
+        return [form_kernel_bridge._bash_path(), *command]
+    return command
 
 
 _NODE_ID_RE = re.compile(r"^@[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$")
@@ -649,7 +661,7 @@ def _run_grounded_ask(
             os.fsync(query_out.fileno())
         try:
             process = _run_native_wrapper(
-                [str(wrapper), "ask-file", query_path],
+                _grounded_ask_command(wrapper, query_path),
                 cwd=root,
                 timeout=timeout,
                 on_start=on_process_start,
