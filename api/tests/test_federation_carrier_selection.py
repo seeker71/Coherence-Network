@@ -119,6 +119,7 @@ def test_form_bridge_stages_large_source_outside_the_process_arguments(
 
     monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
     monkeypatch.setattr(form_kernel_bridge, "_source_runner_path", lambda: runner)
+    monkeypatch.setattr(form_kernel_bridge, "_bash_path", lambda: "bash")
     monkeypatch.setattr(form_kernel_bridge.subprocess, "run", run)
 
     assert form_kernel_bridge.run_recipe(large_source) == "1"
@@ -126,6 +127,22 @@ def test_form_bridge_stages_large_source_outside_the_process_arguments(
     assert large_source not in observed["command"]
     assert observed["source"] == large_source + "\n"
     assert not observed["source_path"].exists()
+
+
+def test_form_bridge_resolves_configured_git_bash_off_windows_path(
+    tmp_path,
+    monkeypatch,
+):
+    program_files = tmp_path / "Program Files"
+    git_bash = program_files / "Git" / "bin" / "bash.exe"
+    git_bash.parent.mkdir(parents=True)
+    git_bash.write_bytes(b"git-bash")
+    monkeypatch.setattr(form_kernel_bridge.sys, "platform", "win32")
+    monkeypatch.setattr(form_kernel_bridge.shutil, "which", lambda _: None)
+    monkeypatch.setenv("ProgramFiles", str(program_files))
+    monkeypatch.delenv("ProgramW6432", raising=False)
+
+    assert form_kernel_bridge._bash_path() == str(git_bash)
 
 
 def test_large_federation_identity_crosses_the_file_backed_form_transport():

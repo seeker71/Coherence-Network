@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -83,6 +85,27 @@ def _source_runner_path() -> Path:
     """Resolve the file-backed direct-source runner used by form-cli eval."""
     image = _IMAGE_ROOT / "scripts" / "fkwu_run.sh"
     return image if image.is_file() else _REPO_ROOT / "scripts" / "fkwu_run.sh"
+
+
+def _bash_path() -> str:
+    """Resolve the shell carrier on POSIX and supported Windows hosts."""
+    for name in ("bash.exe", "bash") if sys.platform == "win32" else ("bash",):
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+    if sys.platform == "win32":
+        roots = (
+            os.environ.get("ProgramFiles"),
+            os.environ.get("ProgramW6432"),
+            r"C:\Program Files",
+        )
+        for root in roots:
+            if not root:
+                continue
+            candidate = Path(root) / "Git" / "bin" / "bash.exe"
+            if candidate.is_file():
+                return str(candidate)
+    raise RuntimeError("Git Bash is unavailable for the native Form source runner")
 
 
 def kernel_bin_path() -> Path:
@@ -139,7 +162,7 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
             staged.write("\n")
             source_path = Path(staged.name)
         proc = subprocess.run(
-            ["bash", str(_source_runner_path()), "--src", str(source_path)],
+            [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
             check=False,
             capture_output=True,
             text=True,
