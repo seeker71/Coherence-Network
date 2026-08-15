@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 import tomllib
@@ -64,6 +66,43 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     assert "COPY form/runtime /app/form/runtime" in dockerfile
     assert "cargo build" not in dockerfile
     assert "form-kernel-rust" not in dockerfile
+
+
+def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
+    root = tmp_path / "image"
+    scripts = root / "scripts"
+    runtime = root / "form" / "runtime"
+    stdlib = root / "form" / "form-stdlib"
+    scripts.mkdir(parents=True)
+    runtime.mkdir(parents=True)
+    stdlib.mkdir(parents=True)
+    runner = scripts / "fkwu_run.sh"
+    shutil.copy2(REPO_ROOT / "scripts" / "fkwu_run.sh", runner)
+    (runtime / "fkwu-uni.c").write_text("bootstrap", encoding="utf-8")
+    (runtime / "fkwu-optable.h").write_text("bootstrap", encoding="utf-8")
+    (stdlib / "core.fk").write_text("flat-core-marker\n", encoding="utf-8")
+    offered = root / "offered.fk"
+    offered.write_text("offered-recipe-marker\n", encoding="utf-8")
+    fkwu = root / "form" / "fkwu"
+    fkwu.write_text(
+        "#!/usr/bin/env bash\n"
+        "grep -q flat-core-marker \"$2\" || exit 4\n"
+        "grep -q offered-recipe-marker \"$2\" || exit 5\n"
+        "printf '42\\n'\n",
+        encoding="utf-8",
+    )
+    fkwu.chmod(fkwu.stat().st_mode | 0o111)
+
+    result = subprocess.run(
+        ["bash", str(runner), "--src", str(offered)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TMPDIR": str(tmp_path)},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "42"
 
 
 def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
