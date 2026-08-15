@@ -13,6 +13,7 @@ import hashlib
 import logging
 import os
 import re
+import secrets
 import signal
 import subprocess
 import threading
@@ -54,6 +55,15 @@ _DIALOGUE_ENVELOPE_RECIPE = (
     / "public_dialogue_envelope.fk"
 )
 _DIALOGUE_BAND_ENTRY = "(dialogue-band))"
+_SHA256_RECIPE_CANDIDATES = (
+    Path(__file__).resolve().parents[3]
+    / "form"
+    / "form"
+    / "form-stdlib"
+    / "sha256.fk",
+    Path("/app/form/form-stdlib/sha256.fk"),
+)
+_FORM_DIGEST_PREFIX = b"form-cli-carrier-challenge-v1\n"
 
 _BCP47_RE = re.compile(
     r"^(?:"
@@ -119,30 +129,63 @@ def set_grounded_ask_runner(runner: Callable[..., Any]) -> None:
 
 def _admit_dialogue_envelope(
     *,
-    locale_length: int,
-    point_length: int,
-    question_length: int,
-    disclosure: int,
-    parent_length: int,
+    locale: str,
+    point: str,
+    question: str,
+    disclosure: str,
+    parent: str,
     timeout_seconds: int,
 ) -> bool:
-    """Offer the real six-field envelope to Form before persistence."""
-    source = _DIALOGUE_ENVELOPE_RECIPE.read_text(encoding="utf-8")
+    """Offer content-bound encodings of all six fields to Form."""
+    values = tuple(
+        value.encode("utf-8").hex()
+        for value in (locale, point, question, disclosure, parent)
+    ) + (str(timeout_seconds),)
+    source = _native_dialogue_recipe_source()
     if source.count(_DIALOGUE_BAND_ENTRY) != 1:
         raise RuntimeError("native Form dialogue admission entry is unavailable")
     invocation = (
-        "(dialogue-offered (dialogue-envelope "
-        f"{locale_length} {point_length} {question_length} {disclosure} "
-        f"{parent_length} {timeout_seconds}))"
-        ")"
+        "(dialogue-envelope-receipt "
+        + " ".join(f'"{value}"' for value in values[:-1])
+        + f" {timeout_seconds}))"
     )
-    admitted = form_kernel_bridge.run_recipe(
+    receipt = form_kernel_bridge.run_recipe(
         source.replace(_DIALOGUE_BAND_ENTRY, invocation),
         timeout=10,
     )
-    if admitted not in {"0", "1"}:
+    pieces = receipt.split("|")
+    if pieces == ["0", ""]:
+        return False
+    if len(pieces) != 2 or pieces[0] != "1" or not re.fullmatch(
+        r"[0-9a-f]{64}", pieces[1]
+    ):
         raise RuntimeError("native Form dialogue admission returned an invalid verdict")
-    return admitted == "1"
+    canonical = "public-dialogue-envelope-v2|" + "".join(
+        f"{len(value)}:{value}" for value in values
+    )
+    expected = hashlib.sha256(
+        _FORM_DIGEST_PREFIX + canonical.encode("ascii")
+    ).hexdigest()
+    if not secrets.compare_digest(pieces[1], expected):
+        raise RuntimeError("native Form dialogue receipt did not bind the offered envelope")
+    return True
+
+
+def _native_dialogue_recipe_source() -> str:
+    for candidate in _SHA256_RECIPE_CANDIDATES:
+        if candidate.is_file():
+            sha256_source = candidate.read_text(encoding="utf-8")
+            break
+    else:
+        raise RuntimeError("native Form SHA-256 recipe is unavailable")
+    source = sha256_source + "\n" + _DIALOGUE_ENVELOPE_RECIPE.read_text(
+        encoding="utf-8"
+    )
+    return "\n".join(
+        line
+        for line in source.splitlines()
+        if not line.lstrip().startswith("; preludes:")
+    )
 
 
 def _contains_control(value: str) -> bool:
@@ -269,13 +312,11 @@ def submit_dialogue(
             start_window_seconds=START_WINDOW_SECONDS,
         ) as admission_session:
             if not _admit_dialogue_envelope(
-                locale_length=len(requested_locale),
-                point_length=len(point_of_view),
-                question_length=len(question),
-                disclosure=int(
-                    public_disclosure_ack == store.PUBLIC_DISCLOSURE_ACK
-                ),
-                parent_length=len(parent_dialogue_id or ""),
+                locale=requested_locale,
+                point=point_of_view,
+                question=question,
+                disclosure=public_disclosure_ack,
+                parent=parent_dialogue_id or "",
                 timeout_seconds=channel_timeout_seconds,
             ):
                 raise RuntimeError("native Form declined the public dialogue envelope")

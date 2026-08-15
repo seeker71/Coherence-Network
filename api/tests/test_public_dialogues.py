@@ -21,6 +21,7 @@ from app.routers import substrate as substrate_router
 from app.routers.dialogues import DialogueCreate
 from app.main import app
 from app.services import dialogue_service
+from app.services import form_kernel_bridge
 from app.services import public_dialogue_store as store
 
 
@@ -278,13 +279,65 @@ def test_form_receives_the_real_dialogue_envelope_before_persistence(
 
     assert offered["state"] == "pending"
     assert observed == {
-        "locale_length": 2,
-        "point_length": len("akar bakau"),
-        "question_length": len("Apa yang dirasakan akar bakau?"),
-        "disclosure": 1,
-        "parent_length": 0,
+        "locale": "id",
+        "point": "akar bakau",
+        "question": "Apa yang dirasakan akar bakau?",
+        "disclosure": "public-unlisted-v1",
+        "parent": "",
         "timeout_seconds": 60,
     }
+
+
+def test_form_receipt_is_bound_to_same_length_dialogue_values(monkeypatch):
+    original_run_recipe = form_kernel_bridge.run_recipe
+    sources = []
+
+    def observed_run(source, *, timeout):
+        sources.append(source)
+        return original_run_recipe(source, timeout=timeout)
+
+    monkeypatch.setattr(form_kernel_bridge, "run_recipe", observed_run)
+
+    assert dialogue_service._admit_dialogue_envelope(
+        locale="en",
+        point="river",
+        question="hello",
+        disclosure="public-unlisted-v1",
+        parent="",
+        timeout_seconds=60,
+    )
+    assert dialogue_service._admit_dialogue_envelope(
+        locale="fr",
+        point="ocean",
+        question="world",
+        disclosure="public-unlisted-v1",
+        parent="",
+        timeout_seconds=60,
+    )
+
+    assert len(sources) == 2
+    assert sources[0] != sources[1]
+    assert '"656e" "7269766572" "68656c6c6f"' in sources[0]
+    assert '"6672" "6f6365616e" "776f726c64"' in sources[1]
+    assert "dialogue-envelope-receipt" in sources[0]
+
+
+def test_form_dialogue_receipt_rejects_a_digest_not_bound_to_the_offer(monkeypatch):
+    monkeypatch.setattr(
+        form_kernel_bridge,
+        "run_recipe",
+        lambda *_, **__: "1|" + "0" * 64,
+    )
+
+    with pytest.raises(RuntimeError, match="did not bind"):
+        dialogue_service._admit_dialogue_envelope(
+            locale="en",
+            point="river",
+            question="hello",
+            disclosure="public-unlisted-v1",
+            parent="",
+            timeout_seconds=60,
+        )
 
 
 def test_known_pacing_refusal_happens_before_form(dialogue_store, monkeypatch):
