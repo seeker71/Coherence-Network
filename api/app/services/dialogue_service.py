@@ -583,6 +583,8 @@ def _worker_loop() -> None:
             moved = False
         if moved:
             continue
+        if _WORKER_STOP.is_set():
+            break
         _WORKER_WAKE.wait(timeout=5.0)
         _WORKER_WAKE.clear()
 
@@ -602,5 +604,15 @@ def ensure_dialogue_worker() -> None:
 
 
 def stop_dialogue_worker() -> None:
-    _WORKER_STOP.set()
-    _WORKER_WAKE.set()
+    global _WORKER_THREAD
+    with _WORKER_LOCK:
+        _WORKER_STOP.set()
+        _WORKER_WAKE.set()
+        thread = _WORKER_THREAD
+        if thread is None:
+            return
+        if thread is threading.current_thread():
+            return
+        thread.join()
+        if _WORKER_THREAD is thread:
+            _WORKER_THREAD = None

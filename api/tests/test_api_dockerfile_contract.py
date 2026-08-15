@@ -103,6 +103,7 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
         "app": "app.main:app",
         "host": "0.0.0.0",
         "port": 8000,
+        "ws": "websockets-sansio",
         "proxy_headers": True,
         "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
     }

@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GO = os.path.join(ROOT, "form", "form", "form-kernel-go", "bin-go")
@@ -24,7 +25,9 @@ LOGIC = ["form-cli-repl-control.fk"]   # pure launch/line-routing recipe; no fkw
 
 def kernel(exprs, timeout=5.0):
     """run the control recipe + a list of (print ...) exprs on the Go kernel; return outputs."""
-    src = "\n".join(open(os.path.join(STD, r)).read() for r in LOGIC)
+    src = "\n".join(
+        Path(STD, recipe).read_text(encoding="utf-8") for recipe in LOGIC
+    )
     src += "\n" + "\n".join(f"(print {e})" for e in exprs) + "\n"
     with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as f:
         f.write(src)

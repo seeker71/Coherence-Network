@@ -275,7 +275,13 @@ def _free_port() -> int:
 @contextmanager
 def _serve_app():
     port = _free_port()
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    config = uvicorn.Config(
+        app,
+        host="127.0.0.1",
+        port=port,
+        log_level="error",
+        ws="websockets-sansio",
+    )
     server = uvicorn.Server(config)
     server.install_signal_handlers = lambda: None  # type: ignore[assignment]
     thread = threading.Thread(target=server.run, daemon=True)

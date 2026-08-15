@@ -651,6 +651,45 @@ def test_worker_loop_survives_transient_store_fault(monkeypatch, caplog):
     dialogue_service._WORKER_STOP.clear()
 
 
+def test_worker_shutdown_waits_and_restart_gets_a_fresh_thread(monkeypatch):
+    entered = threading.Event()
+    release = threading.Event()
+    restarted = threading.Event()
+
+    def blocking_tombstone():
+        entered.set()
+        release.wait()
+
+    monkeypatch.setattr(store, "tombstone_expired", blocking_tombstone)
+    monkeypatch.setattr(dialogue_service, "process_dialogue_once", lambda: False)
+    dialogue_service._WORKER_STOP.clear()
+    dialogue_service._WORKER_THREAD = None
+    dialogue_service.ensure_dialogue_worker()
+    assert entered.wait(timeout=1)
+    first_thread = dialogue_service._WORKER_THREAD
+
+    stopper = threading.Thread(target=dialogue_service.stop_dialogue_worker)
+    stopper.start()
+    assert stopper.is_alive()
+    release.set()
+    stopper.join(timeout=1)
+    assert not stopper.is_alive()
+    assert dialogue_service._WORKER_THREAD is None
+
+    def observe_restart():
+        restarted.set()
+        dialogue_service._WORKER_STOP.set()
+
+    monkeypatch.setattr(store, "tombstone_expired", observe_restart)
+    dialogue_service.ensure_dialogue_worker()
+    second_thread = dialogue_service._WORKER_THREAD
+    assert second_thread is not None
+    assert second_thread is not first_thread
+    assert restarted.wait(timeout=1)
+    dialogue_service.stop_dialogue_worker()
+    assert dialogue_service._WORKER_THREAD is None
+
+
 def test_dialogue_store_is_not_the_internal_agent_task_namespace():
     assert store.PublicDialogueRecord.__tablename__ == "public_dialogues"
     assert "agent" not in store.PublicDialogueRecord.__tablename__
