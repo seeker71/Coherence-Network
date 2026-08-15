@@ -340,6 +340,13 @@ def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
+async def _run_dialogue_tool(handler: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    try:
+        return await run_in_threadpool(handler, *args, **kwargs)
+    except Exception:
+        return {"error": "Dialogue storage is presently unavailable."}
+
+
 async def _handle_jsonrpc(
     payload: dict[str, Any],
     *,
@@ -376,7 +383,7 @@ async def _handle_jsonrpc(
         if name == "fetch":
             return _jsonrpc_result(request_id, _content_result(_fetch(arguments)))
         if name == "start_dialogue":
-            result = await run_in_threadpool(
+            result = await _run_dialogue_tool(
                 _start_dialogue,
                 arguments,
                 public_origin=public_origin,
@@ -386,13 +393,13 @@ async def _handle_jsonrpc(
                 _content_result(result, is_error="error" in result),
             )
         if name == "get_dialogue":
-            result = await run_in_threadpool(_get_dialogue, arguments)
+            result = await _run_dialogue_tool(_get_dialogue, arguments)
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),
             )
         if name == "remove_dialogue":
-            result = await run_in_threadpool(_remove_dialogue, arguments)
+            result = await _run_dialogue_tool(_remove_dialogue, arguments)
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),

@@ -1,12 +1,12 @@
 """Thin durable carrier admitted by the native Form federation recipe.
 
-Form owns which operation shapes enter. Python carries content-addressed bytes
-and filesystem indexes without interpreting message text.
+Form owns which operation shapes enter and constructs the content-addressed
+message and edge identities. Python persists those opaque identities and
+encoded bytes without interpreting message text.
 """
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 import os
 import re
@@ -22,12 +22,23 @@ from app.services import form_kernel_bridge
 
 _LOCK = threading.RLock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
+_EDGE_ID = re.compile(r"^edge_[0-9a-f]{64}$")
+_FORM_TOKEN = re.compile(r"^[A-Za-z0-9_-]*$")
+_OFFER_IDENTITY_TIMEOUT_SECONDS = 30
 _RECIPE = (
     Path(__file__).resolve().parent.parent
     / "form_recipes"
     / "public_federation_graph_cli.fk"
 )
 _BAND_ENTRY = "(pfgc-band))"
+_SHA256_RECIPE_CANDIDATES = (
+    Path(__file__).resolve().parents[3]
+    / "form"
+    / "form"
+    / "form-stdlib"
+    / "sha256.fk",
+    Path("/app/form/form-stdlib/sha256.fk"),
+)
 
 if sys.platform == "win32":
     import msvcrt
@@ -72,7 +83,7 @@ def _admit(operation: int, *shape: int) -> None:
     """Offer the actual operation and encoded message shape to Form."""
     if len(shape) != 6 or any(value < 0 for value in shape):
         raise RuntimeError("native Form federation admission shape is invalid")
-    source = _RECIPE.read_text(encoding="utf-8")
+    source = _native_recipe_source()
     if source.count(_BAND_ENTRY) != 1:
         raise RuntimeError("native Form federation admission entry is unavailable")
     invocation = f"(pfgc-admit {operation} {' '.join(str(value) for value in shape)}))"
@@ -84,16 +95,50 @@ def _admit(operation: int, *shape: int) -> None:
         raise RuntimeError("native Form federation admission was not witnessed")
 
 
-def _field(value: str) -> str:
-    return f"{len(value)}:{value}"
+def _sha256_recipe_source() -> str:
+    for candidate in _SHA256_RECIPE_CANDIDATES:
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    raise RuntimeError("native Form SHA-256 recipe is unavailable")
 
 
-def _message_id(*values: str) -> str:
-    canonical = "federation-message-v1|" + "".join(_field(value) for value in values)
-    digest = hashlib.sha256(
-        b"form-cli-carrier-challenge-v1\n" + canonical.encode("ascii")
-    ).hexdigest()
-    return f"msg_{digest}"
+def _without_prelude_directives(source: str) -> str:
+    return "\n".join(
+        line
+        for line in source.splitlines()
+        if not line.lstrip().startswith("; preludes:")
+    )
+
+
+def _native_recipe_source() -> str:
+    return _without_prelude_directives(
+        _sha256_recipe_source() + "\n" + _RECIPE.read_text(encoding="utf-8")
+    )
+
+
+def _offer_identity(*values: str) -> tuple[str, str]:
+    """Ask Form to construct the content-addressed message and graph edge."""
+    if len(values) != 6 or any(not _FORM_TOKEN.fullmatch(value) for value in values):
+        raise RuntimeError("native Form federation offer contains an invalid token")
+    source = _native_recipe_source()
+    if source.count(_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form federation admission entry is unavailable")
+    invocation = "(pfgc-offer-receipt " + " ".join(
+        f'"{value}"' for value in values
+    ) + "))"
+    receipt = form_kernel_bridge.run_recipe(
+        source.replace(_BAND_ENTRY, invocation),
+        timeout=_OFFER_IDENTITY_TIMEOUT_SECONDS,
+    )
+    pieces = receipt.split("|")
+    if (
+        len(pieces) != 3
+        or pieces[0] != "1"
+        or not _ID.fullmatch(pieces[1])
+        or not _EDGE_ID.fullmatch(pieces[2])
+    ):
+        raise RuntimeError("native Form federation identity receipt is invalid")
+    return pieces[1], pieces[2]
 
 
 def _path(name: str) -> Path:
@@ -155,17 +200,13 @@ def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
     encoded_text = _token(text)
     encoded_payload = _token(json.dumps(payload, sort_keys=True, separators=(",", ":")))
     encoded_timestamp = _token(timestamp)
-    _admit(
-        1,
-        len(encoded_from),
-        len(encoded_to),
-        len(encoded_kind),
-        len(encoded_text),
-        len(encoded_payload),
-        len(encoded_timestamp),
-    )
-    message_id = _message_id(
-        encoded_from, encoded_to, encoded_kind, encoded_text, encoded_payload, encoded_timestamp
+    message_id, edge_id = _offer_identity(
+        encoded_from,
+        encoded_to,
+        encoded_kind,
+        encoded_text,
+        encoded_payload,
+        encoded_timestamp,
     )
     with _LOCK:
         message_path = _path(f"message-{message_id}")
@@ -178,6 +219,16 @@ def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
                     f"payload={encoded_payload}", f"timestamp={encoded_timestamp}",
                 )),
             )
+        edge_path = _path(f"edge-{edge_id}")
+        if not edge_path.is_file():
+            _atomic_write_ascii(
+                edge_path,
+                "\n".join((
+                    f"id={edge_id}", f"message_id={message_id}",
+                    f"from_node={encoded_from}", f"to_node={encoded_to}",
+                    f"type={encoded_kind}",
+                )),
+            )
         _append_id(_path(f"out-{encoded_from}"), message_id)
         _append_id(
             _path("broadcast" if not encoded_to else f"in-{encoded_to}"), message_id
@@ -185,8 +236,8 @@ def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
     return {
         "ack": "node",
         "message_id": message_id,
-        "message_node": "content-addressed",
-        "edge_node": "content-addressed",
+        "message_node": message_id,
+        "edge_node": edge_id,
         "persisted": "1",
         "traversable": "1",
         "observed": "1",

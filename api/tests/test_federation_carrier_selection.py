@@ -1,6 +1,7 @@
 """Selection and recovery witnesses for Form federation admission."""
 from __future__ import annotations
 
+import hashlib
 import multiprocessing
 import time
 from pathlib import Path
@@ -25,19 +26,27 @@ def _append_from_process(store: str, message_id: str, ready, start) -> None:
     carrier._append_id(Path(store) / "broadcast", message_id)
 
 
-def test_federation_offers_the_actual_operation_shape_to_form(monkeypatch):
+def test_federation_offers_the_actual_values_to_form(monkeypatch):
     observed = {}
 
     def run_recipe(source, *, timeout):
         observed.update(source=source, timeout=timeout)
-        return "1"
+        return f"1|msg_{'a' * 64}|edge_{'b' * 64}"
 
     monkeypatch.setattr(form_kernel_bridge, "run_recipe", run_recipe)
-    carrier._admit(1, 8, 0, 4, 12, 16, 20)
+    message_id, edge_id = carrier._offer_identity(
+        "R2lsZXM", "QXJpZWw", "bGlnaHQtY29kZQ", "MzM", "e30", "MjAyNg"
+    )
 
-    assert "(pfgc-admit 1 8 0 4 12 16 20)" in observed["source"]
+    assert (
+        '(pfgc-offer-receipt "R2lsZXM" "QXJpZWw" "bGlnaHQtY29kZQ" '
+        '"MzM" "e30" "MjAyNg")'
+    ) in observed["source"]
+    assert "sha256-stream-string" in observed["source"]
     assert "(pfgc-band)" not in observed["source"]
-    assert observed["timeout"] == 10
+    assert observed["timeout"] == carrier._OFFER_IDENTITY_TIMEOUT_SECONDS
+    assert message_id == f"msg_{'a' * 64}"
+    assert edge_id == f"edge_{'b' * 64}"
 
 
 def test_federation_form_refusal_stops_the_carrier(monkeypatch):
@@ -47,12 +56,44 @@ def test_federation_form_refusal_stops_the_carrier(monkeypatch):
         carrier._admit(2, 8, 0, 0, 0, 0, 0)
 
 
+def test_federation_form_identity_refusal_stops_the_carrier(monkeypatch):
+    monkeypatch.setattr(form_kernel_bridge, "run_recipe", lambda *_, **__: "0||")
+
+    with pytest.raises(RuntimeError, match="identity receipt is invalid"):
+        carrier._offer_identity("a", "", "b", "c", "d", "e")
+
+
 def test_federation_admission_recipe_is_static_and_present():
     assert carrier._RECIPE.is_file()
     source = carrier._RECIPE.read_text(encoding="utf-8")
     assert "pfgc-admit" in source
     assert "pfgc-offer" in source
+    assert "pfgc-offer-receipt" in source
+    assert "pfgc-message-id" in source
+    assert "pfgc-edge-id" in source
     assert "1111" not in source
+
+
+def test_federation_message_and_edge_identities_are_computed_by_form():
+    values = ("R2lsZXM", "QXJpZWw", "bGlnaHQtY29kZQ", "MzM", "e30", "MjAyNg")
+
+    def field(value: str) -> str:
+        return f"{len(value)}:{value}"
+
+    def digest(canonical: str) -> str:
+        return hashlib.sha256(
+            b"form-cli-carrier-challenge-v1\n" + canonical.encode("ascii")
+        ).hexdigest()
+
+    expected_message = "msg_" + digest(
+        "federation-message-v1|" + "".join(field(value) for value in values)
+    )
+    expected_edge = "edge_" + digest(
+        "federation-edge-v1|"
+        + "".join(field(value) for value in (*values[:3], expected_message))
+    )
+
+    assert carrier._offer_identity(*values) == (expected_message, expected_edge)
 
 
 def test_federation_recipe_path_follows_the_application_package():
@@ -89,6 +130,13 @@ def test_federation_store_path_uses_file_backed_configuration(tmp_path, monkeypa
 def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monkeypatch):
     monkeypatch.setattr(carrier, "get_str", lambda *_, **__: str(tmp_path))
     monkeypatch.setattr(carrier, "_admit", lambda *_, **__: None)
+    message_id = f"msg_{'c' * 64}"
+    edge_id = f"edge_{'d' * 64}"
+    monkeypatch.setattr(
+        carrier,
+        "_offer_identity",
+        lambda *_: (message_id, edge_id),
+    )
     real_append = carrier._append_id
     interrupted = False
 
@@ -113,12 +161,15 @@ def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monk
 
     message_files = list(tmp_path.glob("message-msg_*"))
     assert len(message_files) == 1
-    message_id = message_files[0].name.removeprefix("message-")
+    assert message_files[0].name.removeprefix("message-") == message_id
 
     monkeypatch.setattr(carrier, "_append_id", real_append)
     retried = carrier.offer(**values)
 
     assert retried["message_id"] == message_id
+    assert retried["message_node"] == message_id
+    assert retried["edge_node"] == edge_id
+    assert (tmp_path / f"edge-{edge_id}").is_file()
     assert message_id in carrier.visible_ids("Ariel")
     assert message_id in carrier._read_ids(tmp_path / f"out-{carrier._token('Giles')}")
 

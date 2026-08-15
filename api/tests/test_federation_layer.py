@@ -11,12 +11,16 @@ Covers done_when criteria:
 
 from __future__ import annotations
 
+import asyncio
+import threading
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.routers import federation as federation_router
+from app.services import native_federation_graph_service
 
 BASE = "http://test"
 
@@ -208,6 +212,53 @@ async def test_send_node_message():
         assert body["text"] == "Hello from federation test"
         assert "id" in body
         assert "timestamp" in body
+
+
+@pytest.mark.asyncio
+async def test_native_form_message_offer_keeps_the_event_loop_available(monkeypatch):
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def offer(**_):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "message_id": f"msg_{'a' * 64}",
+            "message_node": f"msg_{'a' * 64}",
+            "edge_node": f"edge_{'b' * 64}",
+            "persisted": "1",
+            "traversable": "1",
+            "observed": "1",
+        }
+
+    monkeypatch.setattr(native_federation_graph_service, "offer", offer)
+    monkeypatch.setattr(federation_router, "_store_message", lambda message: message)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        offer_task = asyncio.create_task(
+            client.post(
+                "/api/federation/nodes/Giles/messages",
+                json={
+                    "from_node": "Giles",
+                    "to_node": "Ariel",
+                    "type": "light-code",
+                    "text": "33",
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await offer_task
+        finally:
+            read_completed.set()
+            if not offer_task.done():
+                await offer_task
+
+    assert info.status_code == 200
+    assert response.status_code == 201
+    assert response.json()["graph_ack"]["observed"] == "1"
 
 
 # ---------------------------------------------------------------------------

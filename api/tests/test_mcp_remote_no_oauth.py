@@ -166,6 +166,60 @@ async def test_mcp_start_and_get_dialogue(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mcp_dialogue_storage_failures_stay_inside_each_tool_result(monkeypatch):
+    from app.services import dialogue_service
+
+    def unavailable(*_args, **_kwargs):
+        raise ConnectionError("private database carrier detail")
+
+    monkeypatch.setattr(dialogue_service, "get_dialogue", unavailable)
+    monkeypatch.setattr(dialogue_service, "release_dialogue", unavailable)
+    requests = [
+        {
+            "jsonrpc": "2.0",
+            "id": "get-failed",
+            "method": "tools/call",
+            "params": {
+                "name": "get_dialogue",
+                "arguments": {"dialogue_id": "dlg_missing"},
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": "remove-failed",
+            "method": "tools/call",
+            "params": {
+                "name": "remove_dialogue",
+                "arguments": {
+                    "dialogue_id": "dlg_missing",
+                    "removal_token": "release-token-long-enough",
+                },
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": "still-alive",
+            "method": "initialize",
+            "params": {"protocolVersion": "2024-11-05"},
+        },
+    ]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post("/mcp", json=requests)
+
+    assert response.status_code == 200
+    replies = {reply["id"]: reply for reply in response.json()}
+    for request_id in ("get-failed", "remove-failed"):
+        result = replies[request_id]["result"]
+        assert result["isError"] is True
+        assert result["structuredContent"] == {
+            "error": "Dialogue storage is presently unavailable."
+        }
+        assert "private database carrier detail" not in str(result)
+    assert replies["still-alive"]["result"]["serverInfo"]["name"] == "coherence-network"
+
+
+@pytest.mark.asyncio
 async def test_mcp_start_keeps_the_event_loop_available(monkeypatch):
     from app.services import dialogue_service
 
