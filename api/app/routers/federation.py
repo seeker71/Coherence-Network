@@ -9,8 +9,10 @@ import queue
 import threading
 import time
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 
+import anyio
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -65,6 +67,13 @@ from app.services import native_federation_graph_service
 from app.services import unified_db as _udb
 
 router = APIRouter()
+_NATIVE_FORM_LIMITER = anyio.CapacityLimiter(1)
+
+
+async def _run_native_form(function: Any, /, *args: Any, **kwargs: Any) -> Any:
+    """Wait outside AnyIO's shared worker pool for the one federation CPU lane."""
+    call = partial(function, *args, **kwargs)
+    return await anyio.to_thread.run_sync(call, limiter=_NATIVE_FORM_LIMITER)
 
 
 @router.post("/federation/instances", response_model=FederatedInstance, status_code=201, summary="Register a remote Coherence instance")
@@ -867,7 +876,7 @@ async def send_message(node_id: str, body: NodeMessage):
     """Send a message from this node. Set to_node=null to broadcast."""
     timestamp = datetime.now(timezone.utc).isoformat()
     try:
-        graph = await run_in_threadpool(
+        graph = await _run_native_form(
             native_federation_graph_service.offer,
             from_node=node_id, to_node=body.to_node, kind=body.type,
             text=body.text, payload=body.payload, timestamp=timestamp,
@@ -907,7 +916,7 @@ async def get_messages(
 ):
     """Get messages for this node; observation is consuming only when requested."""
     try:
-        results = await run_in_threadpool(
+        results = await _run_native_form(
             _query_messages,
             node_id,
             since=since,
@@ -929,7 +938,7 @@ async def get_messages(
 async def get_message_by_id(message_id: str):
     """Read a federation node message by id."""
     try:
-        msg = await run_in_threadpool(_get_message, message_id)
+        msg = await _run_native_form(_get_message, message_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if msg is None:
@@ -942,7 +951,7 @@ async def broadcast_message(body: NodeMessage):
     """Broadcast a message to all nodes."""
     timestamp = datetime.now(timezone.utc).isoformat()
     try:
-        graph = await run_in_threadpool(
+        graph = await _run_native_form(
             native_federation_graph_service.offer,
             from_node=body.from_node, to_node=None, kind=body.type,
             text=body.text, payload=body.payload, timestamp=timestamp,

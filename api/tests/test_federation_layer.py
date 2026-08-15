@@ -261,6 +261,69 @@ async def test_native_form_message_offer_keeps_the_event_loop_available(monkeypa
     assert response.json()["graph_ack"]["observed"] == "1"
 
 
+@pytest.mark.asyncio
+async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypatch):
+    from app.services import dialogue_service
+
+    started = threading.Event()
+    release = threading.Event()
+    starts = []
+
+    def offer(**_):
+        starts.append(threading.get_ident())
+        started.set()
+        release.wait(3)
+        return {
+            "message_id": f"msg_{'a' * 64}",
+            "message_node": f"msg_{'a' * 64}",
+            "edge_node": f"edge_{'b' * 64}",
+            "persisted": "1",
+            "traversable": "1",
+            "observed": "1",
+        }
+
+    monkeypatch.setattr(native_federation_graph_service, "offer", offer)
+    monkeypatch.setattr(federation_router, "_store_message", lambda message: message)
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue",
+        lambda dialogue_id: {"id": dialogue_id, "state": "miss"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        offers = [
+            asyncio.create_task(
+                client.post(
+                    f"/api/federation/nodes/sender-{index}/messages",
+                    json={
+                        "from_node": f"sender-{index}",
+                        "to_node": "Ariel",
+                        "type": "light-code",
+                        "text": "33",
+                    },
+                )
+            )
+            for index in range(45)
+        ]
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            await asyncio.sleep(0.05)
+            dialogue = await asyncio.wait_for(
+                client.get("/api/dialogues/dlg_concurrent"),
+                timeout=1,
+            )
+            assert len(starts) == 1
+            release.set()
+            responses = await asyncio.gather(*offers)
+        finally:
+            release.set()
+            await asyncio.gather(*offers, return_exceptions=True)
+
+    assert dialogue.status_code == 200
+    assert dialogue.json()["state"] == "miss"
+    assert all(response.status_code == 201 for response in responses)
+
+
 # ---------------------------------------------------------------------------
 # 6. POST /api/federation/broadcast sends to all nodes
 # ---------------------------------------------------------------------------

@@ -355,6 +355,8 @@ def tombstone_dialogue(dialogue_id: str, removal_token_sha256: str) -> int | boo
             row.removal_token_sha256, removal_token_sha256
         ):
             return False
+        if row.state == "tombstoned":
+            return True
         carrier_pgid = row.carrier_pgid
         _tombstone(row)
         return carrier_pgid if carrier_pgid is not None else True

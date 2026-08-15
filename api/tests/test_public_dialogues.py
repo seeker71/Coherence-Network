@@ -1032,13 +1032,23 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     observed = store.get_dialogue(row["id"])
     assert observed["state"] == "miss"
     assert observed["output"]["outcome"] == "miss"
+    real_now = store._now
+    first_release = datetime(2026, 8, 15, 1, 2, 3, tzinfo=timezone.utc)
+    retry_release = datetime(2026, 8, 15, 4, 5, 6, tzinfo=timezone.utc)
+    monkeypatch.setattr(store, "_now", lambda: first_release)
     assert dialogue_service.release_dialogue(row["id"], token) is True
+    released_once = store.get_dialogue(row["id"])
+    monkeypatch.setattr(store, "_now", lambda: retry_release)
     assert dialogue_service.release_dialogue(row["id"], token) is True
     assert dialogue_service.release_dialogue(row["id"], "different-capability-token-long-enough") is False
     released = store.get_dialogue(row["id"])
     assert released["state"] == "tombstoned"
     assert released["question"] == "[released]"
     assert released["question_sha256"] == "0" * 64
+    assert released["updated_at"] == released_once["updated_at"]
+    assert released["tombstoned_at"] == released_once["tombstoned_at"]
+    assert released["tombstoned_at"] == first_release.isoformat()
+    monkeypatch.setattr(store, "_now", real_now)
 
     for index in range(5):
         store.create_dialogue(
