@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import multiprocessing
+import signal
+import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -107,26 +109,115 @@ def test_form_bridge_stages_large_source_outside_the_process_arguments(
     runner = tmp_path / "fkwu_run.sh"
     large_source = '(do (let offered "' + ("x" * 150_000) + '") "1")'
 
-    def run(command, **kwargs):
-        source_path = Path(command[-1])
-        observed.update(
-            command=command,
-            source=source_path.read_text(encoding="utf-8"),
-            source_path=source_path,
-            kwargs=kwargs,
-        )
-        return SimpleNamespace(returncode=0, stdout="1\n", stderr="")
+    class Process:
+        returncode = 0
+
+        def __init__(self, command, **kwargs):
+            source_path = Path(command[-1])
+            observed.update(
+                command=command,
+                source=source_path.read_text(encoding="utf-8"),
+                source_path=source_path,
+                kwargs=kwargs,
+            )
+
+        def communicate(self, *, timeout):
+            observed["timeout"] = timeout
+            return "1\n", ""
 
     monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
     monkeypatch.setattr(form_kernel_bridge, "_source_runner_path", lambda: runner)
     monkeypatch.setattr(form_kernel_bridge, "_bash_path", lambda: "bash")
-    monkeypatch.setattr(form_kernel_bridge.subprocess, "run", run)
+    monkeypatch.setattr(form_kernel_bridge.subprocess, "Popen", Process)
 
     assert form_kernel_bridge.run_recipe(large_source) == "1"
     assert observed["command"][:3] == ["bash", str(runner), "--src"]
     assert large_source not in observed["command"]
     assert observed["source"] == large_source + "\n"
     assert not observed["source_path"].exists()
+
+
+def test_form_timeout_is_normalized_and_reaps_the_carrier_tree(tmp_path, monkeypatch):
+    observed = {}
+
+    class TimedProcess:
+        pid = 31337
+        returncode = None
+
+        def __init__(self, command, **kwargs):
+            observed.update(command=command, kwargs=kwargs)
+
+        def communicate(self, *, timeout):
+            raise subprocess.TimeoutExpired(observed["command"], timeout)
+
+    monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
+    monkeypatch.setattr(form_kernel_bridge, "_source_runner_path", lambda: tmp_path / "runner")
+    monkeypatch.setattr(form_kernel_bridge, "_bash_path", lambda: "bash")
+    monkeypatch.setattr(form_kernel_bridge.subprocess, "Popen", TimedProcess)
+    monkeypatch.setattr(
+        form_kernel_bridge,
+        "_reap_process_tree",
+        lambda process: observed.update(reaped=process.pid),
+    )
+
+    with pytest.raises(RuntimeError, match="timed out after 0.25 seconds"):
+        form_kernel_bridge.run_recipe("(do 1)", timeout=0.25)
+
+    assert observed["reaped"] == 31337
+
+
+def test_posix_form_timeout_kills_and_reaps_the_process_group(monkeypatch):
+    observed = []
+
+    class Process:
+        pid = 4242
+
+        def communicate(self, *, timeout):
+            observed.append(("communicate", timeout))
+            return "", ""
+
+    monkeypatch.setattr(form_kernel_bridge.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        form_kernel_bridge.os,
+        "killpg",
+        lambda pid, sig: observed.append(("killpg", pid, sig)),
+    )
+
+    form_kernel_bridge._reap_process_tree(Process())
+
+    assert observed == [
+        ("killpg", 4242, signal.SIGKILL),
+        ("communicate", 5),
+    ]
+
+
+def test_windows_form_timeout_terminates_the_process_tree(monkeypatch):
+    observed = []
+
+    class Process:
+        pid = 31337
+
+        def communicate(self, *, timeout):
+            observed.append(("communicate", timeout))
+            return "", ""
+
+        def kill(self):
+            observed.append(("kill",))
+
+    def taskkill(command, **kwargs):
+        observed.append(("taskkill", command, kwargs))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(form_kernel_bridge.sys, "platform", "win32")
+    monkeypatch.setattr(form_kernel_bridge.subprocess, "run", taskkill)
+
+    form_kernel_bridge._reap_process_tree(Process())
+
+    assert observed[0][0:2] == (
+        "taskkill",
+        ["taskkill", "/PID", "31337", "/T", "/F"],
+    )
+    assert observed[1] == ("communicate", 5)
 
 
 def test_form_bridge_resolves_configured_git_bash_off_windows_path(

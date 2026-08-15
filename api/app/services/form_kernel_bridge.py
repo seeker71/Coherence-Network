@@ -32,6 +32,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -108,6 +109,39 @@ def _bash_path() -> str:
     raise RuntimeError("Git Bash is unavailable for the native Form source runner")
 
 
+def _process_group_kwargs() -> dict[str, Any]:
+    if sys.platform == "win32":
+        return {
+            "creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+        }
+    return {"start_new_session": True}
+
+
+def _reap_process_tree(process: subprocess.Popen[str]) -> None:
+    """Force a timed-out source runner and all native descendants to exit."""
+    if sys.platform == "win32":
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            process.kill()
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    try:
+        process.communicate(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+
+
 def kernel_bin_path() -> Path:
     """Return the direct-source fkwu binary used by recipe execution."""
     image = _IMAGE_ROOT / "form" / "fkwu"
@@ -161,22 +195,29 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
             staged.write(fk_source)
             staged.write("\n")
             source_path = Path(staged.name)
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
-            check=False,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
+            **_process_group_kwargs(),
         )
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            _reap_process_tree(proc)
+            raise RuntimeError(
+                f"fkwu timed out after {timeout:g} seconds"
+            ) from exc
     finally:
         if source_path is not None:
             source_path.unlink(missing_ok=True)
 
     if proc.returncode != 0:
         raise RuntimeError(
-            f"fkwu failed (exit {proc.returncode}): {proc.stderr.strip()}"
+            f"fkwu failed (exit {proc.returncode}): {stderr.strip()}"
         )
-    out = proc.stdout.rstrip("\n").splitlines()
+    out = stdout.rstrip("\n").splitlines()
     if not out:
         raise RuntimeError("fkwu produced no output")
     return out[0]
