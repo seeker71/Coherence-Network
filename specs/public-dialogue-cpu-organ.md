@@ -68,8 +68,10 @@ someone shares its id.
 view, and result content. The durable row becomes a content-free tombstone so
 the removal itself remains observable. Non-running rows are automatically
 tombstoned after seven days. A running row first reaches a controlled terminal
-receipt and is then eligible for expiry, so process ownership never disappears
-mid-execution.
+boundary and is then durably tombstoned, so process ownership never disappears
+mid-execution. At the expiry boundary, a public read already receives a
+content-free tombstone view; the durable running row retains its worker and
+process-group ownership until that carrier returns and commits the tombstone.
 
 A follow-up points at an available parent dialogue id. It stores only an edge;
 it does not copy conversation state or attach to internal/private task ids.

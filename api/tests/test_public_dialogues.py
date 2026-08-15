@@ -1141,6 +1141,57 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     assert store.get_dialogue(expiring_row["id"])["tombstoned_at"] == expired["tombstoned_at"]
     monkeypatch.setattr(store, "_now", real_now)
 
+    running_expiry = datetime(2026, 8, 22, 6, 7, 8, tzinfo=timezone.utc)
+    running_row, _ = store.create_dialogue(
+        question="Who owns cleanup after public visibility expires?",
+        question_sha256="d" * 64,
+        point_of_view="native carrier",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=30,
+        network_peer_sha256="d" * 64,
+        expires_at=running_expiry,
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    claimed = store.claim_next_dialogue("running-expiry-test-run")
+    assert claimed["id"] == running_row["id"]
+    assert store.record_carrier_pgid(
+        running_row["id"], "running-expiry-test-run", 424242
+    )
+    monkeypatch.setattr(store, "_now", lambda: running_expiry)
+    public_expiry = store.get_dialogue(running_row["id"])
+    assert public_expiry["state"] == "tombstoned"
+    assert public_expiry["question"] == "[released]"
+    assert public_expiry["question_sha256"] == "0" * 64
+    assert public_expiry["point_of_view"] == "[released]"
+    assert public_expiry["output"]["outcome"] == "tombstoned"
+    with factory() as check_session:
+        still_owned = check_session.get(store.PublicDialogueRecord, running_row["id"])
+        assert still_owned.state == "running"
+        assert still_owned.claimed_by == "running-expiry-test-run"
+        assert still_owned.carrier_pgid == 424242
+        assert still_owned.question == running_row["question"]
+    assert store.finish_dialogue(
+        running_row["id"],
+        "running-expiry-test-run",
+        state="miss",
+        output={"outcome": "miss", "answer": ""},
+    )
+    completed_expiry = store.get_dialogue(running_row["id"])
+    assert completed_expiry["state"] == "tombstoned"
+    assert completed_expiry["tombstoned_at"] == running_expiry.isoformat()
+    with factory() as check_session:
+        released_after_cleanup = check_session.get(
+            store.PublicDialogueRecord, running_row["id"]
+        )
+        assert released_after_cleanup.state == "tombstoned"
+        assert released_after_cleanup.claimed_by is None
+        assert released_after_cleanup.carrier_pgid is None
+    monkeypatch.setattr(store, "_now", real_now)
+
     for index in range(5):
         store.create_dialogue(
             question=f"question {index}",

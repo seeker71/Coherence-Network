@@ -286,8 +286,26 @@ def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         if row.state != "tombstoned" and expires_at <= now:
+            if row.state == "running":
+                return _expired_running_view(row)
             _tombstone(row, now=now)
         return _row(row)
+
+
+def _expired_running_view(row: PublicDialogueRecord) -> dict[str, Any]:
+    """Hide expired public content without abandoning its native carrier."""
+    observed = _row(row)
+    observed.update(
+        state="tombstoned",
+        question="[released]",
+        question_sha256="0" * 64,
+        point_of_view="[released]",
+        output={
+            "outcome": "tombstoned",
+            "detail": "public content expired; native cleanup remains owned",
+        },
+    )
+    return observed
 
 
 def _locked_dialogue(session: Any, dialogue_id: str) -> PublicDialogueRecord | None:
@@ -352,10 +370,17 @@ def finish_dialogue(
         row = _locked_dialogue(session, dialogue_id)
         if row is None or row.state != "running" or row.claimed_by != run_id:
             return False
+        now = _now()
+        expires_at = row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= now:
+            _tombstone(row, now=now)
+            return True
         row.state = state
         row.output_json = json.dumps(output, ensure_ascii=False, separators=(",", ":"))
         row.carrier_pgid = None
-        row.updated_at = _now()
+        row.updated_at = now
         return True
 
 
