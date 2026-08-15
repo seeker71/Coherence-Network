@@ -388,6 +388,88 @@ async def test_mcp_start_dialogue_refuses_implicit_public_disclosure_ack():
     assert response.json()["result"]["isError"] is True
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("question", {"text": "hello"}),
+        ("point_of_view", ["river"]),
+        ("locale", True),
+        ("public_disclosure_ack", 1),
+        ("parent_dialogue_id", {"id": "dlg_parent"}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_mcp_start_dialogue_rejects_non_string_fields_before_storage(
+    field,
+    value,
+    monkeypatch,
+):
+    from app.services import dialogue_service
+
+    def unexpected_submit(**_values):
+        raise AssertionError("invalid MCP fields must not reach dialogue storage")
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", unexpected_submit)
+    arguments = {
+        "question": "hello",
+        "point_of_view": "river",
+        "locale": "en",
+        "public_disclosure_ack": "public-unlisted-v1",
+        "parent_dialogue_id": "dlg_parent",
+    }
+    arguments[field] = value
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": f"invalid-{field}",
+                "method": "tools/call",
+                "params": {"name": "start_dialogue", "arguments": arguments},
+            },
+        )
+
+    result = response.json()["result"]
+    assert response.status_code == 200
+    assert result["isError"] is True
+    assert result["structuredContent"] == {"error": f"{field} must be a string"}
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "arguments", "field"),
+    [
+        ("get_dialogue", {"dialogue_id": ["dlg"]}, "dialogue_id"),
+        (
+            "remove_dialogue",
+            {"dialogue_id": "dlg", "removal_token": {"token": "release"}},
+            "removal_token",
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_mcp_dialogue_capability_fields_reject_non_strings(
+    tool_name,
+    arguments,
+    field,
+):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": f"invalid-{field}",
+                "method": "tools/call",
+                "params": {"name": tool_name, "arguments": arguments},
+            },
+        )
+
+    result = response.json()["result"]
+    assert response.status_code == 200
+    assert result["isError"] is True
+    assert result["structuredContent"] == {"error": f"{field} must be a string"}
+
+
 @pytest.mark.asyncio
 async def test_mcp_start_dialogue_refuses_explicit_zero_timeout_before_admission():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:

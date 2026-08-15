@@ -270,12 +270,40 @@ def _fetch(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"error": "Unknown result id. Expected an id starting with 'idea:' or 'spec:'."}
 
 
+def _string_argument(
+    arguments: dict[str, Any],
+    name: str,
+    *,
+    optional: bool = False,
+) -> str | None:
+    if name not in arguments:
+        return None if optional else ""
+    value = arguments[name]
+    if optional and value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string")
+    return value
+
+
 def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[str, Any]:
     from app.services import dialogue_service
 
-    if arguments.get("public_disclosure_ack") != "public-unlisted-v1":
-        return {"error": "public_disclosure_ack must equal 'public-unlisted-v1'"}
     try:
+        question = _string_argument(arguments, "question")
+        point_of_view = _string_argument(arguments, "point_of_view")
+        locale = _string_argument(arguments, "locale")
+        public_disclosure_ack = _string_argument(
+            arguments,
+            "public_disclosure_ack",
+        )
+        parent_dialogue_id = _string_argument(
+            arguments,
+            "parent_dialogue_id",
+            optional=True,
+        )
+        if public_disclosure_ack != "public-unlisted-v1":
+            return {"error": "public_disclosure_ack must equal 'public-unlisted-v1'"}
         raw_timeout = (
             arguments["channel_timeout_seconds"]
             if "channel_timeout_seconds" in arguments
@@ -284,16 +312,12 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
         if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, int):
             raise ValueError("channel_timeout_seconds must be an integer")
         return dialogue_service.submit_dialogue(
-            question=str(arguments.get("question") or ""),
-            point_of_view=str(arguments.get("point_of_view") or ""),
-            locale=str(arguments.get("locale") or ""),
+            question=question,
+            point_of_view=point_of_view,
+            locale=locale,
             public_disclosure_ack="public-unlisted-v1",
             network_peer=public_origin,
-            parent_dialogue_id=(
-                str(arguments["parent_dialogue_id"])
-                if arguments.get("parent_dialogue_id")
-                else None
-            ),
+            parent_dialogue_id=parent_dialogue_id or None,
             channel_timeout_seconds=raw_timeout,
         )
     except dialogue_service.DialogueRateLimitError as exc:
@@ -305,7 +329,10 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
 def _get_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services import dialogue_service
 
-    dialogue_id = str(arguments.get("dialogue_id") or "").strip()
+    try:
+        dialogue_id = _string_argument(arguments, "dialogue_id").strip()
+    except ValueError as exc:
+        return {"error": str(exc)}
     if not dialogue_id:
         return {"error": "dialogue_id is required"}
     dialogue = dialogue_service.get_dialogue(dialogue_id)
@@ -315,8 +342,11 @@ def _get_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
 def _remove_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
     from app.services import dialogue_service
 
-    dialogue_id = str(arguments.get("dialogue_id") or "").strip()
-    removal_token = str(arguments.get("removal_token") or "")
+    try:
+        dialogue_id = _string_argument(arguments, "dialogue_id").strip()
+        removal_token = _string_argument(arguments, "removal_token")
+    except ValueError as exc:
+        return {"error": str(exc)}
     if not dialogue_id or not removal_token:
         return {"error": "dialogue_id and removal_token are required"}
     if not dialogue_service.release_dialogue(dialogue_id, removal_token):

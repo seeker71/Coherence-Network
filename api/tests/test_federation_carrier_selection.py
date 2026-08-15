@@ -166,6 +166,31 @@ def test_form_timeout_is_normalized_and_reaps_the_carrier_tree(tmp_path, monkeyp
     assert observed["reaped"] == 31337
 
 
+def test_form_carrier_start_failure_is_normalized_and_cleans_staged_source(
+    tmp_path,
+    monkeypatch,
+):
+    observed = {}
+
+    def unavailable_carrier(command, **_kwargs):
+        observed["source_path"] = Path(command[-1])
+        raise PermissionError("host detail")
+
+    monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
+    monkeypatch.setattr(
+        form_kernel_bridge,
+        "_source_runner_path",
+        lambda: tmp_path / "runner",
+    )
+    monkeypatch.setattr(form_kernel_bridge, "_bash_path", lambda: "bash")
+    monkeypatch.setattr(form_kernel_bridge.subprocess, "Popen", unavailable_carrier)
+
+    with pytest.raises(RuntimeError, match="native Form source runner could not start"):
+        form_kernel_bridge.run_recipe("(do 1)")
+
+    assert not observed["source_path"].exists()
+
+
 def test_posix_form_timeout_kills_and_reaps_the_process_group(monkeypatch):
     observed = []
 
@@ -224,16 +249,26 @@ def test_form_bridge_resolves_configured_git_bash_off_windows_path(
     tmp_path,
     monkeypatch,
 ):
-    program_files = tmp_path / "Program Files"
-    git_bash = program_files / "Git" / "bin" / "bash.exe"
+    git_bash = tmp_path / "configured" / "bash.exe"
     git_bash.parent.mkdir(parents=True)
     git_bash.write_bytes(b"git-bash")
+    observed = []
+
+    def configured_path(section, key, default):
+        observed.append((section, key, default))
+        return str(git_bash)
+
     monkeypatch.setattr(form_kernel_bridge.sys, "platform", "win32")
-    monkeypatch.setattr(form_kernel_bridge.shutil, "which", lambda _: None)
-    monkeypatch.setenv("ProgramFiles", str(program_files))
-    monkeypatch.delenv("ProgramW6432", raising=False)
+    monkeypatch.setattr(form_kernel_bridge, "get_str", configured_path)
 
     assert form_kernel_bridge._bash_path() == str(git_bash)
+    assert observed == [
+        (
+            "form_runtime",
+            "windows_bash_path",
+            r"C:\Program Files\Git\bin\bash.exe",
+        )
+    ]
 
 
 def test_large_federation_identity_crosses_the_file_backed_form_transport():

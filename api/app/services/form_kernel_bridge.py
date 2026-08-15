@@ -31,13 +31,14 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import signal
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
+
+from app.config_loader import get_str
 
 def preload_available() -> bool:
     """Compatibility readout: sibling-kernel preload is not an execution path."""
@@ -89,23 +90,22 @@ def _source_runner_path() -> Path:
 
 
 def _bash_path() -> str:
-    """Resolve the shell carrier on POSIX and supported Windows hosts."""
-    for name in ("bash.exe", "bash") if sys.platform == "win32" else ("bash",):
-        resolved = shutil.which(name)
-        if resolved:
-            return resolved
+    """Resolve the shell carrier exclusively through file-backed config."""
     if sys.platform == "win32":
-        roots = (
-            os.environ.get("ProgramFiles"),
-            os.environ.get("ProgramW6432"),
-            r"C:\Program Files",
+        configured = get_str(
+            "form_runtime",
+            "windows_bash_path",
+            default=r"C:\Program Files\Git\bin\bash.exe",
         )
-        for root in roots:
-            if not root:
-                continue
-            candidate = Path(root) / "Git" / "bin" / "bash.exe"
-            if candidate.is_file():
-                return str(candidate)
+    else:
+        configured = get_str(
+            "form_runtime",
+            "posix_bash_path",
+            default="/bin/bash",
+        )
+    candidate = Path(configured)
+    if candidate.is_file():
+        return str(candidate)
     raise RuntimeError("Git Bash is unavailable for the native Form source runner")
 
 
@@ -195,13 +195,16 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
             staged.write(fk_source)
             staged.write("\n")
             source_path = Path(staged.name)
-        proc = subprocess.Popen(
-            [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            **_process_group_kwargs(),
-        )
+        try:
+            proc = subprocess.Popen(
+                [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                **_process_group_kwargs(),
+            )
+        except OSError as exc:
+            raise RuntimeError("native Form source runner could not start") from exc
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired as exc:

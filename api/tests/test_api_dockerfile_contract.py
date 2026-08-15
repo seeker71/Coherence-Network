@@ -153,6 +153,16 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
     assert "--forwarded-allow-ips=*" not in dockerfile
 
 
+def test_native_form_shell_carriers_are_file_backed_configuration() -> None:
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+
+    assert config["form_runtime"] == {
+        "_doc": "Host carrier paths used to enter local Form source execution.",
+        "posix_bash_path": "/bin/bash",
+        "windows_bash_path": r"C:\Program Files\Git\bin\bash.exe",
+    }
+
+
 def test_api_runtime_carries_the_process_inspector_used_by_dialogue_reaping() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
 
