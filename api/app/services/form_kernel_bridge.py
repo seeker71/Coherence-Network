@@ -32,6 +32,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -78,6 +79,12 @@ def _wrapper_path() -> Path:
     return _REPO_ROOT / "bin" / "form-cli"
 
 
+def _source_runner_path() -> Path:
+    """Resolve the file-backed direct-source runner used by form-cli eval."""
+    image = _IMAGE_ROOT / "scripts" / "fkwu_run.sh"
+    return image if image.is_file() else _REPO_ROOT / "scripts" / "fkwu_run.sh"
+
+
 def kernel_bin_path() -> Path:
     """Return the direct-source fkwu binary used by recipe execution."""
     image = _IMAGE_ROOT / "form" / "fkwu"
@@ -119,13 +126,28 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
     if not kernel_available():
         raise RuntimeError(f"c-bootstrapped fkwu binary not found at {bin_path}")
 
-    proc = subprocess.run(
-        [str(_wrapper_path()), "eval", fk_source],
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
+    source_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            suffix=".fk",
+            delete=False,
+        ) as staged:
+            staged.write(fk_source)
+            staged.write("\n")
+            source_path = Path(staged.name)
+        proc = subprocess.run(
+            ["bash", str(_source_runner_path()), "--src", str(source_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    finally:
+        if source_path is not None:
+            source_path.unlink(missing_ok=True)
 
     if proc.returncode != 0:
         raise RuntimeError(

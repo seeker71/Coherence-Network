@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import multiprocessing
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -94,6 +97,83 @@ def test_federation_message_and_edge_identities_are_computed_by_form():
     )
 
     assert carrier._offer_identity(*values) == (expected_message, expected_edge)
+
+
+def test_form_bridge_stages_large_source_outside_the_process_arguments(
+    tmp_path,
+    monkeypatch,
+):
+    observed = {}
+    runner = tmp_path / "fkwu_run.sh"
+    large_source = '(do (let offered "' + ("x" * 150_000) + '") "1")'
+
+    def run(command, **kwargs):
+        source_path = Path(command[-1])
+        observed.update(
+            command=command,
+            source=source_path.read_text(encoding="utf-8"),
+            source_path=source_path,
+            kwargs=kwargs,
+        )
+        return SimpleNamespace(returncode=0, stdout="1\n", stderr="")
+
+    monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
+    monkeypatch.setattr(form_kernel_bridge, "_source_runner_path", lambda: runner)
+    monkeypatch.setattr(form_kernel_bridge.subprocess, "run", run)
+
+    assert form_kernel_bridge.run_recipe(large_source) == "1"
+    assert observed["command"][:3] == ["bash", str(runner), "--src"]
+    assert large_source not in observed["command"]
+    assert observed["source"] == large_source + "\n"
+    assert not observed["source_path"].exists()
+
+
+def test_large_federation_identity_crosses_the_file_backed_form_transport():
+    message_id, edge_id = carrier._offer_identity(
+        "a",
+        "b",
+        "c",
+        "x" * 150_000,
+        "e",
+        "f",
+    )
+
+    assert carrier._ID.fullmatch(message_id)
+    assert carrier._EDGE_ID.fullmatch(edge_id)
+
+
+def test_federation_identity_kernel_runs_are_serialized(monkeypatch):
+    entered_first = threading.Event()
+    entered_second = threading.Event()
+    release_first = threading.Event()
+    calls = 0
+    calls_lock = threading.Lock()
+
+    def run_recipe(*_, **__):
+        nonlocal calls
+        with calls_lock:
+            calls += 1
+            call = calls
+        if call == 1:
+            entered_first.set()
+            assert release_first.wait(2)
+        else:
+            entered_second.set()
+        return f"1|msg_{'a' * 64}|edge_{'b' * 64}"
+
+    monkeypatch.setattr(form_kernel_bridge, "run_recipe", run_recipe)
+    values = ("a", "b", "c", "d", "e", "f")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(carrier._offer_identity, *values)
+        assert entered_first.wait(1)
+        second = pool.submit(carrier._offer_identity, *values)
+        assert not entered_second.wait(0.2)
+        release_first.set()
+        assert first.result(timeout=2)[0].startswith("msg_")
+        assert second.result(timeout=2)[1].startswith("edge_")
+
+    assert entered_second.is_set()
 
 
 def test_federation_recipe_path_follows_the_application_package():

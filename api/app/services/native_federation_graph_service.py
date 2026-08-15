@@ -21,6 +21,7 @@ from app.config_loader import get_str
 from app.services import form_kernel_bridge
 
 _LOCK = threading.RLock()
+_KERNEL_LOCK = threading.Lock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
 _EDGE_ID = re.compile(r"^edge_[0-9a-f]{64}$")
 _FORM_TOKEN = re.compile(r"^[A-Za-z0-9_-]*$")
@@ -87,10 +88,11 @@ def _admit(operation: int, *shape: int) -> None:
     if source.count(_BAND_ENTRY) != 1:
         raise RuntimeError("native Form federation admission entry is unavailable")
     invocation = f"(pfgc-admit {operation} {' '.join(str(value) for value in shape)}))"
-    admitted = form_kernel_bridge.run_recipe(
-        source.replace(_BAND_ENTRY, invocation),
-        timeout=10,
-    )
+    with _KERNEL_LOCK:
+        admitted = form_kernel_bridge.run_recipe(
+            source.replace(_BAND_ENTRY, invocation),
+            timeout=10,
+        )
     if admitted != "1":
         raise RuntimeError("native Form federation admission was not witnessed")
 
@@ -126,10 +128,11 @@ def _offer_identity(*values: str) -> tuple[str, str]:
     invocation = "(pfgc-offer-receipt " + " ".join(
         f'"{value}"' for value in values
     ) + "))"
-    receipt = form_kernel_bridge.run_recipe(
-        source.replace(_BAND_ENTRY, invocation),
-        timeout=_OFFER_IDENTITY_TIMEOUT_SECONDS,
-    )
+    with _KERNEL_LOCK:
+        receipt = form_kernel_bridge.run_recipe(
+            source.replace(_BAND_ENTRY, invocation),
+            timeout=_OFFER_IDENTITY_TIMEOUT_SECONDS,
+        )
     pieces = receipt.split("|")
     if (
         len(pieces) != 3
