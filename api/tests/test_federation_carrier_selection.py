@@ -127,6 +127,68 @@ def test_federation_store_path_uses_file_backed_configuration(tmp_path, monkeypa
     }
 
 
+def test_atomic_write_syncs_the_parent_after_publish(tmp_path, monkeypatch):
+    destination = tmp_path / "message"
+    events = []
+    real_replace = carrier.os.replace
+
+    def replace(source, target):
+        events.append(("replace", Path(target)))
+        real_replace(source, target)
+
+    monkeypatch.setattr(carrier.os, "replace", replace)
+    monkeypatch.setattr(
+        carrier,
+        "_fsync_directory",
+        lambda path: events.append(("directory-fsync", path)),
+    )
+
+    carrier._atomic_write_ascii(destination, "embodied=yes\n")
+
+    assert destination.read_text(encoding="ascii") == "embodied=yes\n"
+    assert events == [
+        ("replace", destination),
+        ("directory-fsync", tmp_path),
+    ]
+
+
+@pytest.mark.skipif(
+    carrier.sys.platform == "win32",
+    reason="Windows does not expose directory fsync through os.open",
+)
+def test_directory_sync_opens_syncs_and_closes_the_directory(tmp_path, monkeypatch):
+    events = []
+    real_open = carrier.os.open
+    real_fsync = carrier.os.fsync
+    real_close = carrier.os.close
+
+    def open_directory(path, flags):
+        descriptor = real_open(path, flags)
+        events.append(("open", Path(path), descriptor))
+        return descriptor
+
+    def sync_directory(descriptor):
+        events.append(("fsync", descriptor))
+        real_fsync(descriptor)
+
+    def close_directory(descriptor):
+        events.append(("close", descriptor))
+        real_close(descriptor)
+
+    monkeypatch.setattr(carrier.os, "open", open_directory)
+    monkeypatch.setattr(carrier.os, "fsync", sync_directory)
+    monkeypatch.setattr(carrier.os, "close", close_directory)
+
+    carrier._fsync_directory(tmp_path)
+
+    descriptor = events[0][2]
+    assert events == [
+        ("open", tmp_path, descriptor),
+        ("fsync", descriptor),
+        ("close", descriptor),
+    ]
+
+
 def test_retry_repairs_indexes_after_message_publish_interruption(tmp_path, monkeypatch):
     monkeypatch.setattr(carrier, "get_str", lambda *_, **__: str(tmp_path))
     monkeypatch.setattr(carrier, "_admit", lambda *_, **__: None)

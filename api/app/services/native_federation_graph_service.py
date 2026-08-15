@@ -186,8 +186,21 @@ def _atomic_write_ascii(path: Path, content: str) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary_path, path)
+        _fsync_directory(path.parent)
     finally:
         temporary_path.unlink(missing_ok=True)
+
+
+def _fsync_directory(path: Path) -> None:
+    """Make a published rename durable on hosts with directory fsync."""
+    if sys.platform == "win32":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    directory_fd = os.open(path, flags)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
