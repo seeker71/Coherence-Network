@@ -103,9 +103,13 @@
     "status": "pass",
     "details": "The following exact-head AI review extended the embodied review set to thirty-eight threads and found two lifecycle seams. Admission now locks and time-checks the named parent, rejecting expired and releasing parents before any child edge can persist. Running release now commits a content-free internal releasing handoff that remains publicly tombstoned while retaining the worker claim and carrier pgid; synchronous release or the next worker after restart reaps that recorded group and only then clears durable ownership. The SQLite transaction witness observes public redaction together with the still-durable claim and pgid before reaping, then observes the final tombstone only after the reaper acknowledges success. A restart witness attends an interrupted releasing row before new work, while an inspection-failure witness retains ownership for retry. Expired running and unswept terminal parents both reject child persistence. The complete warning-strict dialogue band passed all 49 tests, the complete warning-strict API body passed all 2135 tests in 199.15 seconds, and Ruff, evidence validation, and git diff validation passed."
   },
+  "recovery_reap_acknowledgement_rewitness": {
+    "status": "pass",
+    "details": "The next exact-head AI review extended the embodied review set to thirty-nine threads and found that interrupted-running recovery discarded a failed process-inspection or process-reaping result. Recovery now stops before attempts-exhausted terminalization, native carrier launch, or pgid replacement unless cleanup is acknowledged. A focused witness forces the reaper to return false and observes no new grounded-ask launch, a still-running durable row, and the original carrier pgid retained for retry. The warning-strict dialogue and MCP band passed all 72 tests, and Ruff passed both touched files."
+  },
   "ci_validation": {
     "status": "pending",
-    "details": "Linux Thread Gates, Windows Host Floor, and GitGuardian all passed on exact reviewed head a4219080f5c03e241c2bbe718ed20f0c1fa266ef. The exact-head review's parent-admission and two-phase running-release repairs are locally re-witnessed and await a new CI run after push."
+    "details": "Linux Thread Gates and GitGuardian passed on exact reviewed head 06f20bdb81b860e7934482715f5dce156965e520, while Windows Host Floor remains in progress. The exact-head review's recovery-reaping acknowledgement repair is locally re-witnessed and awaits a fresh CI run after push."
   },
   "deploy_validation": {
     "status": "pending",

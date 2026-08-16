@@ -573,6 +573,32 @@ def test_interrupted_running_turn_is_reaped_and_recovered(dialogue_store, monkey
     assert row["state"] == "answered"
 
 
+def test_interrupted_running_turn_waits_when_reaping_is_not_acknowledged(
+    dialogue_store,
+    monkeypatch,
+):
+    offered = _offer()
+    row = dialogue_store[offered["id"]]
+    row.update(state="running", claimed_by="dead-worker", carrier_pgid=424242, attempt=1)
+    called = []
+    monkeypatch.setattr(
+        dialogue_service,
+        "_reap_recorded_process_group",
+        lambda _pgid: False,
+    )
+    monkeypatch.setattr(
+        dialogue_service,
+        "_GROUNDED_ASK_RUNNER",
+        lambda *_, **__: called.append(True),
+    )
+
+    assert dialogue_service.process_dialogue_once() is False
+    assert called == []
+    assert row["state"] == "running"
+    assert row["carrier_pgid"] == 424242
+    assert row["claimed_by"] == dialogue_service._RUN_ID
+
+
 def test_recovery_attempts_exhaust_into_terminal_failure(dialogue_store, monkeypatch):
     offered = _offer()
     row = dialogue_store[offered["id"]]

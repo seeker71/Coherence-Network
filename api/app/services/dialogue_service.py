@@ -605,7 +605,8 @@ def process_dialogue_once() -> bool:
                 store.finish_releasing_dialogue(dialogue_id, carrier_pgid)
                 return True
             return False
-        _reap_recorded_process_group(row.get("carrier_pgid"))
+        if _reap_recorded_process_group(row.get("carrier_pgid")) is False:
+            return False
         if int(row.get("attempt") or 0) > MAX_DIALOGUE_ATTEMPTS:
             store.finish_dialogue(
                 dialogue_id,
