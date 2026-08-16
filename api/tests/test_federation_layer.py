@@ -12,7 +12,10 @@ Covers done_when criteria:
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import json
 import threading
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -28,6 +31,45 @@ BASE = "http://test"
 def _node_id() -> str:
     """Generate a 16-char node ID (model requires min_length=16, max_length=16)."""
     return uuid4().hex[:16]
+
+
+def test_mark_messages_read_locks_rows_before_replacing_reader_set(monkeypatch):
+    from app.services import unified_db
+
+    record = SimpleNamespace(read_by_json='["first-node"]')
+    observed = {"locked": False, "committed": False}
+
+    class Query:
+        def filter(self, *_args):
+            return self
+
+        def order_by(self, *_args):
+            return self
+
+        def with_for_update(self):
+            observed["locked"] = True
+            return self
+
+        def __iter__(self):
+            assert observed["locked"] is True
+            return iter([record])
+
+    class Session:
+        def query(self, *_args):
+            return Query()
+
+        def commit(self):
+            observed["committed"] = True
+
+    @contextlib.contextmanager
+    def session():
+        yield Session()
+
+    monkeypatch.setattr(unified_db, "session", session)
+    federation_router._mark_messages_read("second-node", {"msg_one"})
+
+    assert json.loads(record.read_by_json) == ["first-node", "second-node"]
+    assert observed == {"locked": True, "committed": True}
 
 
 # ---------------------------------------------------------------------------

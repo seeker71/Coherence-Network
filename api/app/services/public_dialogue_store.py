@@ -363,12 +363,29 @@ def claim_next_dialogue(run_id: str) -> dict[str, Any] | None:
             return None
         if row.state == "releasing":
             return _row(row)
+        recovered = row.state == "running"
         row.state = "running"
         row.claimed_by = run_id
-        row.attempt = int(row.attempt or 0) + 1
+        if not recovered:
+            row.attempt = int(row.attempt or 0) + 1
         row.updated_at = _now()
         session.flush()
-        return _row(row)
+        claimed = _row(row)
+        claimed["recovered"] = recovered
+        return claimed
+
+
+def begin_recovered_dialogue_attempt(dialogue_id: str, run_id: str) -> int | None:
+    """Spend one execution attempt only after prior carrier cleanup succeeded."""
+    ensure_schema()
+    with unified_db.session() as session:
+        row = _locked_dialogue(session, dialogue_id)
+        if row is None or row.state != "running" or row.claimed_by != run_id:
+            return None
+        row.carrier_pgid = None
+        row.attempt = int(row.attempt or 0) + 1
+        row.updated_at = _now()
+        return row.attempt
 
 
 def record_carrier_pgid(dialogue_id: str, run_id: str, pgid: int) -> bool:

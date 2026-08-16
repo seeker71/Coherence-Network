@@ -861,7 +861,13 @@ def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
         from app.services import unified_db as _udb
 
         with _udb.session() as session:
-            for rec in session.query(NodeMessageRecord).filter(NodeMessageRecord.id.in_(msg_ids)):
+            records = (
+                session.query(NodeMessageRecord)
+                .filter(NodeMessageRecord.id.in_(msg_ids))
+                .order_by(NodeMessageRecord.id)
+                .with_for_update()
+            )
+            for rec in records:
                 read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
                 if node_id not in read_by:
                     read_by.append(node_id)

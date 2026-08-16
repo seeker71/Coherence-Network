@@ -80,10 +80,22 @@ def dialogue_store(monkeypatch):
         row = candidates[0]
         if row["state"] == "releasing":
             return dict(row)
+        recovered = row["state"] == "running"
         row["state"] = "running"
         row["claimed_by"] = run_id
+        if not recovered:
+            row["attempt"] += 1
+        claimed = dict(row)
+        claimed["recovered"] = recovered
+        return claimed
+
+    def begin_recovered(dialogue_id, run_id):
+        row = rows[dialogue_id]
+        if row["state"] != "running" or row["claimed_by"] != run_id:
+            return None
+        row["carrier_pgid"] = None
         row["attempt"] += 1
-        return dict(row)
+        return row["attempt"]
 
     def finish(dialogue_id, run_id, *, state, output):
         row = rows[dialogue_id]
@@ -97,6 +109,7 @@ def dialogue_store(monkeypatch):
     monkeypatch.setattr(store, "create_dialogue", create_dialogue)
     monkeypatch.setattr(store, "get_dialogue", lambda dialogue_id: rows.get(dialogue_id))
     monkeypatch.setattr(store, "claim_next_dialogue", claim_next)
+    monkeypatch.setattr(store, "begin_recovered_dialogue_attempt", begin_recovered)
     monkeypatch.setattr(
         store,
         "record_carrier_pgid",
@@ -595,8 +608,34 @@ def test_interrupted_running_turn_waits_when_reaping_is_not_acknowledged(
     assert dialogue_service.process_dialogue_once() is False
     assert called == []
     assert row["state"] == "running"
+    assert row["attempt"] == 1
     assert row["carrier_pgid"] == 424242
     assert row["claimed_by"] == dialogue_service._RUN_ID
+
+
+def test_reaping_retries_do_not_spend_execution_attempts(dialogue_store, monkeypatch):
+    offered = _offer()
+    row = dialogue_store[offered["id"]]
+    row.update(state="running", claimed_by="dead-worker", carrier_pgid=424242, attempt=1)
+    reap_results = iter((False, False, True))
+    monkeypatch.setattr(
+        dialogue_service,
+        "_reap_recorded_process_group",
+        lambda _pgid: next(reap_results),
+    )
+    monkeypatch.setattr(
+        dialogue_service,
+        "_GROUNDED_ASK_RUNNER",
+        lambda *_, **__: _receipt(answer="Recovered after observation returned."),
+    )
+
+    assert dialogue_service.process_dialogue_once() is False
+    assert dialogue_service.process_dialogue_once() is False
+    assert row["attempt"] == 1
+    assert row["carrier_pgid"] == 424242
+    assert dialogue_service.process_dialogue_once() is True
+    assert row["attempt"] == 2
+    assert row["state"] == "answered"
 
 
 def test_recovery_attempts_exhaust_into_terminal_failure(dialogue_store, monkeypatch):

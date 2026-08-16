@@ -607,6 +607,15 @@ def process_dialogue_once() -> bool:
             return False
         if _reap_recorded_process_group(row.get("carrier_pgid")) is False:
             return False
+        if row.get("recovered"):
+            recovered_attempt = store.begin_recovered_dialogue_attempt(
+                dialogue_id,
+                _RUN_ID,
+            )
+            if recovered_attempt is None:
+                return False
+            row["attempt"] = recovered_attempt
+            row["carrier_pgid"] = None
         if int(row.get("attempt") or 0) > MAX_DIALOGUE_ATTEMPTS:
             store.finish_dialogue(
                 dialogue_id,

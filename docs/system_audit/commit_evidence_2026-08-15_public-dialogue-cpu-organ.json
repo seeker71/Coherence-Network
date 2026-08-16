@@ -107,9 +107,13 @@
     "status": "pass",
     "details": "The next exact-head AI review extended the embodied review set to thirty-nine threads and found that interrupted-running recovery discarded a failed process-inspection or process-reaping result. Recovery now stops before attempts-exhausted terminalization, native carrier launch, or pgid replacement unless cleanup is acknowledged. A focused witness forces the reaper to return false and observes no new grounded-ask launch, a still-running durable row, and the original carrier pgid retained for retry. The warning-strict dialogue and MCP band passed all 72 tests, and Ruff passed both touched files."
   },
+  "attempt_budget_and_read_marker_rewitness": {
+    "status": "pass",
+    "details": "The following exact-head AI review extended the embodied review set to forty-one threads and found two remaining concurrency seams. Reclaiming an interrupted running dialogue no longer increments its execution-attempt counter before previous-carrier cleanup is acknowledged. Two forced cleanup refusals retain attempt 1 and the original pgid; the third acknowledged cleanup clears that ownership, spends attempt 2, starts one native carrier, and reaches answered instead of attempts-exhausted. Concurrent federation read-marker replacements now select all affected message rows in stable id order with FOR UPDATE before reading or replacing read_by_json, preventing two thread-pooled pollers from losing each other's reader identity on PostgreSQL. A focused contract witness observes the row lock before iteration and preserves both readers. The warning-strict dialogue, MCP, and federation band passed all 85 tests; the complete warning-strict API body passed all 406 tests; Ruff and git diff validation passed."
+  },
   "ci_validation": {
     "status": "pending",
-    "details": "Linux Thread Gates and GitGuardian passed on exact reviewed head 06f20bdb81b860e7934482715f5dce156965e520, while Windows Host Floor remains in progress. The exact-head review's recovery-reaping acknowledgement repair is locally re-witnessed and awaits a fresh CI run after push."
+    "details": "Linux Thread Gates and GitGuardian passed on exact reviewed head f8c0869a0ca4d8f9942bb4521eff2bf8bc804ea1, while Windows Host Floor remains in progress. The exact-head review's attempt-budget and federation read-marker repairs are locally re-witnessed and await a fresh CI run after push."
   },
   "deploy_validation": {
     "status": "pending",
