@@ -1,0 +1,145 @@
+; public_dialogue_envelope.fk — content-bound native dialogue admission.
+; preludes: form-stdlib/sha256.fk
+(do
+  (defn dialogue-envelope (locale point question disclosure parent timeout)
+    (list locale point question disclosure parent timeout))
+
+  (defn dialogue-locale (envelope) (nth envelope 0))
+  (defn dialogue-point (envelope) (nth envelope 1))
+  (defn dialogue-question (envelope) (nth envelope 2))
+  (defn dialogue-disclosure (envelope) (nth envelope 3))
+  (defn dialogue-parent (envelope) (nth envelope 4))
+  (defn dialogue-timeout (envelope) (nth envelope 5))
+
+  (defn dialogue-even-token (value)
+    (if (eq (mod (str_len value) 2) 0) 1 0))
+
+  (defn dialogue-timeout-ok (envelope)
+    (if (ge (dialogue-timeout envelope) 10)
+        (if (le (dialogue-timeout envelope) 120) 1 0)
+        0))
+
+  (defn dialogue-parent-ok (envelope)
+    (if (le (str_len (dialogue-parent envelope)) 640)
+        (if (eq (dialogue-even-token (dialogue-parent envelope)) 1)
+            (dialogue-timeout-ok envelope)
+            0)
+        0))
+
+  (defn dialogue-question-ok (envelope)
+    (if (gt (str_len (dialogue-question envelope)) 0)
+        (if (le (str_len (dialogue-question envelope)) 9600)
+            (if (eq (dialogue-even-token (dialogue-question envelope)) 1)
+                (if (le
+                        (add
+                          (str_len (dialogue-point envelope))
+                          (str_len (dialogue-question envelope)))
+                        12000)
+                    (dialogue-parent-ok envelope)
+                    0)
+                0)
+            0)
+        0))
+
+  (defn dialogue-point-ok (envelope)
+    (if (gt (str_len (dialogue-point envelope)) 0)
+        (if (le (str_len (dialogue-point envelope)) 1920)
+            (if (eq (dialogue-even-token (dialogue-point envelope)) 1)
+                (dialogue-question-ok envelope)
+                0)
+            0)
+        0))
+
+  (defn dialogue-locale-ok (envelope)
+    (if (gt (str_len (dialogue-locale envelope)) 0)
+        (if (le (str_len (dialogue-locale envelope)) 160)
+            (if (eq (dialogue-even-token (dialogue-locale envelope)) 1)
+                (dialogue-point-ok envelope)
+                0)
+            0)
+        0))
+
+  (defn dialogue-offered (envelope)
+    (if (str_eq
+          (dialogue-disclosure envelope)
+          "7075626c69632d756e6c69737465642d7631")
+        (dialogue-locale-ok envelope)
+        0))
+
+  (defn dialogue-field (value)
+    (str_concat (int_to_str (str_len value)) (str_concat ":" value)))
+
+  (defn dialogue-fields-6 (a b c d e f)
+    (str_concat (dialogue-field a)
+    (str_concat (dialogue-field b)
+    (str_concat (dialogue-field c)
+    (str_concat (dialogue-field d)
+    (str_concat (dialogue-field e) (dialogue-field f)))))))
+
+  (defn dialogue-hex-digit (value)
+    (substring "0123456789abcdef" value (add value 1)))
+
+  (defn dialogue-hex-byte (value)
+    (str_concat
+      (dialogue-hex-digit (div value 16))
+      (dialogue-hex-digit (mod value 16))))
+
+  (defn dialogue-hex-bytes-loop (values out)
+    (if (eq (len values) 0) out
+        (dialogue-hex-bytes-loop
+          (tail values)
+          (str_concat out (dialogue-hex-byte (head values))))))
+
+  (defn dialogue-hex-bytes (values)
+    (dialogue-hex-bytes-loop values ""))
+
+  (defn dialogue-content-digest (canonical)
+    (dialogue-hex-bytes
+      (sha256-stream-string
+        (str_concat "form-cli-carrier-challenge-v1"
+          (str_concat (byte_to_str 10) canonical)))))
+
+  (defn dialogue-envelope-wire (envelope)
+    (str_concat "public-dialogue-envelope-v2|"
+      (dialogue-fields-6
+        (dialogue-locale envelope)
+        (dialogue-point envelope)
+        (dialogue-question envelope)
+        (dialogue-disclosure envelope)
+        (dialogue-parent envelope)
+        (int_to_str (dialogue-timeout envelope)))))
+
+  (defn dialogue-envelope-receipt (locale point question disclosure parent timeout)
+    (do
+      (let envelope
+        (dialogue-envelope locale point question disclosure parent timeout))
+      (if (eq (dialogue-offered envelope) 1)
+          (str_concat "1|"
+            (dialogue-content-digest (dialogue-envelope-wire envelope)))
+          "0|")))
+
+  (defn dialogue-band ()
+    (do
+      (let first-turn
+        (dialogue-envelope
+          "656e" "7269766572" "68656c6c6f"
+          "7075626c69632d756e6c69737465642d7631" "" 120))
+      (let next-turn
+        (dialogue-envelope
+          "656e" "7269766572" "68656c6c6f"
+          "7075626c69632d756e6c69737465642d7631" "646c675f31" 120))
+      (add
+        (if (eq (dialogue-offered first-turn) 1) 1 0)
+        (add
+          (if (str_eq (dialogue-locale first-turn) "656e") 2 0)
+          (add
+            (if (str_eq (dialogue-point first-turn) "7269766572") 4 0)
+            (add
+              (if (str_eq (dialogue-question first-turn) "68656c6c6f") 8 0)
+              (add
+                (if (str_eq
+                      (dialogue-disclosure first-turn)
+                      "7075626c69632d756e6c69737465642d7631") 16 0)
+                (if (str_eq (dialogue-parent next-turn) "646c675f31") 32 0))))))))
+
+  (dialogue-band))

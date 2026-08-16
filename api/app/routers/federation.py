@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import queue
+import threading
 import time
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 
+import anyio
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from app.middleware.traceability import traces_to
 
@@ -60,6 +67,13 @@ from app.services import native_federation_graph_service
 from app.services import unified_db as _udb
 
 router = APIRouter()
+_NATIVE_FORM_LIMITER = anyio.CapacityLimiter(1)
+
+
+async def _run_native_form(function: Any, /, *args: Any, **kwargs: Any) -> Any:
+    """Wait outside AnyIO's shared worker pool for the one federation CPU lane."""
+    call = partial(function, *args, **kwargs)
+    return await anyio.to_thread.run_sync(call, limiter=_NATIVE_FORM_LIMITER)
 
 
 @router.post("/federation/instances", response_model=FederatedInstance, status_code=201, summary="Register a remote Coherence instance")
@@ -847,7 +861,13 @@ def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
         from app.services import unified_db as _udb
 
         with _udb.session() as session:
-            for rec in session.query(NodeMessageRecord).filter(NodeMessageRecord.id.in_(msg_ids)):
+            records = (
+                session.query(NodeMessageRecord)
+                .filter(NodeMessageRecord.id.in_(msg_ids))
+                .order_by(NodeMessageRecord.id)
+                .with_for_update()
+            )
+            for rec in records:
                 read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
                 if node_id not in read_by:
                     read_by.append(node_id)
@@ -862,7 +882,8 @@ async def send_message(node_id: str, body: NodeMessage):
     """Send a message from this node. Set to_node=null to broadcast."""
     timestamp = datetime.now(timezone.utc).isoformat()
     try:
-        graph = native_federation_graph_service.offer(
+        graph = await _run_native_form(
+            native_federation_graph_service.offer,
             from_node=node_id, to_node=body.to_node, kind=body.type,
             text=body.text, payload=body.payload, timestamp=timestamp,
         )
@@ -879,7 +900,7 @@ async def send_message(node_id: str, body: NodeMessage):
         "read_by": [],
         "graph_ack": graph,
     }
-    _store_message(msg)
+    await run_in_threadpool(_store_message, msg)
     _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
     # Push to SSE subscribers
     _notify_sse_subscribers(body.to_node, msg)
@@ -901,7 +922,8 @@ async def get_messages(
 ):
     """Get messages for this node; observation is consuming only when requested."""
     try:
-        results = _query_messages(
+        results = await _run_native_form(
+            _query_messages,
             node_id,
             since=since,
             unread_only=unread_only,
@@ -913,7 +935,7 @@ async def get_messages(
 
     if mark_read:
         msg_ids = {m["id"] for m in results}
-        _mark_messages_read(node_id, msg_ids)
+        await run_in_threadpool(_mark_messages_read, node_id, msg_ids)
 
     return {"node_id": node_id, "messages": results, "count": len(results)}
 
@@ -922,7 +944,7 @@ async def get_messages(
 async def get_message_by_id(message_id: str):
     """Read a federation node message by id."""
     try:
-        msg = _get_message(message_id)
+        msg = await _run_native_form(_get_message, message_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if msg is None:
@@ -935,7 +957,8 @@ async def broadcast_message(body: NodeMessage):
     """Broadcast a message to all nodes."""
     timestamp = datetime.now(timezone.utc).isoformat()
     try:
-        graph = native_federation_graph_service.offer(
+        graph = await _run_native_form(
+            native_federation_graph_service.offer,
             from_node=body.from_node, to_node=None, kind=body.type,
             text=body.text, payload=body.payload, timestamp=timestamp,
         )
@@ -952,7 +975,7 @@ async def broadcast_message(body: NodeMessage):
         "read_by": [],
         "graph_ack": graph,
     }
-    _store_message(msg)
+    await run_in_threadpool(_store_message, msg)
     _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])
     # Notify SSE subscribers
     _notify_sse_subscribers(None, msg)
@@ -961,11 +984,6 @@ async def broadcast_message(body: NodeMessage):
 
 
 # ── SSE: real-time push notifications for connected nodes ────────────
-
-import asyncio
-import queue
-import threading
-from fastapi.responses import StreamingResponse
 
 # In-memory subscriber queues: node_id → list[queue.Queue]
 _sse_subscribers: dict[str, list[queue.Queue]] = {}

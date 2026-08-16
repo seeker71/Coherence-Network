@@ -18,7 +18,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.routers import substrate as substrate_router
-from app.services import native_runtime_observation, unified_db
+from app.services import form_kernel_bridge, native_runtime_observation, unified_db
 from app.services.grounding_source import read_grounding_source
 from app.services.substrate import ingest_git_artifact
 
@@ -563,6 +563,53 @@ def test_api_binds_stable_native_carrier_before_and_after_ask(tmp_path, monkeypa
     assert response.kernel_runtime == "fkwu"
 
 
+def test_windows_grounded_ask_launches_wrapper_through_configured_git_bash(
+    tmp_path,
+    monkeypatch,
+):
+    wrapper = tmp_path / "bin" / "form-cli"
+    wrapper.parent.mkdir(parents=True)
+    wrapper.write_text("#!/usr/bin/env bash\nexit 99\n", encoding="utf-8")
+    bash = tmp_path / "Git" / "bin" / "bash.exe"
+    bash.parent.mkdir(parents=True)
+    bash.write_bytes(b"git-bash")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(substrate_router, "_grounded_ask_root", lambda: tmp_path)
+    monkeypatch.setattr(substrate_router, "_windows_host", lambda: True)
+    monkeypatch.setattr(form_kernel_bridge, "_bash_path", lambda: str(bash))
+    observation = _carrier_observation(tmp_path)
+    monkeypatch.setattr(
+        native_runtime_observation,
+        "observe_native_runtime",
+        lambda *, force=False: json.loads(json.dumps(observation)),
+    )
+    observed = {}
+
+    def run(command, **kwargs):
+        observed.update(
+            command=command,
+            kwargs=kwargs,
+            query=Path(command[3]).read_text(encoding="utf-8"),
+        )
+        return SimpleNamespace(
+            returncode=0,
+            stdout=_grounded_stdout(b"windows native answer"),
+            stderr=_trust(),
+        )
+
+    monkeypatch.setattr(substrate_router, "_run_native_wrapper", run)
+
+    response = substrate_router._run_grounded_ask(
+        "what is grounded on Windows?",
+        on_process_start=lambda _pid: None,
+    )
+
+    assert observed["command"][:3] == [str(bash), str(wrapper), "ask-file"]
+    assert observed["query"] == "what is grounded on Windows?"
+    assert observed["kwargs"]["on_start"] is not None
+    assert response.answer == "windows native answer"
+
+
 def test_api_rejects_fake_root_and_mid_request_carrier_drift(tmp_path, monkeypatch):
     wrapper = tmp_path / "bin" / "form-cli"
     wrapper.parent.mkdir(parents=True)
@@ -731,6 +778,7 @@ def test_wrapper_manifest_and_fail_closed_native_flow_are_current():
     assert "native grounding attestation failed" in source
     assert "Observed callers enforce the stronger all-four-axis row" in source
     assert "first_line=\"${first_line%$'\\r'}\"" in source
+    assert "verified_receipt=\"${verified_receipt%$'\\r'}\"" in source
     assert "trust_line=\"${trust_line%$'\\r'}\"" in source
     assert '"$receipt_file.consuming"' in source
     assert "attempt=1" in source and '"$attempt" -le 2' in source

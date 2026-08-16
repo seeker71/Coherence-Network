@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
+import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 import tomllib
+
+from app import server
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -63,6 +68,43 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     assert "form-kernel-rust" not in dockerfile
 
 
+def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
+    root = tmp_path / "image"
+    scripts = root / "scripts"
+    runtime = root / "form" / "runtime"
+    stdlib = root / "form" / "form-stdlib"
+    scripts.mkdir(parents=True)
+    runtime.mkdir(parents=True)
+    stdlib.mkdir(parents=True)
+    runner = scripts / "fkwu_run.sh"
+    shutil.copy2(REPO_ROOT / "scripts" / "fkwu_run.sh", runner)
+    (runtime / "fkwu-uni.c").write_text("bootstrap", encoding="utf-8")
+    (runtime / "fkwu-optable.h").write_text("bootstrap", encoding="utf-8")
+    (stdlib / "core.fk").write_text("flat-core-marker\n", encoding="utf-8")
+    offered = root / "offered.fk"
+    offered.write_text("offered-recipe-marker\n", encoding="utf-8")
+    fkwu = root / "form" / "fkwu"
+    fkwu.write_text(
+        "#!/usr/bin/env bash\n"
+        "grep -q flat-core-marker \"$2\" || exit 4\n"
+        "grep -q offered-recipe-marker \"$2\" || exit 5\n"
+        "printf '42\\n'\n",
+        encoding="utf-8",
+    )
+    fkwu.chmod(fkwu.stat().st_mode | 0o111)
+
+    result = subprocess.run(
+        ["bash", str(runner), "--src", str(offered)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TMPDIR": str(tmp_path)},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "42"
+
+
 def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
     pyproject = tomllib.loads((REPO_ROOT / "api" / "pyproject.toml").read_text(encoding="utf-8"))
     project_dependencies = {
@@ -76,6 +118,55 @@ def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
     }
 
     assert sorted(project_dependencies - docker_requirements) == []
+
+
+def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypatch) -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+    captured = {}
+
+    monkeypatch.setattr(
+        server,
+        "get_list",
+        lambda *args: config["server"]["forwarded_allow_ips"],
+    )
+    monkeypatch.setattr(
+        server.uvicorn,
+        "run",
+        lambda app, **values: captured.update(app=app, **values),
+    )
+    server.main()
+
+    assert config["server"]["forwarded_allow_ips"] == ["127.0.0.1", "172.16.0.0/12"]
+    assert captured == {
+        "app": "app.main:app",
+        "host": "0.0.0.0",
+        "port": 8000,
+        "ws": "websockets-sansio",
+        "proxy_headers": True,
+        "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
+    }
+    assert 'CMD ["python", "-m", "app.server"]' in dockerfile
+    assert "EXPOSE 8000" in dockerfile
+    assert "http://127.0.0.1:8000/api/health" in dockerfile
+    assert "FORWARDED_ALLOW_IPS" not in dockerfile
+    assert "--forwarded-allow-ips=*" not in dockerfile
+
+
+def test_native_form_shell_carriers_are_file_backed_configuration() -> None:
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+
+    assert config["form_runtime"] == {
+        "_doc": "Host carrier paths used to enter local Form source execution.",
+        "posix_bash_path": "/bin/bash",
+        "windows_bash_path": r"C:\Program Files\Git\bin\bash.exe",
+    }
+
+
+def test_api_runtime_carries_the_process_inspector_used_by_dialogue_reaping() -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+
+    assert re.search(r"^\s+procps \\$", dockerfile, re.MULTILINE) is not None
 
 
 def test_transmuted_endpoint_recipes_are_git_tracked() -> None:

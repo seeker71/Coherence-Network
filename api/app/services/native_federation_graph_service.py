@@ -1,7 +1,8 @@
-"""Thin byte carrier for the native Form federation graph.
+"""Thin durable carrier admitted by the native Form federation recipe.
 
-Python owns process transport and the SQL projection. Form owns message
-identity, edge composition, durable graph indexes, and traversal.
+Form owns which operation shapes enter and constructs the content-addressed
+message and edge identities. Python persists those opaque identities and
+encoded bytes without interpreting message text.
 """
 from __future__ import annotations
 
@@ -9,80 +10,68 @@ import base64
 import json
 import os
 import re
-import subprocess
+import sys
 import tempfile
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_IMAGE_ROOT = Path("/app")
-_LOCK = threading.Lock()
+from app.config_loader import get_str
+from app.services import form_kernel_bridge
+
+_LOCK = threading.RLock()
+_KERNEL_LOCK = threading.Lock()
 _ID = re.compile(r"^msg_[0-9a-f]{64}$")
+_EDGE_ID = re.compile(r"^edge_[0-9a-f]{64}$")
+_FORM_TOKEN = re.compile(r"^[A-Za-z0-9_-]*$")
+_OFFER_IDENTITY_TIMEOUT_SECONDS = 30
+_RECIPE = (
+    Path(__file__).resolve().parent.parent
+    / "form_recipes"
+    / "public_federation_graph_cli.fk"
+)
+_BAND_ENTRY = "(pfgc-band))"
+_SHA256_RECIPE_CANDIDATES = (
+    Path(__file__).resolve().parents[3]
+    / "form"
+    / "form"
+    / "form-stdlib"
+    / "sha256.fk",
+    Path("/app/form/form-stdlib/sha256.fk"),
+)
 
+if sys.platform == "win32":
+    import msvcrt
 
-def _classic_form_root(root: Path) -> Path:
-    """The classic kernel tree base (form-stdlib, form-cli, bootstrap/...).
+    def _lock_file(stream: Any) -> None:
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
 
-    Dockerfile.api's COPY destinations deliberately keep this flat under the
-    deployed image (``root/form/...``); a source checkout of the restructured
-    coherence-kernel submodule nests one level deeper (``form/form/...``).
-    The image always ships ``form/form-cli.sha256`` as a build artifact
-    (never committed in the submodule at any depth), so its presence
-    reliably tells the two apart.
-    """
-    if (root / "form" / "form-cli.sha256").is_file():
-        return root / "form"
-    return root / "form" / "form"
+    def _unlock_file(stream: Any) -> None:
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+else:
+    import fcntl
 
+    def _lock_file(stream: Any) -> None:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
 
-def _host_native_carrier(root: Path) -> Path | None:
-    """The carrier this host can actually execute, from the bootstrap receipt.
-
-    A production image ships one carrier at ``form/form-cli`` beside its
-    digest authority, and that file is the answer. A source checkout is
-    different: ``form/form-cli`` inside the pinned submodule may have been
-    built for another host, so ``scripts/ensure_form_cli_native.sh`` builds
-    the local one under ``.cache/form-cli-native/`` and records the exact
-    selection. Skipping that receipt is how a Linux runner ends up exec'ing
-    a carrier built elsewhere and getting ``Exec format error``.
-    """
-    if (root / "form" / "form-cli.sha256").is_file():
-        return _classic_form_root(root) / "form-cli"
-
-    receipt_path = root / ".cache" / "form-cli-native" / "selected.json"
-    if not receipt_path.is_file():
-        return None
-    try:
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if receipt.get("schema") != "selected-form-cli-carrier-v1":
-        return None
-    native_path = receipt.get("native_path")
-    if not isinstance(native_path, str) or not native_path:
-        return None
-    binary = Path(native_path)
-    if not binary.is_absolute():
-        binary = root / binary
-    binary = binary.resolve()
-    # The receipt may only ever point inside the host-native cache.
-    if not binary.is_relative_to((root / ".cache" / "form-cli-native").resolve()):
-        return None
-    return binary
-
-
-def _binary() -> Path:
-    for root in (_IMAGE_ROOT, _REPO_ROOT):
-        selected = _host_native_carrier(root)
-        if selected is not None and selected.is_file() and os.access(selected, os.X_OK):
-            return selected
-    raise RuntimeError("native Form federation carrier is unavailable")
+    def _unlock_file(stream: Any) -> None:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def store_path() -> Path:
-    raw = os.environ.get("COHERENCE_FORM_GRAPH_STORE")
-    path = Path(raw).expanduser() if raw else Path(tempfile.gettempdir()) / "coherence-federation-graph"
+    raw = get_str(
+        "federation",
+        "form_graph_store_path",
+        "~/.coherence-network/federation-graph",
+    )
+    path = (
+        Path(raw).expanduser()
+        if raw
+        else Path(tempfile.gettempdir()) / "coherence-federation-graph"
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -91,51 +80,196 @@ def _token(value: str) -> str:
     return base64.urlsafe_b64encode(value.encode()).decode().rstrip("=") or "_"
 
 
-def _run(command: str) -> str:
-    with _LOCK:
-        proc = subprocess.run(
-            [str(_binary())], input=f"fsh {command}\n", text=True,
-            capture_output=True, check=False, timeout=10,
+def _admit(operation: int, *shape: int) -> None:
+    """Offer the actual operation and encoded message shape to Form."""
+    if len(shape) != 6 or any(value < 0 for value in shape):
+        raise RuntimeError("native Form federation admission shape is invalid")
+    source = _native_recipe_source()
+    if source.count(_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form federation admission entry is unavailable")
+    invocation = f"(pfgc-admit {operation} {' '.join(str(value) for value in shape)}))"
+    with _KERNEL_LOCK:
+        admitted = form_kernel_bridge.run_recipe(
+            source.replace(_BAND_ENTRY, invocation),
+            timeout=10,
         )
-    if proc.returncode != 0:
-        raise RuntimeError(f"native Form federation command failed: {proc.stderr.strip()}")
-    return proc.stdout.strip()
+    if admitted != "1":
+        raise RuntimeError("native Form federation admission was not witnessed")
+
+
+def _sha256_recipe_source() -> str:
+    for candidate in _SHA256_RECIPE_CANDIDATES:
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    raise RuntimeError("native Form SHA-256 recipe is unavailable")
+
+
+def _without_prelude_directives(source: str) -> str:
+    return "\n".join(
+        line
+        for line in source.splitlines()
+        if not line.lstrip().startswith("; preludes:")
+    )
+
+
+def _native_recipe_source() -> str:
+    return _without_prelude_directives(
+        _sha256_recipe_source() + "\n" + _RECIPE.read_text(encoding="utf-8")
+    )
+
+
+def _offer_identity(*values: str) -> tuple[str, str]:
+    """Ask Form to construct the content-addressed message and graph edge."""
+    if len(values) != 6 or any(not _FORM_TOKEN.fullmatch(value) for value in values):
+        raise RuntimeError("native Form federation offer contains an invalid token")
+    source = _native_recipe_source()
+    if source.count(_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form federation admission entry is unavailable")
+    invocation = "(pfgc-offer-receipt " + " ".join(
+        f'"{value}"' for value in values
+    ) + "))"
+    with _KERNEL_LOCK:
+        receipt = form_kernel_bridge.run_recipe(
+            source.replace(_BAND_ENTRY, invocation),
+            timeout=_OFFER_IDENTITY_TIMEOUT_SECONDS,
+        )
+    pieces = receipt.split("|")
+    if (
+        len(pieces) != 3
+        or pieces[0] != "1"
+        or not _ID.fullmatch(pieces[1])
+        or not _EDGE_ID.fullmatch(pieces[2])
+    ):
+        raise RuntimeError("native Form federation identity receipt is invalid")
+    return pieces[1], pieces[2]
+
+
+def _path(name: str) -> Path:
+    return store_path() / name
+
+
+def _read_ids(path: Path) -> list[str]:
+    if not path.is_file():
+        return []
+    return [value for value in path.read_text(encoding="ascii").splitlines() if _ID.fullmatch(value)]
+
+
+@contextmanager
+def _index_transaction():
+    """Serialize one index mutation across threads and API processes."""
+    lock_path = _path(".index.lock")
+    with _LOCK, lock_path.open("a+b") as stream:
+        if stream.seek(0, os.SEEK_END) == 0:
+            stream.write(b"\0")
+            stream.flush()
+        _lock_file(stream)
+        try:
+            yield
+        finally:
+            _unlock_file(stream)
+
+
+def _append_id(path: Path, message_id: str) -> None:
+    with _index_transaction():
+        ids = _read_ids(path)
+        if message_id not in ids:
+            _atomic_write_ascii(
+                path,
+                "".join(f"{value}\n" for value in [*ids, message_id]),
+            )
+
+
+def _atomic_write_ascii(path: Path, content: str) -> None:
+    """Publish one complete carrier file or leave the previous value intact."""
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary_path = Path(temporary)
+    try:
+        with os.fdopen(fd, "w", encoding="ascii", newline="\n") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, path)
+        _fsync_directory(path.parent)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _fsync_directory(path: Path) -> None:
+    """Make a published rename durable on hosts with directory fsync."""
+    if sys.platform == "win32":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    directory_fd = os.open(path, flags)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def offer(*, from_node: str, to_node: str | None, kind: str, text: str,
           payload: dict[str, Any], timestamp: str) -> dict[str, str]:
-    # Variable-width user bytes are encoded only for the space-delimited carrier;
-    # Form still receives and hashes every byte and makes every graph decision.
-    command = " ".join((
-        "federation-offer", str(store_path()), _token(from_node),
-        "-" if to_node is None else _token(to_node), _token(kind), _token(text),
-        _token(json.dumps(payload, sort_keys=True, separators=(",", ":"))), _token(timestamp),
-    ))
-    fields = dict(part.split("=", 1) for part in _run(command).split("|") if "=" in part)
-    message_id = fields.get("message_id", "")
-    if fields.get("ack") != "node" or not _ID.fullmatch(message_id):
-        raise RuntimeError(f"native Form federation offer was not witnessed: {fields}")
-    for required in ("persisted", "traversable", "observed"):
-        if fields.get(required) != "1":
-            raise RuntimeError(f"native Form federation receipt lacks {required}=1")
-    return fields
-
-
-def _ids(command: str) -> list[str]:
-    values = [line for line in _run(command).splitlines() if line]
-    if any(not _ID.fullmatch(value) for value in values):
-        raise RuntimeError("native Form federation traversal returned an invalid node id")
-    return values
+    # Variable-width user bytes remain opaque, path-safe payloads in this membrane;
+    # Form receives the concrete operation and encoded field widths before a write.
+    encoded_from = _token(from_node)
+    encoded_to = "" if to_node is None else _token(to_node)
+    encoded_kind = _token(kind)
+    encoded_text = _token(text)
+    encoded_payload = _token(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+    encoded_timestamp = _token(timestamp)
+    message_id, edge_id = _offer_identity(
+        encoded_from,
+        encoded_to,
+        encoded_kind,
+        encoded_text,
+        encoded_payload,
+        encoded_timestamp,
+    )
+    with _LOCK:
+        message_path = _path(f"message-{message_id}")
+        if not message_path.is_file():
+            _atomic_write_ascii(
+                message_path,
+                "\n".join((
+                    f"id={message_id}", f"from_node={encoded_from}", f"to_node={encoded_to}",
+                    f"type={encoded_kind}", f"text={encoded_text}",
+                    f"payload={encoded_payload}", f"timestamp={encoded_timestamp}",
+                )),
+            )
+        edge_path = _path(f"edge-{edge_id}")
+        if not edge_path.is_file():
+            _atomic_write_ascii(
+                edge_path,
+                "\n".join((
+                    f"id={edge_id}", f"message_id={message_id}",
+                    f"from_node={encoded_from}", f"to_node={encoded_to}",
+                    f"type={encoded_kind}",
+                )),
+            )
+        _append_id(_path(f"out-{encoded_from}"), message_id)
+        _append_id(
+            _path("broadcast" if not encoded_to else f"in-{encoded_to}"), message_id
+        )
+    return {
+        "ack": "node",
+        "message_id": message_id,
+        "message_node": message_id,
+        "edge_node": edge_id,
+        "persisted": "1",
+        "traversable": "1",
+        "observed": "1",
+    }
 
 
 def visible_ids(node_id: str) -> list[str]:
-    store = str(store_path())
-    direct = _ids(f"federation-incoming {store} {_token(node_id)}")
-    broadcasts = _ids(f"federation-broadcasts {store}")
+    encoded_node = _token(node_id)
+    _admit(2, len(encoded_node), 0, 0, 0, 0, 0)
+    direct = _read_ids(_path(f"in-{encoded_node}"))
+    broadcasts = _read_ids(_path("broadcast"))
     return list(dict.fromkeys(direct + broadcasts))
 
 
 def has(message_id: str) -> bool:
     if not _ID.fullmatch(message_id):
         return False
-    return _run(f"federation-has {store_path()} {message_id}") == "1"
+    _admit(3, len(message_id), 0, 0, 0, 0, 0)
+    return _path(f"message-{message_id}").is_file()

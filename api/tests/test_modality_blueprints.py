@@ -70,6 +70,7 @@ def session():
         s.commit()
     finally:
         s.close()
+        engine.dispose()
 
 
 def test_shape_signature_blueprint_is_deterministic(session):

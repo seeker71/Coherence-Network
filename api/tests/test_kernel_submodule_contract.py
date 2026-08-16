@@ -21,6 +21,8 @@ APP_RECIPES = {
     "endpoint_placeholder_name.fk",
     "endpoint_reaction_resonance.fk",
     "endpoint_request_progress.fk",
+    "public_dialogue_envelope.fk",
+    "public_federation_graph_cli.fk",
 }
 
 
@@ -175,6 +177,22 @@ def test_network_endpoint_recipes_are_owned_by_the_api() -> None:
             / "examples"
             / name
         ).exists()
+
+
+def test_full_model_receipt_resolves_the_nested_kernel_runtime() -> None:
+    """Composition gates execute from the populated kernel runtime directory."""
+    script = (
+        REPO_ROOT
+        / "scripts"
+        / "fkwu_form_cli_full_model_inference_composition_receipt.sh"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        '[[ -x "$FORM_RUNTIME_DIR/validate.sh" ]] || '
+        'FORM_RUNTIME_DIR="$ROOT/form/form"'
+    ) in script
+    assert script.count("cd '$FORM_RUNTIME_DIR' && ./validate.sh") == 6
+    assert "cd '$ROOT/form' && ./validate.sh" not in script
 
 
 def test_form_cli_installer_hydrates_the_kernel_submodule() -> None:

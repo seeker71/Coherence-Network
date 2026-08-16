@@ -46,6 +46,7 @@ def session():
         s.commit()
     finally:
         s.close()
+        engine.dispose()
 
 
 def _make_file(content: str) -> Path:

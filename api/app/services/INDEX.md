@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 253
+**Total files**: 255
 
 | File | Purpose |
 |---|---|
@@ -92,6 +92,7 @@
 | [deployment_observation.py](deployment_observation.py) | Persistent, content-bound deployment observations in the Form substrate. |
 | [deployment_observer_oidc.py](deployment_observer_oidc.py) | Verify GitHub Actions OIDC identity for the public deployment observer. |
 | [deployment_observer_service.py](deployment_observer_service.py) | One-time external deployment challenges and byte-bound observations. |
+| [dialogue_service.py](dialogue_service.py) | Persistent public dialogue cells attended by one native CPU worker. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
 | [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
 | [discovery_reward_service.py](discovery_reward_service.py) | Discovery reward service — CC flows to contributors who bring attention. |
@@ -174,7 +175,7 @@
 | [meta_service.py](meta_service.py) | Metadata self-discovery service. |
 | [metrics_service.py](metrics_service.py) | Task metrics: persistence and aggregation. Spec 026 Phase 1. |
 | [mvp_baseline_service.py](mvp_baseline_service.py) | Helpers for local MVP baseline artifact discovery. |
-| [native_federation_graph_service.py](native_federation_graph_service.py) | Thin byte carrier for the native Form federation graph. |
+| [native_federation_graph_service.py](native_federation_graph_service.py) | Thin durable carrier admitted by the native Form federation recipe. |
 | [native_runtime_observation.py](native_runtime_observation.py) | Behavioral observation of the deployed kernel and form-cli carriers. |
 | [native_training_receipts.py](native_training_receipts.py) | Load committed native training receipt artifacts for model dashboards. |
 | [news_ingestion_service.py](news_ingestion_service.py) | News ingestion service: fetches RSS feeds and caches results. |
@@ -203,6 +204,7 @@
 | [prompt_ab_roi_service.py](prompt_ab_roi_service.py) | Backward-compatible wrapper around SlotSelector for prompt variant selection. |
 | [proposal_service.py](proposal_service.py) | Proposals — short suggestions the collective can vote on by meeting. |
 | [proprioception_service.py](proprioception_service.py) | Proprioception service — auto-sensing system state. |
+| [public_dialogue_store.py](public_dialogue_store.py) | Durable cells for the unlisted public dialogue lane. |
 | [push_subscription_service.py](push_subscription_service.py) | Web Push subscription storage + send. |
 | [quality_awareness_service.py](quality_awareness_service.py) | Guidance-first quality awareness summary derived from maintainability audits. |
 | [reaction_service.py](reaction_service.py) | Reactions — a lightweight surface for expressing care on anything. |

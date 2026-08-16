@@ -60,6 +60,7 @@ def session():
         s.commit()
     finally:
         s.close()
+        engine.dispose()
 
 
 MEMORY_BODY = """---
