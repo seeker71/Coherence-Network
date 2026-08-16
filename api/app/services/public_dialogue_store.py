@@ -13,20 +13,34 @@ import secrets
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Iterator
 
 from sqlalchemy import DateTime, Integer, String, Text, case, func, select, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.services import unified_db
+from app.services import form_kernel_bridge, unified_db
 
 
-PUBLIC_DISCLOSURE_ACK = "public-unlisted-v1"
+PUBLIC_SINGLE_TURN_DISCLOSURE_ACK = "public-unlisted-v1"
+PUBLIC_DISCLOSURE_ACK = "public-unlisted-thread-v2"
+PUBLIC_DISCLOSURE_ACKS = frozenset(
+    (PUBLIC_SINGLE_TURN_DISCLOSURE_ACK, PUBLIC_DISCLOSURE_ACK)
+)
+MAX_THREAD_TURNS = 128
 ACTIVE_STATES = ("pending", "running", "releasing")
 TERMINAL_STATES = ("answered", "miss", "failed", "tombstoned")
 _ADMISSION_LOCK_KEY = 0x434F484449414C47  # "COHDIALG"
 _ADMISSION_LOCK = threading.RLock()
+_THREAD_PLANNER_LOCK_KEY = 0x434F484454485250  # "COHDTHRP"
+_THREAD_PLANNER_SLOT = threading.Lock()
+_THREAD_WINDOW_RECIPE = (
+    Path(__file__).resolve().parent.parent
+    / "form_recipes"
+    / "public_dialogue_thread_window.fk"
+)
+_THREAD_WINDOW_BAND_ENTRY = "  (dialogue-thread-window-band))"
 
 
 class PublicDialogueRateLimitError(RuntimeError):
@@ -38,6 +52,16 @@ class PublicDialogueRateLimitError(RuntimeError):
 class PublicDialogueAdmissionBusyError(RuntimeError):
     def __init__(self):
         super().__init__("the public dialogue admission lane is presently attending another offer")
+
+
+class PublicDialogueThreadDisclosureError(ValueError):
+    def __init__(self):
+        super().__init__("this turn grants single-turn access only")
+
+
+class PublicDialogueThreadPlannerBusyError(RuntimeError):
+    def __init__(self):
+        super().__init__("the native dialogue thread planner is presently attending another read")
 
 
 class PublicDialogueRecord(Base):
@@ -140,6 +164,25 @@ def _admission_lock(session: Any) -> None:
         session.execute(text("BEGIN IMMEDIATE"))
 
 
+@contextmanager
+def _thread_planning_slot() -> Iterator[Any]:
+    """Bound fkwu planning once per process and, on production, once per DB."""
+    if not _THREAD_PLANNER_SLOT.acquire(blocking=False):
+        raise PublicDialogueThreadPlannerBusyError()
+    try:
+        with unified_db.session() as session:
+            if session.bind is not None and session.bind.dialect.name == "postgresql":
+                acquired = session.scalar(
+                    text("SELECT pg_try_advisory_xact_lock(:lock_key)"),
+                    {"lock_key": _THREAD_PLANNER_LOCK_KEY},
+                )
+                if not acquired:
+                    raise PublicDialogueThreadPlannerBusyError()
+            yield session
+    finally:
+        _THREAD_PLANNER_SLOT.release()
+
+
 def _check_admission(
     session: Any,
     *,
@@ -175,6 +218,10 @@ def _check_admission(
         if parent is None or parent.state in ("tombstoned", "releasing"):
             raise ValueError(
                 "parent_dialogue_id does not name an available public dialogue"
+            )
+        if parent.disclosure_ack != PUBLIC_DISCLOSURE_ACK:
+            raise ValueError(
+                "parent_dialogue_id names a single-turn-only public dialogue"
             )
         expires_at = parent.expires_at
         if expires_at.tzinfo is None:
@@ -218,6 +265,7 @@ def create_dialogue(
     requested_locale: str,
     canonical_locale: str,
     parent_dialogue_id: str | None,
+    public_disclosure_ack: str = PUBLIC_DISCLOSURE_ACK,
     channel_timeout_seconds: int,
     network_peer_sha256: str,
     expires_at: datetime,
@@ -242,6 +290,7 @@ def create_dialogue(
                 requested_locale=requested_locale,
                 canonical_locale=canonical_locale,
                 parent_dialogue_id=parent_dialogue_id,
+                public_disclosure_ack=public_disclosure_ack,
                 channel_timeout_seconds=channel_timeout_seconds,
                 network_peer_sha256=network_peer_sha256,
                 expires_at=expires_at,
@@ -251,6 +300,8 @@ def create_dialogue(
                 admission_session=session,
             )
 
+    if public_disclosure_ack not in PUBLIC_DISCLOSURE_ACKS:
+        raise ValueError("unknown public dialogue disclosure acknowledgement")
     now = _now()
     dialogue_id = "dlg_" + secrets.token_urlsafe(18)
     removal_token = secrets.token_urlsafe(32)
@@ -264,7 +315,7 @@ def create_dialogue(
         canonical_locale=canonical_locale,
         parent_dialogue_id=parent_dialogue_id,
         channel_timeout_seconds=channel_timeout_seconds,
-        disclosure_ack=PUBLIC_DISCLOSURE_ACK,
+        disclosure_ack=public_disclosure_ack,
         visibility="unlisted-public",
         network_peer_sha256=network_peer_sha256,
         removal_token_sha256=hashlib.sha256(removal_token.encode("utf-8")).hexdigest(),
@@ -303,6 +354,206 @@ def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:
                 return _expired_running_view(row)
             _tombstone(row, now=now)
         return _row(row)
+
+
+def _thread_child_candidates(
+    session: Any,
+    frontier: list[str],
+    seen_ids: set[str],
+    limit: int,
+) -> list[PublicDialogueRecord]:
+    return list(
+        session.scalars(
+            select(PublicDialogueRecord)
+            .where(
+                PublicDialogueRecord.parent_dialogue_id.in_(frontier),
+                PublicDialogueRecord.id.notin_(seen_ids),
+            )
+            .order_by(
+                PublicDialogueRecord.created_at.asc(),
+                PublicDialogueRecord.id.asc(),
+            )
+            .limit(limit)
+        )
+    )
+
+
+def _thread_candidates(
+    session: Any,
+    anchor: PublicDialogueRecord,
+    max_turns: int,
+) -> list[PublicDialogueRecord]:
+    root = anchor
+    ancestry = [anchor]
+    ancestor_ids = {anchor.id}
+    while root.parent_dialogue_id and len(ancestry) < max_turns:
+        parent = session.scalar(
+            select(PublicDialogueRecord).where(
+                PublicDialogueRecord.id == root.parent_dialogue_id
+            )
+        )
+        if parent is None or parent.id in ancestor_ids:
+            break
+        ancestor_ids.add(parent.id)
+        ancestry.append(parent)
+        root = parent
+
+    rows = list(reversed(ancestry))
+    seen_ids = {row.id for row in rows}
+    frontier = list(seen_ids)
+    while frontier and len(rows) < max_turns + 1:
+        remaining = max_turns + 1 - len(rows)
+        fresh = _thread_child_candidates(session, frontier, seen_ids, remaining)
+        if not fresh:
+            break
+        rows.extend(fresh)
+        frontier = [child.id for child in fresh]
+        seen_ids.update(frontier)
+    return rows
+
+
+def _native_thread_window(
+    candidates: list[PublicDialogueRecord],
+    anchor_id: str,
+    max_turns: int,
+) -> dict[str, Any]:
+    """Let Form choose topology and truncation over persistence-carried rows."""
+    source = _THREAD_WINDOW_RECIPE.read_text(encoding="utf-8")
+    if source.count(_THREAD_WINDOW_BAND_ENTRY) != 1:
+        raise RuntimeError("native Form dialogue thread entry is unavailable")
+    identifiers: dict[str, str] = {}
+    nodes = []
+    for row in candidates:
+        node_id = row.id.encode("utf-8").hex()
+        parent_id = (row.parent_dialogue_id or "").encode("utf-8").hex()
+        identifiers[node_id] = row.id
+        identifiers[parent_id] = row.parent_dialogue_id or ""
+        nodes.append(f'(list "{node_id}" "{parent_id}")')
+    anchor_hex = anchor_id.encode("utf-8").hex()
+    invocation = (
+        "(dialogue-thread-window-receipt (list "
+        + " ".join(nodes)
+        + f') "{anchor_hex}" {max_turns})'
+    )
+    receipt = form_kernel_bridge.run_recipe(
+        source.replace(_THREAD_WINDOW_BAND_ENTRY, f"  {invocation})"),
+        timeout=10,
+    )
+    pieces = receipt.split("|")
+    if len(pieces) != 6 or pieces[5] not in ("0", "1"):
+        raise RuntimeError("native Form dialogue thread returned an invalid verdict")
+    selected_hex = pieces[4].split(",") if pieces[4] else []
+    if (
+        not selected_hex
+        or len(selected_hex) > max_turns
+        or len(selected_hex) != len(set(selected_hex))
+        or anchor_hex not in selected_hex
+        or any(value not in identifiers for value in selected_hex)
+    ):
+        raise RuntimeError("native Form dialogue thread returned an invalid window")
+
+    def identity(value: str) -> str | None:
+        if not value:
+            return None
+        if value not in identifiers:
+            raise RuntimeError("native Form dialogue thread returned an unknown identity")
+        return identifiers[value]
+
+    selected = [identifiers[value] for value in selected_hex]
+    root_id = identity(pieces[0])
+    oldest_id = identity(pieces[1])
+    continuation_id = identity(pieces[2])
+    if identity(pieces[3]) != anchor_id or oldest_id != selected[0]:
+        raise RuntimeError("native Form dialogue thread returned an unbound window")
+    if (root_id is None) == (continuation_id is None):
+        raise RuntimeError("native Form dialogue thread returned an ambiguous root")
+    return {
+        "root_dialogue_id": root_id,
+        "oldest_observed_dialogue_id": oldest_id,
+        "continuation_parent_dialogue_id": continuation_id,
+        "anchor_dialogue_id": anchor_id,
+        "selected_ids": selected,
+        "truncated": pieces[5] == "1",
+    }
+
+
+def _observe_thread_rows(
+    rows: list[PublicDialogueRecord],
+    *,
+    now: datetime,
+) -> list[dict[str, Any]]:
+    observed: list[dict[str, Any]] = []
+    for row in rows:
+        if row.state == "releasing":
+            observed.append(_released_owned_view(row))
+            continue
+        expires_at = row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if row.state != "tombstoned" and expires_at <= now:
+            if row.state == "running":
+                observed.append(_expired_running_view(row))
+                continue
+            _tombstone(row, now=now)
+        observed.append(_row(row))
+    return observed
+
+
+def get_dialogue_thread(
+    dialogue_id: str,
+    *,
+    max_turns: int = MAX_THREAD_TURNS,
+) -> dict[str, Any] | None:
+    """Read one bounded unlisted dialogue tree from any turn capability."""
+    if isinstance(max_turns, bool) or not 1 <= max_turns <= MAX_THREAD_TURNS:
+        raise ValueError(f"max_turns must be between 1 and {MAX_THREAD_TURNS}")
+    ensure_schema()
+    with _thread_planning_slot() as session:
+        anchor = session.scalar(
+            select(PublicDialogueRecord).where(PublicDialogueRecord.id == dialogue_id)
+        )
+        if anchor is None:
+            return None
+        if anchor.disclosure_ack != PUBLIC_DISCLOSURE_ACK:
+            raise PublicDialogueThreadDisclosureError()
+        candidates = _thread_candidates(session, anchor, max_turns)
+        if any(row.disclosure_ack != PUBLIC_DISCLOSURE_ACK for row in candidates):
+            raise PublicDialogueThreadDisclosureError()
+        plan = _native_thread_window(candidates, dialogue_id, max_turns)
+    with unified_db.session() as session:
+        lock_order = case(
+            {
+                row_id: position
+                for position, row_id in enumerate(plan["selected_ids"])
+            },
+            value=PublicDialogueRecord.id,
+            else_=len(plan["selected_ids"]),
+        )
+        locked = list(
+            session.scalars(
+                select(PublicDialogueRecord)
+                .where(PublicDialogueRecord.id.in_(plan["selected_ids"]))
+                .order_by(lock_order)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        )
+        locked_by_id = {row.id: row for row in locked}
+        if set(locked_by_id) != set(plan["selected_ids"]):
+            raise RuntimeError("dialogue thread changed before its native window locked")
+        rows = [locked_by_id[row_id] for row_id in plan["selected_ids"]]
+        observed = _observe_thread_rows(rows, now=_now())
+        return {
+            "root_dialogue_id": plan["root_dialogue_id"],
+            "oldest_observed_dialogue_id": plan["oldest_observed_dialogue_id"],
+            "continuation_parent_dialogue_id": plan[
+                "continuation_parent_dialogue_id"
+            ],
+            "anchor_dialogue_id": plan["anchor_dialogue_id"],
+            "turns": observed,
+            "turn_count": len(observed),
+            "truncated": plan["truncated"],
+        }
 
 
 def _expired_running_view(row: PublicDialogueRecord) -> dict[str, Any]:

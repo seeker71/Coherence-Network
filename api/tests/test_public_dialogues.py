@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import os
 import sys
 import threading
@@ -52,7 +53,9 @@ def dialogue_store(monkeypatch):
             "canonical_locale": values["canonical_locale"],
             "parent_dialogue_id": parent_id,
             "channel_timeout_seconds": values["channel_timeout_seconds"],
-            "disclosure_ack": store.PUBLIC_DISCLOSURE_ACK,
+            "disclosure_ack": values.get(
+                "public_disclosure_ack", store.PUBLIC_DISCLOSURE_ACK
+            ),
             "visibility": "unlisted-public",
             "output": {},
             "claimed_by": None,
@@ -209,7 +212,7 @@ def _offer(**changes):
         "question": "Apakah cache bagian dari tubuh?",
         "point_of_view": "cache termodinamik",
         "locale": "id",
-        "public_disclosure_ack": "public-unlisted-v1",
+        "public_disclosure_ack": "public-unlisted-thread-v2",
         "network_peer": "test-peer",
         "channel_timeout_seconds": 90,
     }
@@ -299,6 +302,19 @@ def test_disclosure_ack_is_versioned_and_persists_zero_rows_when_absent(dialogue
     assert dialogue_store == {}
 
 
+def test_single_turn_disclosure_advertises_only_single_turn_actions(dialogue_store):
+    offered = _offer(
+        question="This receipt stays one turn.",
+        public_disclosure_ack=store.PUBLIC_SINGLE_TURN_DISCLOSURE_ACK,
+    )
+
+    assert offered["public_disclosure_ack"] == store.PUBLIC_SINGLE_TURN_DISCLOSURE_ACK
+    assert "reply_url" not in offered
+    assert "thread_url" not in offered
+    assert offered["poll_url"].endswith(offered["id"])
+    assert offered["release_url"].endswith(offered["id"])
+
+
 def test_form_receives_the_real_dialogue_envelope_before_persistence(
     dialogue_store, monkeypatch
 ):
@@ -322,7 +338,7 @@ def test_form_receives_the_real_dialogue_envelope_before_persistence(
         "locale": "id",
         "point": "akar bakau",
         "question": "Apa yang dirasakan akar bakau?",
-        "disclosure": "public-unlisted-v1",
+        "disclosure": "public-unlisted-thread-v2",
         "parent": "",
         "timeout_seconds": 60,
     }
@@ -477,6 +493,61 @@ def test_postgres_admission_contention_is_nonblocking_and_explicit():
         "",
     )
     assert observed["params"] == {"lock_key": store._ADMISSION_LOCK_KEY}
+
+
+def test_thread_planner_contention_is_bounded_locally(monkeypatch):
+    @contextlib.contextmanager
+    def session():
+        yield SimpleNamespace(bind=SimpleNamespace(dialect=SimpleNamespace(name="sqlite")))
+
+    monkeypatch.setattr(store.unified_db, "session", session)
+    entered = threading.Event()
+    release = threading.Event()
+
+    def hold_planner():
+        with store._thread_planning_slot():
+            entered.set()
+            assert release.wait(2)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(hold_planner)
+        assert entered.wait(1)
+        try:
+            with pytest.raises(
+                store.PublicDialogueThreadPlannerBusyError,
+                match="presently attending",
+            ):
+                with store._thread_planning_slot():
+                    pass
+        finally:
+            release.set()
+        first.result(timeout=2)
+
+
+def test_postgres_thread_planner_contention_is_nonblocking_and_explicit(monkeypatch):
+    observed = {}
+
+    def scalar(statement, params):
+        observed.update(statement=str(statement), params=params)
+        return False
+
+    @contextlib.contextmanager
+    def session():
+        yield SimpleNamespace(
+            bind=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")),
+            scalar=scalar,
+        )
+
+    monkeypatch.setattr(store.unified_db, "session", session)
+    with pytest.raises(
+        store.PublicDialogueThreadPlannerBusyError,
+        match="presently attending",
+    ):
+        with store._thread_planning_slot():
+            pass
+
+    assert "pg_try_advisory_xact_lock" in observed["statement"]
+    assert observed["params"] == {"lock_key": store._THREAD_PLANNER_LOCK_KEY}
 
 
 def test_form_dialogue_refusal_persists_nothing(dialogue_store, monkeypatch):
@@ -953,6 +1024,107 @@ async def test_http_membrane_starts_reads_releases_and_has_no_public_list(monkey
 
 
 @pytest.mark.asyncio
+async def test_http_reply_fixes_parent_and_thread_read_exposes_no_capabilities(monkeypatch):
+    captured = {}
+
+    def submit(**values):
+        captured.update(values)
+        return {
+            "id": "dlg_reply",
+            "state": "pending",
+            "parent_dialogue_id": values["parent_dialogue_id"],
+            "removal_token": "reply-removal-token-long-enough",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue_thread",
+        lambda dialogue_id: {
+            "root_dialogue_id": "dlg_root",
+            "anchor_dialogue_id": dialogue_id,
+            "turns": [
+                {"id": "dlg_root", "parent_dialogue_id": None},
+                {"id": "dlg_reply", "parent_dialogue_id": "dlg_root"},
+            ],
+            "turn_count": 2,
+            "truncated": False,
+        },
+    )
+    body = {
+        "question": "The river replies.",
+        "point_of_view": "river",
+        "locale": "en",
+        "public_disclosure_ack": "public-unlisted-thread-v2",
+    }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        rejected_override = await client.post(
+            "/api/dialogues/dlg_root/replies",
+            json={**body, "parent_dialogue_id": "dlg_other"},
+        )
+        replied = await client.post(
+            "/api/dialogues/dlg_root/replies",
+            json=body,
+        )
+        observed = await client.get("/api/dialogues/dlg_reply/thread")
+
+    assert rejected_override.status_code == 422
+    assert replied.status_code == 202
+    assert replied.headers["cache-control"] == "no-store"
+    assert captured["parent_dialogue_id"] == "dlg_root"
+    assert observed.status_code == 200
+    assert observed.headers["cache-control"] == "no-store"
+    assert observed.json()["turn_count"] == 2
+    assert "removal_token" not in json.dumps(observed.json())
+
+
+@pytest.mark.asyncio
+async def test_http_thread_read_contains_native_planner_failure(monkeypatch):
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue_thread",
+        lambda _dialogue_id: (_ for _ in ()).throw(
+            RuntimeError("private native carrier detail")
+        ),
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/api/dialogues/dlg_native/thread")
+
+    assert response.status_code == 503
+    assert response.headers["retry-after"] == "15"
+    assert response.json()["detail"] == (
+        "Native dialogue thread planning is presently unavailable"
+    )
+    assert "private native carrier detail" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_http_legacy_disclosure_stays_single_turn_only(monkeypatch):
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue_thread",
+        lambda _dialogue_id: (_ for _ in ()).throw(
+            dialogue_service.DialogueThreadDisclosureError()
+        ),
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/api/dialogues/dlg_legacy/thread")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This turn grants single-turn access only"
+
+
+@pytest.mark.asyncio
 async def test_http_membrane_preserves_distinct_public_peers_through_trusted_proxies(monkeypatch):
     origins: list[str] = []
 
@@ -1258,6 +1430,43 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     assert released["tombstoned_at"] == first_release.isoformat()
     monkeypatch.setattr(store, "_now", real_now)
 
+    legacy, legacy_token = store.create_dialogue(
+        question="This id grants one-turn access only.",
+        question_sha256="9" * 64,
+        point_of_view="legacy disclosure",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        public_disclosure_ack=store.PUBLIC_SINGLE_TURN_DISCLOSURE_ACK,
+        channel_timeout_seconds=30,
+        network_peer_sha256="9" * 64,
+        expires_at=real_now() + timedelta(days=7),
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    assert store.get_dialogue(legacy["id"])["disclosure_ack"] == (
+        store.PUBLIC_SINGLE_TURN_DISCLOSURE_ACK
+    )
+    with pytest.raises(store.PublicDialogueThreadDisclosureError):
+        store.get_dialogue_thread(legacy["id"])
+    with pytest.raises(ValueError, match="single-turn-only"):
+        store.create_dialogue(
+            question="A reply cannot widen the earlier disclosure.",
+            question_sha256="8" * 64,
+            point_of_view="consent boundary",
+            requested_locale="en",
+            canonical_locale="en",
+            parent_dialogue_id=legacy["id"],
+            channel_timeout_seconds=30,
+            network_peer_sha256="8" * 64,
+            expires_at=real_now() + timedelta(days=7),
+            max_active=8,
+            starts_per_window=6,
+            start_window_seconds=60,
+        )
+    assert dialogue_service.release_dialogue(legacy["id"], legacy_token) is True
+
     expiry_boundary = datetime(2026, 8, 22, 1, 2, 3, tzinfo=timezone.utc)
     expiring_row, _ = store.create_dialogue(
         question="What remains visible at the expiry boundary?",
@@ -1493,3 +1702,160 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
             start_window_seconds=60,
         )
     engine.dispose()
+
+
+def test_dialogue_thread_survives_database_restart_and_keeps_expiry_boundary(
+    monkeypatch,
+    tmp_path,
+):
+    database_path = tmp_path / "dialogue-thread.db"
+    first_engine = create_engine(f"sqlite+pysqlite:///{database_path}")
+    store.PublicDialogueRecord.__table__.create(bind=first_engine, checkfirst=True)
+
+    def session_for(engine):
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+        @contextlib.contextmanager
+        def session():
+            value = factory()
+            try:
+                yield value
+                value.commit()
+            except Exception:
+                value.rollback()
+                raise
+            finally:
+                value.close()
+
+        return session
+
+    monkeypatch.setattr(store.unified_db, "ensure_schema", lambda: None)
+    monkeypatch.setattr(store.unified_db, "session", session_for(first_engine))
+    expiry_boundary = datetime.now(timezone.utc) + timedelta(seconds=30)
+    root, root_token = store.create_dialogue(
+        question="What does the river see?",
+        question_sha256="a" * 64,
+        point_of_view="river",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=30,
+        network_peer_sha256="a" * 64,
+        expires_at=expiry_boundary,
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    reply, reply_token = store.create_dialogue(
+        question="I see the banks that let me move.",
+        question_sha256="b" * 64,
+        point_of_view="water",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=root["id"],
+        channel_timeout_seconds=30,
+        network_peer_sha256="b" * 64,
+        expires_at=expiry_boundary + timedelta(days=7),
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    assert root_token != reply_token
+    first_engine.dispose()
+
+    restarted_engine = create_engine(f"sqlite+pysqlite:///{database_path}")
+    monkeypatch.setattr(store.unified_db, "session", session_for(restarted_engine))
+    persisted = store.get_dialogue_thread(reply["id"])
+    assert persisted is not None
+    assert persisted["root_dialogue_id"] == root["id"]
+    assert persisted["anchor_dialogue_id"] == reply["id"]
+    assert [turn["id"] for turn in persisted["turns"]] == [root["id"], reply["id"]]
+    assert persisted["turns"][1]["parent_dialogue_id"] == root["id"]
+    assert "removal_token" not in json.dumps(persisted)
+
+    monkeypatch.setattr(store, "_now", lambda: expiry_boundary)
+    expired = store.get_dialogue_thread(reply["id"])
+    assert expired is not None
+    assert expired["turns"][0]["state"] == "tombstoned"
+    assert expired["turns"][0]["question"] == "[released]"
+    assert expired["turns"][1]["question"] == reply["question"]
+    bounded = store.get_dialogue_thread(root["id"], max_turns=1)
+    assert bounded is not None
+    assert bounded["turn_count"] == 1
+    assert bounded["truncated"] is True
+
+    third, _ = store.create_dialogue(
+        question="The banks answer the water.",
+        question_sha256="c" * 64,
+        point_of_view="riverbank",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=reply["id"],
+        channel_timeout_seconds=30,
+        network_peer_sha256="c" * 64,
+        expires_at=expiry_boundary + timedelta(days=7),
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    with session_for(restarted_engine)() as skewed_session:
+        skewed_session.get(store.PublicDialogueRecord, root["id"]).created_at = (
+            expiry_boundary + timedelta(seconds=3)
+        )
+        skewed_session.get(store.PublicDialogueRecord, reply["id"]).created_at = (
+            expiry_boundary + timedelta(seconds=2)
+        )
+        skewed_session.get(store.PublicDialogueRecord, third["id"]).created_at = (
+            expiry_boundary + timedelta(seconds=1)
+        )
+    skewed_clock_thread = store.get_dialogue_thread(third["id"])
+    assert [turn["id"] for turn in skewed_clock_thread["turns"]] == [
+        root["id"],
+        reply["id"],
+        third["id"],
+    ]
+    ancestry_window = store.get_dialogue_thread(third["id"], max_turns=2)
+    assert ancestry_window is not None
+    assert ancestry_window["root_dialogue_id"] is None
+    assert ancestry_window["continuation_parent_dialogue_id"] == root["id"]
+    assert [turn["id"] for turn in ancestry_window["turns"]] == [
+        reply["id"],
+        third["id"],
+    ]
+    assert ancestry_window["anchor_dialogue_id"] == third["id"]
+    assert ancestry_window["truncated"] is True
+    restarted_engine.dispose()
+
+
+def test_dialogue_thread_window_semantics_execute_on_native_fkwu():
+    created = datetime(2026, 8, 17, tzinfo=timezone.utc)
+    candidates = [
+        SimpleNamespace(id="dlg_root", parent_dialogue_id=None, created_at=created),
+        SimpleNamespace(
+            id="dlg_anchor",
+            parent_dialogue_id="dlg_root",
+            created_at=created + timedelta(seconds=1),
+        ),
+        SimpleNamespace(
+            id="dlg_sibling",
+            parent_dialogue_id="dlg_root",
+            created_at=created + timedelta(seconds=2),
+        ),
+        SimpleNamespace(
+            id="dlg_child",
+            parent_dialogue_id="dlg_anchor",
+            created_at=created + timedelta(seconds=3),
+        ),
+    ]
+
+    plan = store._native_thread_window(candidates, "dlg_anchor", 3)
+
+    assert form_kernel_bridge.active_runtime() == "fkwu"
+    assert plan == {
+        "root_dialogue_id": "dlg_root",
+        "oldest_observed_dialogue_id": "dlg_root",
+        "continuation_parent_dialogue_id": None,
+        "anchor_dialogue_id": "dlg_anchor",
+        "selected_ids": ["dlg_root", "dlg_anchor", "dlg_sibling"],
+        "truncated": True,
+    }
