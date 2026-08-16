@@ -21,7 +21,7 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy.exc import OperationalError
 
@@ -46,10 +46,14 @@ from app.services.substrate import (
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
 from app.services.unified_db import session as session_scope
 from app import config_loader
+from app.services import form_kernel_bridge
 
 
 router = APIRouter()
-_KERNEL_CORE_BML_RELATIVE = Path("form") / "form-stdlib" / "bml" / "kernel-core.bml"
+_KERNEL_CORE_BML_RELATIVES = (
+    Path("form") / "form" / "form-stdlib" / "bml" / "kernel-core.bml",
+    Path("form") / "form-stdlib" / "bml" / "kernel-core.bml",
+)
 _KERNEL_CORE_COUNTS = {
     "primitive_count": "RequiredPrimitiveCount",
     "dispatch_count": "RequiredDispatchCount",
@@ -278,6 +282,17 @@ def _grounded_ask_root() -> Path:
     return api_root.parent
 
 
+def _windows_host() -> bool:
+    return os.name == "nt"
+
+
+def _grounded_ask_command(wrapper: Path, query_path: str) -> list[str]:
+    command = [str(wrapper), "ask-file", query_path]
+    if _windows_host():
+        return [form_kernel_bridge._bash_path(), *command]
+    return command
+
+
 _NODE_ID_RE = re.compile(r"^@[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _TRUST_RE = re.compile(
@@ -290,8 +305,38 @@ _TRUST_RE = re.compile(
 )
 
 
+def _terminate_native_process_tree(process: subprocess.Popen[bytes]) -> None:
+    """Terminate and reap the isolated native carrier process group."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+    if process.poll() is None:
+        process.kill()
+    process.communicate()
+
+
 def _run_native_wrapper(
-    command: list[str], *, cwd: Path, timeout: int
+    command: list[str],
+    *,
+    cwd: Path,
+    timeout: int,
+    on_start: Callable[[int], None] | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     """Run the wrapper in an isolated process group and reap the whole tree."""
     popen_kwargs: dict[str, Any] = {
@@ -304,31 +349,16 @@ def _run_native_wrapper(
     else:
         popen_kwargs["start_new_session"] = True
     process = subprocess.Popen(command, **popen_kwargs)
+    if on_start is not None:
+        try:
+            on_start(process.pid)
+        except Exception:
+            _terminate_native_process_tree(process)
+            raise
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        if os.name == "nt":
-            subprocess.run(
-                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-        else:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                process.communicate(timeout=2)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-        if process.poll() is None:
-            process.kill()
-            process.communicate()
+        _terminate_native_process_tree(process)
         raise exc
     return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
@@ -354,6 +384,8 @@ def _secure_native_query_directory(path: Path) -> None:
 def _parse_native_grounded_payload(
     stdout: bytes,
     stderr: bytes,
+    *,
+    allow_escalation_miss: bool = False,
 ) -> tuple[str, dict[str, str], dict[str, str], str, str]:
     """Validate the complete byte protocol before exposing any native claim."""
     try:
@@ -378,7 +410,18 @@ def _parse_native_grounded_payload(
         decision,
         reason,
     ) = match.groups()
-    if path != "native":
+    escalation_miss = (
+        allow_escalation_miss
+        and path == "rented"
+        and grounded == "no"
+        and frequency == "unknown"
+        and sufficient == "no"
+        and observed == "no"
+        and verdict == "rented"
+        and decision == "escalate"
+        and reason == "empty"
+    )
+    if path != "native" and not escalation_miss:
         raise HTTPException(
             status_code=502,
             detail="grounded ask returned a non-native path",
@@ -535,10 +578,21 @@ def _parse_native_grounded_payload(
     return trust, trust_fields, bindings, answer, payload
 
 
-def _run_grounded_ask(query: str) -> GroundedAskResponse:
+def _run_grounded_ask(
+    query: str,
+    *,
+    timeout_seconds: int | None = None,
+    allow_escalation_miss: bool = False,
+    on_process_start: Callable[[int], None] | None = None,
+) -> GroundedAskResponse:
     from app.services.native_runtime_observation import observe_native_runtime
 
-    timeout = config_loader.get_int("grounding", "native_ask_timeout_seconds", 20)
+    timeout = (
+        int(timeout_seconds)
+        if timeout_seconds is not None
+        else config_loader.get_int("grounding", "native_ask_timeout_seconds", 20)
+    )
+    timeout = max(1, min(timeout, 600))
     max_chars = config_loader.get_int("grounding", "native_ask_max_query_chars", 2000)
     if len(query) > max_chars:
         raise HTTPException(
@@ -607,9 +661,10 @@ def _run_grounded_ask(query: str) -> GroundedAskResponse:
             os.fsync(query_out.fileno())
         try:
             process = _run_native_wrapper(
-                [str(wrapper), "ask-file", query_path],
+                _grounded_ask_command(wrapper, query_path),
                 cwd=root,
                 timeout=timeout,
+                on_start=on_process_start,
             )
         except subprocess.TimeoutExpired as exc:
             raise HTTPException(
@@ -661,6 +716,7 @@ def _run_grounded_ask(query: str) -> GroundedAskResponse:
     trust, trust_fields, bindings, answer, payload = _parse_native_grounded_payload(
         process.stdout,
         process.stderr,
+        allow_escalation_miss=allow_escalation_miss,
     )
     return GroundedAskResponse(
         query=query,
@@ -1586,9 +1642,10 @@ def _sha256_text(value: str) -> str:
 def _read_kernel_core_source() -> str | None:
     here = Path(__file__).resolve()
     for root in (*here.parents, Path.cwd()):
-        candidate = root / _KERNEL_CORE_BML_RELATIVE
-        if candidate.is_file():
-            return candidate.read_text(encoding="utf-8")
+        for relative in _KERNEL_CORE_BML_RELATIVES:
+            candidate = root / relative
+            if candidate.is_file():
+                return candidate.read_text(encoding="utf-8")
     return None
 
 

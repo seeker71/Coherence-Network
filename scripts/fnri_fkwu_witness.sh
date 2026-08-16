@@ -4,7 +4,7 @@ set -eu
 ROOT="$(cd -P "$(dirname "$0")/.." && pwd)"
 WANT="$(awk '$1=="form-cli"{print $3; exit}' "$ROOT/form/form/fourth-arm-bands.txt")"
 [ -n "$WANT" ] || { echo "FAIL: form-cli band missing from fourth-arm-bands.txt" >&2; exit 1; }
-OUT="$(cd "$ROOT/form" && ./validate.sh form-stdlib/tests/form-cli-band.fk 2>&1)"
+OUT="$(cd "$ROOT/form/form" && ./validate.sh form-stdlib/tests/form-cli-band.fk 2>&1)"
 echo "$OUT" | grep -E "$WANT|fourth|divergent" | tail -3 || true
 if echo "$OUT" | grep -qE "(→|fourth.*=)[[:space:]]*$WANT"; then
   VERDICT="$WANT"

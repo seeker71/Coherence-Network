@@ -288,6 +288,10 @@ ask_native_local() {
         --query-file "$query_file" --request-id "$request_id" \
         >"$receipt_file" 2>/dev/null; then
       IFS= read -r verified_receipt <"$receipt_file" || true
+      # Native Windows Python writes redirected text with CRLF.  The receipt is
+      # authenticated byte-for-byte by Form, so remove only the transport CR
+      # before staging it for the native trust gate.
+      verified_receipt="${verified_receipt%$'\r'}"
       if [ -n "${verified_receipt:-}" ]; then
         receipt="$verified_receipt"
         break

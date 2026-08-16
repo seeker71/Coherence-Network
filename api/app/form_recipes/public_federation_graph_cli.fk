@@ -1,0 +1,109 @@
+; public_federation_graph_cli.fk — operation-sensitive native graph admission.
+; preludes: form-stdlib/sha256.fk
+(do
+    (defn pfgc-offer (from-len to-len kind-len text-len payload-len timestamp-len)
+        (if (gt from-len 0)
+        (if (le from-len 4096)
+        (if (ge to-len 0)
+        (if (le to-len 4096)
+        (if (gt kind-len 0)
+        (if (le kind-len 1024)
+        (if (gt text-len 0)
+        (if (le text-len 262144)
+        (if (gt payload-len 0)
+        (if (le payload-len 1048576)
+        (if (gt timestamp-len 0)
+        (if (le timestamp-len 256) 1 0)
+        0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0))
+
+    (defn pfgc-zero-tail (b c d e f)
+        (if (eq b 0)
+        (if (eq c 0)
+        (if (eq d 0)
+        (if (eq e 0)
+        (if (eq f 0) 1 0)
+        0) 0) 0) 0))
+
+    (defn pfgc-admit (operation a b c d e f)
+        (if (eq operation 1) (pfgc-offer a b c d e f)
+        (if (eq operation 2)
+            (if (gt a 0)
+                (if (le a 4096) (pfgc-zero-tail b c d e f) 0)
+                0)
+        (if (eq operation 3)
+            (if (eq a 68) (pfgc-zero-tail b c d e f) 0)
+            0))))
+
+    (defn pfgc-field (value)
+        (str_concat (int_to_str (str_len value)) (str_concat ":" value)))
+
+    (defn pfgc-fields-6 (a b c d e f)
+        (str_concat (pfgc-field a)
+        (str_concat (pfgc-field b)
+        (str_concat (pfgc-field c)
+        (str_concat (pfgc-field d)
+        (str_concat (pfgc-field e) (pfgc-field f)))))))
+
+    (defn pfgc-fields-4 (a b c d)
+        (str_concat (pfgc-field a)
+        (str_concat (pfgc-field b)
+        (str_concat (pfgc-field c) (pfgc-field d)))))
+
+    (defn pfgc-hex-digit (value)
+        (substring "0123456789abcdef" value (add value 1)))
+
+    (defn pfgc-hex-byte (value)
+        (str_concat
+            (pfgc-hex-digit (div value 16))
+            (pfgc-hex-digit (mod value 16))))
+
+    (defn pfgc-hex-bytes-loop (values out)
+        (if (eq (len values) 0) out
+            (pfgc-hex-bytes-loop (tail values)
+                (str_concat out (pfgc-hex-byte (head values))))))
+
+    (defn pfgc-hex-bytes (values)
+        (pfgc-hex-bytes-loop values ""))
+
+    (defn pfgc-content-digest (canonical)
+        (pfgc-hex-bytes
+            (sha256-stream-string
+                (str_concat "form-cli-carrier-challenge-v1"
+                    (str_concat (byte_to_str 10) canonical)))))
+
+    (defn pfgc-message-id (from-node to-node kind text payload timestamp)
+        (str_concat "msg_"
+            (pfgc-content-digest
+                (str_concat "federation-message-v1|"
+                    (pfgc-fields-6
+                        from-node to-node kind text payload timestamp)))))
+
+    (defn pfgc-edge-id (from-node to-node kind message-id)
+        (str_concat "edge_"
+            (pfgc-content-digest
+                (str_concat "federation-edge-v1|"
+                    (pfgc-fields-4 from-node to-node kind message-id)))))
+
+    (defn pfgc-offer-receipt (from-node to-node kind text payload timestamp)
+        (if (eq (pfgc-offer
+                    (str_len from-node) (str_len to-node) (str_len kind)
+                    (str_len text) (str_len payload) (str_len timestamp)) 1)
+            (do
+                (let message-id
+                    (pfgc-message-id
+                        from-node to-node kind text payload timestamp))
+                (let edge-id (pfgc-edge-id from-node to-node kind message-id))
+                (str_concat "1|"
+                    (str_concat message-id (str_concat "|" edge-id))))
+            "0||"))
+
+    (defn pfgc-band ()
+        (add
+            (if (eq (pfgc-admit 1 8 0 4 12 16 20) 1) 1 0)
+            (add
+                (if (eq (pfgc-admit 2 8 0 0 0 0 0) 1) 10 0)
+                (add
+                    (if (eq (pfgc-admit 3 68 0 0 0 0 0) 1) 100 0)
+                    (if (eq (pfgc-admit 9 0 0 0 0 0 0) 0) 1000 0)))))
+
+    (pfgc-band))

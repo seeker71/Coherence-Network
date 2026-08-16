@@ -14,6 +14,8 @@
 #   fkwu_run.sh <bundle-file> <module.fk>... <band.fk>  # legacy tools only
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FORM_SOURCE_ROOT="$ROOT/form"
+[ -d "$FORM_SOURCE_ROOT/form-stdlib" ] || FORM_SOURCE_ROOT="$ROOT/form/form"
 
 if [ "${1:-}" = "--src" ]; then
     shift
@@ -60,7 +62,7 @@ if [ "${1:-}" = "--src" ]; then
     source_file="$work/program.fk"
     cleanup_source_run() { rm -rf "$work"; }
     trap cleanup_source_run EXIT HUP INT TERM
-    cp "$ROOT/form/form/form-stdlib/core.fk" "$source_file" || exit 3
+    cp "$FORM_SOURCE_ROOT/form-stdlib/core.fk" "$source_file" || exit 3
     for recipe in "$@"; do
         if [ ! -f "$recipe" ]; then
             echo "fkwu_run: source not found: $recipe" >&2

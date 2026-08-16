@@ -176,14 +176,15 @@ def wait_openrouter_rate_limit() -> None:
 
 # Logging
 _LOG_DIR.mkdir(exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)-7s %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(_LOG_DIR / "local_runner.log"),
-    ],
-)
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-7s %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(_LOG_DIR / "local_runner.log"),
+        ],
+    )
 log = logging.getLogger("local_runner")
 
 # Config

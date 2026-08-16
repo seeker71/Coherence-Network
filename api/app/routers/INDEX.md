@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 151
+**Total files**: 152
 
 | File | Purpose |
 |---|---|
@@ -59,6 +59,7 @@
 | [debug.py](debug.py) | Debug mode toggle — runtime log-level control and diagnostic flags. |
 | [deploy.py](deploy.py) | Deploy log surface — public visibility into auto-deploy progress on the VPS. |
 | [deployment_observer.py](deployment_observer.py) | GitHub-OIDC-authenticated public deployment observation endpoints. |
+| [dialogues.py](dialogues.py) | Unlisted public dialogue cells over the VPC Form-native CPU worker. |
 | [dif_feedback.py](dif_feedback.py) | DIF feedback router — track verification accuracy for quality improvement. |
 | [discord_votes.py](discord_votes.py) | Discord reaction vote endpoint (spec-164 API Changes). |
 | [discovery.py](discovery.py) | Discovery router — Serendipity Discovery feed endpoints. |

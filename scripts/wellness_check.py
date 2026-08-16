@@ -1192,7 +1192,8 @@ STATIC_SIGNAL_TERMS = (
 
 def _count_file_lines(path: Path) -> int:
     try:
-        return sum(1 for _ in path.open("rb"))
+        with path.open("rb") as source:
+            return sum(1 for _ in source)
     except OSError:
         return 0
 

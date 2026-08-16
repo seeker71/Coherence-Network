@@ -28,6 +28,7 @@ from app.routers import (
     credentials,
     contributors,
     distributions,
+    dialogues,
     federation,
     field_stories,
     friction,
@@ -363,8 +364,12 @@ async def lifespan(app: FastAPI):
             "startup: translator/indexer registration failed", exc_info=True,
         )
 
+    from app.services import dialogue_service
+
+    dialogue_service.set_grounded_ask_runner(substrate_router._run_grounded_ask)
+    dialogue_service.ensure_dialogue_worker()
     yield
-    # shutdown: nothing needed currently
+    dialogue_service.stop_dialogue_worker()
 
 
 app = FastAPI(
@@ -848,6 +853,7 @@ app.include_router(rooms_router.router, prefix="/api/rooms", tags=["rooms"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
 app.include_router(contributor_identity.router, prefix="/api", tags=["identity"])
 app.include_router(distributions.router, prefix="/api", tags=["distributions"])
+app.include_router(dialogues.router, prefix="/api", tags=["dialogues"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
@@ -900,35 +906,6 @@ app.include_router(places_router.router, prefix="/api", tags=["places"])
 from app.routers import utils as utils_router
 app.include_router(utils_router.router, prefix="/api", tags=["utils"])
 
-# Auto-index repository content on startup
-@app.on_event("startup")
-async def startup_indexer():
-    try:
-        from app.services import content_indexer_service
-        stats = content_indexer_service.scan_and_index_specs()
-        _startup_logger.info("startup: content_indexer_stats=%s", stats)
-    except Exception:
-        _startup_logger.error("startup: content_indexer failed", exc_info=True)
-
-
-@app.on_event("startup")
-async def startup_translator_backend():
-    """Register the on-demand attunement backend.
-
-    Defaults to LibreTranslate (free, no key) so the web surface translates
-    content the moment a visitor requests a locale we don't have cached yet.
-    Set ``COHERENCE_TRANSLATOR=anthropic`` + provide ``ANTHROPIC_API_KEY`` to
-    upgrade to Claude for richer attunement with prompt-carried glossary.
-    """
-    try:
-        from app.services import translator_backends
-        name = translator_backends.register_default_backend()
-        if name:
-            _startup_logger.info("startup: translator_backend=%s (on-demand attunement active)", name)
-        else:
-            _startup_logger.info("startup: translator_backend=none (views serve anchor only)")
-    except Exception:
-        _startup_logger.error("startup: translator_backend registration failed", exc_info=True)
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(execution_value_router.router, prefix="/api", tags=["execution-value"])

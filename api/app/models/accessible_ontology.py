@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +71,8 @@ class InferredRelationship(BaseModel):
 class AccessibleConceptResponse(BaseModel):
     """Full response for an accessible ontology concept."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     title: str
     plain_text: str
@@ -83,10 +84,6 @@ class AccessibleConceptResponse(BaseModel):
     core_concept_match: str | None  # ID of best-matching core concept
     created_at: str
     updated_at: str
-
-    class Config:
-        from_attributes = True
-
 
 class GardenView(BaseModel):
     """Garden-view aggregation of accessible ontology concepts."""

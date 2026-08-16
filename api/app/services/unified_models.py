@@ -109,6 +109,12 @@ from app.services.read_tracking_service import AssetReadDaily, AssetViewEvent  #
 # Wallet models
 from app.services.wallet_service import WalletRecord  # noqa: F401
 
+# Public verification hash-chain and snapshot models
+from app.services.verification_service import (  # noqa: F401
+    DailyHashRecord,
+    SnapshotRecord,
+)
+
 # Reward policy models
 from app.services.reward_policy_service import RewardPolicyRecord  # noqa: F401
 
@@ -141,3 +147,6 @@ from app.services.deployment_observer_service import (  # noqa: F401
     DeploymentObserverChallengeORM,
     DeploymentObserverTokenUseORM,
 )
+
+# Unlisted public dialogue computation receipts
+from app.services.public_dialogue_store import PublicDialogueRecord  # noqa: F401

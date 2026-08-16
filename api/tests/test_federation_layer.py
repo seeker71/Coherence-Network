@@ -11,12 +11,19 @@ Covers done_when criteria:
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import json
+import threading
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.routers import federation as federation_router
+from app.services import native_federation_graph_service
 
 BASE = "http://test"
 
@@ -24,6 +31,45 @@ BASE = "http://test"
 def _node_id() -> str:
     """Generate a 16-char node ID (model requires min_length=16, max_length=16)."""
     return uuid4().hex[:16]
+
+
+def test_mark_messages_read_locks_rows_before_replacing_reader_set(monkeypatch):
+    from app.services import unified_db
+
+    record = SimpleNamespace(read_by_json='["first-node"]')
+    observed = {"locked": False, "committed": False}
+
+    class Query:
+        def filter(self, *_args):
+            return self
+
+        def order_by(self, *_args):
+            return self
+
+        def with_for_update(self):
+            observed["locked"] = True
+            return self
+
+        def __iter__(self):
+            assert observed["locked"] is True
+            return iter([record])
+
+    class Session:
+        def query(self, *_args):
+            return Query()
+
+        def commit(self):
+            observed["committed"] = True
+
+    @contextlib.contextmanager
+    def session():
+        yield Session()
+
+    monkeypatch.setattr(unified_db, "session", session)
+    federation_router._mark_messages_read("second-node", {"msg_one"})
+
+    assert json.loads(record.read_by_json) == ["first-node", "second-node"]
+    assert observed == {"locked": True, "committed": True}
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +254,116 @@ async def test_send_node_message():
         assert body["text"] == "Hello from federation test"
         assert "id" in body
         assert "timestamp" in body
+
+
+@pytest.mark.asyncio
+async def test_native_form_message_offer_keeps_the_event_loop_available(monkeypatch):
+    started = threading.Event()
+    read_completed = threading.Event()
+
+    def offer(**_):
+        started.set()
+        read_completed.wait(2)
+        return {
+            "message_id": f"msg_{'a' * 64}",
+            "message_node": f"msg_{'a' * 64}",
+            "edge_node": f"edge_{'b' * 64}",
+            "persisted": "1",
+            "traversable": "1",
+            "observed": "1",
+        }
+
+    monkeypatch.setattr(native_federation_graph_service, "offer", offer)
+    monkeypatch.setattr(federation_router, "_store_message", lambda message: message)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        offer_task = asyncio.create_task(
+            client.post(
+                "/api/federation/nodes/Giles/messages",
+                json={
+                    "from_node": "Giles",
+                    "to_node": "Ariel",
+                    "type": "light-code",
+                    "text": "33",
+                },
+            )
+        )
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            info = await client.get("/api/mcp")
+            read_completed.set()
+            response = await offer_task
+        finally:
+            read_completed.set()
+            if not offer_task.done():
+                await offer_task
+
+    assert info.status_code == 200
+    assert response.status_code == 201
+    assert response.json()["graph_ack"]["observed"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypatch):
+    from app.services import dialogue_service
+
+    started = threading.Event()
+    release = threading.Event()
+    starts = []
+
+    def offer(**_):
+        starts.append(threading.get_ident())
+        started.set()
+        release.wait(3)
+        return {
+            "message_id": f"msg_{'a' * 64}",
+            "message_node": f"msg_{'a' * 64}",
+            "edge_node": f"edge_{'b' * 64}",
+            "persisted": "1",
+            "traversable": "1",
+            "observed": "1",
+        }
+
+    monkeypatch.setattr(native_federation_graph_service, "offer", offer)
+    monkeypatch.setattr(federation_router, "_store_message", lambda message: message)
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue",
+        lambda dialogue_id: {"id": dialogue_id, "state": "miss"},
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        offers = [
+            asyncio.create_task(
+                client.post(
+                    f"/api/federation/nodes/sender-{index}/messages",
+                    json={
+                        "from_node": f"sender-{index}",
+                        "to_node": "Ariel",
+                        "type": "light-code",
+                        "text": "33",
+                    },
+                )
+            )
+            for index in range(45)
+        ]
+        try:
+            assert await asyncio.to_thread(started.wait, 1)
+            await asyncio.sleep(0.05)
+            dialogue = await asyncio.wait_for(
+                client.get("/api/dialogues/dlg_concurrent"),
+                timeout=1,
+            )
+            assert len(starts) == 1
+            release.set()
+            responses = await asyncio.gather(*offers)
+        finally:
+            release.set()
+            await asyncio.gather(*offers, return_exceptions=True)
+
+    assert dialogue.status_code == 200
+    assert dialogue.json()["state"] == "miss"
+    assert all(response.status_code == 201 for response in responses)
 
 
 # ---------------------------------------------------------------------------

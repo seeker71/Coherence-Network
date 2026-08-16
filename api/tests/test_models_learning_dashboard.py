@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from pathlib import Path
+
+import pytest
 
 from app.routers import models as models_router
 
@@ -12,7 +13,8 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def test_model_routes_normalize_current_config_shape(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_model_routes_normalize_current_config_shape(tmp_path: Path, monkeypatch) -> None:
     routing_path = tmp_path / "api" / "config" / "model_routing.json"
     _write_json(
         routing_path,
@@ -28,8 +30,8 @@ def test_model_routes_normalize_current_config_shape(tmp_path: Path, monkeypatch
     )
     monkeypatch.setattr(models_router, "_ROUTING_PATH", routing_path)
 
-    listing = asyncio.run(models_router.list_models())
-    routing = asyncio.run(models_router.get_routing_config())
+    listing = await models_router.list_models()
+    routing = await models_router.get_routing_config()
 
     assert listing.total == 5
     assert listing.executors["codex"][0].model_id == "gpt-5.3-codex-spark"
@@ -37,7 +39,8 @@ def test_model_routes_normalize_current_config_shape(tmp_path: Path, monkeypatch
     assert routing.openrouter_task_overrides == {"impl": "openrouter/free"}
 
 
-def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path, monkeypatch) -> None:
     repo_root = tmp_path
     routing_path = repo_root / "api" / "config" / "model_routing.json"
     evidence_dir = repo_root / "docs" / "system_audit"
@@ -82,7 +85,7 @@ def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path,
     monkeypatch.setattr(models_router, "_PROOF_LEDGER_DIR", proof_dir)
     monkeypatch.setattr(models_router, "_NATIVE_TRAINING_RECEIPT_DIR", native_receipt_dir)
 
-    dashboard = asyncio.run(models_router.get_learning_dashboard())
+    dashboard = await models_router.get_learning_dashboard()
 
     assert dashboard.summary.routed_model_count == 1
     assert dashboard.summary.learning_surface_count == 1
@@ -97,7 +100,8 @@ def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path,
     assert dashboard.recent_proof_runs[0].model_used == "gpt-5-codex"
 
 
-def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: Path, monkeypatch) -> None:
     repo_root = tmp_path
     routing_path = repo_root / "api" / "config" / "model_routing.json"
     evidence_dir = repo_root / "docs" / "system_audit"
@@ -156,7 +160,7 @@ def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: 
     monkeypatch.setattr(models_router, "_PROOF_LEDGER_DIR", proof_dir)
     monkeypatch.setattr(models_router, "_NATIVE_TRAINING_RECEIPT_DIR", native_receipt_dir)
 
-    dashboard = asyncio.run(models_router.get_learning_dashboard())
+    dashboard = await models_router.get_learning_dashboard()
 
     assert dashboard.summary.trained_native_model_count == 1
     assert dashboard.native_training_artifacts[0].artifact_id == "form-native-nearest-shape-v0"

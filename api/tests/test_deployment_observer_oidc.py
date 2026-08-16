@@ -358,11 +358,21 @@ class _FakeJWKS:
         )
 
 
+@pytest.fixture
+def sqlite_engine():
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+
+
 def test_challenge_consumption_is_dual_vantage_and_one_time(
     monkeypatch: pytest.MonkeyPatch,
     policy: ObserverOIDCPolicy,
+    sqlite_engine,
 ) -> None:
-    engine = create_engine("sqlite+pysqlite:///:memory:")
+    engine = sqlite_engine
     DeploymentObserverChallengeORM.__table__.create(engine)
     DeploymentObserverTokenUseORM.__table__.create(engine)
     fake = _FakeJWKS()
@@ -420,8 +430,9 @@ def test_challenge_consumption_is_dual_vantage_and_one_time(
 def test_authenticated_observation_persists_and_reverifies_the_complete_witness(
     monkeypatch: pytest.MonkeyPatch,
     policy: ObserverOIDCPolicy,
+    sqlite_engine,
 ) -> None:
-    engine = create_engine("sqlite+pysqlite:///:memory:")
+    engine = sqlite_engine
     Base.metadata.create_all(engine)
     fake = _FakeJWKS()
     monkeypatch.setattr(

@@ -49,9 +49,12 @@ def test_sqlite_engine_gets_no_postgres_options():
     """The real sqlite engine (driver always present) must not carry the
     Postgres `options` GUCs, which sqlite would reject."""
     sqlite = udb._create_engine("sqlite:///:memory:")
-    assert sqlite.dialect.name == "sqlite"
-    # sqlite connect_args are {check_same_thread}, never the postgres options
-    args = sqlite.dialect.create_connect_args(sqlite.url)
-    for part in args:
-        if isinstance(part, dict):
-            assert "options" not in part
+    try:
+        assert sqlite.dialect.name == "sqlite"
+        # sqlite connect_args are {check_same_thread}, never the postgres options
+        args = sqlite.dialect.create_connect_args(sqlite.url)
+        for part in args:
+            if isinstance(part, dict):
+                assert "options" not in part
+    finally:
+        sqlite.dispose()
