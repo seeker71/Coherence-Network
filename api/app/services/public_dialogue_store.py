@@ -23,7 +23,7 @@ from app.services import unified_db
 
 
 PUBLIC_DISCLOSURE_ACK = "public-unlisted-v1"
-ACTIVE_STATES = ("pending", "running")
+ACTIVE_STATES = ("pending", "running", "releasing")
 TERMINAL_STATES = ("answered", "miss", "failed", "tombstoned")
 _ADMISSION_LOCK_KEY = 0x434F484449414C47  # "COHDIALG"
 _ADMISSION_LOCK = threading.RLock()
@@ -167,8 +167,19 @@ def _check_admission(
     if int(recent_starts or 0) >= starts_per_window:
         raise PublicDialogueRateLimitError(start_window_seconds)
     if parent_dialogue_id:
-        parent = session.get(PublicDialogueRecord, parent_dialogue_id)
-        if parent is None or parent.state == "tombstoned":
+        parent = session.scalar(
+            select(PublicDialogueRecord)
+            .where(PublicDialogueRecord.id == parent_dialogue_id)
+            .with_for_update()
+        )
+        if parent is None or parent.state in ("tombstoned", "releasing"):
+            raise ValueError(
+                "parent_dialogue_id does not name an available public dialogue"
+            )
+        expires_at = parent.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= now:
             raise ValueError(
                 "parent_dialogue_id does not name an available public dialogue"
             )
@@ -281,6 +292,8 @@ def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:
         )
         if row is None:
             return None
+        if row.state == "releasing":
+            return _released_owned_view(row)
         now = _now()
         expires_at = row.expires_at
         if expires_at.tzinfo is None:
@@ -308,6 +321,13 @@ def _expired_running_view(row: PublicDialogueRecord) -> dict[str, Any]:
     return observed
 
 
+def _released_owned_view(row: PublicDialogueRecord) -> dict[str, Any]:
+    """Expose a releasing row as removed while its carrier remains owned."""
+    observed = _row(row)
+    observed["state"] = "tombstoned"
+    return observed
+
+
 def _locked_dialogue(session: Any, dialogue_id: str) -> PublicDialogueRecord | None:
     return session.scalar(
         select(PublicDialogueRecord)
@@ -329,7 +349,11 @@ def claim_next_dialogue(run_id: str) -> dict[str, Any] | None:
             select(PublicDialogueRecord)
             .where(PublicDialogueRecord.state.in_(ACTIVE_STATES))
             .order_by(
-                case((PublicDialogueRecord.state == "running", 0), else_=1),
+                case(
+                    (PublicDialogueRecord.state == "releasing", 0),
+                    (PublicDialogueRecord.state == "running", 1),
+                    else_=2,
+                ),
                 PublicDialogueRecord.created_at.asc(),
             )
             .with_for_update(skip_locked=True)
@@ -337,6 +361,8 @@ def claim_next_dialogue(run_id: str) -> dict[str, Any] | None:
         )
         if row is None:
             return None
+        if row.state == "releasing":
+            return _row(row)
         row.state = "running"
         row.claimed_by = run_id
         row.attempt = int(row.attempt or 0) + 1
@@ -394,9 +420,31 @@ def tombstone_dialogue(dialogue_id: str, removal_token_sha256: str) -> int | boo
             return False
         if row.state == "tombstoned":
             return True
+        if row.state == "releasing":
+            return row.carrier_pgid if row.carrier_pgid is not None else True
         carrier_pgid = row.carrier_pgid
+        if row.state == "running" and carrier_pgid is not None:
+            _begin_release(row)
+            return carrier_pgid
         _tombstone(row)
-        return carrier_pgid if carrier_pgid is not None else True
+        return True
+
+
+def finish_releasing_dialogue(dialogue_id: str, carrier_pgid: int) -> bool:
+    """Clear durable carrier ownership only after its release was acknowledged."""
+    ensure_schema()
+    with unified_db.session() as session:
+        row = _locked_dialogue(session, dialogue_id)
+        if (
+            row is None
+            or row.state != "releasing"
+            or row.carrier_pgid != carrier_pgid
+        ):
+            return False
+        row.state = "tombstoned"
+        row.claimed_by = None
+        row.carrier_pgid = None
+        return True
 
 
 def tombstone_expired() -> int:
@@ -407,7 +455,9 @@ def tombstone_expired() -> int:
             session.scalars(
                 select(PublicDialogueRecord)
                 .where(
-                    PublicDialogueRecord.state.notin_(("tombstoned", "running")),
+                    PublicDialogueRecord.state.notin_(
+                        ("tombstoned", "running", "releasing")
+                    ),
                     PublicDialogueRecord.expires_at <= now,
                 )
                 .with_for_update(skip_locked=True)
@@ -416,6 +466,20 @@ def tombstone_expired() -> int:
         for row in rows:
             _tombstone(row, now=now)
         return len(rows)
+
+
+def _begin_release(row: PublicDialogueRecord, *, now: datetime | None = None) -> None:
+    witnessed = now or _now()
+    row.state = "releasing"
+    row.question = "[released]"
+    row.question_sha256 = "0" * 64
+    row.point_of_view = "[released]"
+    row.output_json = json.dumps(
+        {"outcome": "tombstoned", "detail": "public content released"},
+        separators=(",", ":"),
+    )
+    row.updated_at = witnessed
+    row.tombstoned_at = witnessed
 
 
 def _tombstone(row: PublicDialogueRecord, *, now: datetime | None = None) -> None:

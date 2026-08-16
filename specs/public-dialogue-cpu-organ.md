@@ -66,7 +66,11 @@ someone shares its id.
 
 `DELETE /api/dialogues/{id}` with the removal token releases question, point of
 view, and result content. The durable row becomes a content-free tombstone so
-the removal itself remains observable. Non-running rows are automatically
+the removal itself remains observable. When a running carrier has already been
+recorded, the row first enters an internal `releasing` handoff: public reads
+already receive the content-free tombstone, while the claim and process-group
+id remain durable until reaping is acknowledged. A restart attends that handoff
+before new work. Non-running rows are automatically
 tombstoned after seven days. A running row first reaches a controlled terminal
 boundary and is then durably tombstoned, so process ownership never disappears
 mid-execution. At the expiry boundary, a public read already receives a
@@ -74,7 +78,9 @@ content-free tombstone view; the durable running row retains its worker and
 process-group ownership until that carrier returns and commits the tombstone.
 
 A follow-up points at an available parent dialogue id. It stores only an edge;
-it does not copy conversation state or attach to internal/private task ids.
+it does not copy conversation state or attach to internal/private task ids. An
+expired or releasing parent is unavailable even before the background expiry
+sweep reaches it.
 
 ## Form shape
 
@@ -167,6 +173,7 @@ capacity, source, timeout, and removal gates.
 - [x] Serialize native work across production API processes with a PostgreSQL advisory lease and recover interrupted `running` rows.
 - [x] Kill and reap the complete native process group on timeout, carrier-start failure, restart recovery, and running-turn release.
 - [x] Lock terminal, release, and expiry transitions on the same database row so completion can never resurrect released content.
+- [x] Preserve a running carrier's durable claim and process-group id through release until reaping is acknowledged, and recover that handoff after restart.
 - [x] Publish answers only from explicit public source paths and preserve a rented result only as an empty lane-specific miss.
 - [x] Accept canonical BCP-47 locale tags while distinguishing locale routing from unproven input-language understanding and projection.
 - [x] Keep receipts unlisted, bounded by capacity and time, automatically expiring, and removable into content-free tombstones.

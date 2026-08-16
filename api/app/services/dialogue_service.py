@@ -357,7 +357,9 @@ def release_dialogue(dialogue_id: str, removal_token: str) -> bool:
     if released is False:
         return False
     if isinstance(released, int) and not isinstance(released, bool):
-        _reap_recorded_process_group(released)
+        reaped = _reap_recorded_process_group(released)
+        if reaped is not False:
+            store.finish_releasing_dialogue(dialogue_id, released)
     return True
 
 
@@ -398,14 +400,18 @@ def _organism_worker_lease() -> Iterator[bool]:
             _LOCAL_LEASE_LOCK.release()
 
 
-def _reap_recorded_process_group(pgid: Any) -> None:
+def _reap_recorded_process_group(pgid: Any) -> bool:
     if not isinstance(pgid, int) or pgid <= 1:
-        return
-    if not _recorded_process_group_is_native(pgid):
-        return
+        return True
+    commands = _recorded_process_group_commands(pgid)
+    if commands is None:
+        return False
+    markers = ("form-cli", "fkwu", "form_cli_rag.py")
+    if not any(any(marker in row for marker in markers) for row in commands):
+        return True
     if _windows_host():
         try:
-            subprocess.run(
+            completed = subprocess.run(
                 ["taskkill", "/PID", str(pgid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -413,35 +419,49 @@ def _reap_recorded_process_group(pgid: Any) -> None:
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
-            pass
-        return
+            return False
+        return int(getattr(completed, "returncode", 0)) == 0
     try:
         os.killpg(pgid, 0)
-    except (ProcessLookupError, PermissionError):
-        return
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
     try:
         os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
-        return
+        return True
+    except PermissionError:
+        return False
     deadline = time.monotonic() + 2.0
     while time.monotonic() < deadline:
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
-            return
+            return True
         time.sleep(0.05)
     try:
         os.killpg(pgid, signal.SIGKILL)
     except ProcessLookupError:
-        pass
+        return True
+    except PermissionError:
+        return False
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        try:
+            os.killpg(pgid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.05)
+    return False
 
 
 def _windows_host() -> bool:
     return os.name == "nt"
 
 
-def _recorded_process_group_is_native(pgid: int) -> bool:
-    """Refuse delayed signals when a recycled process group is not our carrier."""
+def _recorded_process_group_commands(pgid: int) -> list[str] | None:
+    """Observe one recorded group, distinguishing absence from inspection failure."""
     if _windows_host():
         command = [
             "powershell.exe",
@@ -465,7 +485,9 @@ def _recorded_process_group_is_native(pgid: int) -> bool:
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return False
+        return None
+    if int(getattr(observed, "returncode", 0)) != 0:
+        return None
     if _windows_host():
         rows = [observed.stdout.lower()] if observed.stdout else []
     else:
@@ -474,8 +496,16 @@ def _recorded_process_group_is_native(pgid: int) -> bool:
             pieces = line.strip().split(maxsplit=1)
             if len(pieces) == 2 and pieces[0].isdigit() and int(pieces[0]) == pgid:
                 rows.append(pieces[1].lower())
+    return rows
+
+
+def _recorded_process_group_is_native(pgid: int) -> bool:
+    """Refuse delayed signals when a recycled process group is not our carrier."""
+    commands = _recorded_process_group_commands(pgid)
     markers = ("form-cli", "fkwu", "form_cli_rag.py")
-    return bool(rows) and any(any(marker in row for marker in markers) for row in rows)
+    return commands is not None and any(
+        any(marker in row for marker in markers) for row in commands
+    )
 
 
 def _controlled_failure(exc: Exception, *, locale: str) -> dict[str, Any]:
@@ -568,6 +598,13 @@ def process_dialogue_once() -> bool:
         if row is None:
             return False
         dialogue_id = row["id"]
+        if row["state"] == "releasing":
+            carrier_pgid = row.get("carrier_pgid")
+            reaped = _reap_recorded_process_group(carrier_pgid)
+            if reaped is not False and isinstance(carrier_pgid, int):
+                store.finish_releasing_dialogue(dialogue_id, carrier_pgid)
+                return True
+            return False
         _reap_recorded_process_group(row.get("carrier_pgid"))
         if int(row.get("attempt") or 0) > MAX_DIALOGUE_ATTEMPTS:
             store.finish_dialogue(

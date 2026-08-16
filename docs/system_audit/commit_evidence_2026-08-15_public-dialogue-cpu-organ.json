@@ -99,9 +99,13 @@
     "status": "pass",
     "details": "The next exact-head AI review extended the embodied review set to thirty-six threads and found that read-time expiry could clear the durable worker and process-group ownership of a carrier still running. Public reads at the expiry boundary now receive an immediate content-free tombstone view while the locked durable row remains running with its claim and carrier pgid. When the owned carrier returns, its terminal transaction observes the expired boundary and commits the durable tombstone instead of publishing a result. A SQLite boundary witness verifies both the externally redacted view and the internally retained ownership before completion, then verifies ownership is cleared only with the durable tombstone. The complete warning-strict dialogue band passed all 47 tests, the core band passed all 405 tests, and the complete warning-strict API body passed all 2133 tests in 205.16 seconds. Ruff, evidence validation, and git diff validation passed."
   },
+  "parent_and_release_handoff_rewitness": {
+    "status": "pass",
+    "details": "The following exact-head AI review extended the embodied review set to thirty-eight threads and found two lifecycle seams. Admission now locks and time-checks the named parent, rejecting expired and releasing parents before any child edge can persist. Running release now commits a content-free internal releasing handoff that remains publicly tombstoned while retaining the worker claim and carrier pgid; synchronous release or the next worker after restart reaps that recorded group and only then clears durable ownership. The SQLite transaction witness observes public redaction together with the still-durable claim and pgid before reaping, then observes the final tombstone only after the reaper acknowledges success. A restart witness attends an interrupted releasing row before new work, while an inspection-failure witness retains ownership for retry. Expired running and unswept terminal parents both reject child persistence. The complete warning-strict dialogue band passed all 49 tests, the complete warning-strict API body passed all 2135 tests in 199.15 seconds, and Ruff, evidence validation, and git diff validation passed."
+  },
   "ci_validation": {
     "status": "pending",
-    "details": "Linux Thread Gates, Windows Host Floor, and GitGuardian all passed on exact reviewed head 522cf9b35330e00901cc3e38aaf9ee329115a44b. The exact-head review's expiry-boundary repair is locally re-witnessed and awaits its new CI run after push."
+    "details": "Linux Thread Gates, Windows Host Floor, and GitGuardian all passed on exact reviewed head a4219080f5c03e241c2bbe718ed20f0c1fa266ef. The exact-head review's parent-admission and two-phase running-release repairs are locally re-witnessed and await a new CI run after push."
   },
   "deploy_validation": {
     "status": "pending",

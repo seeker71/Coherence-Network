@@ -13,7 +13,7 @@ import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
@@ -30,7 +30,13 @@ def dialogue_store(monkeypatch):
     rows: dict[str, dict] = {}
 
     def create_dialogue(**values):
-        if len([row for row in rows.values() if row["state"] in ("pending", "running")]) >= values["max_active"]:
+        if len(
+            [
+                row
+                for row in rows.values()
+                if row["state"] in ("pending", "running", "releasing")
+            ]
+        ) >= values["max_active"]:
             raise RuntimeError("the public dialogue queue is presently full")
         parent_id = values["parent_dialogue_id"]
         if parent_id and (parent_id not in rows or rows[parent_id]["state"] == "tombstoned"):
@@ -62,11 +68,18 @@ def dialogue_store(monkeypatch):
         return row, f"removal-token-{dialogue_id}-long-enough"
 
     def claim_next(run_id):
-        candidates = [row for row in rows.values() if row["state"] in ("pending", "running")]
-        candidates.sort(key=lambda row: (row["state"] != "running", row["created_at"]))
+        candidates = [
+            row
+            for row in rows.values()
+            if row["state"] in ("pending", "running", "releasing")
+        ]
+        priority = {"releasing": 0, "running": 1, "pending": 2}
+        candidates.sort(key=lambda row: (priority[row["state"]], row["created_at"]))
         if not candidates:
             return None
         row = candidates[0]
+        if row["state"] == "releasing":
+            return dict(row)
         row["state"] = "running"
         row["claimed_by"] = run_id
         row["attempt"] += 1
@@ -90,21 +103,35 @@ def dialogue_store(monkeypatch):
         lambda dialogue_id, run_id, pgid: rows[dialogue_id].update(carrier_pgid=pgid) is None,
     )
     monkeypatch.setattr(store, "finish_dialogue", finish)
+
+    def finish_releasing(dialogue_id, carrier_pgid):
+        row = rows[dialogue_id]
+        if row["state"] != "releasing" or row["carrier_pgid"] != carrier_pgid:
+            return False
+        row.update(state="tombstoned", claimed_by=None, carrier_pgid=None)
+        return True
+
+    monkeypatch.setattr(store, "finish_releasing_dialogue", finish_releasing)
     monkeypatch.setattr(store, "tombstone_expired", lambda: 0)
 
     def tombstone(dialogue_id, _token_hash):
         row = rows.get(dialogue_id)
         if row is None:
             return False
+        if row["state"] == "tombstoned":
+            return True
         carrier_pgid = row.get("carrier_pgid")
+        if row["state"] == "releasing":
+            return carrier_pgid if carrier_pgid is not None else True
+        next_state = "releasing" if row["state"] == "running" and carrier_pgid else "tombstoned"
         row.update(
-            state="tombstoned",
+            state=next_state,
             question="[released]",
             question_sha256="0" * 64,
             point_of_view="[released]",
             output={"outcome": "tombstoned"},
         )
-        return carrier_pgid if carrier_pgid is not None else True
+        return carrier_pgid if next_state == "releasing" else True
 
     monkeypatch.setattr(store, "tombstone_dialogue", tombstone)
 
@@ -645,12 +672,75 @@ def test_release_replaces_public_content_with_tombstone(dialogue_store):
 
 def test_release_of_running_turn_reaps_its_recorded_process(dialogue_store, monkeypatch):
     offered = _offer(question="release while running")
-    dialogue_store[offered["id"]].update(state="running", carrier_pgid=31337)
+    row = dialogue_store[offered["id"]]
+    row.update(state="running", claimed_by="active-worker", carrier_pgid=31337)
     reaped = []
-    monkeypatch.setattr(dialogue_service, "_reap_recorded_process_group", reaped.append)
+
+    def reap(pgid):
+        reaped.append(pgid)
+        assert row["state"] == "releasing"
+        assert row["claimed_by"] == "active-worker"
+        assert row["carrier_pgid"] == 31337
+        assert row["question"] == "[released]"
+        return True
+
+    monkeypatch.setattr(dialogue_service, "_reap_recorded_process_group", reap)
     assert dialogue_service.release_dialogue(offered["id"], offered["removal_token"])
     assert reaped == [31337]
-    assert dialogue_store[offered["id"]]["state"] == "tombstoned"
+    assert row["state"] == "tombstoned"
+    assert row["claimed_by"] is None
+    assert row["carrier_pgid"] is None
+
+
+def test_releasing_turn_is_reaped_and_completed_after_restart(dialogue_store, monkeypatch):
+    offered = _offer(question="release interrupted by API restart")
+    row = dialogue_store[offered["id"]]
+    row.update(
+        state="releasing",
+        question="[released]",
+        question_sha256="0" * 64,
+        point_of_view="[released]",
+        output={"outcome": "tombstoned"},
+        claimed_by="stopped-worker",
+        carrier_pgid=424242,
+    )
+    reaped = []
+
+    def reap(pgid):
+        reaped.append(pgid)
+        return True
+
+    monkeypatch.setattr(dialogue_service, "_reap_recorded_process_group", reap)
+
+    assert dialogue_service.process_dialogue_once() is True
+    assert reaped == [424242]
+    assert row["state"] == "tombstoned"
+    assert row["claimed_by"] is None
+    assert row["carrier_pgid"] is None
+
+
+def test_release_keeps_durable_ownership_when_process_inspection_fails(
+    dialogue_store,
+    monkeypatch,
+):
+    offered = _offer(question="retain ownership until the process can be observed")
+    row = dialogue_store[offered["id"]]
+    row.update(state="running", claimed_by="active-worker", carrier_pgid=616161)
+    monkeypatch.setattr(
+        dialogue_service,
+        "_reap_recorded_process_group",
+        lambda _pgid: False,
+    )
+
+    assert dialogue_service.release_dialogue(offered["id"], offered["removal_token"])
+    assert row["state"] == "releasing"
+    assert row["question"] == "[released]"
+    assert row["claimed_by"] == "active-worker"
+    assert row["carrier_pgid"] == 616161
+    assert dialogue_service.process_dialogue_once() is False
+    assert row["state"] == "releasing"
+    assert row["claimed_by"] == "active-worker"
+    assert row["carrier_pgid"] == 616161
 
 
 def test_windows_release_verifies_and_terminates_the_native_process_tree(monkeypatch):
@@ -665,7 +755,7 @@ def test_windows_release_verifies_and_terminates_the_native_process_tree(monkeyp
     monkeypatch.setattr(dialogue_service, "_windows_host", lambda: True)
     monkeypatch.setattr(dialogue_service.subprocess, "run", run)
 
-    dialogue_service._reap_recorded_process_group(31337)
+    assert dialogue_service._reap_recorded_process_group(31337) is True
 
     assert calls[0][0:4] == [
         "powershell.exe",
@@ -1174,6 +1264,28 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
         assert still_owned.claimed_by == "running-expiry-test-run"
         assert still_owned.carrier_pgid == 424242
         assert still_owned.question == running_row["question"]
+    with pytest.raises(ValueError, match="parent_dialogue_id"):
+        store.create_dialogue(
+            question="May a new edge attach after the parent expired?",
+            question_sha256="1" * 64,
+            point_of_view="child turn",
+            requested_locale="en",
+            canonical_locale="en",
+            parent_dialogue_id=running_row["id"],
+            channel_timeout_seconds=30,
+            network_peer_sha256="1" * 64,
+            expires_at=running_expiry + timedelta(days=7),
+            max_active=8,
+            starts_per_window=6,
+            start_window_seconds=60,
+        )
+    with factory() as check_session:
+        rejected_parent = check_session.get(
+            store.PublicDialogueRecord, running_row["id"]
+        )
+        assert rejected_parent.state == "running"
+        assert rejected_parent.claimed_by == "running-expiry-test-run"
+        assert rejected_parent.carrier_pgid == 424242
     assert store.finish_dialogue(
         running_row["id"],
         "running-expiry-test-run",
@@ -1190,6 +1302,99 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
         assert released_after_cleanup.state == "tombstoned"
         assert released_after_cleanup.claimed_by is None
         assert released_after_cleanup.carrier_pgid is None
+    monkeypatch.setattr(store, "_now", real_now)
+
+    release_row, release_token = store.create_dialogue(
+        question="Can release survive between commit and process reaping?",
+        question_sha256="2" * 64,
+        point_of_view="restart boundary",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=30,
+        network_peer_sha256="2" * 64,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    claimed = store.claim_next_dialogue("release-test-run")
+    assert claimed["id"] == release_row["id"]
+    assert store.record_carrier_pgid(release_row["id"], "release-test-run", 515151)
+
+    def observe_release_handoff(pgid):
+        assert pgid == 515151
+        public_release = store.get_dialogue(release_row["id"])
+        assert public_release["state"] == "tombstoned"
+        assert public_release["question"] == "[released]"
+        with factory() as check_session:
+            releasing = check_session.get(
+                store.PublicDialogueRecord, release_row["id"]
+            )
+            assert releasing.state == "releasing"
+            assert releasing.claimed_by == "release-test-run"
+            assert releasing.carrier_pgid == 515151
+        return True
+
+    monkeypatch.setattr(
+        dialogue_service,
+        "_reap_recorded_process_group",
+        observe_release_handoff,
+    )
+    assert dialogue_service.release_dialogue(release_row["id"], release_token)
+    with factory() as check_session:
+        released = check_session.get(store.PublicDialogueRecord, release_row["id"])
+        assert released.state == "tombstoned"
+        assert released.claimed_by is None
+        assert released.carrier_pgid is None
+
+    terminal_parent_expiry = datetime(2026, 8, 23, 7, 8, 9, tzinfo=timezone.utc)
+    terminal_parent, _ = store.create_dialogue(
+        question="Can an unswept expired terminal turn receive a child?",
+        question_sha256="3" * 64,
+        point_of_view="terminal parent",
+        requested_locale="en",
+        canonical_locale="en",
+        parent_dialogue_id=None,
+        channel_timeout_seconds=30,
+        network_peer_sha256="3" * 64,
+        expires_at=terminal_parent_expiry,
+        max_active=8,
+        starts_per_window=6,
+        start_window_seconds=60,
+    )
+    claimed = store.claim_next_dialogue("terminal-parent-test-run")
+    assert claimed["id"] == terminal_parent["id"]
+    assert store.finish_dialogue(
+        terminal_parent["id"],
+        "terminal-parent-test-run",
+        state="miss",
+        output={"outcome": "miss", "answer": ""},
+    )
+    monkeypatch.setattr(store, "_now", lambda: terminal_parent_expiry)
+    with pytest.raises(ValueError, match="parent_dialogue_id"):
+        store.create_dialogue(
+            question="This child must not persist.",
+            question_sha256="4" * 64,
+            point_of_view="child turn",
+            requested_locale="en",
+            canonical_locale="en",
+            parent_dialogue_id=terminal_parent["id"],
+            channel_timeout_seconds=30,
+            network_peer_sha256="4" * 64,
+            expires_at=terminal_parent_expiry + timedelta(days=7),
+            max_active=8,
+            starts_per_window=6,
+            start_window_seconds=60,
+        )
+    with factory() as check_session:
+        no_child = check_session.scalar(
+            select(store.PublicDialogueRecord).where(
+                store.PublicDialogueRecord.parent_dialogue_id == terminal_parent["id"]
+            )
+        )
+        assert no_child is None
+    assert store.get_dialogue(terminal_parent["id"])["state"] == "tombstoned"
     monkeypatch.setattr(store, "_now", real_now)
 
     for index in range(5):
