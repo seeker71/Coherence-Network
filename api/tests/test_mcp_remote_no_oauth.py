@@ -23,7 +23,15 @@ async def test_mcp_info_declares_no_auth_and_no_challenge(path: str):
     body = response.json()
     assert body["auth_required"] is False
     assert body["auth_schemes"] == ["none"]
-    assert {"search", "fetch", "start_dialogue", "get_dialogue", "remove_dialogue"} <= set(body["tools"])
+    assert {
+        "search",
+        "fetch",
+        "start_dialogue",
+        "get_dialogue",
+        "reply_dialogue",
+        "get_dialogue_thread",
+        "remove_dialogue",
+    } <= set(body["tools"])
 
 
 @pytest.mark.parametrize("path", ["/mcp", "/api/mcp"])
@@ -58,14 +66,32 @@ async def test_mcp_tools_list_marks_public_dialogue_read_and_write_surfaces():
 
     assert response.status_code == 200
     tools = {tool["name"]: tool for tool in response.json()["result"]["tools"]}
-    assert {"search", "fetch", "browse_ideas", "browse_specs", "start_dialogue", "get_dialogue", "remove_dialogue"} <= set(tools)
+    assert {
+        "search",
+        "fetch",
+        "browse_ideas",
+        "browse_specs",
+        "start_dialogue",
+        "get_dialogue",
+        "reply_dialogue",
+        "get_dialogue_thread",
+        "remove_dialogue",
+    } <= set(tools)
     assert "publish_idea" not in tools
     assert "create_spec" not in tools
     assert tools["start_dialogue"]["annotations"]["readOnlyHint"] is False
     assert tools["start_dialogue"]["annotations"]["openWorldHint"] is True
     assert tools["start_dialogue"]["annotations"]["idempotentHint"] is False
     assert tools["get_dialogue"]["annotations"]["readOnlyHint"] is True
+    assert tools["reply_dialogue"]["annotations"]["readOnlyHint"] is False
+    assert tools["get_dialogue_thread"]["annotations"]["readOnlyHint"] is True
     assert tools["remove_dialogue"]["annotations"]["destructiveHint"] is True
+    assert tools["start_dialogue"]["inputSchema"]["properties"][
+        "public_disclosure_ack"
+    ]["enum"] == ["public-unlisted-v1", "public-unlisted-thread-v2"]
+    assert tools["reply_dialogue"]["inputSchema"]["properties"][
+        "public_disclosure_ack"
+    ]["const"] == "public-unlisted-thread-v2"
 
 
 @pytest.mark.asyncio
@@ -166,6 +192,118 @@ async def test_mcp_start_and_get_dialogue(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mcp_reply_and_thread_read_persist_both_directions(monkeypatch):
+    from app.services import dialogue_service
+
+    captured = {}
+
+    def submit(**values):
+        captured.update(values)
+        return {
+            "id": "dlg_reply",
+            "state": "pending",
+            "parent_dialogue_id": values["parent_dialogue_id"],
+            "removal_token": "reply-removal-token-long-enough",
+        }
+
+    monkeypatch.setattr(dialogue_service, "submit_dialogue", submit)
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue_thread",
+        lambda dialogue_id: {
+            "root_dialogue_id": "dlg_root",
+            "anchor_dialogue_id": dialogue_id,
+            "turns": [
+                {"id": "dlg_root", "question": "first"},
+                {
+                    "id": "dlg_reply",
+                    "question": "second",
+                    "parent_dialogue_id": "dlg_root",
+                },
+            ],
+            "turn_count": 2,
+            "truncated": False,
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        replied = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": "reply",
+                "method": "tools/call",
+                "params": {
+                    "name": "reply_dialogue",
+                    "arguments": {
+                        "dialogue_id": "dlg_root",
+                        "question": "second",
+                        "point_of_view": "water",
+                        "locale": "en",
+                        "public_disclosure_ack": "public-unlisted-thread-v2",
+                    },
+                },
+            },
+        )
+        observed = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": "thread",
+                "method": "tools/call",
+                "params": {
+                    "name": "get_dialogue_thread",
+                    "arguments": {"dialogue_id": "dlg_reply"},
+                },
+            },
+        )
+
+    reply_payload = replied.json()["result"]["structuredContent"]
+    thread_payload = observed.json()["result"]["structuredContent"]
+    assert reply_payload["parent_dialogue_id"] == "dlg_root"
+    assert captured["parent_dialogue_id"] == "dlg_root"
+    assert thread_payload["anchor_dialogue_id"] == "dlg_reply"
+    assert [turn["question"] for turn in thread_payload["turns"]] == [
+        "first",
+        "second",
+    ]
+    assert "removal_token" not in json.dumps(thread_payload)
+
+
+@pytest.mark.asyncio
+async def test_mcp_thread_planner_contention_returns_retry_guidance(monkeypatch):
+    from app.services import dialogue_service
+
+    monkeypatch.setattr(
+        dialogue_service,
+        "get_dialogue_thread",
+        lambda _dialogue_id: (_ for _ in ()).throw(
+            dialogue_service.DialogueThreadPlannerBusyError()
+        ),
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        response = await client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": "thread-busy",
+                "method": "tools/call",
+                "params": {
+                    "name": "get_dialogue_thread",
+                    "arguments": {"dialogue_id": "dlg_busy"},
+                },
+            },
+        )
+
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert result["structuredContent"] == {
+        "error": "Native dialogue thread planning is presently busy",
+        "retry_after": 15,
+    }
+
+
+@pytest.mark.asyncio
 async def test_mcp_dialogue_storage_failures_stay_inside_each_tool_result(monkeypatch):
     from app.services import dialogue_service
 
@@ -250,7 +388,7 @@ async def test_mcp_start_keeps_the_event_loop_available(monkeypatch):
                             "question": "What does the river see?",
                             "point_of_view": "river",
                             "locale": "en",
-                            "public_disclosure_ack": "public-unlisted-v1",
+                            "public_disclosure_ack": "public-unlisted-thread-v2",
                         },
                     },
                 },
@@ -440,6 +578,18 @@ async def test_mcp_start_dialogue_rejects_non_string_fields_before_storage(
     ("tool_name", "arguments", "field"),
     [
         ("get_dialogue", {"dialogue_id": ["dlg"]}, "dialogue_id"),
+        ("get_dialogue_thread", {"dialogue_id": ["dlg"]}, "dialogue_id"),
+        (
+            "reply_dialogue",
+            {
+                "dialogue_id": {"id": "dlg"},
+                "question": "hello",
+                "point_of_view": "river",
+                "locale": "en",
+                "public_disclosure_ack": "public-unlisted-v1",
+            },
+            "dialogue_id",
+        ),
         (
             "remove_dialogue",
             {"dialogue_id": "dlg", "removal_token": {"token": "release"}},

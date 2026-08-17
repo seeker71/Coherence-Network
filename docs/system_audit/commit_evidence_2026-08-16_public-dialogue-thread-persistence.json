@@ -1,0 +1,107 @@
+{
+  "date": "2026-08-16T23:00:00+08:00",
+  "thread_branch": "codex/dialogue-thread-persistence",
+  "commit_scope": "Persist both directions of an unlisted public dialogue through explicit HTTP and MCP reply and bounded thread-read surfaces, with each turn independently releasable and all edges surviving carrier restart.",
+  "files_owned": [
+    "api/app/form_recipes/public_dialogue_thread_window.fk",
+    "api/app/routers/dialogues.py",
+    "api/app/routers/mcp_remote.py",
+    "api/app/services/dialogue_service.py",
+    "api/app/services/public_dialogue_store.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-16_public-dialogue-thread-persistence.json",
+    "specs/INDEX.md",
+    "specs/public-dialogue-cpu-organ.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "The focused warning-strict HTTP, durable-store, worker, and MCP band passes 85 tests, and the complete warning-strict API body passes all 406 tests. The connected-window recipe returns 511 on the Go, Rust, and TypeScript sibling walkers and 511 through the direct fkwu source runner; the API test also executes the semantic window on the active fkwu runtime. A real SQLite file receives a root turn and reply with different one-time removal capabilities, is closed, reopened through a fresh SQLAlchemy engine/session carrier, and returns both questions and the directed parent edge from the reply id. The same witness moves the root through its exact expiry boundary into a durable content-free tombstone while the unexpired reply remains visible, proves the one-turn descendant bound reports truncation, retains parent-before-child selection, database lock, and response order under deliberately skewed creation clocks, and retains the requested anchor without mislabeling a partial window as the root. Form owns ancestry, connected descendant admission, bounded selection, continuation, root, and truncation; Python retrieves and locks persistence rows, applies expiry, and validates the native receipt without minting a competing topology verdict. Review is embodied by preserving public-unlisted-v1 as a single-turn-only capability with no inapplicable reply or thread links, requiring explicit public-unlisted-thread-v2 consent for replies and connected reads, placing every fkwu thread planner behind a nonblocking process slot plus organism-wide PostgreSQL advisory lease, preserving MCP retry guidance, and stating accurately that each turn's content ends independently while v2 ids and content-free edges persist as capabilities for the observable tombstone graph. HTTP refuses a body-level parent override, contains native-planner failures behind a retryable public receipt, and HTTP/MCP thread responses contain no removal capability. Ruff, strict spec quality, evidence, and git diff validation pass on the touched surface; maintainability regression and the local PR guard are re-witnessed on the amended head."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "A PR and exact-head independent AI review will be requested after rebase onto the merged public dialogue release."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Production acceptance will create a root and reply, restart the API carrier, read both turns from the connected thread, then independently release both rows."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "public-dialogue-cpu-organ"
+  ],
+  "task_ids": [
+    "public-dialogue-thread-persistence-2026-08-16"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-shaping"
+      ]
+    },
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "adversarial-validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "specs/public-dialogue-cpu-organ.md",
+    "api/app/form_recipes/public_dialogue_thread_window.fk::dialogue-thread-window-band",
+    "api/tests/test_public_dialogues.py::test_dialogue_thread_window_semantics_execute_on_native_fkwu",
+    "api/tests/test_public_dialogues.py::test_thread_planner_contention_is_bounded_locally",
+    "api/tests/test_public_dialogues.py::test_postgres_thread_planner_contention_is_nonblocking_and_explicit",
+    "api/tests/test_public_dialogues.py::test_http_legacy_disclosure_stays_single_turn_only",
+    "api/tests/test_public_dialogues.py::test_single_turn_disclosure_advertises_only_single_turn_actions",
+    "api/tests/test_mcp_remote_no_oauth.py::test_mcp_thread_planner_contention_returns_retry_guidance",
+    "api/tests/test_kernel_submodule_contract.py::test_network_endpoint_recipes_are_owned_by_the_api",
+    "api/tests/test_public_dialogues.py::test_dialogue_thread_survives_database_restart_and_keeps_expiry_boundary",
+    "api/tests/test_public_dialogues.py::test_http_reply_fixes_parent_and_thread_read_exposes_no_capabilities",
+    "api/tests/test_mcp_remote_no_oauth.py::test_mcp_reply_and_thread_read_persist_both_directions"
+  ],
+  "change_files": [
+    "api/app/form_recipes/public_dialogue_thread_window.fk",
+    "api/app/routers/dialogues.py",
+    "api/app/routers/mcp_remote.py",
+    "api/app/services/dialogue_service.py",
+    "api/app/services/public_dialogue_store.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "api/tests/test_mcp_remote_no_oauth.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-16_public-dialogue-thread-persistence.json",
+    "specs/INDEX.md",
+    "specs/public-dialogue-cpu-organ.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A person or MCP connector can add a durable reply to a public dialogue, read the bounded connected thread from either turn id after an API restart, and release only the turn for which it holds the one-time removal capability.",
+    "public_endpoints": [
+      "POST /api/dialogues/{dialogue_id}/replies",
+      "GET /api/dialogues/{dialogue_id}/thread",
+      "POST /mcp tools: reply_dialogue, get_dialogue_thread"
+    ],
+    "test_flows": [
+      "start root, reply from a second point of view, restart storage carrier, and read both turns with their parent edge",
+      "read from either connected turn id without exposing either removal capability",
+      "release each turn with its distinct capability and preserve content-free tombstones"
+    ]
+  }
+}

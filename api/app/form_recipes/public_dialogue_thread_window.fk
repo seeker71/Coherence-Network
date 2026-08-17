@@ -1,0 +1,118 @@
+; public_dialogue_thread_window.fk — bounded connected-turn selection in Form.
+(do
+  (defn dialogue-thread-node-id (node) (nth node 0))
+  (defn dialogue-thread-parent-id (node) (nth node 1))
+
+  (defn dialogue-thread-member (value values)
+    (if (eq (len values) 0) 0
+        (if (str_eq value (head values)) 1
+            (dialogue-thread-member value (tail values)))))
+
+  (defn dialogue-thread-parent (node-id nodes)
+    (if (eq (len nodes) 0) ""
+        (if (str_eq node-id (dialogue-thread-node-id (head nodes)))
+            (dialogue-thread-parent-id (head nodes))
+            (dialogue-thread-parent node-id (tail nodes)))))
+
+  (defn dialogue-thread-ancestry (node-id nodes remaining path)
+    (if (le remaining 1) path
+        (do
+          (let parent-id (dialogue-thread-parent node-id nodes))
+          (if (str_eq parent-id "") path
+              (if (eq (dialogue-thread-member parent-id path) 1) path
+                  (dialogue-thread-ancestry
+                    parent-id nodes (sub remaining 1) (cons parent-id path)))))))
+
+  (defn dialogue-thread-append (values value)
+    (if (eq (len values) 0) (list value)
+        (cons (head values) (dialogue-thread-append (tail values) value))))
+
+  (defn dialogue-thread-scan (nodes selected maximum truncated)
+    (if (eq (len nodes) 0) (list selected truncated)
+        (do
+          (let node (head nodes))
+          (let node-id (dialogue-thread-node-id node))
+          (let parent-id (dialogue-thread-parent-id node))
+          (if (eq (dialogue-thread-member node-id selected) 1)
+              (dialogue-thread-scan (tail nodes) selected maximum truncated)
+              (if (eq (dialogue-thread-member parent-id selected) 1)
+                  (if (lt (len selected) maximum)
+                      (dialogue-thread-scan
+                        (tail nodes)
+                        (dialogue-thread-append selected node-id)
+                        maximum truncated)
+                      (dialogue-thread-scan (tail nodes) selected maximum 1))
+                  (dialogue-thread-scan
+                    (tail nodes) selected maximum truncated))))))
+
+  (defn dialogue-thread-join (values out)
+    (if (eq (len values) 0) out
+        (dialogue-thread-join
+          (tail values)
+          (if (str_eq out "") (head values)
+              (str_concat out (str_concat "," (head values)))))))
+
+  (defn dialogue-thread-pipe (left right)
+    (str_concat left (str_concat "|" right)))
+
+  (defn dialogue-thread-window (nodes anchor-id maximum)
+    (do
+      (let ancestry
+        (dialogue-thread-ancestry anchor-id nodes maximum (list anchor-id)))
+      (let oldest-id (head ancestry))
+      (let continuation-id (dialogue-thread-parent oldest-id nodes))
+      (let scan
+        (dialogue-thread-scan
+          nodes ancestry maximum
+          (if (str_eq continuation-id "") 0 1)))
+      (let selected (nth scan 0))
+      (let truncated (nth scan 1))
+      (list
+        (if (str_eq continuation-id "") oldest-id "")
+        (head selected)
+        continuation-id
+        anchor-id
+        selected
+        truncated)))
+
+  (defn dialogue-thread-window-receipt (nodes anchor-id maximum)
+    (do
+      (let window (dialogue-thread-window nodes anchor-id maximum))
+      (let selected (nth window 4))
+      (dialogue-thread-pipe (nth window 0)
+        (dialogue-thread-pipe (nth window 1)
+          (dialogue-thread-pipe (nth window 2)
+            (dialogue-thread-pipe (nth window 3)
+              (dialogue-thread-pipe
+                (dialogue-thread-join selected "")
+                (if (eq (nth window 5) 1) "1" "0"))))))))
+
+  (defn dialogue-thread-window-band ()
+    (do
+      (let nodes
+        (list
+          (list "72" "")
+          (list "61" "72")
+          (list "62" "72")
+          (list "63" "61")))
+      (let branch (dialogue-thread-window nodes "61" 3))
+      (let deep (dialogue-thread-window nodes "63" 2))
+      (add
+        (if (str_eq (nth branch 0) "72") 1 0)
+        (add
+          (if (str_eq (nth branch 1) "72") 2 0)
+          (add
+            (if (str_eq (nth branch 2) "") 4 0)
+            (add
+              (if (eq (dialogue-thread-member "61" (nth branch 4)) 1) 8 0)
+              (add
+                (if (eq (dialogue-thread-member "62" (nth branch 4)) 1) 16 0)
+                (add
+                  (if (eq (dialogue-thread-member "63" (nth branch 4)) 0) 32 0)
+                  (add
+                    (if (eq (nth branch 5) 1) 64 0)
+                    (add
+                      (if (str_eq (nth deep 0) "") 128 0)
+                      (if (str_eq (nth deep 2) "72") 256 0)))))))))))
+
+  (dialogue-thread-window-band))

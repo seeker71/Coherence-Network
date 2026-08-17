@@ -4,36 +4,38 @@ status: active
 source:
   - file: api/app/form_recipes/public_dialogue_envelope.fk
     symbols: [dialogue-envelope, dialogue-offered]
+  - file: api/app/form_recipes/public_dialogue_thread_window.fk
+    symbols: [dialogue-thread-window, dialogue-thread-window-receipt, dialogue-thread-window-band]
   - file: api/app/services/public_dialogue_store.py
-    symbols: [PublicDialogueRecord, create_dialogue, claim_next_dialogue, tombstone_dialogue]
+    symbols: [PublicDialogueRecord, create_dialogue, get_dialogue_thread, claim_next_dialogue, tombstone_dialogue]
   - file: api/app/services/dialogue_service.py
-    symbols: [submit_dialogue, get_dialogue, process_dialogue_once, release_dialogue]
+    symbols: [submit_dialogue, get_dialogue, get_dialogue_thread, process_dialogue_once, release_dialogue]
   - file: api/app/routers/dialogues.py
-    symbols: [start_dialogue, read_dialogue, release_dialogue]
+    symbols: [start_dialogue, reply_dialogue, read_dialogue, read_dialogue_thread, release_dialogue]
   - file: api/app/routers/mcp_remote.py
-    symbols: [START_DIALOGUE_TOOL, GET_DIALOGUE_TOOL, REMOVE_DIALOGUE_TOOL]
+    symbols: [START_DIALOGUE_TOOL, REPLY_DIALOGUE_TOOL, GET_DIALOGUE_TOOL, GET_DIALOGUE_THREAD_TOOL, REMOVE_DIALOGUE_TOOL]
   - file: api/tests/test_public_dialogues.py
     symbols: [test_dialogue_lifecycle_keeps_source_and_projection_digests, test_rented_miss_is_admitted_only_on_dialogue_lane]
 requirements:
-  - "A caller can offer a question with a point of view, BCP-47 locale, optional parent turn, bounded channel timeout, and versioned acknowledgement that the turn is unlisted-public."
+  - "A caller can offer a question with a point of view, BCP-47 locale, optional parent turn, bounded channel timeout, and a versioned acknowledgement that keeps v1 single-turn-only or explicitly grants thread-v2 visibility."
   - "HTTP returns a persistent dialogue cell immediately; one organism-wide CPU lease realizes queued turns outside the request path."
   - "Only an allowlisted public source path can produce an answer; every other result becomes an attributed miss or controlled failure without publishing carrier output."
-  - "The no-auth MCP endpoint exposes start, get, and removal-capability tools with tested read, write, destructive, idempotent, and open-world annotations."
+  - "The no-auth MCP endpoint exposes start, reply, single-turn read, bounded thread read, and removal-capability tools with tested read, write, destructive, idempotent, and open-world annotations."
 done_when:
-  - "The Form envelope returns 63 on Go, Rust, and TypeScript sibling kernels and 63 on the direct fkwu witness, with the source preflight clean."
+  - "The Form envelope returns 63 and the thread-window recipe returns 511 on Go, Rust, and TypeScript sibling kernels and on the direct fkwu witness, with both source parses clean."
   - "Failure-oriented tests prove disclosure acknowledgement, data isolation, hostile-input containment, queue and timeout bounds, process-group reaping, interrupted-turn recovery, locale provenance, public-source gating, log hygiene, and removal."
-  - "MCP tests prove a connector can start, read, and release a dialogue and receives untrusted structured content."
+  - "HTTP and MCP tests prove two participants can start, reply, restart the database carrier, read both turns in edge order, and independently release their own turn."
   - "A production question returns 202 promptly, remains observable by its unguessable id, and reaches a terminal answered, miss, or failed receipt while API health stays responsive."
-test: "cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_envelope.fk && cd ../.. && python3 -m pytest -q api/tests/test_public_dialogues.py api/tests/test_mcp_remote_no_oauth.py"
+test: "cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_envelope.fk ../../api/app/form_recipes/public_dialogue_thread_window.fk && ../fkwu ../../api/app/form_recipes/public_dialogue_thread_window.fk && cd ../.. && python3 -m pytest -q api/tests/test_public_dialogues.py api/tests/test_mcp_remote_no_oauth.py"
 constraints:
-  - "Form owns the six-field dialogue envelope; Python carries HTTP, bounded process attendance, and the dedicated dialogue table in the existing unified database."
-  - "One PostgreSQL advisory lease spans all API processes and replicas; each native carrier is an isolated process group whose pid is persisted, killed on timeout, and reaped before interrupted work resumes."
+  - "Form owns the six-field dialogue envelope and the connected-thread window, anchor, root, continuation, selection, and truncation verdicts; Python is the retiring carrier for HTTP, bounded process attendance, row retrieval/locking, expiry mutation, and the dedicated dialogue table."
+  - "Separate PostgreSQL advisory leases span all API processes and replicas for queued generation and thread planning; each generation carrier is an isolated process group whose pid is persisted, killed on timeout, and reaped before interrupted work resumes."
   - "A rented escalation is admitted only as an empty dialogue-lane miss; it never becomes an answer or changes the ordinary grounded-ask lane."
   - "Question text is staged only as data, never placed in a shell command or Form source, and never appears in operational logs or failure receipts."
-  - "Public visibility is unlisted-by-id, expires after seven days, and can be released earlier into a content-free tombstone with the creation-time removal capability."
+  - "Public content is unlisted-by-turn-id for v1 and unlisted-by-connected-turn-id for thread-v2, ends after seven days, and can be released earlier into a content-free tombstone with its own creation-time removal capability; v2 ids and edges persist as thread capabilities for the observable tombstone graph."
 ---
 
-# Public Dialogue CPU Organ — one observable Form-grounded turn at a time
+# Public Dialogue CPU Organ — persistent Form-grounded turns in both directions
 
 ## Purpose
 
@@ -53,16 +55,34 @@ no grounded Form-native locale projection exists.
 
 `POST /api/dialogues` accepts `question`, `point_of_view`, `locale`, optional
 `parent_dialogue_id`, `channel_timeout_seconds` from 10 through 120, and the
-literal acknowledgement `public_disclosure_ack: public-unlisted-v1`. The
-acknowledgement means anyone given the unguessable id can read the question and
-receipt. It is a disclosure statement, not proof of identity or third-party
-consent. Missing or different acknowledgement values persist no row.
+versioned acknowledgement `public_disclosure_ack`. `public-unlisted-v1` means
+anyone given the unguessable id can read only that turn's question and receipt.
+`public-unlisted-thread-v2` additionally means anyone given any connected v2
+turn id can read the bounded persistent edge and tombstone graph. A turn's text
+ends at its own release or seven-day expiry, while its id and content-free cell
+remain part of that graph and therefore remain a thread capability. These are
+disclosure statements, not proof of identity or third-party consent. Missing or
+unknown acknowledgement values persist no row, v1 rows remain single-turn-only,
+and no reply may widen a v1 parent into a v2 thread without a new explicit offer.
 
 The response is `202` with a dialogue id, poll URL, seven-day expiry, and a
 removal token shown once. `GET /api/dialogues/{id}` observes `pending`, `running`,
 `answered`, `miss`, `failed`, or `tombstoned`. There is deliberately no public
 list endpoint: an unlisted receipt becomes visible to another person only when
 someone shares its id.
+
+`POST /api/dialogues/{id}/replies` requires `public-unlisted-thread-v2` and
+fixes the parent edge from the path; a caller cannot substitute another parent
+inside the body or attach to a v1 parent. The reply is a new durable row with
+its own one-time removal capability. `GET /api/dialogues/{id}/thread` accepts
+only a v2 turn id, follows it to its root, then reads at most 128 connected turns
+in stable creation order. The response includes parent edges and content-free
+tombstones, never removal capabilities. Any connected v2 turn id is therefore
+the unlisted read capability for that whole connected thread. A self-described
+point of view remains public data, not an authenticated identity. The anchor
+and its ancestry are retained inside the bound; if ancestry alone exceeds it,
+`root_dialogue_id` is null and `continuation_parent_dialogue_id` names the next
+unobserved edge rather than mislabeling a partial window as the root.
 
 `DELETE /api/dialogues/{id}` with the removal token releases question, point of
 view, and result content. The durable row becomes a content-free tombstone so
@@ -82,12 +102,25 @@ it does not copy conversation state or attach to internal/private task ids. An
 expired or releasing parent is unavailable even before the background expiry
 sweep reaches it.
 
+Thread reads apply the same synchronous expiry boundary to every observed row
+before returning text. Dialogue rows and their parent edges live in the unified
+database, so API or worker restarts do not erase either participant's turn.
+
 ## Form shape
 
 `api/app/form_recipes/public_dialogue_envelope.fk` makes six neutral fields one
 cell: locale, point of view, question, disclosure acknowledgement, parent, and
 chosen timeout. `dialogue-offered` accepts only the disclosed, present shape.
 Its band value is `63`, including parent-turn continuity.
+
+`api/app/form_recipes/public_dialogue_thread_window.fk` receives neutral
+`[turn-id, parent-id]` cells in stable creation order plus the anchor and bound.
+Form follows ancestry, preserves the anchor, admits connected descendants while
+room remains, and returns root-or-continuation, the selected turn identities,
+and truncation. Its band value is `511`. The Python store retrieves at most one
+extra persistence row, offers those neutral cells to this recipe on `fkwu`,
+then locks and projects only the identities Form selected. Python validates the
+receipt shape but does not mint a competing topology or truncation verdict.
 
 ## CPU and restart shape
 
@@ -98,6 +131,11 @@ Each API process may host one lightweight attending thread, but a session-level
 PostgreSQL advisory lock permits only one of those threads across all processes
 and deployment replicas to claim native work. SQLite/local development uses a
 process lock and does not make a cross-host claim.
+
+Thread reads use a separate nonblocking local slot plus PostgreSQL advisory
+transaction lease. Across every API process and replica, at most one request
+may launch the fkwu thread-window recipe at a time; contention returns a
+retryable controlled receipt before another subprocess starts.
 
 The worker records the native carrier process-group id before waiting. A normal
 timeout sends TERM, then KILL when necessary, and reaps the group before writing
@@ -159,7 +197,11 @@ The remote no-auth MCP door exposes:
 
 - `start_dialogue`: non-idempotent, non-destructive, open-world write requiring
   the versioned disclosure acknowledgement;
+- `reply_dialogue`: non-idempotent write that fixes a parent edge and returns a
+  distinct removal capability for the new turn;
 - `get_dialogue`: idempotent read of an unlisted receipt by id;
+- `get_dialogue_thread`: idempotent bounded read of the connected thread named
+  by any one of its unlisted turn ids;
 - `remove_dialogue`: idempotent destructive release requiring the capability
   token.
 
@@ -178,36 +220,44 @@ capacity, source, timeout, and removal gates.
 - [x] Accept canonical BCP-47 locale tags while distinguishing locale routing from unproven input-language understanding and projection.
 - [x] Keep receipts unlisted, bounded by capacity and time, automatically expiring, and removable into content-free tombstones.
 - [x] Pace HTTP and MCP atomically across production replicas without retaining raw peer addresses.
-- [x] Expose start, get, and remove through HTTP and no-auth MCP with server-side gates and accurate annotations.
+- [x] Expose start, reply, single-turn read, bounded thread read, and remove through HTTP and no-auth MCP with server-side gates and accurate annotations.
+- [x] Persist both sides of a dialogue and its directed parent edges across a fresh database engine/API restart without exposing either removal capability.
+- [x] Execute bounded thread topology and truncation as a Form recipe on fkwu, with Go/Rust/TypeScript sibling agreement and Python retained only as the retiring SQL/HTTP carrier.
+- [x] Preserve v1 ids as single-turn-only capabilities, require a new thread-v2 acknowledgement before connected reads or replies, and bound thread-planner subprocesses across every API replica.
 
 ## Files to Create/Modify
 
 - `api/app/form_recipes/public_dialogue_envelope.fk` — Form-neutral six-field envelope.
-- `api/app/services/public_dialogue_store.py` — dedicated persistent cell and atomic claim/terminal transitions.
-- `api/app/services/dialogue_service.py` — global worker lease, public-source gate, recovery, and receipts.
-- `api/app/routers/dialogues.py` — bounded HTTP start, observation, and release membrane.
-- `api/app/routers/mcp_remote.py` — connector-visible start/get/remove tools.
+- `api/app/form_recipes/public_dialogue_thread_window.fk` — Form-native connected topology, bounded selection, continuation, and truncation.
+- `api/app/services/public_dialogue_store.py` — dedicated persistent cell, bounded thread traversal, and atomic claim/terminal transitions.
+- `api/app/services/dialogue_service.py` — global worker lease, public-source gate, thread views, recovery, and receipts.
+- `api/app/routers/dialogues.py` — bounded HTTP start/reply, observation, thread-read, and release membrane.
+- `api/app/routers/mcp_remote.py` — connector-visible start/reply/get/thread/remove tools.
 - `api/app/routers/substrate.py` — carrier start witness plus shared process-group reaper.
 - `api/tests/test_public_dialogues.py` and `api/tests/test_mcp_remote_no_oauth.py` — adversarial proof bands.
+- `api/tests/test_kernel_submodule_contract.py` — API ownership inventory for the thread-window Form recipe.
 
 ## Acceptance Tests
 
 `api/tests/test_public_dialogues.py` covers real dedicated-store persistence,
-hostile text, source disclosure, restart recovery, timeout reaping, capacity,
-locale provenance, log canaries, and removal. `api/tests/test_mcp_remote_no_oauth.py`
+hostile text, source disclosure, worker restart recovery, database restart
+persistence of both turns, timeout reaping, bounded traversal, capacity, locale
+provenance, log canaries, and removal. `api/tests/test_mcp_remote_no_oauth.py`
 covers tool discovery, annotation values, structured content, acknowledgement,
-and the complete start/read/release lifecycle.
+and the complete start/reply/thread-read/release lifecycle.
 
 Production acceptance additionally offers one Indonesian mangrove-root question,
-observes `202` before native work completes, polls the receipt to a terminal
-state, confirms `/api/health` remains responsive during native CPU use, then
-uses the returned capability to release the public content.
+replies from a second point of view, restarts the API carrier, observes both
+turns and their edge from either turn id, confirms `/api/health` remains
+responsive during native CPU use, then uses each distinct capability to release
+its own public content.
 
 ## Verification
 
 ```sh
 cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_envelope.fk
-form/fkwu api/app/form_recipes/public_dialogue_envelope.fk
+cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_thread_window.fk
+cd form/form && ../fkwu ../../api/app/form_recipes/public_dialogue_thread_window.fk
 python3 -m pytest -q api/tests/test_public_dialogues.py api/tests/test_mcp_remote_no_oauth.py
 python3 scripts/validate_spec_quality.py --file specs/public-dialogue-cpu-organ.md --strict
 git diff --check
@@ -245,6 +295,7 @@ goal: Open bounded unlisted-public Form-grounded dialogues from a chosen point o
 files_allowed:
   - specs/public-dialogue-cpu-organ.md
   - api/app/form_recipes/public_dialogue_envelope.fk
+  - api/app/form_recipes/public_dialogue_thread_window.fk
   - api/app/services/public_dialogue_store.py
   - api/app/services/dialogue_service.py
   - api/app/services/unified_models.py
@@ -255,20 +306,23 @@ files_allowed:
   - api/app/models/accessible_ontology.py
   - api/tests/test_public_dialogues.py
   - api/tests/test_mcp_remote_no_oauth.py
+  - api/tests/test_kernel_submodule_contract.py
   - specs/INDEX.md
   - api/app/routers/INDEX.md
   - api/app/services/INDEX.md
   - api/tests/INDEX.md
 done_when:
-  - Form envelope returns 63 with clean preflight and named kernel witnesses.
+  - Form envelope returns 63 and thread window returns 511 with clean source parses and named kernel witnesses.
   - Failure-oriented API and MCP gates pass.
   - Production returns 202 promptly, API health remains responsive, and the receipt becomes terminal and removable.
 commands:
   - cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_envelope.fk
+  - cd form/form && ./validate.sh ../../api/app/form_recipes/public_dialogue_thread_window.fk
   - python3 -m pytest -q api/tests/test_public_dialogues.py api/tests/test_mcp_remote_no_oauth.py
+  - python3 -m pytest -q api/tests/test_kernel_submodule_contract.py
   - python3 scripts/validate_spec_quality.py --file specs/public-dialogue-cpu-organ.md
 constraints:
   - Existing unified database only; no second persistence substrate.
-  - One organism-wide CPU lease; no unbounded public process fanout.
+  - Separate organism-wide generation and thread-planning leases; no unbounded public process fanout.
   - Preserve misses, source language, and locale fallbacks without invented meaning.
 ```

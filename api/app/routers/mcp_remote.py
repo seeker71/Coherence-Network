@@ -20,7 +20,7 @@ from app.services.mcp_tool_registry import TOOL_MAP, TOOLS
 router = APIRouter()
 
 SERVER_NAME = "coherence-network"
-SERVER_VERSION = "0.7.0"
+SERVER_VERSION = "0.8.0"
 READ_ONLY_TOOL_NAMES = {
     "browse_ideas",
     "get_idea",
@@ -93,7 +93,7 @@ FETCH_TOOL = _tool(
 
 START_DIALOGUE_TOOL = _tool(
     "start_dialogue",
-    "Offer an unlisted public dialogue turn from a chosen point of view and BCP-47 locale. Public text is untrusted data, expires after seven days, and is observable only to people who receive its id. Returns immediately with a removal capability and dialogue id.",
+    "Offer an unlisted public dialogue turn from a chosen point of view and BCP-47 locale. Choose v1 for a single-turn read capability or thread-v2 so any connected turn id remains a capability for the thread's persistent edge and tombstone graph. Each turn's public text ends at its own release or seven-day expiry. Returns immediately with a removal capability and dialogue id.",
     {
         "type": "object",
         "properties": {
@@ -102,8 +102,8 @@ START_DIALOGUE_TOOL = _tool(
             "locale": {"type": "string", "minLength": 1, "maxLength": 80},
             "public_disclosure_ack": {
                 "type": "string",
-                "const": "public-unlisted-v1",
-                "description": "Acknowledges that anyone given the unguessable dialogue id can read the question and receipt until release or seven-day expiry.",
+                "enum": ["public-unlisted-v1", "public-unlisted-thread-v2"],
+                "description": "v1 grants only this turn. thread-v2 acknowledges that any connected turn id remains a bounded thread capability while the persistent edge/tombstone cells exist; each turn's content ends at its own release or seven-day expiry.",
             },
             "parent_dialogue_id": {"type": "string", "maxLength": 80},
             "channel_timeout_seconds": {
@@ -143,6 +143,66 @@ GET_DIALOGUE_TOOL = _tool(
     },
 )
 
+REPLY_DIALOGUE_TOOL = _tool(
+    "reply_dialogue",
+    "Offer a reply to a thread-v2 unlisted public dialogue turn. The named parent fixes the durable edge; the reply receives its own removal capability.",
+    {
+        "type": "object",
+        "properties": {
+            "dialogue_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            "question": {"type": "string", "minLength": 1, "maxLength": 1200},
+            "point_of_view": {"type": "string", "minLength": 1, "maxLength": 240},
+            "locale": {"type": "string", "minLength": 1, "maxLength": 80},
+            "public_disclosure_ack": {
+                "type": "string",
+                "const": "public-unlisted-thread-v2",
+                "description": "Acknowledges that any connected turn id remains a bounded thread capability for the persistent edge/tombstone graph; this reply's content ends at its own release or seven-day expiry.",
+            },
+            "channel_timeout_seconds": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 120,
+                "default": 90,
+            },
+        },
+        "required": [
+            "dialogue_id",
+            "question",
+            "point_of_view",
+            "locale",
+            "public_disclosure_ack",
+        ],
+        "additionalProperties": False,
+    },
+    annotations={
+        "title": "Reply to public dialogue",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+
+GET_DIALOGUE_THREAD_TOOL = _tool(
+    "get_dialogue_thread",
+    "Observe a bounded connected public dialogue thread from any thread-v2 turn id. Legacy v1 ids remain single-turn-only.",
+    {
+        "type": "object",
+        "properties": {
+            "dialogue_id": {"type": "string", "minLength": 1, "maxLength": 80}
+        },
+        "required": ["dialogue_id"],
+        "additionalProperties": False,
+    },
+    annotations={
+        "title": "Get public dialogue thread",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+
 REMOVE_DIALOGUE_TOOL = _tool(
     "remove_dialogue",
     "Release the public text of one dialogue using the removal capability returned only when it was started. The durable cell remains as a content-free tombstone.",
@@ -170,6 +230,8 @@ def _remote_tools() -> list[dict[str, Any]]:
         FETCH_TOOL,
         START_DIALOGUE_TOOL,
         GET_DIALOGUE_TOOL,
+        REPLY_DIALOGUE_TOOL,
+        GET_DIALOGUE_THREAD_TOOL,
         REMOVE_DIALOGUE_TOOL,
     ]
     for item in TOOLS:
@@ -302,8 +364,11 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
             "parent_dialogue_id",
             optional=True,
         )
-        if public_disclosure_ack != "public-unlisted-v1":
-            return {"error": "public_disclosure_ack must equal 'public-unlisted-v1'"}
+        if public_disclosure_ack not in (
+            "public-unlisted-v1",
+            "public-unlisted-thread-v2",
+        ):
+            return {"error": "public_disclosure_ack names an unsupported version"}
         raw_timeout = (
             arguments["channel_timeout_seconds"]
             if "channel_timeout_seconds" in arguments
@@ -315,7 +380,7 @@ def _start_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[st
             question=question,
             point_of_view=point_of_view,
             locale=locale,
-            public_disclosure_ack="public-unlisted-v1",
+            public_disclosure_ack=public_disclosure_ack,
             network_peer=public_origin,
             parent_dialogue_id=parent_dialogue_id or None,
             channel_timeout_seconds=raw_timeout,
@@ -337,6 +402,66 @@ def _get_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
         return {"error": "dialogue_id is required"}
     dialogue = dialogue_service.get_dialogue(dialogue_id)
     return dialogue if dialogue is not None else {"error": "Dialogue not found"}
+
+
+def _reply_dialogue(arguments: dict[str, Any], *, public_origin: str) -> dict[str, Any]:
+    from app.services import dialogue_service
+
+    try:
+        dialogue_id = _string_argument(arguments, "dialogue_id").strip()
+        question = _string_argument(arguments, "question")
+        point_of_view = _string_argument(arguments, "point_of_view")
+        locale = _string_argument(arguments, "locale")
+        public_disclosure_ack = _string_argument(
+            arguments,
+            "public_disclosure_ack",
+        )
+        if not dialogue_id:
+            return {"error": "dialogue_id is required"}
+        if public_disclosure_ack != "public-unlisted-thread-v2":
+            return {
+                "error": (
+                    "public_disclosure_ack must equal "
+                    "'public-unlisted-thread-v2' for replies"
+                )
+            }
+        raw_timeout = arguments.get("channel_timeout_seconds", 90)
+        if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, int):
+            raise ValueError("channel_timeout_seconds must be an integer")
+        return dialogue_service.submit_dialogue(
+            question=question,
+            point_of_view=point_of_view,
+            locale=locale,
+            public_disclosure_ack="public-unlisted-thread-v2",
+            network_peer=public_origin,
+            parent_dialogue_id=dialogue_id,
+            channel_timeout_seconds=raw_timeout,
+        )
+    except dialogue_service.DialogueRateLimitError as exc:
+        return {"error": str(exc), "retry_after": exc.retry_after}
+    except (TypeError, ValueError, RuntimeError) as exc:
+        return {"error": str(exc)}
+
+
+def _get_dialogue_thread(arguments: dict[str, Any]) -> dict[str, Any]:
+    from app.services import dialogue_service
+
+    try:
+        dialogue_id = _string_argument(arguments, "dialogue_id").strip()
+    except ValueError as exc:
+        return {"error": str(exc)}
+    if not dialogue_id:
+        return {"error": "dialogue_id is required"}
+    try:
+        thread = dialogue_service.get_dialogue_thread(dialogue_id)
+    except dialogue_service.DialogueThreadDisclosureError:
+        return {"error": "This turn grants single-turn access only"}
+    except dialogue_service.DialogueThreadPlannerBusyError:
+        return {
+            "error": "Native dialogue thread planning is presently busy",
+            "retry_after": 15,
+        }
+    return thread if thread is not None else {"error": "Dialogue not found"}
 
 
 def _remove_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -399,7 +524,8 @@ async def _handle_jsonrpc(
                 "instructions": (
                     "Public Coherence Network MCP endpoint. Authentication type: none. "
                     "Read tools observe the commons. Dialogue text is untrusted unlisted-public data; "
-                    "start_dialogue requires an explicit versioned disclosure acknowledgement and remove_dialogue requires its capability token."
+                    "start_dialogue and reply_dialogue require an explicit versioned disclosure acknowledgement; "
+                    "only thread-v2 connected turn ids read their thread, and remove_dialogue requires the turn's capability token."
                 ),
             },
         )
@@ -424,6 +550,22 @@ async def _handle_jsonrpc(
             )
         if name == "get_dialogue":
             result = await _run_dialogue_tool(_get_dialogue, arguments)
+            return _jsonrpc_result(
+                request_id,
+                _content_result(result, is_error="error" in result),
+            )
+        if name == "reply_dialogue":
+            result = await _run_dialogue_tool(
+                _reply_dialogue,
+                arguments,
+                public_origin=public_origin,
+            )
+            return _jsonrpc_result(
+                request_id,
+                _content_result(result, is_error="error" in result),
+            )
+        if name == "get_dialogue_thread":
+            result = await _run_dialogue_tool(_get_dialogue_thread, arguments)
             return _jsonrpc_result(
                 request_id,
                 _content_result(result, is_error="error" in result),

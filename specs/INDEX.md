@@ -83,7 +83,7 @@
 - [form-question-effects-kernel-conformance](form-question-effects-kernel-conformance.md) — Form Question Effects Kernel Conformance
 - [pipeline-observability-and-auto-review](pipeline-observability-and-auto-review.md) — Pipeline Observability and Auto-Review
 - [project-manager-pipeline](project-manager-pipeline.md) — Project Manager Pipeline
-- [public-dialogue-cpu-organ](public-dialogue-cpu-organ.md) — one observable Form-grounded turn at a time
+- [public-dialogue-cpu-organ](public-dialogue-cpu-organ.md) — persistent Form-grounded turns in both directions
 - [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — Split Review Into code-review → deploy → verify-production
 - [symphony-alignment-orchestration](symphony-alignment-orchestration.md) — Symphony Alignment for Coherence Orchestration
 

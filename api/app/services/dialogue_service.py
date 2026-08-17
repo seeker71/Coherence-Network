@@ -113,6 +113,8 @@ _WORKER_STOP = threading.Event()
 _WORKER_THREAD: threading.Thread | None = None
 _GROUNDED_ASK_RUNNER: Callable[..., Any] | None = None
 log = logging.getLogger(__name__)
+DialogueThreadDisclosureError = store.PublicDialogueThreadDisclosureError
+DialogueThreadPlannerBusyError = store.PublicDialogueThreadPlannerBusyError
 
 
 class DialogueRateLimitError(RuntimeError):
@@ -257,6 +259,9 @@ def _dialogue_view(row: dict[str, Any], *, removal_token: str | None = None) -> 
         "poll_url": f"/api/dialogues/{row['id']}",
         "release_url": f"/api/dialogues/{row['id']}",
     }
+    if row["disclosure_ack"] == store.PUBLIC_DISCLOSURE_ACK:
+        view["reply_url"] = f"/api/dialogues/{row['id']}/replies"
+        view["thread_url"] = f"/api/dialogues/{row['id']}/thread"
     if removal_token is not None:
         view["removal_token"] = removal_token
         view["removal_token_note"] = (
@@ -276,9 +281,13 @@ def submit_dialogue(
     channel_timeout_seconds: int = 90,
 ) -> dict[str, Any]:
     """Persist one unlisted public turn and wake the attending CPU worker."""
-    if public_disclosure_ack != store.PUBLIC_DISCLOSURE_ACK:
+    if public_disclosure_ack not in store.PUBLIC_DISCLOSURE_ACKS:
         raise ValueError(
-            f"public_disclosure_ack must equal {store.PUBLIC_DISCLOSURE_ACK!r}"
+            "public_disclosure_ack must name a supported disclosure version"
+        )
+    if parent_dialogue_id is not None and public_disclosure_ack != store.PUBLIC_DISCLOSURE_ACK:
+        raise ValueError(
+            f"thread replies require public_disclosure_ack {store.PUBLIC_DISCLOSURE_ACK!r}"
         )
     question = question.strip()
     point_of_view = point_of_view.strip()
@@ -327,6 +336,7 @@ def submit_dialogue(
                 requested_locale=requested_locale,
                 canonical_locale=canonical_locale,
                 parent_dialogue_id=parent_dialogue_id,
+                public_disclosure_ack=public_disclosure_ack,
                 channel_timeout_seconds=channel_timeout_seconds,
                 network_peer_sha256=network_peer_sha256,
                 expires_at=expires_at,
@@ -349,6 +359,30 @@ def get_dialogue(dialogue_id: str) -> dict[str, Any] | None:
         return None
     _WORKER_WAKE.set()
     return _dialogue_view(row)
+
+
+def get_dialogue_thread(dialogue_id: str) -> dict[str, Any] | None:
+    """Observe the bounded connected thread named by one unlisted turn id."""
+    ensure_dialogue_worker()
+    thread = store.get_dialogue_thread(dialogue_id)
+    if thread is None:
+        return None
+    _WORKER_WAKE.set()
+    return {
+        "root_dialogue_id": thread["root_dialogue_id"],
+        "oldest_observed_dialogue_id": thread["oldest_observed_dialogue_id"],
+        "continuation_parent_dialogue_id": thread[
+            "continuation_parent_dialogue_id"
+        ],
+        "anchor_dialogue_id": thread["anchor_dialogue_id"],
+        "turns": [_dialogue_view(row) for row in thread["turns"]],
+        "turn_count": thread["turn_count"],
+        "truncated": thread["truncated"],
+        "read_capability_note": (
+            "Any thread-v2 turn id remains an unlisted capability for the connected "
+            "tombstone graph; each turn's content ends at its own release or expiry."
+        ),
+    }
 
 
 def release_dialogue(dialogue_id: str, removal_token: str) -> bool:
