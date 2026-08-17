@@ -1,0 +1,83 @@
+{
+  "date": "2026-08-17T09:45:00+08:00",
+  "thread_branch": "codex/dialogue-thread-v2-admission",
+  "commit_scope": "Admit the explicit public-unlisted-thread-v2 disclosure through the Form-native public dialogue envelope while retaining the legacy single-turn disclosure path.",
+  "files_owned": [
+    "api/app/form_recipes/public_dialogue_envelope.fk",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-17_public-dialogue-thread-v2-admission.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "The Form envelope preflight is balanced with zero errors, warnings, and unresolved calls. Its proof band returns 63 on the sibling validator and on a clean direct fkwu run; the final bit now witnesses a parent-bearing thread-v2 envelope while the first turn retains the legacy v1 witness. The real Python carrier receipt test executes both v1 and thread-v2 disclosures through fkwu and verifies their content-bound sources differ. The focused public dialogue, MCP, and kernel ownership suite passes all 94 tests under the repository Python environment, and git diff validation is clean."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "PR 4014 is running the exact-head Linux and Windows gates; independent Codex review requested this evidence artifact and that feedback is embodied here."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "After merge and deployment, the public witness will create a thread-v2 root and reply, restart the API carrier, observe both turns and the directed edge through HTTP and MCP, then independently release both capabilities to tombstones."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "public-dialogue-cpu-organ"
+  ],
+  "task_ids": [
+    "public-dialogue-thread-v2-admission-2026-08-17"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-shaping"
+      ]
+    },
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "adversarial-validation",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "specs/public-dialogue-cpu-organ.md",
+    "api/app/form_recipes/public_dialogue_envelope.fk::dialogue-band",
+    "api/tests/test_public_dialogues.py::test_form_receipt_is_bound_to_same_length_dialogue_values"
+  ],
+  "change_files": [
+    "api/app/form_recipes/public_dialogue_envelope.fk",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-08-17_public-dialogue-thread-v2-admission.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A public-unlisted-thread-v2 root and reply are admitted by Form, persist across an API restart, remain readable from either turn through HTTP and MCP without exposing removal capabilities, and can be released independently.",
+    "public_endpoints": [
+      "POST /api/dialogues",
+      "POST /api/dialogues/{dialogue_id}/replies",
+      "GET /api/dialogues/{dialogue_id}/thread",
+      "POST /mcp tools: reply_dialogue, get_dialogue_thread"
+    ],
+    "test_flows": [
+      "admit a thread-v2 root and child through the native Form receipt",
+      "restart the API carrier and read the same two-turn edge through HTTP and MCP",
+      "release both turns with distinct one-time capabilities and observe tombstones"
+    ]
+  }
+}
