@@ -366,7 +366,7 @@ def test_form_receipt_is_bound_to_same_length_dialogue_values(monkeypatch):
         locale="fr",
         point="ocean",
         question="world",
-        disclosure="public-unlisted-v1",
+        disclosure="public-unlisted-thread-v2",
         parent="",
         timeout_seconds=60,
     )
@@ -375,6 +375,7 @@ def test_form_receipt_is_bound_to_same_length_dialogue_values(monkeypatch):
     assert sources[0] != sources[1]
     assert '"656e" "7269766572" "68656c6c6f"' in sources[0]
     assert '"6672" "6f6365616e" "776f726c64"' in sources[1]
+    assert "7075626c69632d756e6c69737465642d7468726561642d7632" in sources[1]
     assert "dialogue-envelope-receipt" in sources[0]
 
 

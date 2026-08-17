@@ -64,7 +64,11 @@
           (dialogue-disclosure envelope)
           "7075626c69632d756e6c69737465642d7631")
         (dialogue-locale-ok envelope)
-        0))
+        (if (str_eq
+              (dialogue-disclosure envelope)
+              "7075626c69632d756e6c69737465642d7468726561642d7632")
+            (dialogue-locale-ok envelope)
+            0)))
 
   (defn dialogue-field (value)
     (str_concat (int_to_str (str_len value)) (str_concat ":" value)))
@@ -127,7 +131,8 @@
       (let next-turn
         (dialogue-envelope
           "656e" "7269766572" "68656c6c6f"
-          "7075626c69632d756e6c69737465642d7631" "646c675f31" 120))
+          "7075626c69632d756e6c69737465642d7468726561642d7632"
+          "646c675f31" 120))
       (add
         (if (eq (dialogue-offered first-turn) 1) 1 0)
         (add
@@ -140,6 +145,8 @@
                 (if (str_eq
                       (dialogue-disclosure first-turn)
                       "7075626c69632d756e6c69737465642d7631") 16 0)
-                (if (str_eq (dialogue-parent next-turn) "646c675f31") 32 0))))))))
+                (if (str_eq (dialogue-parent next-turn) "646c675f31")
+                    (if (eq (dialogue-offered next-turn) 1) 32 0)
+                    0))))))))
 
   (dialogue-band))
