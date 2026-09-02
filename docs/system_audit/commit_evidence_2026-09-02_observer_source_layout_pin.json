@@ -1,0 +1,113 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/activate-observer-source-layout",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Activate the landed observer archive-layout repair by aligning its immutable workflow call and runtime OIDC policy pin.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-source-layout-pin"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_source_layout_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_source_layout_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "PR #4026 passed Thread Gates, Windows Host Floor, and GitGuardian before merging as f0934d362fa56701a1114539f4dc798d817fed93.",
+    "Commit f0934d362fa56701a1114539f4dc798d817fed93 is on main and contains the observer archive-layout repair plus its source regression.",
+    "The Hostinger caller and API deployment-observer policy now carry the same 40-character immutable workflow SHA.",
+    "The existing runtime-policy regression verifies the reusable-workflow call and OIDC policy remain identical."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_source_layout_pin.json",
+      "git diff --check"
+    ],
+    "summary": "All 20 observer identity, transport, archive-layout, and pin-alignment tests pass; the evidence and whitespace gates pass; the pinned commit is an ancestor of main and contains the repaired workflow bytes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Merge, rollout, and one authenticated observation through the repaired workflow remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The post-deploy observer authenticates as the landed archive-layout workflow and completes immutable carrier reproduction against the deployed container.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation"
+    ],
+    "test_flows": [
+      "Confirm caller and runtime policy use f0934d362fa56701a1114539f4dc798d817fed93.",
+      "Deploy the aligned pin from protected main.",
+      "Execute, reproduce, submit, and verify both native carriers through the authenticated observer."
+    ]
+  },
+  "trust_matrix": {
+    "immutable_pin_selection": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 selected the landed workflow SHA; GitHub merge metadata, immutable source bytes, and the runtime pin regression verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the merged workflow identity, pin contract, and executable OIDC test surface; it did not generate the rollout decision.",
+    "standard_receipt": "pending — focused proof, exact-head CI, merge, rollout, and successful authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The pin activation is authored; local proof, CI, merge, deployment, and live observation remain pending."
+  }
+}
