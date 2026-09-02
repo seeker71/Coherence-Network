@@ -53,6 +53,11 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
   nonce-derived Form expressions before SSH and decodes them only inside the
   remote script, so spaces and parentheses remain one exact argument instead
   of becoming remote shell syntax.
+- [x] **R6 — Immutable archive layout:** Reproduction reads the kernel runtime
+  from archive-root `runtime/` and all Form sources, including the ground canary,
+  from archive-root `form/`. The 2026-09-02 observer reached the form-cli
+  behavioral proof before exposing and repairing the stale root-level
+  `bootstrap/ground.fk` canary path.
 
 ## Stop rules (effective immediately)
 

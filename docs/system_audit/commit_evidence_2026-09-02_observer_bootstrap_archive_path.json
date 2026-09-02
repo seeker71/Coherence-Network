@@ -1,0 +1,117 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/observer-bootstrap-archive-path-20260902",
+  "change_intent": "process_only",
+  "commit_scope": "Align the immutable observer's fkwu ground canary with the nested Form source path in the coherence-kernel archive.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-bootstrap-archive-path"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_bootstrap_archive_path.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_bootstrap_archive_path.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 33603593174 attempt 2 deployed c9212b27aebf28198137d2ac1fbf0d7357bb7198 successfully in 5m21s, proving the native grounding receipt repair.",
+    "The pinned observer then rebuilt form-cli and passed its behavioral proof before exiting at the following fkwu canary command.",
+    "The coherence-kernel gitlink contains runtime/fkwu-uni.c at archive root and the canary at form/bootstrap/ground.fk; archive-root bootstrap/ground.fk does not exist.",
+    "The observer archive-layout regression now asserts the nested canary path and rejects the stale root-level path."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "yaml.safe_load(.github/workflows/public-deployment-observer.yml)",
+      "test -f form/form/bootstrap/ground.fk",
+      "test ! -e form/bootstrap/ground.fk",
+      "git diff --check"
+    ],
+    "summary": "All 21 observer identity, transport, archive-layout, and direct-carrier tests pass; strict spec, workflow syntax, filesystem-layout, and whitespace checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Phase-one merge, immutable pin activation, rollout, and one authenticated observation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Immutable reproduction runs the fkwu ground canary from the real nested archive source and advances to deployed/source digest comparison.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation"
+    ],
+    "test_flows": [
+      "Build form-cli and fkwu from the immutable coherence-kernel archive.",
+      "Execute /source/form/bootstrap/ground.fk through the reproduced fkwu binary and require 42.",
+      "Compare reproduced and deployed carrier digests before recording a WITNESS."
+    ]
+  },
+  "trust_matrix": {
+    "archive_canary_path": {
+      "path": "rented_plus_body_verification",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "Form returned grounded node @1.1.9.757 but judged the lookup insufficient; OpenAI GPT-5 completed diagnosis from the live job boundary and checked-out gitlink layout."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied @1.1.9.757, the exact archive tree, the successful immutable form-cli proof, and the filesystem regression; it did not generate the final path diagnosis.",
+    "standard_receipt": "pending — exact-head CI, phase-one merge, pin activation, rollout, and authenticated observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The canary path is repaired and locally proven; CI, phase-one merge, immutable pin activation, and live observation remain pending."
+  }
+}
