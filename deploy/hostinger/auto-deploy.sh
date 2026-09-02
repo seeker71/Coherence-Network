@@ -1119,6 +1119,8 @@ run_substrate_ingest() {
   #   - OLD_SHA == TARGET_SHA but rebuild was requested (running API at
   #     wrong SHA path)
   #   - git diff fails for any reason
+  #   - the grounding/bootstrap carriers changed, because their new migration
+  #     shape must reconcile the complete source body before RAG heal runs
   local from="$1" to="$2"
   local started ended elapsed all_changed full_refresh_reason="" old_form_sha new_form_sha
   started="$(date +%s)"
@@ -1129,6 +1131,10 @@ run_substrate_ingest() {
     full_refresh_reason="changed-path comparison unavailable"
   elif grep -Fxq 'form/.gitlink-diff-unavailable' <<< "$all_changed"; then
     full_refresh_reason="form gitlink commits unavailable"
+  elif grep -Eq \
+      '^(scripts/(coh_substrate|form_cli_rag)\.py|api/app/services/(grounding_source\.py|substrate/))' \
+      <<< "$all_changed"; then
+    full_refresh_reason="grounding bootstrap/RAG carrier changed"
   else
     old_form_sha="$(git -C "$REPO_DIR" rev-parse "${from}:form" 2>/dev/null || true)"
     new_form_sha="$(git -C "$REPO_DIR" rev-parse "${to}:form" 2>/dev/null || true)"

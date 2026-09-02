@@ -89,6 +89,20 @@ KB_PAGE_DIRS = [
 ]
 
 
+def _classic_form_stdlib_dir() -> Path:
+    """Return the classic Form stdlib in source and production layouts.
+
+    Source worktrees keep the pinned kernel below ``form/form``. The API
+    image flattens that tree below ``form`` and carries the image-built
+    ``form-cli.sha256`` authority beside it. Match the RAG consumer's layout
+    choice so bootstrap and heal always enumerate the same Form sources.
+    """
+    form_root = REPO_ROOT / "form"
+    if (form_root / "form-cli.sha256").is_file():
+        return form_root / "form-stdlib"
+    return form_root / "form" / "form-stdlib"
+
+
 def form_first_source_paths() -> list[Path]:
     """Return every source that the native Form-first RAG can answer from.
 
@@ -98,7 +112,7 @@ def form_first_source_paths() -> list[Path]:
     markdown domains lands as an ARTIFACT cell through ``ingest-paths``.
     """
     patterns = (
-        REPO_ROOT / "form/form/form-stdlib/*.fk",
+        _classic_form_stdlib_dir() / "*.fk",
         REPO_ROOT / "specs/*.md",
         REPO_ROOT / "docs/vision-kb/concepts/*.md",
         REPO_ROOT / "docs/coherence-substrate/*.form",
