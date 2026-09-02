@@ -1,0 +1,129 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/deployment-observer-pin-20260902",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Activate the repaired public deployment observer by aligning its reusable-workflow call and runtime OIDC policy to one immutable on-main commit.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-pin-roll-forward"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_pin_roll_forward.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_public_dialogues.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_pin_roll_forward.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "PR #4022 merged the exact SSH expression transport repair as on-main commit c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 after all exact-head gates and review passed.",
+    "git merge-base confirms c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 is an ancestor of origin/main, and git show confirms that immutable commit hex-encodes the generated Form expression.",
+    "The Hostinger caller and API deployment-observer policy now carry the same 40-character observer workflow SHA.",
+    "The existing runtime-policy regression proves the reusable-workflow call and OIDC policy remain identical.",
+    "Exact-head Thread Gates run 33593298830 exposed a fixed August expiry in the public-dialogue test after the wall clock passed it; the test now injects a pre-expiry clock before setup and terminalization, preserving the intended boundary proof independently of calendar date."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/python -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "api/.venv/bin/python -m pytest -q api/tests/test_public_dialogues.py::test_dedicated_store_round_trip_claim_finish_and_release -x",
+      "api/.venv/bin/python -m pytest -q api/tests/test_public_dialogues.py",
+      "git merge-base --is-ancestor c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 origin/main",
+      "git show c5e9874a04a26e92c0634bfaa49365ffdb81f5e1:.github/workflows/public-deployment-observer.yml",
+      "parse .github/workflows/hostinger-auto-deploy.yml with PyYAML",
+      "ruff check api/app/services/deployment_observer_service.py api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_pin_roll_forward.json",
+      "git diff --check"
+    ],
+    "summary": "All 19 observer tests and all 59 public-dialogue tests pass; the pin is on main, contains the repaired transport, matches runtime policy, parses as workflow YAML, and passes Ruff."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "The first exact head passed review/security while Thread Gates exposed the calendar-dependent public-dialogue fixture; a repaired exact-head run remains pending."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "public-deployment-observer.yml"
+    ],
+    "summary": "The current production release is healthy at d453ca3ef555; rollout of the aligned observer pin and one successful authenticated observation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The post-deploy observer runs the repaired immutable workflow and the deployed API accepts its GitHub OIDC identity under the matching policy pin.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observe"
+    ],
+    "test_flows": [
+      "Deploy the merge carrying the aligned caller and runtime policy pin.",
+      "Issue a GitHub OIDC challenge through the immutable observer workflow.",
+      "Execute, reproduce, submit, and verify both native carriers."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within one minute and was terminated, so it supplied no attributable answer."
+    },
+    "pin_roll_forward": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 selected the two-phase immutable pin rollout; Git ancestry, immutable workflow content, policy tests, and the live OIDC observer will verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the pin contract, on-main ancestry, immutable workflow bytes, and executable OIDC tests; it did not generate the rollout decision.",
+    "standard_receipt": "pending — exact-head CI, merge, deployment, and authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The pin alignment and calendar-independent expiry proof pass locally; repaired exact-head CI, merge, rollout, and live observer proof remain pending."
+  }
+}

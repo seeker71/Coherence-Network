@@ -1469,6 +1469,11 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     assert dialogue_service.release_dialogue(legacy["id"], legacy_token) is True
 
     expiry_boundary = datetime(2026, 8, 22, 1, 2, 3, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        store,
+        "_now",
+        lambda: expiry_boundary - timedelta(seconds=1),
+    )
     expiring_row, _ = store.create_dialogue(
         question="What remains visible at the expiry boundary?",
         question_sha256="e" * 64,
@@ -1507,6 +1512,11 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
     monkeypatch.setattr(store, "_now", real_now)
 
     running_expiry = datetime(2026, 8, 22, 6, 7, 8, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        store,
+        "_now",
+        lambda: running_expiry - timedelta(seconds=1),
+    )
     running_row, _ = store.create_dialogue(
         question="Who owns cleanup after public visibility expires?",
         question_sha256="d" * 64,
@@ -1624,6 +1634,11 @@ def test_dedicated_store_round_trip_claim_finish_and_release(monkeypatch, tmp_pa
         assert released.carrier_pgid is None
 
     terminal_parent_expiry = datetime(2026, 8, 23, 7, 8, 9, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        store,
+        "_now",
+        lambda: terminal_parent_expiry - timedelta(seconds=1),
+    )
     terminal_parent, _ = store.create_dialogue(
         question="Can an unswept expired terminal turn receive a child?",
         question_sha256="3" * 64,
