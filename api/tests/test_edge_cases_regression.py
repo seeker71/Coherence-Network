@@ -12,6 +12,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -638,8 +639,75 @@ async def test_error_response_rfc7807() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 5. Release & PR Gates (4 tests)
+# 5. Release & PR Gates (5 tests)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_local_environment_setup_handles_pre_thread_detached_head(tmp_path: Path) -> None:
+    """Only pre-thread setup defers; active detached tasks remain behind the gate."""
+    repo_root = Path(__file__).resolve().parents[2]
+    environment = tomllib.loads(
+        (repo_root / ".codex/environments/environment.toml").read_text(encoding="utf-8")
+    )
+    setup_script = environment["setup"]["script"]
+
+    bin_dir = tmp_path / "bin"
+    scripts_dir = tmp_path / "scripts"
+    bin_dir.mkdir()
+    scripts_dir.mkdir()
+    stubs = {
+        bin_dir / "git": '#!/bin/sh\nIFS= read -r branch < .branch\nprintf "%s\\n" "$branch"\n',
+        bin_dir / "make": (
+            '#!/bin/sh\nIFS= read -r branch < .branch\nprintf "start-gate-ran:%s\\n" "$branch"\n'
+            '[ "$branch" != "HEAD" ]\n'
+        ),
+        scripts_dir / "ghx.sh": "#!/bin/sh\nexit 1\n",
+    }
+    for path, content in stubs.items():
+        path.write_text(content, encoding="utf-8")
+        path.chmod(0o755)
+
+    branch_file = tmp_path / ".branch"
+    branch_file.write_text("HEAD\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["/bin/bash", "-c", setup_script],
+        cwd=tmp_path,
+        env={"PATH": str(bin_dir)},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "start-gate deferred until the task attaches a branch" in result.stdout
+
+    result = subprocess.run(
+        ["/bin/bash", "-c", setup_script],
+        cwd=tmp_path,
+        env={"PATH": str(bin_dir), "CODEX_THREAD_ID": "active-task"},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "start-gate-ran:HEAD" in result.stdout
+    assert "start-gate deferred" not in result.stdout
+
+    branch_file.write_text("codex/setup-test\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["/bin/bash", "-c", setup_script],
+        cwd=tmp_path,
+        env={"PATH": str(bin_dir)},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "start-gate-ran:codex/setup-test" in result.stdout
 
 
 def test_start_gate_blocks_main_branch() -> None:
