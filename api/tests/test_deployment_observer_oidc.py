@@ -174,6 +174,7 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
         "/source/form/form-stdlib",
         "/source/form/scripts",
         "/source/form/build-form-cli.sh",
+        "/source/form/bootstrap/ground.fk",
         "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256",
         "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt",
         "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp",
@@ -181,6 +182,7 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
     for path in expected_paths:
         assert path in workflow
     assert "/source/form-stdlib" not in workflow
+    assert "/source/bootstrap/ground.fk" not in workflow
     assert "$source_dir/form-stdlib" not in workflow
 
 
