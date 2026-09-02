@@ -1,0 +1,137 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/hati-deploy-lock-20260902",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Keep GitHub-triggered Hostinger rollout and public proof inside the VPS cron lock, and align native public verification with the selected fkwu production authority.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "hostinger-deploy-target-fetch",
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-hostinger-deploy-lock"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "docs/system_audit/commit_evidence_2026-09-02_hostinger_deploy_lock.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/fkwu-only-kernel-collapse.md",
+    "specs/hostinger-deploy-target-fetch.md"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "docs/system_audit/commit_evidence_2026-09-02_hostinger_deploy_lock.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/fkwu-only-kernel-collapse.md",
+    "specs/hostinger-deploy-target-fetch.md"
+  ],
+  "evidence_refs": [
+    "Merged rollout 33583670600 completed the repaired substrate/RAG migration at rc=0 with 1749/1749 sources grounded and 1749 entries healed.",
+    "At 02:40:01Z, the VPS cron caller acquired /tmp/coh-deploy.lock and began a second rollout while the GitHub caller was still in post-deploy readiness probes.",
+    "The cron rollout recreated the API at 02:40:14Z; the first rollout's remaining health probes then timed out and its workflow failed.",
+    "The VPS cron command already uses flock on /tmp/coh-deploy.lock, while the GitHub SSH command previously invoked auto-deploy.sh without that lock.",
+    "Review found that locking auto-deploy alone released before the separate public proof and preserved the false-red race.",
+    "The workflow now locks one carrier that runs auto-deploy followed by the unchanged public reachability/SHA/CORS/pulse checks before returning; the path test proves both operations are ordered inside that carrier and no later verify step remains.",
+    "The production fkwu collapse retires sibling-router containers before observation, so public verification now proves the selected c-bootstrap fkwu runtime, form-cli integrity, and reference-only sibling role from live health instead of waiting on retired router headers.",
+    "The repaired verifier passed against the live 7f637d786f32 deployment, including exact API/web SHA parity, persistence, fkwu authority, web assets, CORS, and a pulse witness that settled to breathing."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh deploy/hostinger/deploy-and-verify.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_REQUIRE_API_HEALTH_SHA=1 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 SHA_PARITY_PATIENCE_SECONDS=30 ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/hostinger-deploy-target-fetch.md --strict",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_hostinger_deploy_lock.json",
+      "git diff --check"
+    ],
+    "summary": "The locked carrier, shell syntax, Hostinger path regression, 18 provenance tests, strict spec gates, evidence gate, whitespace gate, and live fkwu-only public verification pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before the lock repair branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "./scripts/verify_web_api_deploy.sh",
+      "in-app Chromium phone-width verification"
+    ],
+    "summary": "The repaired grounding migration is persisted, the public API serves the merged SHA, and the corrected verifier passes live. A green exact-head serialized rollout receipt remains pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When GitHub and cron both request a rollout, only one caller can recreate services at a time; the waiting caller begins after the lock holder completes.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Assert the GitHub SSH command holds the VPS cron lock around both rollout and public verification.",
+      "Run an exact-head Hostinger rollout after merge.",
+      "Verify public SHA parity and the Hati phone balance."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within one minute and was stopped, so it supplied no attributable answer."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the concurrency diagnosis; VPS timestamps, processes, health probes, workflow source, and regression tests verified it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied deploy logs, process state, source, specification, and executable deployment-path tests; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI and one serialized public rollout remain to be observed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The review repair and live verifier proof are complete; local gates, exact-head CI, merge, and one serialized rollout remain pending."
+  }
+}

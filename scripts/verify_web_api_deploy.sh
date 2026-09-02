@@ -616,6 +616,83 @@ check_provider_readiness() {
   return 0
 }
 
+check_fkwu_native_authority() {
+  local health_url="${API_URL%/}/api/health"
+  local status_url="${API_URL%/}/api/utils/kernel_status"
+  local health_file="$TMP_DIR/fkwu_health.body.json"
+  local status_file="$TMP_DIR/fkwu_status.body.json"
+  local health_status kernel_status
+
+  echo
+  echo "==> fkwu native execution authority: ${health_url} + ${status_url}"
+  health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS \
+    -o "$health_file" -w "%{http_code}" --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" "$health_url" || true)"
+  kernel_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS \
+    -o "$status_file" -w "%{http_code}" --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" "$status_url" || true)"
+  echo "Health HTTP status: ${health_status:-unknown}"
+  echo "Kernel status HTTP status: ${kernel_status:-unknown}"
+
+  if [[ -z "$health_status" || "$health_status" -lt 200 || "$health_status" -ge 300 \
+      || -z "$kernel_status" || "$kernel_status" -lt 200 || "$kernel_status" -ge 300 ]]; then
+    echo "FAIL: fkwu authority endpoints did not return 2xx"
+    return 1
+  fi
+
+  if ! python3 - "$health_file" "$status_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    health = json.load(stream)
+with open(sys.argv[2], encoding="utf-8") as stream:
+    status = json.load(stream)
+
+observation = health.get("native_runtime_observation") or {}
+kernel = observation.get("kernel") or {}
+form_cli = observation.get("form_cli") or {}
+expected = {
+    "health.kernel_runtime": (health.get("kernel_runtime"), "fkwu"),
+    "observation.verified": (observation.get("verified"), True),
+    "kernel.verified": (kernel.get("verified"), True),
+    "kernel.runtime": (kernel.get("runtime"), "fkwu"),
+    "kernel.execution_authority": (
+        kernel.get("execution_authority"),
+        "c-bootstrap-fkwu",
+    ),
+    "kernel.sibling_kernel_role": (
+        kernel.get("sibling_kernel_role"),
+        "differential-reference-only",
+    ),
+    "form_cli.verified": (form_cli.get("verified"), True),
+    "status.active": (status.get("active"), "fkwu"),
+    "status.available": (status.get("available"), True),
+    "status.binary_available": (status.get("binary_available"), True),
+}
+failures = [
+    f"{name}: expected {wanted!r}, got {actual!r}"
+    for name, (actual, wanted) in expected.items()
+    if actual != wanted
+]
+if failures:
+    print("FAIL: fkwu authority proof mismatch")
+    for failure in failures:
+        print(f"  - {failure}")
+    raise SystemExit(1)
+PY
+  then
+    head -c 600 "$health_file" || true
+    echo
+    head -c 300 "$status_file" || true
+    echo
+    return 1
+  fi
+
+  echo "PASS: c-bootstrap fkwu is verified and sibling kernels are reference-only"
+  return 0
+}
+
 check_form_playground_fmf_proof() {
   local page_url="${WEB_URL%/}/substrate/form"
   local html_file="$TMP_DIR/form_playground.body.html"
@@ -1629,14 +1706,7 @@ else
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
-check_native_canary_with_rollout "Kernel image proposal native route" check_kernel_image_native_proposal || fail=1
-check_native_canary_with_rollout "Inventory flow native route" check_inventory_flow_native || fail=1
-check_native_canary_with_rollout "Inventory flow observation native route" check_inventory_flow_observation_native || fail=1
-check_native_canary_with_rollout "Kernel status native route" check_kernel_status_native || fail=1
-check_native_canary_with_rollout "Agent task native routes" check_agent_tasks_activity_native || fail=1
-check_native_canary_with_rollout "Contribution read native routes" check_contribution_reads_native || fail=1
-check_native_canary_with_rollout "Promoted BML read native routes" check_promoted_bml_read_routes_native || fail=1
-check_native_canary_with_rollout "Household events native route" check_household_events_native || fail=1
+check_fkwu_native_authority || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
 check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1

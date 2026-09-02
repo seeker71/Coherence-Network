@@ -298,6 +298,23 @@ grep -Fq "'form/form/form-stdlib/**'" "$WORKFLOW" \
 grep -Fq "'deploy/front-door/**'" "$WORKFLOW" \
   || fail "Hostinger workflow does not trigger for BML front-door catalog changes"
 
+DEPLOY_AND_VERIFY="$ROOT_DIR/deploy/hostinger/deploy-and-verify.sh"
+
+grep -Fq 'flock -w 600 /tmp/coh-deploy.lock bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}' "$WORKFLOW" \
+  || fail "GitHub and VPS cron deploys do not share the same deployment lock"
+grep -Fq 'bash "$DEPLOY_PATH/auto-deploy.sh" "$TARGET_SHA"' "$DEPLOY_AND_VERIFY" \
+  || fail "locked Hostinger carrier does not run auto-deploy"
+grep -Fq './scripts/verify_web_api_deploy.sh "$PUBLIC_API_BASE" "$PUBLIC_WEB_BASE"' "$DEPLOY_AND_VERIFY" \
+  || fail "locked Hostinger carrier releases before public verification"
+if grep -Fq -- '- name: Verify public deployment' "$WORKFLOW"; then
+  fail "public verification still runs after the shared deployment lock releases"
+fi
+deploy_line="$(grep -nF 'bash "$DEPLOY_PATH/auto-deploy.sh" "$TARGET_SHA"' "$DEPLOY_AND_VERIFY" | cut -d: -f1)"
+verify_line="$(grep -nF './scripts/verify_web_api_deploy.sh "$PUBLIC_API_BASE" "$PUBLIC_WEB_BASE"' "$DEPLOY_AND_VERIFY" | cut -d: -f1)"
+if [[ -z "$deploy_line" || -z "$verify_line" || "$deploy_line" -ge "$verify_line" ]]; then
+  fail "locked Hostinger carrier does not keep deploy before public verification"
+fi
+
 grep -Fq "COPY form/form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
 

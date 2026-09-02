@@ -126,15 +126,16 @@ jobs:
           }
           ssh_opts=(-i ~/.ssh/id_hostinger -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=2)
           retry_remote scp "${ssh_opts[@]}" deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/deploy-and-verify.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh"
           retry_remote scp "${ssh_opts[@]}" deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
-          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
+          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
 
       - name: Roll forward VPS
         timeout-minutes: 40
         run: |
           set +e
           timeout 35m ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "${HOSTINGER_SSH_HOST}" \
-            "COMPOSE_ROOT=${HOSTINGER_DEPLOY_PATH} REPO_DIR=${HOSTINGER_DEPLOY_PATH}/repo BRANCH=main ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${TARGET_SHA}"
+            "flock -w 600 /tmp/coh-deploy.lock bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}"
           rc=$?
           set -e
           if [[ "$rc" -ne 0 ]]; then
@@ -147,35 +148,6 @@ jobs:
             echo "::endgroup::"
             exit "$rc"
           fi
-
-      - name: Verify public deployment
-        # Web frontend rolls out a few seconds behind the API. Without retry,
-        # SHA-parity races the rollout and emails a failure that resolves on its
-        # own within 30-90s. Retry up to 3 times with a 30s backoff before
-        # treating it as a real regression.
-        run: |
-          attempt=1
-          max_attempts=3
-          backoff=30
-          while :; do
-            set +e
-            VERIFY_REQUIRE_API_HEALTH_SHA=1 \
-            VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
-            SHA_PARITY_PATIENCE_SECONDS=180 \
-              ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"
-            rc=$?
-            set -e
-            if [ "$rc" -eq 0 ]; then
-              break
-            fi
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "::error::verify_web_api_deploy.sh failed after $attempt attempts (rc=$rc)"
-              exit "$rc"
-            fi
-            echo "::warning::verify attempt $attempt failed (rc=$rc); likely rollout lag — sleeping ${backoff}s before retry"
-            sleep "$backoff"
-            attempt=$((attempt + 1))
-          done
 
   observe-public-deployment:
     # The OIDC observer deliberately accepts only protected-main push and

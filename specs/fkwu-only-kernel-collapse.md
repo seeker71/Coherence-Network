@@ -109,6 +109,7 @@ and native-implementation cross-checks.
 - [x] API runtime returns only `fkwu`; inline/preload/subprocess sibling selection is retired
 - [x] API image builds and ships `/app/form/fkwu`; no sibling binary enters the image
 - [x] deploy removes legacy sibling-router containers before observation
+- [x] public deploy verification observes fkwu health and form-cli integrity instead of retired sibling-router response headers
 - [x] thread gate executes fkwu and invokes siblings only on the `round_ndigits` primitive band
 - [ ] Classify every remaining sibling test as primitive/native conformance or retire it
 
@@ -181,6 +182,7 @@ cd form/form && python3 scripts/validate_fkwu_native_surface.py \
 - `docs/coherence-substrate/kernel-self-composition.form` — self-replace theorem (retire jit.go citations)
 - `form/form/fourth-arm-bands.txt` — current fkwu proof floor
 - `scripts/form_fs_fkwu_receipt.sh` — toolchain-free RUN pattern
+- `scripts/verify_web_api_deploy.sh` — public fkwu authority and carrier-integrity proof
 
 ## See also
 
