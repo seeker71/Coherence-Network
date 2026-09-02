@@ -149,6 +149,22 @@ def test_manual_deploy_cannot_issue_a_witness_for_the_wrong_sha() -> None:
     assert "workflow_dispatch" not in observer_job.split("    uses:", 1)[0]
 
 
+def test_observer_hex_encodes_form_expression_across_ssh_boundary() -> None:
+    workflow = (
+        REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    assert 'print(expression.encode("ascii").hex())' in workflow
+    assert 'fkwu_expression_hex="$5"' in workflow
+    assert '[[ "$fkwu_expression_hex" =~ ^[0-9a-f]+$ ]]' in workflow
+    assert 'bytes.fromhex(sys.argv[1]).decode("ascii")' in workflow
+    assert 'fkwu_expression="$5"' not in workflow
+
+    expression = "(add (mul (add (mul 18279 17) 52532) 19) 41270)"
+    wire_value = expression.encode("ascii").hex()
+    assert set(wire_value) <= set("0123456789abcdef")
+    assert bytes.fromhex(wire_value).decode("ascii") == expression
+
+
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
     policy: ObserverOIDCPolicy,
     signing_key: tuple[rsa.RSAPrivateKey, dict],

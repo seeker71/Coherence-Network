@@ -139,7 +139,7 @@ jobs:
           expected=(((first*17+second)*19+third)*23)+fourth
           expression=f"(add (mul (add (mul (add (mul {first} 17) {second}) 19) {third}) 23) {fourth})"
           form=hashlib.sha256(b"form-cli-carrier-challenge-v1\n"+value.encode("ascii")).hexdigest()
-          print(value); print(expected); print(expression); print(form)
+          print(value); print(expected); print(expression.encode("ascii").hex()); print(form)
           PY
           )
           [[ "${#challenge[@]}" == 4 ]]
@@ -160,8 +160,11 @@ jobs:
           form_source_commit="$2"
           challenge_input="$3"
           fkwu_expected="$4"
-          fkwu_expression="$5"
+          fkwu_expression_hex="$5"
           form_expected="$6"
+          [[ "$fkwu_expression_hex" =~ ^[0-9a-f]+$ ]]
+          (( ${#fkwu_expression_hex} % 2 == 0 ))
+          fkwu_expression="$(python3 -c 'import sys; print(bytes.fromhex(sys.argv[1]).decode("ascii"))' "$fkwu_expression_hex")"
           compose=/docker/coherence-network/docker-compose.yml
           container="$(docker compose -f "$compose" ps -q api)"
           [[ -n "$container" ]]
