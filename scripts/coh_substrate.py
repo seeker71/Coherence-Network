@@ -2512,6 +2512,7 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
         return kind, bp_id
 
     structured = not getattr(args, "flat", False)
+    grounding_sources = {path.resolve() for path in form_first_source_paths()}
     success = skipped = failed = 0
     with session_scope() as session:
         for path in paths:
@@ -2525,8 +2526,16 @@ def cmd_ingest_paths(args: argparse.Namespace) -> int:
                     cell, bp_id, ctor_id = DOMAIN_INGESTERS[domain](
                         session, path.resolve(), structured=structured
                     )
+                    # Domain cells describe the document's semantic shape, while
+                    # RAG freshness is bound to an exact-byte ARTIFACT companion.
+                    # Bootstrap creates both projections; incremental ingest must
+                    # do the same before the delta healer validates source hashes.
+                    grounded = path.resolve() in grounding_sources
+                    if grounded:
+                        _ingest_artifact_source(session, path.resolve())
                     success += 1
-                    print(f"  [{domain}] {path.name}: bp={bp_id}")
+                    suffix = "+artifact" if grounded else ""
+                    print(f"  [{domain}{suffix}] {path.name}: bp={bp_id}")
                 else:
                     kind, bp_id = _as_artifact(session, path.resolve())
                     success += 1

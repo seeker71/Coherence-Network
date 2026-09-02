@@ -1,0 +1,125 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/hati-incremental-grounding-20260902",
+  "change_intent": "process_only",
+  "commit_scope": "Refresh the exact-byte ARTIFACT companion during incremental domain ingest so deployment RAG heal accepts ordinary changed sources without a full bootstrap.",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-09-02-incremental-grounding-binding"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "docs/system_audit/commit_evidence_2026-09-02_incremental_grounding_binding.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/coh_substrate.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "files_owned": [
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "docs/system_audit/commit_evidence_2026-09-02_incremental_grounding_binding.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/coh_substrate.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "evidence_refs": [
+    "Merged Hostinger run 33587404824 held /tmp/coh-deploy.lock around deploy-and-verify.sh and advanced the API to fb903488b0ae before incremental grounding began.",
+    "Incremental ingest reported the changed spec domain cell but the following healer rejected specs/fkwu-only-kernel-collapse.md because its persisted ARTIFACT source binding still carried the earlier exact bytes.",
+    "Bootstrap already creates domain and exact-byte ARTIFACT projections for RAG sources; cmd_ingest_paths previously created only the domain projection for markdown paths.",
+    "The repaired incremental path preserves semantic domain ingest and refreshes the companion ARTIFACT in the same transaction before RAG heal.",
+    "The regression edits one spec twice, runs cmd_ingest_paths after each version, and proves the persisted source hash, answer hash, size, and embeddable RAG entry all match the second exact body."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/python -m pytest -q api/tests/test_form_cli_grounding_runtime.py -k 'incremental_ingest or exact_artifact_binding or bootstrap_corpus or deploy_bootstraps_before_heal'",
+      "api/.venv/bin/python -m pytest -q api/tests/test_form_cli_grounding_runtime.py",
+      "api/.venv/bin/python -m pytest -q --ignore=api/tests/holdout api/tests",
+      "ruff check --ignore F541,F401 scripts/coh_substrate.py api/tests/test_form_cli_grounding_runtime.py",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/form-cli-self-healing-memory.md --strict",
+      "api/.venv/bin/python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_incremental_grounding_binding.json",
+      "git diff --check"
+    ],
+    "summary": "The focused regression passes 5 tests, the full grounding-runtime suite passes 48, the non-holdout API suite passes 406, focused Ruff passes, and strict spec, evidence, and whitespace gates pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head CI run exists before the repair branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "summary": "The API serves merged SHA fb903488b0ae, but its deployment receipt stopped honestly at the stale incremental binding. A healed rollout remains pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "An ordinary changed RAG markdown source receives both its semantic domain cell and current exact-byte ARTIFACT companion before delta heal.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Ingest a spec, edit its body, ingest it again, and build a RAG entry from the second binding.",
+      "Deploy the exact merged repair under the shared lock.",
+      "Observe incremental ingest, RAG heal, public verification, and final Hati balance availability."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The production form-cli query produced no output within one minute and was stopped, so it supplied no attributable answer."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the projection diagnosis; exact deploy logs, substrate source, database-backed regression tests, and strict gates verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the strict stale-binding stop, deployment trace, source model, and executable SQLite proof; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI and one healed serialized public rollout remain to be observed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused proof passes; full local gates, exact-head CI, merge, healed rollout, and public verification remain pending."
+  }
+}
