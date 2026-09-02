@@ -18,6 +18,10 @@ source:
     symbols: [rag-topk, rag-dist]
   - file: scripts/form_cli_rag.py
     symbols: [content_key, freshness, heal, retrieve]
+  - file: scripts/coh_substrate.py
+    symbols: [_classic_form_stdlib_dir, form_first_source_paths, cmd_bootstrap]
+  - file: deploy/hostinger/auto-deploy.sh
+    symbols: [run_substrate_ingest]
   - file: scripts/substrate_post_merge_hook.sh
     symbols: [rag heal step]
 requirements:
@@ -28,6 +32,8 @@ requirements:
   - "Directory enumeration is the universal fs_list op (op 132), four-way + fkwu — the kernel carries it, not ls/find/shell"
   - "Self-heal re-embeds only the delta (missing + drifted) and composts orphans; no full rebuild unless the index is absent"
   - "ask heals the stale delta before retrieving, so a fresh file is answerable without a manual index step"
+  - "bootstrap and the RAG healer enumerate the same Form sources in nested worktrees and the flattened production image"
+  - "a change to grounding/bootstrap carriers forces complete bootstrap before the deployment RAG heal"
   - "the post-merge hook heals the index beside substrate ingest"
 done_when:
   - "rag-key band crosses four-way (Go/Rust/TS/fkwu) via form/form/validate.sh → 7"
@@ -37,6 +43,8 @@ done_when:
   - "rag-heal keys a real file and senses fresh-vs-drift on the kernel with no Python (Go leg → 7)"
   - "rag-heal's enumerate→read→write loop runs on the fkwu native exe via fs_list/read_file/write_file_text"
   - "form-cli ask \"what is form shell?\" retrieves shell-grammar.fk / fsh-main.fk after a heal"
+  - "the grounding runtime test proves bootstrap includes Form sources from the flattened production image"
+  - "the deployment regression proof requires bootstrap to precede heal when grounding carriers change"
   - 'file_exists("form/form/form-stdlib/rag-key.fk")'
   - 'file_exists("form/form/form-stdlib/rag-heal.fk")'
   - 'file_exists("form/form/form-stdlib/tests/rag-freshness-band.fk")'
@@ -91,6 +99,14 @@ content-addressed freshness, expanding to absorb new tissue on its own.
   non-deterministic, so the lane sits outside the four-way output floor by the kernel's own
   design; the directory-list op itself (`fs_list`) IS four-way + fkwu (`fs-list-band` → 3,
   deterministic by membership at one moment on one machine).
+- [ ] **R8 — production layout parity**: substrate bootstrap enumerates the same classic
+  Form stdlib sources as the RAG healer in both the nested source checkout
+  (`form/form/form-stdlib`) and flattened API image (`form/form-stdlib`). A bootstrap
+  success cannot omit production Form sources that the subsequent heal will validate.
+- [ ] **R9 — migration ordering**: a deployment that changes the grounding bootstrap,
+  RAG carrier, grounding-source reader, or substrate services takes the complete-refresh
+  branch. The repaired bootstrap reconciles persisted identities before RAG heal validates
+  them; the incremental heal cannot run first and reject the very migration being deployed.
 
 ## Data Model
 
@@ -119,6 +135,12 @@ RagEntry:
 - `form/form/form-stdlib/form-flatten.fk` — `fs_list` op row (op 132, arity 1, effectful) (modify)
 - `scripts/form_cli_rag.py` — RETIRING bridge: content_key mirrors `rk-text-key`
   (adler32), delta heal, adaptive-k retrieve, fuller snippet, lazy heal on `ask` (modify)
+- `scripts/coh_substrate.py` — production/source Form-layout selection shared in shape
+  with the RAG consumer so bootstrap covers the same source corpus (modify)
+- `api/tests/test_form_cli_grounding_runtime.py` — flattened production-layout corpus
+  and deploy ordering regression proofs (modify)
+- `deploy/hostinger/auto-deploy.sh` — force complete bootstrap before RAG heal when
+  grounding/bootstrap carriers change (modify)
 - `scripts/substrate_post_merge_hook.sh` — rag heal step (modify)
 - `form/form/fourth-arm-bands.txt` — register rag-key/rag-freshness/rag-adaptive-k/rag-index-codec/rag-embed/fs-list bands (modify)
 
@@ -127,6 +149,10 @@ RagEntry:
 - `form/form/validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk` → 63, four-way
 - `form/form/validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk` → 15, four-way
 - `form-cli ask "what is form shell?"` cites `shell-grammar.fk` / `fsh-main.fk`
+- `cd api && .venv/bin/pytest -q tests/test_form_cli_grounding_runtime.py -k bootstrap_corpus`
+  proves both nested source and flattened production Form layouts are included
+- `bash -n deploy/hostinger/auto-deploy.sh` and the deploy ordering regression prove
+  grounding-carrier changes select complete bootstrap before RAG heal
 
 ## Verification
 

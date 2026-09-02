@@ -1,0 +1,129 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/hati-deploy-grounding-20260902",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Keep substrate bootstrap and the Form RAG healer on the same source corpus in nested worktrees and the flattened production API image, and run that bootstrap before heal when grounding carriers change.",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-09-02-form-bootstrap-production-layout"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-09-02_form_bootstrap_production_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/coh_substrate.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "files_owned": [
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-09-02_form_bootstrap_production_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/coh_substrate.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "evidence_refs": [
+    "Hostinger rollout 33579780760 recreated healthy API, web, and pulse containers at the Hati merge SHA before the post-deploy grounding refresh failed.",
+    "The production RAG healer found fkc-table-serialize.fk stale while bootstrap incorrectly reported 697/697 sources grounded.",
+    "The host checkout and running API container carried identical current source bytes, while the persisted ARTIFACT binding retained an older source hash and byte size.",
+    "Production form_cli_rag.py selects form/form-stdlib, while coh_substrate.py previously enumerated only form/form/form-stdlib and therefore omitted the flattened production Form corpus.",
+    "The regression test proves bootstrap now enumerates the flattened production Form source when the image-built form-cli authority is present.",
+    "PR review identified that an incremental deployment would otherwise call RAG heal before the repaired bootstrap; grounding-carrier changes now force the complete bootstrap branch first."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_form_cli_grounding_runtime.py",
+      "cd api && .venv/bin/python -m pytest -q --ignore=tests/holdout",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "ruff check --ignore F541,F401 scripts/coh_substrate.py api/tests/test_form_cli_grounding_runtime.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-cli-self-healing-memory.md --strict",
+      "git diff --check"
+    ],
+    "summary": "The grounding-runtime suite covers nested checkout, flattened production corpus, and complete-bootstrap-before-heal deployment ordering; all 406 non-holdout API tests pass. The deploy script parses, focused lint passes with the touched script's 20 unrelated baseline F541/F401 findings excluded, and the strict spec-quality gate passes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before the repair branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "./scripts/verify_web_api_deploy.sh",
+      "in-app Chromium phone-width verification"
+    ],
+    "summary": "The already-running Hati merge is healthy; the grounding refresh and workflow receipt remain red until this repair merges and rolls out."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A grounding-carrier deployment selects complete refresh; production bootstrap includes every flat Form stdlib source that the subsequent RAG heal validates, so stale bindings are reconciled before bootstrap reports ready.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Construct the flattened production Form layout with its image-built authority marker.",
+      "Enumerate the bootstrap corpus and require the flat Form source to be present.",
+      "Require a grounding-carrier deploy to choose complete bootstrap before RAG heal.",
+      "Run the complete grounding-runtime test file."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native query returned no attributable result, so diagnosis escalated."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the diagnosis; VPS logs, exact hashes, source code, and regression tests verified it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied runtime logs, persisted source identities, source code, specifications, and executable tests; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — CI and production rollout must observe the repaired bootstrap/heal chain."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; exact-head CI, merge, rollout, and public verification remain pending."
+  }
+}
