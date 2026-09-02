@@ -247,9 +247,9 @@ jobs:
               apt-get install -y --no-install-recommends gcc libc6-dev openssl
               mkdir -p /build /build/form-cli-src
               cp -a /source/runtime /build/runtime
-              cp -a /source/form-stdlib /build/form-cli-src/form-stdlib
-              cp -a /source/scripts /build/form-cli-src/scripts
-              cp /source/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
+              cp -a /source/form/form-stdlib /build/form-cli-src/form-stdlib
+              cp -a /source/form/scripts /build/form-cli-src/scripts
+              cp /source/form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
               cd /build/form-cli-src
               CC=cc FORM_CLI_FORCE_LINK=1 /build/form-cli-src/build-form-cli.sh /out/form-cli
               bash /build/form-cli-src/scripts/form_cli_bootstrap_proof.sh /out/form-cli
@@ -259,9 +259,9 @@ jobs:
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
           source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
-          source_digest="$(tr -d '\r\n' < "$source_dir/form-stdlib/bootstrap/form-cli.source.sha256")"
-          source_table_sha="$(sha256sum "$source_dir/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
-          source_stamp_sha="$(sha256sum "$source_dir/form-stdlib/bootstrap/form-cli.stamp" | cut -d' ' -f1)"
+          source_digest="$(tr -d '\r\n' < "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256")"
+          source_table_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
+          source_stamp_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp" | cut -d' ' -f1)"
           python3 - \
             "$direct_body" "$TARGET_SHA" "$form_source_commit" "$builder" \
             "$reproduced_kernel_sha" "$reproduced_form_sha" "$source_wrapper_sha" \
