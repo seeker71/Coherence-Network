@@ -53,6 +53,11 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
   nonce-derived Form expressions before SSH and decodes them only inside the
   remote script, so spaces and parentheses remain one exact argument instead
   of becoming remote shell syntax.
+- [x] **R6 — Exact archive roots:** Independent production-carrier reproduction
+  reads the coherence-kernel archive's top-level `runtime/` and `bootstrap/`
+  tissue while building form-cli from its nested `form/` source root. The
+  observer regression binds every consumed source and receipt path to that
+  released archive layout.
 
 ## Stop rules (effective immediately)
 
@@ -191,7 +196,7 @@ cd form/form && python3 scripts/validate_fkwu_native_surface.py \
 - `scripts/form_fs_fkwu_receipt.sh` — toolchain-free RUN pattern
 - `scripts/verify_web_api_deploy.sh` — public fkwu authority and carrier-integrity proof
 - `.github/workflows/public-deployment-observer.yml` — authenticated direct-carrier observation with exact SSH argument transport
-- `api/tests/test_deployment_observer_oidc.py` — observer identity and SSH transport regression proof
+- `api/tests/test_deployment_observer_oidc.py` — observer identity, SSH transport, and archive-layout regression proof
 
 ## See also
 

@@ -165,6 +165,32 @@ def test_observer_hex_encodes_form_expression_across_ssh_boundary() -> None:
     assert bytes.fromhex(wire_value).decode("ascii") == expression
 
 
+def test_observer_rebuild_uses_the_kernel_archives_split_source_roots() -> None:
+    workflow = (
+        REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    kernel = REPO_ROOT / "form"
+
+    for path in (
+        "runtime/fkwu-uni.c",
+        "bootstrap/ground.fk",
+        "form/build-form-cli.sh",
+        "form/scripts/form_cli_bootstrap_proof.sh",
+        "form/form-stdlib/bootstrap/form-cli.source.sha256",
+        "form/form-stdlib/bootstrap/form-cli-table.txt",
+        "form/form-stdlib/bootstrap/form-cli.stamp",
+    ):
+        assert (kernel / path).is_file(), path
+
+    assert "cp -a /source/form/form-stdlib" in workflow
+    assert "cp -a /source/form/scripts" in workflow
+    assert "cp /source/form/build-form-cli.sh" in workflow
+    assert '"$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256"' in workflow
+    assert '"$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt"' in workflow
+    assert '"$source_dir/form/form-stdlib/bootstrap/form-cli.stamp"' in workflow
+    assert "cp -a /source/form-stdlib" not in workflow
+
+
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
     policy: ObserverOIDCPolicy,
     signing_key: tuple[rsa.RSAPrivateKey, dict],

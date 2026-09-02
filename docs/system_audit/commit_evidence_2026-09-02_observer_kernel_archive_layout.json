@@ -1,0 +1,124 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/observer-kernel-archive-layout-20260902",
+  "change_intent": "process_only",
+  "commit_scope": "Reproduce the deployed native carriers from the coherence-kernel archive's actual split source roots.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-kernel-archive-layout"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_kernel_archive_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_kernel_archive_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "Hostinger run 33595290891 deployed 488fbe0dcbbfee76f97330710aa97512eba5be1a successfully and passed the locked public verifier.",
+    "Its authenticated observer crossed SSH and executed the deployed carriers, then failed independent reproduction with cp: cannot stat '/source/form-stdlib'.",
+    "The pinned coherence-kernel tree places runtime/ and bootstrap/ at archive root and the form-cli build sources at form/form-stdlib, form/scripts, and form/build-form-cli.sh.",
+    "The regression proves every archive path consumed by the observer exists in the pinned submodule and rejects the stale top-level form-stdlib copy path."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/python -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "ruff check api/tests/test_deployment_observer_oidc.py",
+      "parse .github/workflows/public-deployment-observer.yml with yaml.safe_load",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_kernel_archive_layout.json"
+    ],
+    "summary": "All 20 observer identity, transport, and archive-layout tests pass; Ruff, workflow YAML parsing, strict spec quality, and diff checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "public-deployment-observer.yml"
+    ],
+    "summary": "The workflow repair must merge, receive an immutable pin, and complete one authenticated production observation."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Independent reproduction reads the released archive's actual split roots and reaches binary identity comparison.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge"
+    ],
+    "test_flows": [
+      "Execute both native carriers directly in the deployed container.",
+      "Build fkwu from archive-root runtime and form-cli from archive-root form/.",
+      "Compare reproduced artifacts and submit a byte-bound authenticated observation."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within one minute and was terminated, so it supplied no attributable answer."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the archive-root diagnosis; the exact GitHub log, pinned submodule tree, workflow source, and regression verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact failed path, pinned kernel tree, specification, and regression surface; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI, immutable workflow pin, and one successful authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local proof passes; exact-head CI, merge, pin roll-forward, and live observer proof remain pending."
+  }
+}
