@@ -49,7 +49,11 @@ INDEX = os.path.expanduser("~/.coherence-network/rag-index/index.jsonl")
 INDEX_SCHEMA = "nodeid-rag-v2"
 EMBEDDING_KIND = "form-semantic-v2"
 INDEX_STAMP_SCHEMA = "native-rag-index-stamp-v1"
-ATTESTATION_LIFETIME_SECONDS = 60
+# The native trust pass independently replays retrieval over the complete index.
+# Production's CPU lane can take longer than one minute for that second pass, so
+# use the full lifetime already accepted by the Form gate rather than expiring a
+# valid receipt while native verification is still running.
+ATTESTATION_LIFETIME_SECONDS = 300
 NATIVE_EMBED_REQUEST_MAX_BYTES = 4 * 1024 * 1024
 # The emitted carrier materializes a request's JSONL result before returning it.
 # Bound cardinality independently of input bytes so a corpus containing many

@@ -530,37 +530,39 @@ jobs:
               raise SystemExit("observer returned no WITNESS NodeID")
           PY
 
-      - name: Verify public answer is fully observed
+      - name: Verify recorded answer through the authenticated direct carrier
         shell: bash
+        env:
+          HOSTINGER_SSH_KEY: ${{ secrets.hostinger_ssh_key }}
         run: |
           set -euo pipefail
-          response="$(mktemp)"
-          trap 'rm -f "$response"' EXIT
-          query="observed deployment witness ${TARGET_SHA} native carrier commitment"
-          payload="$(python3 -c 'import json,sys; print(json.dumps({"query":sys.argv[1]},separators=(",",":")))' "$query")"
-          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
-            --connect-timeout 5 --max-time 45 \
-            -H 'Accept: application/json' \
-            -H 'Content-Type: application/json' \
-            --data "$payload" \
-            "${API_BASE}/api/substrate/grounded-ask" \
-            -o "$response"
-          python3 - "$response" "$TARGET_SHA" <<'PY'
-          import json,sys
-          body=json.load(open(sys.argv[1],encoding="utf-8"))
-          expected=(
-              "trust  path:native  grounded:yes  freq:yes  "
-              "freq-source:certified-form  suffic:yes  observed:yes  -> OBSERVED  "
-              "decision:accept  reason:ok"
-          )
-          if body.get("trust") != expected:
-              raise SystemExit(f"public ask is not OBSERVED: {body.get('trust')!r}")
-          answer=json.loads(body.get("answer") or "null")
-          if answer.get("expected_sha") != sys.argv[2] or answer.get("actual_sha") != sys.argv[2]:
-              raise SystemExit("public WITNESS is not current-SHA bound")
-          if answer.get("observer_authentication") != "github-actions-oidc-v1":
-              raise SystemExit("public WITNESS lacks independent OIDC authentication")
-          for field in ("commitment_sha256","stable_health_sha256","job_workflow_sha"):
-              if not answer.get(field):
-                  raise SystemExit(f"public WITNESS lacks {field}")
-          PY
+          ssh_dir="$(mktemp -d)"
+          trap 'rm -rf "$ssh_dir"' EXIT
+          install -m 700 -d "$ssh_dir"
+          printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
+          chmod 600 "$ssh_dir/key"
+          cat > "$ssh_dir/known_hosts" <<'HOSTKEY'
+          187.77.152.42 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFXwjAlbFkFWkQ+X16UCTDLTS6sM6wKtlfsIBhxOjcAR
+          HOSTKEY
+          chmod 600 "$ssh_dir/known_hosts"
+          ssh \
+            -i "$ssh_dir/key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=2 \
+            root@187.77.152.42 bash -s -- "$TARGET_SHA" <<'REMOTE'
+          set -euo pipefail
+          target_sha="$1"
+          compose=/docker/coherence-network/docker-compose.yml
+          container="$(docker compose -f "$compose" ps -q api)"
+          [[ -n "$container" ]]
+          docker exec "$container" sh -lc '
+            set -eu
+            cd /app
+            python3 scripts/form_cli_rag.py heal
+            bash scripts/verify_observed_deployment_ask.sh "$1"
+          ' sh "$target_sha"
+          REMOTE

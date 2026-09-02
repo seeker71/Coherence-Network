@@ -184,6 +184,24 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
     assert "$source_dir/form-stdlib" not in workflow
 
 
+def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> None:
+    workflow = (
+        REPO_ROOT / ".github" / "workflows" / "public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    final_step = workflow.split(
+        "- name: Verify recorded answer through the authenticated direct carrier", 1
+    )[1]
+
+    assert "HOSTINGER_SSH_KEY: ${{ secrets.hostinger_ssh_key }}" in final_step
+    assert 'python3 scripts/form_cli_rag.py heal' in final_step
+    assert 'bash scripts/verify_observed_deployment_ask.sh "$1"' in final_step
+    assert 'root@187.77.152.42 bash -s -- "$TARGET_SHA"' in final_step
+    assert "/api/substrate/grounded-ask" not in final_step
+
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+    assert config["grounding"]["native_ask_timeout_seconds"] == 20
+
+
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
     policy: ObserverOIDCPolicy,
     signing_key: tuple[rsa.RSAPrivateKey, dict],
