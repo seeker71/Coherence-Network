@@ -1,0 +1,126 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/advance-observer-workflow-pin",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Advance the deployment caller and runtime OIDC policy to the landed observer commit that safely transports generated Form expressions across SSH.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-transport-pin"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_transport_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_transport_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "Hostinger run 33592943952 targeted c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 but its referenced_workflows metadata resolved public-deployment-observer.yml at f2457c87286b6ec7668a4e17f855b18347c7c8f9.",
+    "The same run reconstructed the raw '(add ...)' expression in the remote command and failed with bash syntax error near unexpected token '('.",
+    "Commit c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 contains the lowercase ASCII-hex transport and remote in-script decode added by PR #4022.",
+    "The caller workflow and runtime OIDC policy now share that exact immutable SHA, and the regression binds the expected landed transport commit."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_transport_pin.json"
+    ],
+    "summary": "All 19 observer identity, immutable-pin, and expression-transport tests pass; the strict authority spec, evidence, and whitespace gates pass. The first interpreter path was absent in this worktree, and the single mechanical retry through python3 passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Merge, rollout, and one authenticated public observation through the advanced pin remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The deploy caller loads the landed hex-transport observer, allowing direct native-carrier execution to proceed past SSH command construction under the matching runtime OIDC policy.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation"
+    ],
+    "test_flows": [
+      "Confirm the workflow call and runtime policy share the immutable landed transport SHA.",
+      "Run the focused observer identity and transport regression.",
+      "After merge, verify the deploy run references c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 and records a current-SHA public witness."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form body returned a grounded miss for the shell-transport question, so remote reasoning was allowed."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 inferred the stale-pin cause; GitHub referenced_workflows metadata, the failed command, and repository pins verify it exactly."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the immutable workflow pins, OIDC policy, test surface, and exact GitHub run evidence; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI, merge, rollout, and one successful authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The narrow pin repair is authored; focused proof, CI, merge, and live observation remain pending."
+  }
+}
