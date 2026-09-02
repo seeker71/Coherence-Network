@@ -213,6 +213,14 @@ host-io lane:
 - Lazy heal adds embedding latency on the first `ask` after the body changes. Mitigated
   by delta-only heal (typically a handful of files) and the merge-time heal keeping the
   steady state fresh.
+- The protected ask has two native corpus passes: selection, then request-bound trust
+  verification. Live production evidence on 2026-09-02 measured the complete pass at
+  about 159 seconds, while a local arm completed in 72.76 seconds. Grounding receipts
+  therefore use the Form gate's existing 300-second maximum. The unauthenticated public
+  API remains bounded at 20 seconds; the OIDC observer heals and reads the recorded
+  WITNESS through its existing pinned-SSH direct container carrier, outside Cloudflare's
+  shorter origin timeout. This is a bounded carrier repair, not a relaxation of
+  grounding, frequency, sufficiency, or observation proof.
 
 ## Known Gaps
 

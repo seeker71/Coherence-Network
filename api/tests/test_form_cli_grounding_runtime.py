@@ -441,6 +441,7 @@ def test_attestation_is_request_bound_hmac_with_exact_18_fields(tmp_path, monkey
     assert fields[17] == expected_frequency
     assert fields[5] == grounding["persisted_source_sha256"]
     assert fields[6] == hashlib.sha256(query.read_bytes()).hexdigest()
+    assert int(fields[8]) - int(fields[7]) == rag.ATTESTATION_LIFETIME_SECONDS == 300
     assert rag.native_trace_receipt("@1.1.9.7", "unused", str(query), "bad/id")[0] is False
 
 
