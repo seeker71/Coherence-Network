@@ -943,6 +943,38 @@ def test_bootstrap_corpus_includes_every_native_answer_family():
     assert any(path.startswith("docs/shared/") for path in relative)
 
 
+def test_bootstrap_corpus_includes_flat_production_form_sources(
+    tmp_path, monkeypatch
+):
+    stdlib = tmp_path / "form" / "form-stdlib"
+    stdlib.mkdir(parents=True)
+    source = stdlib / "fkc-table-serialize.fk"
+    source.write_text("(defn table-serialize () 1)\n", encoding="utf-8")
+    (tmp_path / "form" / "form-cli.sha256").write_text(
+        "a" * 64 + "\n", encoding="ascii"
+    )
+
+    monkeypatch.setattr(coh, "REPO_ROOT", tmp_path)
+
+    assert coh.form_first_source_paths() == [source]
+
+
+def test_deploy_bootstraps_before_heal_when_grounding_carriers_change():
+    deploy = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
+        encoding="utf-8"
+    )
+
+    carrier_gate = "grounding bootstrap/RAG carrier changed"
+    bootstrap = "python3 scripts/coh_substrate.py bootstrap"
+    heal = "python3 scripts/form_cli_rag.py heal"
+
+    assert "scripts/(coh_substrate|form_cli_rag)" in deploy
+    assert "api/app/services/(grounding_source" in deploy
+    assert carrier_gate in deploy
+    full_refresh = deploy.index(carrier_gate)
+    assert deploy.index(bootstrap, full_refresh) < deploy.index(heal, full_refresh)
+
+
 def test_rag_source_identity_is_platform_independent():
     assert (
         rag._canonical_source_path(r"form\form\form-stdlib\rag-ask.fk")
