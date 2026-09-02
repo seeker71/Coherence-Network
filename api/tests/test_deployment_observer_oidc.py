@@ -136,6 +136,10 @@ def test_runtime_policy_pin_matches_the_reusable_workflow_call() -> None:
     )
     assert expected in workflow
     assert len(deployment_observer_service.PINNED_OBSERVER_WORKFLOW_SHA) == 40
+    assert (
+        deployment_observer_service.PINNED_OBSERVER_WORKFLOW_SHA
+        == "c5e9874a04a26e92c0634bfaa49365ffdb81f5e1"
+    )
 
 
 def test_manual_deploy_cannot_issue_a_witness_for_the_wrong_sha() -> None:
