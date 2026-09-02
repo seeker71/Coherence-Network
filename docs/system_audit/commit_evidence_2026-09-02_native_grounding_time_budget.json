@@ -1,0 +1,122 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/native-grounding-time-budget-20260902",
+  "change_intent": "process_only",
+  "commit_scope": "Keep request-bound native grounding attestations alive for the measured complete CPU replay and route the observer's final trust read through its authenticated direct carrier.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-09-02-native-grounding-time-budget"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_native_grounding_time_budget.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/form_cli_rag.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_native_grounding_time_budget.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/form_cli_rag.py",
+    "specs/form-cli-self-healing-memory.md"
+  ],
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 33599148719 failed twice after about 159 seconds because the native trust replay outlived the 60-second request-bound receipt.",
+    "A local complete native ask selected @1.1.9.1137 and returned a valid native-partial trust row in 72.76 seconds.",
+    "form-cli-staged-trace.fk already limits a valid attestation to at most 300 seconds; the repair adopts that existing bound without changing any trust axis.",
+    "The unauthenticated API remains capped at 20 seconds; the pinned-OIDC observer uses its existing SSH identity to run the final current-SHA trust proof directly inside the deployed API container, beyond Cloudflare's origin timeout."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_form_cli_grounding_runtime.py -k 'attestation_is_request_bound_hmac_with_exact_18_fields or public_native_ask_budgets_cover_the_complete_cpu_replay'",
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-cli-self-healing-memory.md --strict",
+      "python3 -m json.tool api/config/api.json",
+      "yaml.safe_load(.github/workflows/public-deployment-observer.yml)",
+      "git diff --check"
+    ],
+    "summary": "The focused clock contract, all 21 observer identity/transport tests, strict spec validation, JSON/YAML parsing, and whitespace validation pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Merge, rollout, and one current-SHA native OBSERVED answer remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The slower production CPU completes both native retrieval passes before its authenticated receipt expires, and the observer reads the result through pinned SSH without extending the unauthenticated API or depending on Cloudflare's request window.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation",
+      "Pinned-SSH direct container form-cli ask"
+    ],
+    "test_flows": [
+      "Deploy the exact merged SHA and complete the host-local native grounding proof.",
+      "Record the authenticated deployment WITNESS.",
+      "Heal and read that WITNESS inside the deployed API container with all four trust axes observed."
+    ]
+  },
+  "trust_matrix": {
+    "time_budget_alignment": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 diagnosed the clock mismatch; live deployment timing, the native @1.1.9.1137 answer, and the Form five-minute validity gate supplied machine evidence."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the failing deployment trace, live timing, native NodeID answer, existing five-minute gate, and executable contract tests; it did not generate the repair decision.",
+    "standard_receipt": "pending — exact-head CI, merge, rollout, and a current-SHA OBSERVED answer remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The bounded timing repair is authored and locally proven; exact-head CI, merge, and live deployment observation remain pending."
+  }
+}
