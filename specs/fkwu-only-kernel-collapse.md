@@ -16,12 +16,14 @@ requirements:
   - "One JIT path: recipe → form-asm bytes → native; compost jit.go / clang production / parallel plugin JIT"
   - "New host-io and kernel surface lands in Form stdlib + registry first; sibling kernels frozen"
   - "Production proof executes fkwu; sibling runs are explicitly labeled primitive conformance checks"
+  - "Deployment observation preserves generated Form expressions as shell-safe exact bytes across the SSH carrier"
 done_when:
   - "Phase 0 gate: validate_fkwu_native_surface.py passes in CI on every form/form/validate.sh run"
   - "Phase 1: native-op-manifest is source for flt-ops rows (generated or single .fk manifest); zero manual flt-ops edits for new natives"
   - "Phase 2: fkwu BUILD uses form-asm (macho/pe/elf), not clang; table flatten runs on fkwu, not Go bin-go"
   - "Phase 3: form-cli built from c-bootstrap fkwu; scripts/form_fs_fkwu_receipt.sh class of receipts pass on mac/windows/android"
   - "Phase 4: deployment and API expose only fkwu; Go/Rust/TS remain bounded primitive witnesses"
+  - "The public deployment observer executes nonce-derived Form expressions without remote-shell reparsing"
 test: "cd form/form && python3 scripts/validate_fkwu_native_surface.py && python3 scripts/gen_flt_ops_from_manifest.py && python3 scripts/sync_native_op_manifest.py && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk"
 constraints:
   - "Do not add new registerNative entries to Go/Rust/TS except oracle bugfixes on frozen allowlist"
@@ -47,6 +49,10 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
 - [ ] **R2 — Manifest is source of truth:** `native-op-manifest.fk` drives `flt-ops` via generator; no hand-edited per-op tags without manifest row.
 - [x] **R3 — Sibling boundary:** Go/Rust/TS participate only in primitive/native-assumption conformance; production execution and observation require `fkwu`.
 - [ ] **R4 — Receipt honesty:** Standard receipt rows stay `pending` until c-bootstrap fkwu + form-cli traces exist on mac/windows/android.
+- [x] **R5 — Exact SSH carrier:** The public deployment observer hex-encodes
+  nonce-derived Form expressions before SSH and decodes them only inside the
+  remote script, so spaces and parentheses remain one exact argument instead
+  of becoming remote shell syntax.
 
 ## Stop rules (effective immediately)
 
@@ -110,6 +116,7 @@ and native-implementation cross-checks.
 - [x] API image builds and ships `/app/form/fkwu`; no sibling binary enters the image
 - [x] deploy removes legacy sibling-router containers before observation
 - [x] public deploy verification observes fkwu health and form-cli integrity instead of retired sibling-router response headers
+- [x] public deployment observation transports generated Form expressions through a shell-safe exact-byte encoding before direct carrier execution
 - [x] thread gate executes fkwu and invokes siblings only on the `round_ndigits` primitive band
 - [ ] Classify every remaining sibling test as primitive/native conformance or retire it
 
@@ -183,6 +190,8 @@ cd form/form && python3 scripts/validate_fkwu_native_surface.py \
 - `form/form/fourth-arm-bands.txt` — current fkwu proof floor
 - `scripts/form_fs_fkwu_receipt.sh` — toolchain-free RUN pattern
 - `scripts/verify_web_api_deploy.sh` — public fkwu authority and carrier-integrity proof
+- `.github/workflows/public-deployment-observer.yml` — authenticated direct-carrier observation with exact SSH argument transport
+- `api/tests/test_deployment_observer_oidc.py` — observer identity and SSH transport regression proof
 
 ## See also
 

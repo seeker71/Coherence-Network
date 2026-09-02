@@ -1,0 +1,122 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/deployment-observer-quote-20260902",
+  "change_intent": "process_only",
+  "commit_scope": "Preserve nonce-derived Form expressions as one exact shell-safe argument across the public deployment observer SSH boundary.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-ssh-expression-transport"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_ssh_expression_transport.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_ssh_expression_transport.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "Hostinger run 33590478398 deployed d453ca3ef555 successfully, reconciled one exact source binding, refreshed one embedding, grounded 1749/1749 sources, and passed the locked public verifier.",
+    "The downstream observer failed at 2026-09-02T04:33:09Z before carrier execution because SSH reconstructed a remote command containing the raw expression '(add ...)' and bash reported a syntax error near unexpected token '('.",
+    "The generated expression is now transported as lowercase ASCII hex, which contains no remote-shell metacharacters, and is decoded only inside the already-running remote script.",
+    "The regression binds the workflow source to the hex encode/decode boundary and proves an expression containing spaces and parentheses round-trips exactly."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/python -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_ssh_expression_transport.json"
+    ],
+    "summary": "All 19 observer identity/transport tests pass, the strict fkwu authority spec gate passes, and the exact-byte transport regression covers the failed SSH shape."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before the observer transport branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "public-deployment-observer.yml"
+    ],
+    "summary": "The production release is healthy at d453ca3ef555; an exact-head observer pin and successful post-merge observation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Nonce-derived Form expressions reach the deployed container as one exact decoded argument, so authenticated direct carrier observation proceeds past SSH command construction.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge"
+    ],
+    "test_flows": [
+      "Issue a pinned GitHub OIDC deployment challenge.",
+      "Transport and decode the nonce-derived Form expression across SSH.",
+      "Execute and independently reproduce both native carriers, then submit the byte-bound observation."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within one minute and was terminated, so it supplied no attributable answer."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the transport diagnosis; the exact GitHub log, workflow source, and executable regression verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact failed command, workflow source, specification, and regression surface; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI, immutable workflow pin, and one successful authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The narrow repair and focused local proof pass; exact-head CI, merge, pin roll-forward, and live observer proof remain pending."
+  }
+}
