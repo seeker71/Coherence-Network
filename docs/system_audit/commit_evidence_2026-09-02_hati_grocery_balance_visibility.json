@@ -1,0 +1,128 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/hati-balance-20260902",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Keep the Hati grocery remaining balance inside the first phone viewport while preserving its laptop ledger-column placement and its graph-backed amount.",
+  "idea_ids": [
+    "light-hub-membrane"
+  ],
+  "spec_ids": [
+    "hati-grocery-ledger"
+  ],
+  "task_ids": [
+    "task-2026-09-02-hati-grocery-balance-visibility"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "observation",
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-09-02_hati_grocery_balance_visibility.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx",
+    "web/tests/hati-grocery-layout.test.ts"
+  ],
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-09-02_hati_grocery_balance_visibility.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx",
+    "web/tests/hati-grocery-layout.test.ts"
+  ],
+  "evidence_refs": [
+    "Live app.hati.earth rendered the graph-backed remaining balance as Rp 4.046.000 with no console warnings or errors.",
+    "Before the change, the visible phone balance card began at y=940.5 in a 390x844 viewport and therefore sat below the first screen.",
+    "After the change, the visible phone balance card spans y=92.5..171 in a 390x844 local render; the hidden laptop instance has a zero rect.",
+    "At the default 1483px laptop width, the visible balance remains in the ledger column at x=941.5..1293.5 and y=92.5.",
+    "The combined local web/API verifier passed all HTTP, interface-parity, runtime-summary, and application-route checks."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test -- --run tests/hati-grocery-layout.test.ts tests/hati-grocery-handoff.test.ts",
+      "cd web && npm test",
+      "cd web && npm run build",
+      "cd api && .venv/bin/python -m pytest tests/test_grocery_ledger.py -q",
+      "cd api && .venv/bin/python -m pytest -q --ignore=tests/holdout",
+      "python3 scripts/validate_spec_quality.py --file specs/hati-grocery-ledger.md --strict",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "in-app Chromium render checks at 390x844 and 1483x578",
+      "make wellness",
+      "git diff --check"
+    ],
+    "summary": "The full web suite passes 150 tests across 26 files, the non-holdout API suite passes 406 tests, the focused grocery bands pass 7 web and 29 API tests, and the Next.js production build, strict spec-quality gate, combined local verifier, and browser geometry proof all pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before the branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "app.hati.earth",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "summary": "The public app still serves the pre-change mobile ordering until merge and rollout complete."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A phone opens with the remaining balance directly below the Hati header and before the spend/top-up entry pad; a laptop keeps the same balance at the top of the ledger column.",
+    "public_endpoints": [
+      "GET https://app.hati.earth/",
+      "GET /api/grocery/totals"
+    ],
+    "test_flows": [
+      "Load the live app at phone width and measure the pre-change visible balance below the first viewport.",
+      "Render the changed app at 390x844 and verify the visible balance card is wholly inside the first viewport.",
+      "Render the changed app at laptop width and verify the sidebar balance remains visible while the phone instance is hidden."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form body returned grounded:miss and explicitly escalated."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the diagnosis; repository source, tests, and browser geometry verified it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the source, Form miss/escalation receipt, tests, build, wellness, and browser-observable runtime evidence; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — this responsive web change has no c-bootstrap form-cli mac/windows/android observation band."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; exact-head CI, merge, rollout, and public phone-width verification remain pending."
+  }
+}

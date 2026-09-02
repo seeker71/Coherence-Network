@@ -206,6 +206,25 @@ function rupiah(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");
 }
 
+function BalanceCard({
+  label,
+  remaining,
+  className = "",
+}: {
+  label: string;
+  remaining: number;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 ${className}`}>
+      <div className="text-[11px] uppercase tracking-wider text-amber-600">{label}</div>
+      <div className="mt-1 truncate text-2xl font-medium tabular-nums text-amber-300">
+        {rupiah(remaining)}
+      </div>
+    </div>
+  );
+}
+
 // What the typed thousands mean, mirrored for the live preview only.
 // The recorded value is always the kernel's answer, never this.
 function previewIdr(typed: string): number {
@@ -633,9 +652,16 @@ export default function GroceryPage() {
           </button>
         </header>
 
+        {/* A phone opens on the question this ledger exists to answer. */}
+        <BalanceCard
+          label={t.remaining}
+          remaining={totals?.remaining_idr ?? 0}
+          className="mt-6 lg:hidden"
+        />
+
         {/* On a phone this is one column; on a laptop the ledger sits beside
             the entry pad instead of a 1000px-wide empty gutter. */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <div className="mt-3 grid gap-6 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
           <section className="min-w-0">
             {/* ---- the number ---- */}
             <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-neutral-800 bg-neutral-900/40 p-1">
@@ -920,12 +946,11 @@ export default function GroceryPage() {
 
           {/* ---- the ledger ---- */}
           <aside className="min-w-0">
-            <div className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-amber-600">{t.remaining}</div>
-              <div className="mt-1 truncate text-2xl font-medium tabular-nums text-amber-300">
-                {rupiah(totals?.remaining_idr ?? 0)}
-              </div>
-            </div>
+            <BalanceCard
+              label={t.remaining}
+              remaining={totals?.remaining_idr ?? 0}
+              className="mb-3 hidden lg:block"
+            />
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">

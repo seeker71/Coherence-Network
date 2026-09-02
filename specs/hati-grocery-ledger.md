@@ -7,7 +7,9 @@ source:
   - file: api/app/form_recipes/endpoint_grocery_amount.fk
     symbols: [rupiah, scale_frac, pow10]
   - file: web/app/grocery/page.tsx
-    symbols: [GroceryPage, previewIdr(), todayLocal()]
+    symbols: [BalanceCard, GroceryPage, previewIdr(), todayLocal()]
+  - file: web/tests/hati-grocery-layout.test.ts
+    symbols: [Hati grocery balance layout]
   - file: web/middleware.ts
     symbols: [app. host rewrite]
   - file: deploy/hostinger/auto-deploy.sh
@@ -19,6 +21,7 @@ requirements:
   - "When no shop is near, category icons carry the description and a custom field overrides it"
   - "The entry date defaults to today in the hub's timezone (UTC+8), not UTC"
   - "Buys and top-ups append to one signed ledger the hub owns; remaining is a single sum; a dark sheet never loses an entry"
+  - "On a phone the remaining balance sits directly below the header before the entry pad; on a laptop it stays in the ledger column"
   - "GET /api/grocery/export.csv returns the whole ledger, so leaving the app costs nothing"
   - "The surface answers on app.hati.earth"
 done_when:
@@ -28,8 +31,9 @@ done_when:
   - "Writing requires a household member with write access; seeing is open to any registered cell"
   - "the mirror appends When/Amount/What rows; remaining is a fixed-cell formula, never a row; export.csv stays the fuller record"
   - "app.hati.earth serves the ledger with no site chrome"
+  - "a 390x844 viewport shows the remaining balance in the first screen before the entry pad"
   - "all tests pass"
-test: "cd api && python -m pytest tests/test_grocery_ledger.py -q"
+test: "cd api && .venv/bin/python -m pytest tests/test_grocery_ledger.py -q"
 constraints:
   - "Shops reuse the household_place cell with kind=shop — no parallel location system"
   - "Identity reuses the household device token — no second login"
@@ -104,6 +108,45 @@ into a shoebox of receipts, which is the failure this replaces.
 - [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
   and flushes them on the next connection.
+
+## Files to Create/Modify
+
+- `api/app/routers/grocery.py` — ledger routes, totals, places, export, and sheet mirror.
+- `api/app/form_recipes/endpoint_grocery_amount.fk` — exact thousands-to-rupiah recipe.
+- `api/tests/test_grocery_ledger.py` — API and ledger-flow acceptance coverage.
+- `web/app/grocery/page.tsx` — contained phone and laptop grocery surface.
+- `web/tests/hati-grocery-layout.test.ts` — responsive balance-placement invariant.
+- `web/middleware.ts` — `app.hati.earth` host routing.
+- `deploy/hostinger/auto-deploy.sh` — public grocery host labels.
+
+## Acceptance Tests
+
+- `api/tests/test_grocery_ledger.py` proves exact amounts, signed totals, permissions, places, deletion, export, and sheet resilience.
+- `web/tests/hati-grocery-layout.test.ts` proves the phone balance precedes the entry pad and the laptop balance stays in the ledger column.
+- Manual validation at a 390x844 viewport confirms the visible balance card is fully inside the first screen.
+
+## Verification
+
+```bash
+cd api && .venv/bin/python -m pytest tests/test_grocery_ledger.py -q
+cd web && npm test -- --run tests/hati-grocery-layout.test.ts tests/hati-grocery-handoff.test.ts
+cd web && npm run build
+./scripts/verify_worktree_local_web.sh --start
+```
+
+## Out of Scope
+
+- The responsive placement change preserves the ledger arithmetic, graph storage, household identity, and sheet-mirror contracts.
+- The grocery surface remains a focused household ledger rather than a general accounting application.
+
+## Risks and Assumptions
+
+- Tailwind's `lg` breakpoint remains the boundary between the phone-first balance card and the laptop ledger column; the source test and rendered viewport proof guard both sides.
+- The graph totals route remains the source of the displayed amount; layout visibility never substitutes a locally computed balance.
+
+## Known Gaps and Follow-up Tasks
+
+- Follow-up task: complete the standard receipt already named in Honest Floor by observing the amount recipe through c-bootstrap `form-cli` on Windows and Android metal.
 
 ## Design Notes
 
