@@ -19,7 +19,7 @@ source:
   - file: scripts/form_cli_rag.py
     symbols: [content_key, freshness, heal, retrieve]
   - file: scripts/coh_substrate.py
-    symbols: [_classic_form_stdlib_dir, form_first_source_paths, cmd_bootstrap]
+    symbols: [_classic_form_stdlib_dir, form_first_source_paths, cmd_bootstrap, cmd_ingest_paths]
   - file: deploy/hostinger/auto-deploy.sh
     symbols: [run_substrate_ingest]
   - file: scripts/substrate_post_merge_hook.sh
@@ -34,6 +34,7 @@ requirements:
   - "ask heals the stale delta before retrieving, so a fresh file is answerable without a manual index step"
   - "bootstrap and the RAG healer enumerate the same Form sources in nested worktrees and the flattened production image"
   - "a change to grounding/bootstrap carriers forces complete bootstrap before the deployment RAG heal"
+  - "incremental ingest refreshes the exact-byte ARTIFACT companion for every changed RAG source before delta heal"
   - "the post-merge hook heals the index beside substrate ingest"
 done_when:
   - "rag-key band crosses four-way (Go/Rust/TS/fkwu) via form/form/validate.sh → 7"
@@ -45,6 +46,7 @@ done_when:
   - "form-cli ask \"what is form shell?\" retrieves shell-grammar.fk / fsh-main.fk after a heal"
   - "the grounding runtime test proves bootstrap includes Form sources from the flattened production image"
   - "the deployment regression proof requires bootstrap to precede heal when grounding carriers change"
+  - "the grounding runtime test proves a changed spec receives a current ARTIFACT binding through ingest-paths"
   - 'file_exists("form/form/form-stdlib/rag-key.fk")'
   - 'file_exists("form/form/form-stdlib/rag-heal.fk")'
   - 'file_exists("form/form/form-stdlib/tests/rag-freshness-band.fk")'
@@ -107,6 +109,10 @@ content-addressed freshness, expanding to absorb new tissue on its own.
   RAG carrier, grounding-source reader, or substrate services takes the complete-refresh
   branch. The repaired bootstrap reconciles persisted identities before RAG heal validates
   them; the incremental heal cannot run first and reject the very migration being deployed.
+- [ ] **R10 — incremental exact binding**: `ingest-paths` preserves the domain projection
+  and also refreshes the content-addressed ARTIFACT companion for every path in the RAG
+  source corpus. Delta heal sees the new source hash, answer hash, and byte size without
+  requiring a complete bootstrap for an ordinary spec or concept edit.
 
 ## Data Model
 
@@ -138,7 +144,7 @@ RagEntry:
 - `scripts/coh_substrate.py` — production/source Form-layout selection shared in shape
   with the RAG consumer so bootstrap covers the same source corpus (modify)
 - `api/tests/test_form_cli_grounding_runtime.py` — flattened production-layout corpus
-  and deploy ordering regression proofs (modify)
+  plus migration-order and incremental exact-binding regression proofs (modify)
 - `deploy/hostinger/auto-deploy.sh` — force complete bootstrap before RAG heal when
   grounding/bootstrap carriers change (modify)
 - `scripts/substrate_post_merge_hook.sh` — rag heal step (modify)
@@ -153,6 +159,8 @@ RagEntry:
   proves both nested source and flattened production Form layouts are included
 - `bash -n deploy/hostinger/auto-deploy.sh` and the deploy ordering regression prove
   grounding-carrier changes select complete bootstrap before RAG heal
+- `cd api && .venv/bin/pytest -q tests/test_form_cli_grounding_runtime.py -k incremental_ingest`
+  proves a changed RAG source is exact-byte bound before the delta healer reads it
 
 ## Verification
 
