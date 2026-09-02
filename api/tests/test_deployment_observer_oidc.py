@@ -165,6 +165,25 @@ def test_observer_hex_encodes_form_expression_across_ssh_boundary() -> None:
     assert bytes.fromhex(wire_value).decode("ascii") == expression
 
 
+def test_observer_reproduction_follows_kernel_archive_layout() -> None:
+    workflow = (
+        REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    expected_paths = (
+        "/source/runtime",
+        "/source/form/form-stdlib",
+        "/source/form/scripts",
+        "/source/form/build-form-cli.sh",
+        "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256",
+        "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt",
+        "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp",
+    )
+    for path in expected_paths:
+        assert path in workflow
+    assert "/source/form-stdlib" not in workflow
+    assert "$source_dir/form-stdlib" not in workflow
+
+
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
     policy: ObserverOIDCPolicy,
     signing_key: tuple[rsa.RSAPrivateKey, dict],

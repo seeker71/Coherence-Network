@@ -116,7 +116,7 @@ and native-implementation cross-checks.
 - [x] API image builds and ships `/app/form/fkwu`; no sibling binary enters the image
 - [x] deploy removes legacy sibling-router containers before observation
 - [x] public deploy verification observes fkwu health and form-cli integrity instead of retired sibling-router response headers
-- [x] public deployment observation transports generated Form expressions through a shell-safe exact-byte encoding before direct carrier execution
+- [x] public deployment observation transports generated Form expressions through a shell-safe exact-byte encoding before direct carrier execution and reproduces the immutable kernel from its nested `form/` source layout
 - [x] thread gate executes fkwu and invokes siblings only on the `round_ndigits` primitive band
 - [ ] Classify every remaining sibling test as primitive/native conformance or retire it
 

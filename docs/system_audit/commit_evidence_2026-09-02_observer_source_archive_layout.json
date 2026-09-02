@@ -1,0 +1,124 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/fix-observer-source-layout",
+  "change_intent": "process_only",
+  "commit_scope": "Align deployment-observer immutable reproduction paths with the mixed root and nested form layout of the pinned coherence-kernel archive.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-source-archive-layout"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_source_archive_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_source_archive_layout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "Merged run 33595290891 attempt 1 loaded public-deployment-observer.yml at c5e9874a04a26e92c0634bfaa49365ffdb81f5e1 and passed OIDC issuance before a transient SSH timeout.",
+    "Run 33595290891 attempt 2 generated the hex-encoded Form expression, executed the direct carrier script, then failed immutable reproduction at cp: cannot stat '/source/form-stdlib'.",
+    "The checked-out coherence-kernel gitlink 6d6282d902457a3efb344ff6378f264ed4c2c694 places runtime/fkwu-uni.c at repository root and build-form-cli.sh, scripts, and form-stdlib under form/.",
+    "The observer now copies and hashes those exact archive paths, while retaining the root runtime path."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_source_archive_layout.json",
+      "git diff --check"
+    ],
+    "summary": "All 20 observer identity, transport, and archive-layout tests pass; the strict authority spec, evidence, and whitespace gates pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "The workflow correction must first land immutably, then its caller and runtime OIDC pins must advance before live observation."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Immutable-source reproduction reads the coherence-kernel archive's actual nested form-cli build inputs and proceeds to compare reproduced and deployed carrier digests.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation"
+    ],
+    "test_flows": [
+      "Verify every immutable reproduction source path against the checked-out kernel archive.",
+      "Land the corrected reusable workflow as an immutable commit.",
+      "Advance caller and runtime policy pins, deploy, and complete authenticated public observation."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form body returned no attributable answer within one minute and was stopped, so remote reasoning was allowed."
+    },
+    "archive_layout_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the path diagnosis; the exact live failure and checked-out gitlink paths verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the live observer trace, immutable workflow bytes, and exact submodule filesystem layout; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — focused proof, exact-head CI, two-phase pin rollout, and one successful authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The archive path repair is authored; local proof, CI, immutable landing, pin advance, and live observation remain pending."
+  }
+}
