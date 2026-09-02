@@ -959,6 +959,55 @@ def test_bootstrap_corpus_includes_flat_production_form_sources(
     assert coh.form_first_source_paths() == [source]
 
 
+def test_incremental_ingest_refreshes_exact_artifact_before_rag_heal(
+    tmp_path, monkeypatch
+):
+    db_path = tmp_path / "incremental.sqlite"
+    monkeypatch.setattr(unified_db, "database_url", lambda: f"sqlite+pysqlite:///{db_path}")
+    unified_db.reset_engine()
+    unified_db.ensure_schema()
+
+    source = tmp_path / "specs" / "incremental-grounding.md"
+    source.parent.mkdir()
+    source.write_text(
+        "---\n"
+        "idea_id: incremental-grounding\n"
+        "requirements: [bind exact bytes]\n"
+        "done_when: [RAG accepts the changed source]\n"
+        "test: pytest\n"
+        "---\n\n"
+        "First grounded body.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(coh, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(coh, "form_first_source_paths", lambda: [source])
+    monkeypatch.setattr(rag, "ROOT", str(tmp_path))
+    args = SimpleNamespace(paths=[str(source)], from_stdin=False, flat=False)
+
+    try:
+        assert coh.cmd_ingest_paths(args) == 0
+        first = read_grounding_source(source)
+        first_record = rag._grounding_records([str(source)])[str(source)]
+        assert first_record["persisted_source_sha256"] == first.source_sha256
+
+        source.write_text(source.read_text(encoding="utf-8") + "Second exact body.\n")
+        assert coh.cmd_ingest_paths(args) == 0
+
+        second = read_grounding_source(source)
+        second_record = rag._grounding_records([str(source)])[str(source)]
+        assert second_record["persisted_source_sha256"] == second.source_sha256
+        assert second_record["persisted_answer_sha256"] == second.answer_sha256
+        assert second_record["persisted_size"] == second.source_size
+        healed = rag._embed_cell(
+            str(source), "spec", str(source), grounding_record=second_record
+        )
+        assert healed is not None
+        assert healed["key"] == second.source_sha256
+        assert healed["answer_key"] == second.answer_sha256
+    finally:
+        unified_db.reset_engine()
+
+
 def test_deploy_bootstraps_before_heal_when_grounding_carriers_change():
     deploy = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
         encoding="utf-8"
