@@ -7,12 +7,14 @@ that translate their API shape to/from this service.
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, cast, func, or_
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
 from app.models.graph import (  # noqa: F401 — NodeRevision imported for table creation
@@ -228,7 +230,10 @@ def get_node(node_id: str) -> dict[str, Any] | None:
         return node.to_dict() if node else None
 
 
-def get_node_by_slug(slug: str) -> dict[str, Any] | None:
+def get_node_by_slug(
+    slug: str,
+    node_type: str | None = None,
+) -> dict[str, Any] | None:
     """Resolve a node by the `slug` property a presence carries.
 
     The slug is the human-readable doorway URL (`/people/{slug}`).
@@ -243,12 +248,69 @@ def get_node_by_slug(slug: str) -> dict[str, Any] | None:
         # Postgres + SQLite both store properties as JSON; the SQLAlchemy
         # JSON column adapter exposes ``Node.properties["slug"]`` as a
         # comparable expression on either backend.
-        node = (
-            s.query(Node)
-            .filter(Node.properties["slug"].as_string() == slug)
-            .first()
-        )
+        q = s.query(Node).filter(Node.properties["slug"].as_string() == slug)
+        if node_type:
+            q = q.filter(Node.type == node_type)
+        node = q.first()
         return node.to_dict() if node else None
+
+
+def get_node_by_alias(
+    alias: str,
+    node_type: str | None = None,
+) -> dict[str, Any] | None:
+    """Resolve one exact declared alias without returning graph inventories.
+
+    Production uses the graph_nodes properties GIN index through JSONB
+    containment. SQLite uses a JSON-text prefilter for local portability; both
+    paths confirm exact membership in Python before returning a node.
+    """
+    if not alias:
+        return None
+    with session() as s:
+        q = s.query(Node)
+        if node_type:
+            q = q.filter(Node.type == node_type)
+        if s.get_bind().dialect.name == "postgresql":
+            alias_filter = Node.properties.op("@>")(
+                cast(json.dumps({"aliases": [alias]}), JSONB)
+            )
+        else:
+            marker = json.dumps(alias, ensure_ascii=False)
+            alias_filter = Node.properties["aliases"].as_string().contains(marker)
+        candidates = q.filter(alias_filter).order_by(Node.updated_at.desc()).all()
+        for node in candidates:
+            aliases = (node.properties or {}).get("aliases", [])
+            if isinstance(aliases, list) and alias in aliases:
+                return node.to_dict()
+    return None
+
+
+def resolve_node_identity(node_id: str) -> dict[str, Any] | None:
+    """Resolve a graph id, typed or bare slug, alias, or legacy contributor id."""
+    node = get_node(node_id)
+    if node:
+        return node
+
+    node_type: str | None = None
+    bare_id = node_id
+    if ":" in node_id:
+        prefix, candidate = node_id.split(":", 1)
+        if prefix in NODE_TYPE_SET:
+            node_type = prefix
+            bare_id = candidate
+
+    node = get_node_by_slug(bare_id, node_type=node_type)
+    if node:
+        return node
+
+    node = get_node_by_alias(bare_id, node_type=node_type)
+    if node:
+        return node
+
+    if ":" not in node_id:
+        return get_node(f"contributor:{node_id}")
+    return None
 
 
 # Types a PATCH may move a node between — the presence bucket. This

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 39
+**Total files**: 40
 
 | File | Purpose |
 |---|---|
@@ -32,6 +32,7 @@
 | [locale-fetch.ts](locale-fetch.ts) | Server-side helper for locale-aware API fetches. |
 | [locales.ts](locales.ts) | _no top-of-file purpose_ |
 | [named-lineage.ts](named-lineage.ts) | named-lineage — slugs of the load-bearing humans in the lineage, |
+| [presence-node.ts](presence-node.ts) | Shared canonical-id, slug, and alias resolution for presence routes. |
 | [public-config.ts](public-config.ts) | _no top-of-file purpose_ |
 | [pulse-server.ts](pulse-server.ts) | Server-only helper for resolving the Pulse Monitor base URL. |
 | [reception-policy.ts](reception-policy.ts) | reception-policy.ts — the frozen (ice) projection of the body's |
