@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 38
+**Total files**: 39
 
 | File | Purpose |
 |---|---|
@@ -39,6 +39,7 @@
 | [renderer-resolver.ts](renderer-resolver.ts) | Renderer resolver — given a MIME type, find the renderer to use. |
 | [renderer-sdk.ts](renderer-sdk.ts) | Renderer SDK — the public interface for building compatible asset renderers. |
 | [request-locale.ts](request-locale.ts) | _no top-of-file purpose_ |
+| [stewardship-documents.ts](stewardship-documents.ts) | Bounded reader and link rewriter for the repository's public stewardship corpus. |
 | [use-paged-list.ts](use-paged-list.ts) | Reusable hook for surfaces that read a paginated list endpoint |
 | [utils.ts](utils.ts) | _no top-of-file purpose_ |
 | [vision-utils.ts](vision-utils.ts) | Shared utilities for Living Collective vision pages. |

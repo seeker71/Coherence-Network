@@ -136,6 +136,7 @@
     "/specs/[spec_id]": "web/app/specs/[spec_id]/page.tsx",
     "/specs/[spec_id]/edit": "web/app/specs/[spec_id]/edit/page.tsx",
     "/specs/new": "web/app/specs/new/page.tsx",
+    "/stewardship/[[...path]]": "web/app/stewardship/[[...path]]/page.tsx",
     "/substrate": "web/app/substrate/page.tsx",
     "/substrate/[domain]/[name]": "web/app/substrate/[domain]/[name]/page.tsx",
     "/substrate/form": "web/app/substrate/form/page.tsx",
