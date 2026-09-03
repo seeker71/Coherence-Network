@@ -1,0 +1,116 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-02",
+  "thread_branch": "codex/activate-observer-canary-path-20260902",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Activate the immutable observer workflow containing the nested ground-canary path and authenticated direct WITNESS read.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-09-02-observer-canary-path-pin"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_canary_path_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-09-02_observer_canary_path_pin.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "PR #4029 passed Thread Gates, Windows Host Floor, and GitGuardian before merging as 7c17ceb1d4f9d7a2bbcdbfe4a3685df1b28431e1.",
+    "Commit 7c17ceb1d4f9d7a2bbcdbfe4a3685df1b28431e1 is on main and contains the nested fkwu canary path plus the authenticated direct WITNESS read from PR #4028.",
+    "The Hostinger reusable-workflow caller and API OIDC admission policy now carry the same immutable 40-character SHA.",
+    "The runtime-policy regression rejects any caller/policy pin mismatch."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "ruff check api/app/services/deployment_observer_service.py api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-02_observer_canary_path_pin.json",
+      "git merge-base --is-ancestor 7c17ceb1d4f9d7a2bbcdbfe4a3685df1b28431e1 origin/main",
+      "git diff --check"
+    ],
+    "summary": "The observer identity, archive-layout, direct-carrier, and caller/policy pin tests pass; lint, evidence, ancestry, and whitespace checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and app.hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Merge, rollout, and one authenticated direct-carrier observation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The post-deploy job authenticates as the landed workflow, reproduces both native carriers through the corrected archive paths, records the WITNESS, and reads it through pinned SSH.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "POST https://api.coherencycoin.com/api/deployment-observer/challenge",
+      "POST https://api.coherencycoin.com/api/deployment-observer/observation"
+    ],
+    "test_flows": [
+      "Confirm both immutable pins equal 7c17ceb1d4f9d7a2bbcdbfe4a3685df1b28431e1.",
+      "Deploy the exact merged activation SHA from protected main.",
+      "Complete immutable reproduction, OIDC observation, index heal, and direct native OBSERVED answer."
+    ]
+  },
+  "trust_matrix": {
+    "immutable_pin_activation": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "Form returned an empty miss; OpenAI GPT-5 selected the merged SHA from GitHub and the repository's executable pin contract verifies the activation."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the immutable merged workflow bytes, the pin admission contract, and executable observer tests; it did not generate the activation decision.",
+    "standard_receipt": "pending — focused proof, exact-head CI, merge, rollout, and authenticated direct observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The pin activation is authored; local proof, CI, merge, rollout, and live observation remain pending."
+  }
+}
