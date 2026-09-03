@@ -202,16 +202,14 @@ async def graph_stats():
 
 @router.get("/graph/nodes/{node_id}", summary="Get a single node")
 async def get_node(node_id: str, request: Request, lang: str | None = Query(None)):
-    """Get a single node by id, falling back to slug lookup.
+    """Get a single node by id, falling back to slug and alias lookup.
 
-    The path argument is treated as a graph id first. When that misses
-    and the value contains no namespace prefix (no colon), the lookup
-    retries against the `slug` property and finally against the
-    `contributor:{path}` form — the same human-readable doorway used
-    in `/people/{slug}` URLs, plus the legacy bare-name shape used by
-    older routes. This lets every URL form converge to one identity
-    through one endpoint, with the mapping living in the graph
-    instead of a hand-curated table.
+    The path argument is treated as a graph id first. When that misses,
+    the lookup retries against the node's `slug` and declared `aliases`.
+    A recognized namespace prefix narrows those matches to the same node
+    type; a bare value retains the legacy `contributor:{path}` fallback.
+    This lets every URL form converge to one identity through one endpoint,
+    with the mapping living in the graph instead of a hand-curated table.
 
     Locale-projected when the caller's lang resolves to a non-default
     SUPPORTED_LOCALES member. Cache-miss triggers a best-effort
@@ -219,11 +217,7 @@ async def get_node(node_id: str, request: Request, lang: str | None = Query(None
     path; the current read keeps source-language text rather than
     blocking on translation latency.
     """
-    node = graph_service.get_node(node_id)
-    if not node and ":" not in node_id:
-        node = graph_service.get_node_by_slug(node_id)
-    if not node and ":" not in node_id:
-        node = graph_service.get_node(f"contributor:{node_id}")
+    node = graph_service.resolve_node_identity(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     target_lang = resolve_caller_lang(request, lang)
@@ -319,17 +313,13 @@ async def get_edges(
     direction: str = Query(default="both", pattern="^(both|outgoing|incoming)$"),
     type: str | None = None,
 ):
-    """Get edges for a node, accepting either the graph id or a slug.
+    """Get edges for a node, accepting a graph id, slug, or alias.
 
-    The path argument resolves through the same slug-or-id lookup as
+    The path argument resolves through the same identity lookup as
     `GET /graph/nodes/{node_id}` so callers using the human-readable
     URL get the right edges without a second round-trip.
     """
-    resolved = graph_service.get_node(node_id)
-    if not resolved and ":" not in node_id:
-        resolved = graph_service.get_node_by_slug(node_id)
-    if not resolved and ":" not in node_id:
-        resolved = graph_service.get_node(f"contributor:{node_id}")
+    resolved = graph_service.resolve_node_identity(node_id)
     if not resolved:
         return []
     return graph_service.get_edges(
