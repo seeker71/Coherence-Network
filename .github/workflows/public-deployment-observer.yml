@@ -254,7 +254,8 @@ jobs:
               CC=cc FORM_CLI_FORCE_LINK=1 /build/form-cli-src/build-form-cli.sh /out/form-cli
               bash /build/form-cli-src/scripts/form_cli_bootstrap_proof.sh /out/form-cli
               cc -O2 -o /out/fkwu /build/runtime/fkwu-uni.c
-              test "$(/out/fkwu --src /source/bootstrap/ground.fk 2>/dev/null)" = 42
+              cp /source/bootstrap/ground.fk /build/ground.fk
+              test "$(/out/fkwu --src /build/ground.fk 2>/dev/null)" = 42
             '
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"

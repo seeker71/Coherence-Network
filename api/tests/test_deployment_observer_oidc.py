@@ -181,6 +181,9 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
     )
     for path in expected_paths:
         assert path in workflow
+    assert "cp /source/bootstrap/ground.fk /build/ground.fk" in workflow
+    assert "/out/fkwu --src /build/ground.fk" in workflow
+    assert "/out/fkwu --src /source/bootstrap/ground.fk" not in workflow
     assert "/source/form-stdlib" not in workflow
     assert "/source/form/bootstrap/ground.fk" not in workflow
     assert "$source_dir/form-stdlib" not in workflow
