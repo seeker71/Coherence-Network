@@ -10,7 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.services import presence_service
+from app.services import graph_service, presence_service
 
 BASE = "http://test"
 
@@ -20,6 +20,25 @@ def _reset_presence():
     presence_service.clear_for_tests()
     yield
     presence_service.clear_for_tests()
+
+
+@pytest.mark.asyncio
+async def test_graph_node_identity_resolves_declared_skill_alias():
+    graph_service.create_node(
+        id="skill:canonical-practice",
+        type="skill",
+        name="Canonical Practice",
+        properties={
+            "slug": "canonical-practice",
+            "aliases": ["practice-doorway"],
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        for identity in ("practice-doorway", "skill:practice-doorway"):
+            response = await c.get(f"/api/graph/nodes/{identity}")
+            assert response.status_code == 200, response.text
+            assert response.json()["id"] == "skill:canonical-practice"
 
 
 @pytest.mark.asyncio

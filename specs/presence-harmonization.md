@@ -15,6 +15,10 @@ source:
     symbols: [PresenceView, PresenceShape, FieldTrace, HarmonizedFact, HarmonizedBroadcast, HarmonizedLineage]
   - file: api/app/routers/presence_views.py
     symbols: [get_presence_view, get_presence_view_traces, recompute_presence_view]
+  - file: api/app/routers/graph.py
+    symbols: [get_node]
+  - file: api/app/services/graph_service.py
+    symbols: [get_node_by_alias, resolve_node_identity]
   - file: api/db/migrations/NNNN_presence_views.sql
     symbols: [presence_views table, presence_view_traces table]
   - file: scripts/sync_presence_views.py
@@ -33,6 +37,8 @@ source:
     symbols: [routedFetcher]
   - file: api/tests/test_presence_harmonizer.py
     symbols: [test_robert_calibration, test_traces_every_field, test_privacy_filter_drops_intimate, test_per_locale_candidates, test_recompute_on_edge_change]
+  - file: api/tests/test_flow_presence.py
+    symbols: [test_graph_node_identity_resolves_declared_skill_alias]
 requirements:
   - "Pure function harmonize(graph_node_id, locale) -> PresenceShape composed from primary data — never from hand-curated overrides"
   - "PresenceShape mirrors what hand-built /people pages render today: tagline, bio (paragraphs), facts list, hero image, lineage, resonance, broadcasts/works, footer links"
@@ -49,7 +55,7 @@ requirements:
   - "Calibration script (scripts/calibrate_presence_robert.py) compares harmonized shape against the hand-built fixture and prints field-by-field equivalence; passing calibration unlocks compost of the hand-built TSX files for that human"
   - "PresencePage component continues to render the existing PresenceIdentity shape; harmonizer output flows through nodeToPresenceIdentity unchanged so no visual regression for already-rendering presences"
   - "Readable and refinable presence routes resolve canonical graph ids, bare contributor ids, human-readable slugs, and declared aliases through the same identity path"
-  - "Alias resolution follows every graph-list page for each supported presence type, so older cells beyond the API's 500-item page cap remain reachable"
+  - "Alias resolution is a filtered canonical graph lookup and never enumerates graph-list pages from a public presence request"
 done_when:
   - "harmonize('contributor:robert-edward-grant-f7e43ccfb4b0', 'en') returns a PresenceShape with non-empty tagline, bio (>=2 paragraphs), >=3 facts, >=2 broadcasts, >=1 lineage edge"
   - "Every field on the returned shape carries a FieldTrace naming source candidate(s) and the score that picked it"

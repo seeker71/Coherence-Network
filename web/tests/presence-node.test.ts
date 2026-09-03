@@ -27,18 +27,14 @@ describe("resolvePresenceGraphNode", () => {
       name: "Urs Muff",
     };
     const fetcher = routedFetcher({
-      "/api/graph/nodes?type=contributor&limit=500": {
-        items: [canonical],
-      },
+      "/api/graph/nodes/urs-muff": canonical,
     });
 
     await expect(
       resolvePresenceGraphNode("urs-muff", fetcher),
     ).resolves.toEqual(canonical);
     expect(fetcher).toHaveBeenCalledWith("/api/graph/nodes/urs-muff");
-    expect(fetcher).toHaveBeenCalledWith(
-      "/api/graph/nodes/contributor%3Aurs-muff",
-    );
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
   it("resolves aliases through the same shared identity path", async () => {
@@ -48,9 +44,7 @@ describe("resolvePresenceGraphNode", () => {
       aliases: ["urs"],
     };
     const fetcher = routedFetcher({
-      "/api/graph/nodes?type=contributor&limit=500": {
-        items: [canonical],
-      },
+      "/api/graph/nodes/urs": canonical,
     });
 
     await expect(resolvePresenceGraphNode("urs", fetcher)).resolves.toEqual(
@@ -68,9 +62,7 @@ describe("resolvePresenceGraphNode", () => {
         aliases: [`shared-${type}-alias`],
       };
       const fetcher = routedFetcher({
-        [`/api/graph/nodes?type=${encodeURIComponent(type)}&limit=500`]: {
-          items: [canonical],
-        },
+        [`/api/graph/nodes/shared-${type}-alias`]: canonical,
       });
 
       await expect(
@@ -78,34 +70,6 @@ describe("resolvePresenceGraphNode", () => {
       ).resolves.toEqual(canonical);
     },
   );
-
-  it("continues through every page of a supported presence type", async () => {
-    const canonical = {
-      id: "contributor:old-cell",
-      type: "contributor",
-      aliases: ["older-alias"],
-    };
-    const firstPage = Array.from({ length: 500 }, (_, index) => ({
-      id: `contributor:recent-${index}`,
-    }));
-    const fetcher = routedFetcher({
-      "/api/graph/nodes?type=contributor&limit=500": {
-        items: firstPage,
-        total: 501,
-      },
-      "/api/graph/nodes?type=contributor&limit=500&offset=500": {
-        items: [canonical],
-        total: 501,
-      },
-    });
-
-    await expect(
-      resolvePresenceGraphNode("older-alias", fetcher),
-    ).resolves.toEqual(canonical);
-    expect(fetcher).toHaveBeenCalledWith(
-      "/api/graph/nodes?type=contributor&limit=500&offset=500",
-    );
-  });
 
   it("returns a canonical node without scanning the contributor list", async () => {
     const canonical = { id: "contributor:seeker71", name: "Urs Muff" };
@@ -117,6 +81,18 @@ describe("resolvePresenceGraphNode", () => {
       resolvePresenceGraphNode("contributor:seeker71", fetcher),
     ).resolves.toEqual(canonical);
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps missing identities to bounded canonical lookups", async () => {
+    const fetcher = routedFetcher({});
+
+    await expect(
+      resolvePresenceGraphNode("missing-presence", fetcher),
+    ).resolves.toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).not.toHaveBeenCalledWith(
+      expect.stringContaining("/api/graph/nodes?"),
+    );
   });
 });
 
