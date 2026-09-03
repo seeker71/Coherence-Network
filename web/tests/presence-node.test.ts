@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  PRESENCE_NODE_TYPES,
   resolvePresenceGraphNode,
   type PresenceNodeFetcher,
   type PresenceNodeRecord,
@@ -56,6 +57,27 @@ describe("resolvePresenceGraphNode", () => {
       canonical,
     );
   });
+
+  it.each(PRESENCE_NODE_TYPES)(
+    "resolves a declared alias on a %s presence",
+    async (type) => {
+      const canonical = {
+        id: `${type}:canonical-cell`,
+        type,
+        slug: `canonical-${type}`,
+        aliases: [`shared-${type}-alias`],
+      };
+      const fetcher = routedFetcher({
+        [`/api/graph/nodes?type=${encodeURIComponent(type)}&limit=500`]: {
+          items: [canonical],
+        },
+      });
+
+      await expect(
+        resolvePresenceGraphNode(`shared-${type}-alias`, fetcher),
+      ).resolves.toEqual(canonical);
+    },
+  );
 
   it("returns a canonical node without scanning the contributor list", async () => {
     const canonical = { id: "contributor:seeker71", name: "Urs Muff" };

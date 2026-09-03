@@ -28,7 +28,7 @@ source:
   - file: web/components/presence/PresencePage.tsx
     symbols: [PresencePage, PresenceIdentity]
   - file: web/lib/presence-node.ts
-    symbols: [resolvePresenceGraphNode]
+    symbols: [PRESENCE_NODE_TYPES, resolvePresenceGraphNode]
   - file: web/tests/presence-node.test.ts
     symbols: [routedFetcher]
   - file: api/tests/test_presence_harmonizer.py

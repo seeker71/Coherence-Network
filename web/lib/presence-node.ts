@@ -9,6 +9,18 @@ export type PresenceNodeFetcher = (
   path: string,
 ) => Promise<PresenceNodeRecord | null>;
 
+export const PRESENCE_NODE_TYPES = [
+  "contributor",
+  "interested-person",
+  "event",
+  "scene",
+  "place",
+  "community",
+  "network-org",
+  "practice",
+  "asset",
+] as const;
+
 async function fetchPresencePath(
   path: string,
 ): Promise<PresenceNodeRecord | null> {
@@ -43,21 +55,27 @@ export async function resolvePresenceGraphNode(
   const bareId = id.startsWith("contributor:")
     ? id.slice("contributor:".length)
     : id;
-  const list = await fetcher("/api/graph/nodes?type=contributor&limit=500");
-  const items = Array.isArray(list?.items) ? list.items : [];
+  const lists = await Promise.all(
+    PRESENCE_NODE_TYPES.map((type) =>
+      fetcher(`/api/graph/nodes?type=${encodeURIComponent(type)}&limit=500`),
+    ),
+  );
   const humanSlug = Boolean(bareId) && !/^[0-9a-f]{12,}$/.test(bareId);
 
-  for (const candidate of items) {
-    if (!candidate || typeof candidate !== "object") continue;
-    const node = candidate as PresenceNodeRecord;
-    if (humanSlug && node.slug === bareId) return node;
-    const aliases = Array.isArray(node.aliases) ? node.aliases : [];
-    if (
-      aliases.some(
-        (alias) => typeof alias === "string" && alias === bareId,
-      )
-    ) {
-      return node;
+  for (const list of lists) {
+    const items = Array.isArray(list?.items) ? list.items : [];
+    for (const candidate of items) {
+      if (!candidate || typeof candidate !== "object") continue;
+      const node = candidate as PresenceNodeRecord;
+      if (humanSlug && node.slug === bareId) return node;
+      const aliases = Array.isArray(node.aliases) ? node.aliases : [];
+      if (
+        aliases.some(
+          (alias) => typeof alias === "string" && alias === bareId,
+        )
+      ) {
+        return node;
+      }
     }
   }
 

@@ -21,7 +21,10 @@ import {
   type PresenceContent,
   type PresenceContentByLocale,
 } from "@/lib/presence-content";
-import { resolvePresenceGraphNode } from "@/lib/presence-node";
+import {
+  PRESENCE_NODE_TYPES,
+  resolvePresenceGraphNode,
+} from "@/lib/presence-node";
 
 /**
  * /people/[id] — a warm public garden view of a contributor.
@@ -455,17 +458,9 @@ export default async function PersonPage({
   // `when`, `where` fields fell through to the warm-garden view that
   // expects voices — and rendered as empty scaffolds, hiding the
   // history alive in the graph.
-  const NODE_TYPES_THAT_RENDER_AS_PRESENCE = new Set([
-    "contributor",
-    "interested-person",
-    "event",
-    "scene",
-    "place",
-    "community",
-    "network-org",
-    "practice",
-    "asset",
-  ]);
+  const NODE_TYPES_THAT_RENDER_AS_PRESENCE = new Set<string>(
+    PRESENCE_NODE_TYPES,
+  );
   const graphNodeType = (graphNode?.type as string) || "";
   const hasCanonicalUrl =
     !!graphNode &&
