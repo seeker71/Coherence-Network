@@ -1,0 +1,116 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-03",
+  "thread_branch": "codex/repair-observer-ground-path-20260903",
+  "change_intent": "process_only",
+  "commit_scope": "Repair the public deployment observer's fkwu ground canary to follow the exact coherence-kernel archive layout.",
+  "idea_ids": [
+    "deploy-reliability",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-09-03-observer-ground-archive-path"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-03_observer_ground_archive_path.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-09-03_observer_ground_archive_path.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/fkwu-only-kernel-collapse.md"
+  ],
+  "evidence_refs": [
+    "The activated observer built and behaviorally proved form-cli, then failed its next command because /source/form/bootstrap/ground.fk does not exist in the extracted coherence-kernel archive.",
+    "The pinned coherence-kernel git tree contains bootstrap/ground.fk and does not contain form/bootstrap/ground.fk.",
+    "The source archive is extracted with --strip-components=1 at /source, so the executable canary path is /source/bootstrap/ground.fk.",
+    "The regression now requires the root bootstrap path and rejects the stale nested path."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git -C form ls-tree -r --name-only HEAD bootstrap form/bootstrap",
+      "api/.venv/bin/python -m pytest -q api/tests/test_deployment_observer_oidc.py",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/fkwu-only-kernel-collapse.md --strict",
+      "api/.venv/bin/python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-09-03_observer_ground_archive_path.json",
+      "git diff --check"
+    ],
+    "summary": "The kernel tree reports bootstrap/ground.fk, all 21 observer tests pass, the strict spec gate passes, and whitespace is clean."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head GitHub Actions proof is pending push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api.coherencycoin.com and hati.earth",
+    "commands": [
+      "Hostinger Auto Deploy",
+      "Public Deployment Observer"
+    ],
+    "summary": "Phase-one merge, immutable pin activation, rollout, and one complete observer run remain pending."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The observer reproduces fkwu, executes the archive-root ground canary as 42, and continues into authenticated observation instead of stopping at a missing source path.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Reproduce the immutable coherence-kernel archive in the observer builder.",
+      "Execute /source/bootstrap/ground.fk with the reproduced fkwu and require 42.",
+      "Continue through OIDC observation and the final authenticated direct-carrier trust read."
+    ]
+  },
+  "trust_matrix": {
+    "archive_path_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query timed out without an attributable answer; OpenAI GPT-5 formed the repair and the exact git tree, extraction command, production failure, regression, and focused tests verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the immutable archive topology, workflow failure, spec, and executable regression; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — exact-head CI, immutable activation, rollout, and a complete authenticated public observation remain to be witnessed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; exact-head CI and phase-one merge must make this workflow immutable before its caller and OIDC policy can be advanced."
+  }
+}
