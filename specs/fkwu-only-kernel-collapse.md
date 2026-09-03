@@ -55,9 +55,9 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
   of becoming remote shell syntax.
 - [x] **R6 — Immutable archive layout:** Reproduction reads the kernel runtime
   from archive-root `runtime/` and all Form sources, including the ground canary,
-  from archive-root `form/`. The 2026-09-02 observer reached the form-cli
-  behavioral proof before exposing and repairing the stale root-level
-  `bootstrap/ground.fk` canary path.
+  from their paths in the kernel archive. The form-cli source tree lives under
+  archive-root `form/`, while the fkwu ground canary lives at archive-root
+  `bootstrap/ground.fk`. The observer keeps those distinct layouts executable.
 
 ## Stop rules (effective immediately)
 
