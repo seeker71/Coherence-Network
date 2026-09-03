@@ -92,7 +92,11 @@ function sourceLinkMisses(): string[] {
 }
 
 function markdownLinkMisses(): string[] {
-  const roots = [join(WEB_ROOT, "messages"), join(WEB_ROOT, "content")];
+  const roots = [
+    join(WEB_ROOT, "messages"),
+    join(WEB_ROOT, "content"),
+    resolve(WEB_ROOT, "..", "docs", "presence-content"),
+  ];
   const misses: string[] = [];
   for (const root of roots) {
     for (const file of walk(root).filter((path) => path.endsWith(".json"))) {

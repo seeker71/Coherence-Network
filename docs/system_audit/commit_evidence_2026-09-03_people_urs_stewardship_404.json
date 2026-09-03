@@ -1,0 +1,156 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-03",
+  "thread_branch": "codex/people-urs-internal-404-20260903",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Make every internal link emitted by /people/urs resolve by exposing the existing public stewardship corpus through a bounded Hati route.",
+  "idea_ids": [
+    "public-stewardship-records",
+    "web-404-healing"
+  ],
+  "spec_ids": [
+    "stewardship-public-pages"
+  ],
+  "task_ids": [
+    "task-2026-09-03-people-urs-stewardship-404"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "observation",
+        "direction",
+        "merge-authorization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "Dockerfile.web",
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "docs/system_audit/commit_evidence_2026-09-03_people_urs_stewardship_404.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/verify_worktree_local_web.sh",
+    "specs/INDEX.md",
+    "specs/stewardship-public-pages.md",
+    "web/app/INDEX.md",
+    "web/app/stewardship/[[...path]]/page.tsx",
+    "web/lib/INDEX.md",
+    "web/lib/stewardship-documents.ts",
+    "web/tests/internal-page-links.test.ts",
+    "web/tests/stewardship-pages.test.ts"
+  ],
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "Dockerfile.web",
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "docs/system_audit/commit_evidence_2026-09-03_people_urs_stewardship_404.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/verify_worktree_local_web.sh",
+    "specs/INDEX.md",
+    "specs/stewardship-public-pages.md",
+    "web/app/INDEX.md",
+    "web/app/stewardship/[[...path]]/page.tsx",
+    "web/lib/INDEX.md",
+    "web/lib/stewardship-documents.ts",
+    "web/tests/internal-page-links.test.ts",
+    "web/tests/stewardship-pages.test.ts"
+  ],
+  "evidence_refs": [
+    "The rendered https://hati.earth/people/urs profile and all 97 unique internal links in its hydrated DOM were checked; exactly two returned 404.",
+    "The two failures were /stewardship/registry and /stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont, and both corresponding public source documents already existed under docs/stewardship.",
+    "The local production build returns HTTP 200 for both repaired URLs with the expected Stewardship Registry and Tesla Model 3 headings.",
+    "The in-app browser rendered both repaired pages through the shared Hati shell and showed the public privacy boundary and source attribution links.",
+    "Both deployment workflows include docs/stewardship/** in their main-branch push paths, so record-only corrections and removals roll out immediately."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test -- --run tests/stewardship-pages.test.ts tests/internal-page-links.test.ts",
+      "cd web && npm test",
+      "cd web && npm run build",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/stewardship-public-pages.md --strict",
+      "api/.venv/bin/python scripts/generate_repo_indexes.py",
+      "API_PORT=18130 WEB_PORT=3130 ./scripts/verify_worktree_local_web.sh --start",
+      "curl both local stewardship URLs and assert their source headings",
+      "in-app browser render both local stewardship URLs",
+      "bulk HTTP audit of all 97 internal links rendered by https://hati.earth/people/urs",
+      "git diff --check",
+      "make wellness"
+    ],
+    "summary": "The focused stewardship/link suite passes 7 tests, the full web suite passes 154 tests across 27 files, the Next.js production build and strict spec gate pass, the combined local verifier passes, and both repaired pages return 200 and render their source-backed content. The remaining build warnings originate in pre-existing middleware, Tailwind module-type, and presence-walk tracing code."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No exact-head GitHub Actions run exists before the branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "hati.earth",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "summary": "The live profile still exposes the two source links as 404 until merge and rollout complete."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Every internal link on /people/urs resolves; the two stewardship records render as public, source-attributed Hati pages while sensitive specifics remain outside the public surface.",
+    "public_endpoints": [
+      "GET https://hati.earth/people/urs",
+      "GET https://hati.earth/stewardship/registry",
+      "GET https://hati.earth/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont"
+    ],
+    "test_flows": [
+      "Extract every same-origin link from the hydrated /people/urs DOM and check its final HTTP status.",
+      "Render the registry locally and follow its source-backed stewardship links.",
+      "Render the Tesla record locally and verify its title, public privacy note, and source attribution."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form body query timed out without an attributable answer; direct substrate annotation then reported no bound cells for either public source document."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the route diagnosis; repository sources, a complete profile-link crawl, tests, build output, local HTTP, and browser rendering verified it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the committed source documents, route topology, Form miss, direct substrate miss, tests, build, local runtime, and browser-observable evidence; it did not generate the diagnosis or patch.",
+    "standard_receipt": "pending — this web route has no c-bootstrap form-cli macOS/Windows/Android observation band."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; exact-head CI, merge, rollout, and live verification of both repaired stewardship URLs remain pending."
+  }
+}

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 167
+**Total files**: 168
 
 | Route | File | Purpose |
 |---|---|---|
@@ -143,6 +143,7 @@
 | `/specs/[spec_id]` | [page.tsx](specs/[spec_id]/page.tsx) | _no top-of-file purpose_ |
 | `/specs/new` | [page.tsx](specs/new/page.tsx) | Spec creation surface — author a new spec from the visiting body. |
 | `/specs` | [page.tsx](specs/page.tsx) | _no top-of-file purpose_ |
+| `/stewardship/[[...path]]` | [page.tsx](stewardship/[[...path]]/page.tsx) | Public, source-attributed stewardship documents inside the shared Hati shell. |
 | `/substrate/[domain]/[name]` | [page.tsx](substrate/[domain]/[name]/page.tsx) | _no top-of-file purpose_ |
 | `/substrate/form` | [page.tsx](substrate/form/page.tsx) | Form-language playground — ask the substrate structural questions |
 | `/substrate/form/space` | [page.tsx](substrate/form/space/page.tsx) | Kernel Space — a walkable 3D rendering of the Form kernel's recipe tree. |
