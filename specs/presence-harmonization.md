@@ -49,6 +49,7 @@ requirements:
   - "Calibration script (scripts/calibrate_presence_robert.py) compares harmonized shape against the hand-built fixture and prints field-by-field equivalence; passing calibration unlocks compost of the hand-built TSX files for that human"
   - "PresencePage component continues to render the existing PresenceIdentity shape; harmonizer output flows through nodeToPresenceIdentity unchanged so no visual regression for already-rendering presences"
   - "Readable and refinable presence routes resolve canonical graph ids, bare contributor ids, human-readable slugs, and declared aliases through the same identity path"
+  - "Alias resolution follows every graph-list page for each supported presence type, so older cells beyond the API's 500-item page cap remain reachable"
 done_when:
   - "harmonize('contributor:robert-edward-grant-f7e43ccfb4b0', 'en') returns a PresenceShape with non-empty tagline, bio (>=2 paragraphs), >=3 facts, >=2 broadcasts, >=1 lineage edge"
   - "Every field on the returned shape carries a FieldTrace naming source candidate(s) and the score that picked it"

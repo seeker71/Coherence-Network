@@ -79,6 +79,34 @@ describe("resolvePresenceGraphNode", () => {
     },
   );
 
+  it("continues through every page of a supported presence type", async () => {
+    const canonical = {
+      id: "contributor:old-cell",
+      type: "contributor",
+      aliases: ["older-alias"],
+    };
+    const firstPage = Array.from({ length: 500 }, (_, index) => ({
+      id: `contributor:recent-${index}`,
+    }));
+    const fetcher = routedFetcher({
+      "/api/graph/nodes?type=contributor&limit=500": {
+        items: firstPage,
+        total: 501,
+      },
+      "/api/graph/nodes?type=contributor&limit=500&offset=500": {
+        items: [canonical],
+        total: 501,
+      },
+    });
+
+    await expect(
+      resolvePresenceGraphNode("older-alias", fetcher),
+    ).resolves.toEqual(canonical);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/graph/nodes?type=contributor&limit=500&offset=500",
+    );
+  });
+
   it("returns a canonical node without scanning the contributor list", async () => {
     const canonical = { id: "contributor:seeker71", name: "Urs Muff" };
     const fetcher = routedFetcher({

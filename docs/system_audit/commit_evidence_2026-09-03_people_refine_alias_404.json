@@ -66,6 +66,7 @@
     "The same browser session rendered /people/contributor%3Aseeker71/edit as the intended editor, proving that the inside page existed and that identity resolution, rather than routing or deployment, was the broken boundary.",
     "The display and edit routes now use one resolver for canonical graph ids, bare contributor ids, human-readable slugs, and declared aliases.",
     "Exact-head Codex review identified contributor-only fallback coverage; the resolver and its test matrix now cover contributor, interested-person, event, scene, place, community, network-org, practice, and asset presences.",
+    "The refreshed exact-head review identified the graph API's 500-node page cap; the resolver now advances through each response's total and offset until it finds the alias or exhausts every supported type.",
     "The public deploy verifier now requires the expected rendered profile and editor titles, so an HTTP-200 soft 404 fails the rollout contract.",
     "Browser and command evidence records only route state and public headings; private profile or account content is intentionally excluded."
   ],
@@ -81,7 +82,7 @@
       "git diff --check",
       "make wellness"
     ],
-    "summary": "The shared resolver tests cover every supported presence type; the full web suite, production build, strict spec gate, commit-evidence validation, and combined local web/API verifier pass. The local in-memory API intentionally lacks production contributor graph data, so the exact data-backed editor rendering is covered by unit proof and the public deployment gate."
+    "summary": "The shared resolver tests cover every supported presence type and aliases older than the API's 500-item first page; the full web suite, production build, strict spec gate, commit-evidence validation, and combined local web/API verifier pass. The local in-memory API intentionally lacks production contributor graph data, so the exact data-backed editor rendering is covered by unit proof and the public deployment gate."
   },
   "ci_validation": {
     "status": "pending",
