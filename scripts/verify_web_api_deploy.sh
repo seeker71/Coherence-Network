@@ -122,6 +122,7 @@ check_native_canary_with_rollout() {
 check_url() {
   local name="$1"
   local url="$2"
+  local required_text="${3:-}"
   local slug
   slug="$(echo "$name" | tr "[:upper:]" "[:lower:]" | tr -cs "a-z0-9" "_")"
   local headers_file="$TMP_DIR/${slug}.headers.txt"
@@ -182,6 +183,10 @@ check_url() {
   [[ -n "$server" ]] && echo "Server: ${server}"
 
   if [[ "$status" -ge 200 && "$status" -lt 400 ]]; then
+    if [[ -n "$required_text" ]] && ! grep -Fq "$required_text" "$body_file"; then
+      echo "FAIL: expected text not found: $required_text"
+      return 1
+    fi
     echo "PASS"
     return 0
   fi
@@ -1714,6 +1719,8 @@ check_web_public_asset "generated vision image" "/visuals/generated/lc-space-0.j
 check_url "Public web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Public web API health page" "${WEB_URL%/}/api-health" || fail=1
 check_url "Public web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
+check_url "Hati Urs profile" "https://hati.earth/people/urs" "Urs Muff" || fail=1
+check_url "Hati Urs profile refine doorway" "https://hati.earth/people/urs-muff/edit" "Refine Urs Muff" || fail=1
 check_url "Hati stewardship registry" "https://hati.earth/stewardship/registry" || fail=1
 check_url "Hati Tesla stewardship record" "https://hati.earth/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont" || fail=1
 check_form_playground_fmf_proof || fail=1

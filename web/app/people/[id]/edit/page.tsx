@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PresenceRefineForm } from "@/components/presence/PresenceRefineForm";
-import { getApiBase } from "@/lib/api";
-import { fetchJsonOrNull } from "@/lib/fetch";
+import { resolvePresenceGraphNode } from "@/lib/presence-node";
 
 /**
  * /people/[id]/edit — refine any presence's primary data.
@@ -38,11 +37,7 @@ type GraphNode = {
 };
 
 async function fetchNode(id: string): Promise<GraphNode | null> {
-  return fetchJsonOrNull<GraphNode>(
-    `${getApiBase()}/api/graph/nodes/${encodeURIComponent(id)}`,
-    {},
-    5000,
-  );
+  return (await resolvePresenceGraphNode(id)) as GraphNode | null;
 }
 
 function decodeRouteParam(rawId: string): string {

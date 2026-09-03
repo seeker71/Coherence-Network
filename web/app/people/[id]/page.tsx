@@ -21,6 +21,7 @@ import {
   type PresenceContent,
   type PresenceContentByLocale,
 } from "@/lib/presence-content";
+import { resolvePresenceGraphNode } from "@/lib/presence-node";
 
 /**
  * /people/[id] — a warm public garden view of a contributor.
@@ -118,75 +119,6 @@ async function fetchContributor(id: string): Promise<ContributorNode | null> {
  * the Contributor model. We need them to decide whether to render
  * the polished presence view or the warm garden view.
  */
-async function fetchGraphNode(id: string): Promise<Record<string, unknown> | null> {
-  const base = getApiBase();
-  const node = await fetchJsonOrNull<Record<string, unknown>>(
-    `${base}/api/graph/nodes/${encodeURIComponent(id)}`,
-    {},
-    5000,
-  );
-  if (node) return node;
-
-  // The id might be a bare slug without the "contributor:" prefix
-  // (that's what /contributors/graduate returns, and what lives in
-  // localStorage). Try that shape too.
-  if (!id.includes(":")) {
-    const prefixed = await fetchJsonOrNull<Record<string, unknown>>(
-      `${base}/api/graph/nodes/${encodeURIComponent(`contributor:${id}`)}`,
-      {},
-      5000,
-    );
-    if (prefixed) return prefixed;
-  }
-
-  // Last fallback: the id is `contributor:{slug}` but the graph node
-  // for that presence is stored under a non-standard stable id —
-  // commonly `contributor:{16-hex}` from older auto-create flows.
-  // Such nodes still carry the human-readable slug in their `slug`
-  // field, so search the contributor list and match on that.
-  //
-  // This closes the gap where /people/contributor:michael-levin and
-  // similar URLs returned a sparse fallback page instead of the rich
-  // description body, because Levin's stable id is
-  // contributor:3f42d44094e36ce5 not contributor:michael-levin.
-  if (id.startsWith("contributor:")) {
-    const slug = id.slice("contributor:".length);
-    if (slug && !slug.match(/^[0-9a-f]{12,}$/)) {
-      const list = await fetchJsonOrNull<{ items: Record<string, unknown>[] }>(
-        `${base}/api/graph/nodes?type=contributor&limit=500`,
-        {},
-        5000,
-      );
-      const match = list?.items?.find(
-        (n) => typeof n.slug === "string" && n.slug === slug,
-      );
-      if (match) return match;
-    }
-  }
-
-  // Alias match: a node's `aliases` list names every handle this cell
-  // answers to — all alive, none deprecated. Urs's contributor:seeker71
-  // carries ["seeker71","urs-muff","ursmuff","urs"]; any of those URL
-  // forms lands on the same cell. Match against the bare id (no
-  // contributor: prefix) so /people/seeker71, /people/urs, etc. resolve
-  // even when a request reaches this handler directly.
-  {
-    const list = await fetchJsonOrNull<{ items: Record<string, unknown>[] }>(
-      `${base}/api/graph/nodes?type=contributor&limit=500`,
-      {},
-      5000,
-    );
-    const bareId = id.startsWith("contributor:") ? id.slice("contributor:".length) : id;
-    const match = list?.items?.find((n) => {
-      const aliases = Array.isArray(n.aliases) ? (n.aliases as unknown[]) : [];
-      return aliases.some((a) => typeof a === "string" && a === bareId);
-    });
-    if (match) return match;
-  }
-
-  return null;
-}
-
 type EdgeRow = {
   id: string;
   from_id: string;
@@ -383,7 +315,7 @@ export async function generateMetadata({
   // One presence, one doorway: shared link previews and search
   // engines converge on `/people/{slug}` even when an inbound link
   // arrives at the graph-id form. The mapping lives in the graph.
-  const node = await fetchGraphNode(id);
+  const node = await resolvePresenceGraphNode(id);
   const slug = node && typeof node.slug === "string" ? node.slug : null;
   const name = node && typeof node.name === "string" ? node.name : null;
   const display = name || id.replace(/-[a-z0-9]{6,}$/, "").replace(/-/g, " ");
@@ -459,7 +391,7 @@ export default async function PersonPage({
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  const graphNode = await fetchGraphNode(id);
+  const graphNode = await resolvePresenceGraphNode(id);
 
   // First dispatch: the graph node carries a structured `presence_content`
   // JSON — the body's authored content for this cell, in the same shape
