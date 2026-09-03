@@ -57,7 +57,9 @@ This spec is the **collapse plan**: phased moves from today’s honest floor to 
   from archive-root `runtime/` and all Form sources, including the ground canary,
   from their paths in the kernel archive. The form-cli source tree lives under
   archive-root `form/`, while the fkwu ground canary lives at archive-root
-  `bootstrap/ground.fk`. The observer keeps those distinct layouts executable.
+  `bootstrap/ground.fk`. The archive stays read-only; the observer copies the
+  canary into writable build space so fkwu can emit its sibling `.fkb` and
+  `.sym` artifacts without mutating the source mount.
 
 ## Stop rules (effective immediately)
 
