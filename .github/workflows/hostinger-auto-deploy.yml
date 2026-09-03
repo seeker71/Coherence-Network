@@ -10,6 +10,7 @@ on:
       - 'deploy/hostinger/**'
       - 'deploy/front-door/**'
       - 'docs/breath/**'
+      - 'docs/stewardship/**'
       - 'scripts/verify_web_api_deploy.sh'
       - 'scripts/form_cli_rag.py'
       - 'scripts/ensure_form_cli_native.sh'

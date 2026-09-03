@@ -709,6 +709,14 @@ run_validations() {
   fi
   check_url "Web contributions" "${WEB_BASE}/contributions" "Contributions"
   check_url "Web contributors" "${WEB_BASE}/contributors" "Contributors"
+  check_url \
+    "Web stewardship registry" \
+    "${WEB_BASE}/stewardship/registry" \
+    "Stewardship Registry"
+  check_url \
+    "Web Tesla stewardship record" \
+    "${WEB_BASE}/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont" \
+    "Tesla Model 3"
   local contributor_id
   contributor_id="$(sample_contributor_id)"
   if [[ -n "${contributor_id}" ]]; then

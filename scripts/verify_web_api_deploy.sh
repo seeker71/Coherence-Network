@@ -1714,6 +1714,8 @@ check_web_public_asset "generated vision image" "/visuals/generated/lc-space-0.j
 check_url "Public web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Public web API health page" "${WEB_URL%/}/api-health" || fail=1
 check_url "Public web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
+check_url "Hati stewardship registry" "https://hati.earth/stewardship/registry" || fail=1
+check_url "Hati Tesla stewardship record" "https://hati.earth/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont" || fail=1
 check_form_playground_fmf_proof || fail=1
 check_web_runtime_sha \
   "${WEB_URL%/}/api/health-proxy" \

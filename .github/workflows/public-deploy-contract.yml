@@ -8,6 +8,7 @@ on:
       - 'web/**'
       - 'deploy/hostinger/**'
       - 'deploy/front-door/**'
+      - 'docs/stewardship/**'
       - 'Dockerfile*'
       - 'docker-compose*.yml'
       - 'scripts/verify_web_api_deploy.sh'
