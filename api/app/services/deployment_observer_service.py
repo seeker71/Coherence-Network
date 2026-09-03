@@ -36,7 +36,7 @@ PUBLIC_API_BASE = "https://api.coherencycoin.com"
 # deployed target continue to come from protected main, while GitHub OIDC proves
 # that the external observer job itself executed these exact workflow bytes.
 # Identity pins live in reviewed image code, never the host-mutable config.
-PINNED_OBSERVER_WORKFLOW_SHA = "7c17ceb1d4f9d7a2bbcdbfe4a3685df1b28431e1"
+PINNED_OBSERVER_WORKFLOW_SHA = "6704f4b08d7b524ad001deeb1db15627255801dc"
 PINNED_REPOSITORY = "seeker71/Coherence-Network"
 PINNED_REPOSITORY_ID = "1155981916"
 PINNED_REPOSITORY_OWNER = "seeker71"
