@@ -159,6 +159,6 @@ jobs:
     permissions:
       contents: none
       id-token: write
-    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@738811cc376afd4de4d2454fb6af1c4d9726c0ff
+    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@61070d093bcc5614ad95e3029b58d190bd500f4b
     secrets:
       hostinger_ssh_key: ${{ secrets.HOSTINGER_SSH_KEY }}
