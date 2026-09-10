@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -30,6 +30,13 @@ from app.db.base import Base
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 _SCHEMA_LOCK = threading.Lock()
 _SCHEMA_INITIALIZED: dict[str, bool] = {}
+
+POSTGRES_SUBSTRATE_UNIQUENESS_DDL = (
+    "ALTER TABLE substrate_nodes "
+    "DROP CONSTRAINT IF EXISTS uq_substrate_serialized",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_substrate_serialized_digest "
+    "ON substrate_nodes (package, level, domain, md5(serialized))",
+)
 
 
 def _normalize_engine_cache() -> dict[str, Any]:
@@ -115,6 +122,22 @@ def _create_all_idempotent(*, bind, url: str) -> None:
             # SQLite schema setup can race across separate connections during tests.
             return
         raise
+    _repair_postgres_substrate_uniqueness(bind=bind, url=url)
+
+
+def _repair_postgres_substrate_uniqueness(*, bind, url: str) -> None:
+    """Lift unbounded serialized trees out of PostgreSQL's btree payload.
+
+    Older deployments used the full serialized text in a UNIQUE constraint.
+    PostgreSQL refuses values whose index row exceeds roughly one third of a
+    page. A built-in md5 expression keeps the atomic interning backstop bounded;
+    kernel lookups additionally compare the complete serialized text.
+    """
+    if not url.startswith("postgres"):
+        return
+    with bind.begin() as connection:
+        for statement in POSTGRES_SUBSTRATE_UNIQUENESS_DDL:
+            connection.execute(text(statement))
 
 
 def engine():

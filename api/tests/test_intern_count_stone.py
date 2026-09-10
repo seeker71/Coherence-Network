@@ -58,3 +58,39 @@ def test_sqlite_engine_gets_no_postgres_options():
                 assert "options" not in part
     finally:
         sqlite.dispose()
+
+
+def test_postgres_schema_replaces_unbounded_serialized_unique_constraint(monkeypatch):
+    """Schema setup migrates the old full-text btree key before ingestion."""
+    calls: list[str] = []
+
+    class _Connection:
+        def execute(self, statement):
+            calls.append(str(statement))
+
+    class _Begin:
+        def __enter__(self):
+            return _Connection()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _Bind:
+        def begin(self):
+            return _Begin()
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="postgresql://db")
+
+    assert calls == list(udb.POSTGRES_SUBSTRATE_UNIQUENESS_DDL)
+    assert "DROP CONSTRAINT IF EXISTS uq_substrate_serialized" in calls[0]
+    assert "md5(serialized)" in calls[1]
+
+
+def test_sqlite_schema_does_not_run_postgres_substrate_migration(monkeypatch):
+    class _Bind:
+        def begin(self):
+            raise AssertionError("Postgres migration must not run on SQLite")
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="sqlite:///:memory:")

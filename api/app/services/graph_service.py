@@ -263,7 +263,9 @@ def get_node_by_alias(
 
     Production uses the graph_nodes properties GIN index through JSONB
     containment. SQLite uses a JSON-text prefilter for local portability; both
-    paths confirm exact membership in Python before returning a node.
+    paths confirm exact membership in Python before returning a node. Both the
+    current ``aliases`` field and the source-corpus ``legacy_ids`` field are
+    recognized so existing presence identities remain valid doorways.
     """
     if not alias:
         return None
@@ -272,17 +274,27 @@ def get_node_by_alias(
         if node_type:
             q = q.filter(Node.type == node_type)
         if s.get_bind().dialect.name == "postgresql":
-            alias_filter = Node.properties.op("@>")(
-                cast(json.dumps({"aliases": [alias]}), JSONB)
+            alias_filter = or_(
+                Node.properties.op("@>")(
+                    cast(json.dumps({"aliases": [alias]}), JSONB)
+                ),
+                Node.properties.op("@>")(
+                    cast(json.dumps({"legacy_ids": [alias]}), JSONB)
+                ),
             )
         else:
             marker = json.dumps(alias, ensure_ascii=False)
-            alias_filter = Node.properties["aliases"].as_string().contains(marker)
+            alias_filter = or_(
+                Node.properties["aliases"].as_string().contains(marker),
+                Node.properties["legacy_ids"].as_string().contains(marker),
+            )
         candidates = q.filter(alias_filter).order_by(Node.updated_at.desc()).all()
         for node in candidates:
-            aliases = (node.properties or {}).get("aliases", [])
-            if isinstance(aliases, list) and alias in aliases:
-                return node.to_dict()
+            properties = node.properties or {}
+            for field in ("aliases", "legacy_ids"):
+                aliases = properties.get(field, [])
+                if isinstance(aliases, list) and alias in aliases:
+                    return node.to_dict()
     return None
 
 

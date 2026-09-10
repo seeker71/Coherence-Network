@@ -1,9 +1,10 @@
 # Mirroring the grocery ledger into your own Google Sheet
 
-The ledger lives in the network's graph. Google Sheets is a **mirror** — a
-copy that lands in a spreadsheet the hub owns, so the record is readable,
-sortable, and shareable by people who will never open the app, and so
-leaving the app costs nothing.
+New app entries live in the network's graph and mirror into Google Sheets.
+The Sheet also carries the household history from before the app existed, so
+the app reads its fixed `Sisa` summary cell as the balance baseline and applies
+any new graph entries still waiting to sync. Only `A1:B3` is read; the household
+log remains in the Sheet the hub owns.
 
 Nothing here puts a Google credential in our keystore. You deploy a small
 script against your own spreadsheet and hand us a URL; revoking us is
@@ -256,9 +257,9 @@ The next entry appends a row. A running API caches config until
 
 ## 5. Watch the float, and say something when it runs low
 
-The balance's source of truth is the graph, so the watch asks the network what
-is left rather than reading the mirror it sits in — a sheet can lag, and an
-alert that trusts a stale mirror is worse than no alert.
+The watch asks the network what is left rather than reading its own formula
+directly. The network reconciles that Sheet baseline with graph entries still
+waiting to sync, so a temporarily lagging mirror does not lose a new spend.
 
 Mail goes out through the account that owns the script, so no mail credential
 lands in the keystore or anywhere else.
@@ -272,9 +273,9 @@ lands in the keystore or anywhere else.
 // ---------------------------------------------------------------------------
 // The low-float watch.
 //
-// The graph is the source of truth for the balance, so the watch asks the
-// network what is left rather than reading the mirror it is sitting in - the
-// sheet can lag, and an alert that trusts a stale mirror is worse than none.
+// Ask the network for the reconciled balance: Sheet baseline plus graph entries
+// still waiting to sync. Reading only this script's formula would miss that
+// pending delta while the mirror is temporarily dark.
 //
 // Set MEMBER_TOKEN and ALERT_TO in Project Settings > Script properties, then
 // add a daily time-driven trigger on watchFloat. Mail goes out through the

@@ -77,7 +77,7 @@
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
 | [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
-| [test_federation_carrier_selection.py](test_federation_carrier_selection.py) | Selection witnesses for the direct fkwu federation admission carrier. |
+| [test_federation_carrier_selection.py](test_federation_carrier_selection.py) | Selection and recovery witnesses for Form federation admission. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
 | [test_federation_peer_poll.py](test_federation_peer_poll.py) | Acceptance tests for federation_peer_poll_service — the heartbeat. |
