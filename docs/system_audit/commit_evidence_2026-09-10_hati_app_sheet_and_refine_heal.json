@@ -41,6 +41,7 @@
     "api/app/services/unified_db.py",
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
+    "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
     "api/tests/test_kernel_submodule_contract.py",
@@ -65,6 +66,7 @@
     "api/app/services/unified_db.py",
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
+    "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
     "api/tests/test_kernel_submodule_contract.py",
@@ -89,10 +91,10 @@
     "New graph writes carry the entry-id-v1 protocol marker; unmarked unsynced legacy rows remain explicitly unknown, make balance unavailable, and are excluded from automatic replay or deletion until migrated.",
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
     "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
-    "Generic graph PATCH and DELETE routes reject grocery_spend nodes so callers cannot bypass household authorization or Sheet reconciliation.",
+    "Generic graph list, detail, revision, PATCH, and DELETE routes reject or omit grocery_spend nodes so unauthenticated callers cannot expose household records or bypass reconciliation.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
     "The restructure now holds the same Apps Script lock for its full snapshot-and-rewrite interval, excluding concurrent append and delete operations.",
-    "Grocery reads paginate through every graph row before declaring the legacy-unknown set empty; a 2,001-row focused witness crosses the former page ceiling.",
+    "Grocery reconciliation reads every row with one immutable-ID-ordered database statement before declaring the legacy-unknown set empty; a 2,001-row focused witness proves there is no page ceiling or mutable OFFSET seam.",
     "Graph identity lookup now recognizes both aliases and legacy_ids with indexed JSON containment and exact membership confirmation.",
     "PostgreSQL substrate uniqueness now uses a bounded md5 expression key while exact full serialized text remains part of every lookup; SQLite retains exact tuple uniqueness.",
     "A PostgreSQL uniqueness-migration failure now clears the cached engine and raises through startup, guaranteeing the supervisor retries the complete schema gate instead of serving the old constraint.",
@@ -116,10 +118,12 @@
       "api/.venv/bin/pytest -q api/tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "ruff check api/app/services/graph_service.py api/app/services/unified_db.py api/app/services/substrate/orm.py api/app/services/substrate/kernel.py api/tests/test_intern_count_stone.py",
+      "cd api && pytest -q tests/test_grocery_ledger.py tests/test_graph_layer.py",
+      "cd api && ruff check app/routers/graph.py app/routers/grocery.py app/services/graph_service.py tests/test_grocery_ledger.py tests/test_graph_layer.py",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The full local PR guard passes on the sixth review repair, including API tests, the production web build, and the combined runtime verifier. Locked Sheet restructuring, complete graph pagination, and catalog-gated PostgreSQL migration pass a 69-test focused suite; both Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, and git diff validation pass."
+    "summary": "The full local PR guard passes on the seventh review repair, including API tests, the production web build, and the combined runtime verifier. The focused repair passes 57 grocery and graph tests: one-statement grocery snapshot scanning closes the mutable pagination seam, and generic graph reads no longer expose private grocery rows. Both Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",
