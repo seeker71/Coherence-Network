@@ -17,12 +17,11 @@ When no shop is near (or GPS is off), a category icon carries the meaning
 — fruit, vegetable, fish, spice — and a free-text field takes anything the
 icons don't hold.
 
-**The ledger is not a lock.** The graph holds the entries; Google Sheets is
-a mirror, fed by a webhook URL the hub owns (an Apps Script bound to their
-own sheet — see ``docs/grocery-sheets-setup.md``). If the webhook is unset
-or failing, entries still record and carry ``sheet_synced=false`` until a
-resync. ``GET /grocery/export.csv`` is the always-available door out, so
-leaving this app costs nothing.
+**The ledger is not a lock.** The graph holds app entries; Google Sheets is
+the hub-owned historical balance baseline and outbound mirror (see
+``docs/grocery-sheets-setup.md``). The app reads only its fixed summary cells,
+then applies graph entries still waiting to sync. If the Sheet is dark, the
+graph keeps answering. ``GET /grocery/export.csv`` remains the open door out.
 
 Identity is the household's: a device token that resolves to a member with
 write access. Seeing the ledger is open to any registered cell here.
@@ -32,6 +31,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -44,7 +44,6 @@ from pydantic import BaseModel, Field
 from app.routers.household import (
     _PLACE_TYPE,
     _all_places,
-    _member_by_token,
     _node_to_place,
     _now,
     _place_distance,
@@ -612,6 +611,7 @@ class TotalsResponse(BaseModel):
     month_total_idr: int
     month_count: int
     remaining_idr: int = 0     # topped up minus spent — what is left to shop with
+    remaining_source: Literal["sheet", "graph"] = "graph"
 
 
 @router.get(
@@ -630,9 +630,21 @@ async def totals(
     buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
     day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
     month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
-    # One sum over the whole ledger, signed — the same number the sheet's
-    # remaining cell computes, so the two can never quietly disagree.
-    remaining = -sum(_node_to_spend(n).signed_idr for n in rows)
+    # The Sheet carries history from before the app existed. Read its fixed
+    # Sisa cell as the baseline, then apply only graph entries still waiting
+    # to reach the mirror. A dark/unconfigured Sheet falls back to the graph.
+    sheet_remaining = _read_sheet_remaining_idr()
+    if sheet_remaining is None:
+        remaining = -sum(_node_to_spend(n).signed_idr for n in rows)
+        remaining_source: Literal["sheet", "graph"] = "graph"
+    else:
+        pending_signed = sum(
+            _node_to_spend(n).signed_idr
+            for n in rows
+            if n.get("sheet_synced") is False
+        )
+        remaining = sheet_remaining - pending_signed
+        remaining_source = "sheet"
     return TotalsResponse(
         on=day,
         day_total_idr=sum(int(n.get("amount_idr") or 0) for n in day_rows),
@@ -640,6 +652,7 @@ async def totals(
         month_total_idr=sum(int(n.get("amount_idr") or 0) for n in month_rows),
         month_count=len(month_rows),
         remaining_idr=remaining,
+        remaining_source=remaining_source,
     )
 
 
@@ -729,6 +742,47 @@ def _sheet_id() -> str:
     # Otherwise the hub's own sheet, which ships in api/config/settings.json so
     # a fresh deploy already points at the right ledger with nothing to set up.
     return str(config_loader.api_config("grocery", "sheet_id", "") or "").strip()
+
+
+def _parse_sheet_idr(value: str) -> int | None:
+    """Read one whole-rupiah formatted Sheet value without using a float."""
+    compact = re.sub(r"[^0-9,.-]", "", str(value or ""))
+    if not compact:
+        return None
+    if re.fullmatch(r"-?\d{1,3}(?:[,.]\d{3})+", compact):
+        compact = compact.replace(",", "").replace(".", "")
+    if not re.fullmatch(r"-?\d+", compact):
+        return None
+    return int(compact)
+
+
+def _read_sheet_remaining_idr() -> int | None:
+    """Read the bounded balance summary from the connected Sheet.
+
+    The app never downloads the household log: only A1:B3, whose labels and
+    formulas are the documented Sheet contract. The webhook being configured
+    is the signal that this deployment is connected to that Sheet. Any read
+    failure returns ``None`` so graph-backed offline use keeps working.
+    """
+    sheet_id = _sheet_id()
+    if not sheet_id or not _sheet_webhook()[0]:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", sheet_id):
+        return None
+    url = (
+        f"https://docs.google.com/spreadsheets/d/{sheet_id}/export"
+        "?format=csv&gid=0&range=A1:B3"
+    )
+    try:
+        response = httpx.get(url, timeout=4.0, follow_redirects=True)
+        if response.status_code >= 400:
+            return None
+        for row in csv.reader(io.StringIO(response.text)):
+            if len(row) >= 2 and row[0].strip().casefold() == "sisa":
+                return _parse_sheet_idr(row[1])
+    except Exception:
+        return None
+    return None
 
 
 class SheetStatus(BaseModel):

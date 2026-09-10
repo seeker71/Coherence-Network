@@ -17,10 +17,9 @@ category vocabulary lives in category.py.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional
 
-from typing import Callable
-
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -178,13 +177,13 @@ def intern_node(
     package = category.package
 
     # SELECT first — same-shape lookup, all-in-one-transaction visibility.
-    existing = (
-        session.query(SubstrateNodeORM)
-        .filter_by(
-            package=package, level=level, domain=domain, serialized=serialized,
-        )
-        .one_or_none()
-    )
+    existing = _serialized_shape_query(
+        session,
+        package=package,
+        level=level,
+        domain=domain,
+        serialized=serialized,
+    ).one_or_none()
     if existing is not None:
         _bump_seen_count(session, existing)
         return NodeID(
@@ -216,13 +215,13 @@ def intern_node(
     except IntegrityError:
         # Race lost — another process inserted the same shape. Re-query.
         session.rollback()
-        existing = (
-            session.query(SubstrateNodeORM)
-            .filter_by(
-                package=package, level=level, domain=domain, serialized=serialized,
-            )
-            .one_or_none()
-        )
+        existing = _serialized_shape_query(
+            session,
+            package=package,
+            level=level,
+            domain=domain,
+            serialized=serialized,
+        ).one_or_none()
         if existing is None:
             raise
         _bump_seen_count(session, existing)
@@ -723,6 +722,27 @@ def vocabulary_histogram(session: Session) -> dict:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _serialized_shape_query(
+    session: Session,
+    *,
+    package: int,
+    level: int,
+    domain: str,
+    serialized: str,
+):
+    """Return the exact-shape query, using PostgreSQL's bounded digest index."""
+    query = session.query(SubstrateNodeORM).filter_by(
+        package=package,
+        level=level,
+        domain=domain,
+    )
+    if session.get_bind().dialect.name == "postgresql":
+        query = query.filter(
+            func.md5(SubstrateNodeORM.serialized) == func.md5(serialized)
+        )
+    return query.filter(SubstrateNodeORM.serialized == serialized)
 
 
 def _node_to_db_id(session: Session, node_id: Optional[NodeID]) -> Optional[int]:

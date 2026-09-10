@@ -1,0 +1,148 @@
+{
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "date": "2026-09-10",
+  "thread_branch": "codex/heal-hati-refine-deploy-20260903",
+  "change_intent": "runtime_fix",
+  "commit_scope": "Restore the Hati grocery balance from its connected Sheet, resolve production-shaped legacy presence identities, and keep large substrate recipes deployable on PostgreSQL.",
+  "idea_ids": [
+    "web-404-healing",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "presence-harmonization"
+  ],
+  "task_ids": [
+    "task-2026-09-03-hati-refine-production-heal"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction", "merge-authorization"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_files": [
+    "api/app/services/graph_service.py",
+    "api/app/routers/grocery.py",
+    "api/app/services/substrate/kernel.py",
+    "api/app/services/substrate/orm.py",
+    "api/app/services/unified_db.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_flow_presence.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_intern_count_stone.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-09-10_hati_app_sheet_and_refine_heal.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/presence-harmonization.md",
+    "specs/hati-grocery-ledger.md",
+    "web/tests/presence-node.test.ts"
+  ],
+  "files_owned": [
+    "api/app/services/graph_service.py",
+    "api/app/routers/grocery.py",
+    "api/app/services/substrate/kernel.py",
+    "api/app/services/substrate/orm.py",
+    "api/app/services/unified_db.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_flow_presence.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_intern_count_stone.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-09-10_hati_app_sheet_and_refine_heal.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/presence-harmonization.md",
+    "specs/hati-grocery-ledger.md",
+    "web/tests/presence-node.test.ts"
+  ],
+  "evidence_refs": [
+    "The merged deployment installed SHA 61070d093bcc5614ad95e3029b58d190bd500f4b, but /people/urs-muff/edit still rendered the soft-404 page.",
+    "The source-backed Urs graph record declares legacy_ids containing urs-muff; the first resolver implementation queried aliases only.",
+    "The failed Hostinger rollout log showed PostgreSQL rejecting a 10877-character recipe value because uq_substrate_serialized exceeded the btree index-row limit.",
+    "The Google Sheets connector verified the configured Hati Suci - Food workbook, its Sheet1 summary formulas, and a current calculated balance without reading or recording household transaction rows in this receipt.",
+    "The app contract was write-only: it mirrored graph entries into Sheets but calculated remaining balance solely from graph rows, excluding the pre-app ledger history.",
+    "The totals route now reads only Sheet1 A1:B3 as its historical balance baseline and applies unsynced graph entries as a pending delta; Sheet failure falls back to the graph.",
+    "Graph identity lookup now recognizes both aliases and legacy_ids with indexed JSON containment and exact membership confirmation.",
+    "PostgreSQL substrate uniqueness now uses a bounded md5 expression key while exact full serialized text remains part of every lookup; SQLite retains exact tuple uniqueness.",
+    "No private profile content is included in this receipt."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/pytest -q api/tests/test_flow_presence.py::test_graph_node_identity_resolves_declared_and_legacy_aliases",
+      "cd web && npm test -- --run tests/presence-node.test.ts",
+      "api/.venv/bin/pytest -q api/tests/test_intern_count_stone.py api/tests/test_substrate.py api/tests/test_flow_presence.py::test_graph_node_identity_resolves_declared_and_legacy_aliases",
+      "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py",
+      "ruff check api/app/routers/grocery.py api/tests/test_grocery_ledger.py",
+      "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/hati-grocery-ledger.md --strict",
+      "read the connected Sheet balance through the exact A1:B3 production URL without emitting its value",
+      "api/.venv/bin/pytest -q api/tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "ruff check api/app/services/graph_service.py api/app/services/unified_db.py api/app/services/substrate/orm.py api/app/services/substrate/kernel.py api/tests/test_intern_count_stone.py",
+      "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
+      "git diff --check"
+    ],
+    "summary": "The full local PR guard passes, including 407 API tests, the production web build, and the combined runtime verifier. Focused identity and substrate suites pass 25 tests, the grocery suite passes 31 tests, web resolver coverage passes 15 tests, the timing gate passes in 8.32 seconds, changed production files pass lint, the live bounded Sheet read succeeds, and PostgreSQL mock DDL emits the bounded unique digest index without the full-text constraint."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Exact-head CI will run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "hati.earth",
+    "commands": ["./scripts/verify_web_api_deploy.sh"],
+    "summary": "Awaiting reviewed merge and public roll-forward."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The authenticated grocery surface shows the Sheet-backed remaining balance, while following Refine from /people/urs renders the Urs editor rather than the soft-404 view.",
+    "public_endpoints": [
+      "GET https://hati.earth/people/urs",
+      "GET https://hati.earth/people/urs-muff/edit"
+      ,"GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Resolve a real-data-shaped legacy_ids value through bare and typed identities.",
+      "Ingest a recipe whose serialized form is larger than PostgreSQL's btree entry ceiling.",
+      "Open /people/urs and follow its Refine doorway after deployment."
+      ,"Open the authenticated grocery surface and confirm the balance reports the Sheet source."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form lookup for the serialized uniqueness contract did not return and was interrupted after one minute; no native answer is claimed."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; repository source, exact deploy logs, focused tests, compiled DDL, CI, and browser verification carry the proof."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the production-shaped identity record, PostgreSQL failure trace, Form timeout, tests, schema compiler, deploy run, and browser witness; it did not generate the repair.",
+    "standard_receipt": "pending — the native Form contender can ground structural lookups but returned no result for this database migration question, and no browser-rendering champion is trained for this path."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof passes; full gate, exact-head CI, review, merge, rollout, and live click verification remain."
+  }
+}

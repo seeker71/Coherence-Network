@@ -371,6 +371,47 @@ def test_the_sheet_door_reports_where_the_mirror_lands(client, monkeypatch):
     assert isinstance(wired.json()["pending"], int)
 
 
+def test_the_sheet_balance_is_read_without_downloading_the_ledger(monkeypatch):
+    class _Response:
+        status_code = 200
+        text = 'Sisa,"Rp2,419,050"\nBelanja,"Rp3,000,000"\nIsi ulang,"Rp5,419,050"\n'
+
+    seen: list[str] = []
+
+    def fake_get(url, **_kwargs):
+        seen.append(url)
+        return _Response()
+
+    monkeypatch.setattr(grocery, "_sheet_id", lambda: "SHEETID123")
+    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", ""))
+    monkeypatch.setattr(grocery.httpx, "get", fake_get)
+
+    assert grocery._read_sheet_remaining_idr() == 2_419_050
+    assert seen == [
+        "https://docs.google.com/spreadsheets/d/SHEETID123/export"
+        "?format=csv&gid=0&range=A1:B3"
+    ]
+
+
+def test_totals_use_sheet_balance_plus_only_pending_graph_delta(client, monkeypatch):
+    resident = client.post("/api/household/bootstrap", json={"name": "Sheet keeper"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+    monkeypatch.setattr(grocery, "_read_sheet_remaining_idr", lambda: 2_000_000)
+
+    spend = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    )
+    assert spend.status_code == 200, spend.text
+    assert spend.json()["sheet_synced"] is False
+
+    body = client.get(f"/api/grocery/totals?token={token}").json()
+    assert body["remaining_idr"] == 1_900_000
+    assert body["remaining_source"] == "sheet"
+
+
 def test_a_wrong_number_can_be_taken_back(client):
     resident = client.post("/api/household/bootstrap", json={"name": "Putu"})
     if resident.status_code == 409:

@@ -38,7 +38,7 @@ constraints:
   - "Shops reuse the household_place cell with kind=shop — no parallel location system"
   - "Identity reuses the household device token — no second login"
   - "The amount is computed by the recipe only; no Python mirror of the arithmetic"
-  - "The graph is the source of truth; Sheets is a mirror, never the store"
+  - "The graph owns app writes; the connected Sheet supplies the historical balance baseline until its older rows are represented in the graph"
   - "No Google service-account credentials in the keystore — the hub owns the webhook"
 ---
 
@@ -94,6 +94,11 @@ into a shoebox of receipts, which is the failure this replaces.
   /api/grocery/export.csv` is the door out, always open, and carries the
   fuller ten-column record.
 
+- [ ] **R6a — The balance includes the ledger that predates the app.** The
+  totals route reads only the Sheet's fixed `Sisa` summary cell (`A1:B3`),
+  then applies graph entries still waiting to sync. It never downloads the
+  household log. If the Sheet is dark, the graph remains a complete fallback.
+
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
   "what is left to spend" is one signed sum rather than two tables to
@@ -142,7 +147,7 @@ cd web && npm run build
 ## Risks and Assumptions
 
 - Tailwind's `lg` breakpoint remains the boundary between the phone-first balance card and the laptop ledger column; the source test and rendered viewport proof guard both sides.
-- The graph totals route remains the source of the displayed amount; layout visibility never substitutes a locally computed balance.
+- The totals route remains the source of the displayed amount; it reconciles the Sheet baseline with pending graph writes, and layout visibility never substitutes a locally computed balance.
 
 ## Known Gaps and Follow-up Tasks
 
