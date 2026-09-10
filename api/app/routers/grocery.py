@@ -67,6 +67,7 @@ _KIND_BUY = "buy"        # money out — a market run
 _KIND_TOPUP = "topup"    # money in — the float topped back up
 _SHOP_KIND = "shop"
 _CURRENCY = "IDR"
+_SHEET_PROTOCOL = "entry-id-v1"
 
 # Bali is UTC+8 with no DST — "today" for the manager standing in the market,
 # not today in UTC. An entry made at 07:30 local must not file as yesterday.
@@ -498,6 +499,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "created_at": _now(),
         "runtime": runtime,
         "sheet_synced": False,
+        "sheet_protocol": _SHEET_PROTOCOL,
     }
     graph_service.create_node(
         id=spend_id,
@@ -582,6 +584,7 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         "created_at": _now(),
         "runtime": runtime,
         "sheet_synced": False,
+        "sheet_protocol": _SHEET_PROTOCOL,
     }
     graph_service.create_node(
         id=topup_id, type=_SPEND_TYPE,
@@ -695,8 +698,16 @@ async def totals(
     # in this graph. That acknowledgement closes the append/flag crash seam:
     # an entry present in the Sheet is never applied twice merely because its
     # local sheet_synced flag was not committed before a crash.
-    pending = [_node_to_spend(n) for n in rows if not n.get("sheet_synced")]
-    snapshot = await _read_sheet_snapshot([spend.id for spend in pending])
+    pending_nodes = [n for n in rows if not n.get("sheet_synced")]
+    legacy_unknown = any(
+        _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL for node in pending_nodes
+    )
+    pending = [_node_to_spend(n) for n in pending_nodes]
+    snapshot = (
+        None
+        if legacy_unknown
+        else await _read_sheet_snapshot([spend.id for spend in pending])
+    )
     pending_signed = [
         spend.signed_idr
         for spend in pending
@@ -873,6 +884,7 @@ class SheetStatus(BaseModel):
     configured: bool          # is there a webhook to push through?
     sheet_url: str | None = None   # where the hub's own copy lives
     pending: int              # entries the sheet has not seen yet
+    blocked_legacy: int = 0   # pre-Entry-ID rows whose presence is unknowable
 
 
 @router.get(
@@ -884,12 +896,16 @@ async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
     _require_member(token)
     sheet_id = _sheet_id()
     webhook_url, secret = _sheet_webhook()
+    unsynced = [n for n in _all_spends() if not n.get("sheet_synced")]
     return SheetStatus(
         configured=bool(webhook_url and secret),
         sheet_url=(
             f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit" if sheet_id else None
         ),
-        pending=sum(1 for n in _all_spends() if not n.get("sheet_synced")),
+        pending=len(unsynced),
+        blocked_legacy=sum(
+            1 for n in unsynced if _s(n.get("sheet_protocol")) != _SHEET_PROTOCOL
+        ),
     )
 
 
@@ -933,6 +949,12 @@ async def _reconcile_sheet_delete(node: dict, actor: dict) -> bool | None:
     ``None`` means the private carrier could not prove completion. The caller
     must retain the graph row so retrying remains safe.
     """
+    if not node.get("sheet_synced") and _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL:
+        # A predecessor carrier appended without Entry IDs. For these rows a
+        # false local flag cannot distinguish "never sent" from "sent, then
+        # crashed before flagging". Preserve the row until a one-time migration
+        # identifies it; neither deletion nor resync may guess.
+        return None
     url, secret = _sheet_webhook()
     if not url or not secret:
         return None
@@ -977,6 +999,7 @@ class ResyncResponse(BaseModel):
     attempted: int
     synced: int
     configured: bool
+    blocked_legacy: int = 0
 
 
 @router.post(
@@ -988,7 +1011,11 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
     webhook_url, secret = _sheet_webhook()
     configured = bool(webhook_url and secret)
-    pending = [n for n in _all_spends() if not n.get("sheet_synced")]
+    all_pending = [n for n in _all_spends() if not n.get("sheet_synced")]
+    pending = [
+        n for n in all_pending if _s(n.get("sheet_protocol")) == _SHEET_PROTOCOL
+    ]
+    blocked_legacy = len(all_pending) - len(pending)
     pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
     synced = 0
     if configured:
@@ -997,7 +1024,12 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
             if await _push_to_sheet(spend):
                 graph_service.update_node(node["id"], properties={"sheet_synced": True})
                 synced += 1
-    return ResyncResponse(attempted=len(pending), synced=synced, configured=configured)
+    return ResyncResponse(
+        attempted=len(pending),
+        synced=synced,
+        configured=configured,
+        blocked_legacy=blocked_legacy,
+    )
 
 
 @router.get(

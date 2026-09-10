@@ -101,7 +101,11 @@ into a shoebox of receipts, which is the failure this replaces.
   returns the household log; an idempotent `Entry ID` closes the append/flag
   crash seam. If the Sheet is dark, day/month totals and the graph ledger stay
   available, while the historical remaining balance is explicitly unavailable
-  rather than being replaced by an incomplete graph-only number.
+  rather than being replaced by an incomplete graph-only number. New graph
+  writes carry an `entry-id-v1` protocol marker. An unsynced row without that
+  marker predates ID acknowledgements, so its Sheet presence remains unknown:
+  balance is unavailable and automatic resync/deletion preserves it until a
+  one-time migration identifies the corresponding Sheet row.
 
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so

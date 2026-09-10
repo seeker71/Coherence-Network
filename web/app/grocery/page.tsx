@@ -52,6 +52,7 @@ type SheetStatus = {
   configured: boolean;
   sheet_url?: string | null;
   pending: number;
+  blocked_legacy?: number;
 };
 
 type Totals = {
@@ -139,6 +140,7 @@ const T = {
     csv: "Download CSV",
     openSheet: "Open the sheet",
     waiting: "waiting",
+    needsReview: "legacy entry needs review",
     zero: "Type an amount first",
     savedOk: "Recorded",
     modeBuy: "Spent",
@@ -190,6 +192,7 @@ const T = {
     csv: "Unduh CSV",
     openSheet: "Buka sheet",
     waiting: "menunggu",
+    needsReview: "catatan lama perlu diperiksa",
     zero: "Isi jumlahnya dulu",
     savedOk: "Tercatat",
     modeBuy: "Belanja",
@@ -1042,6 +1045,7 @@ export default function GroceryPage() {
                 >
                   {t.openSheet}
                   {sheet.pending > 0 ? ` · ${sheet.pending} ${t.waiting}` : ""}
+                  {(sheet.blocked_legacy ?? 0) > 0 ? ` · ${t.needsReview}` : ""}
                 </a>
               )}
             </div>
