@@ -510,20 +510,101 @@ def test_sheet_append_requires_an_idempotent_entry_acknowledgement(monkeypatch):
     assert seen[0]["secret"] == "shared-secret"
 
 
+def test_sheet_append_does_not_acknowledge_a_cancelled_entry(monkeypatch):
+    spend = grocery.SpendResponse(
+        id="spend-cancelled", amount_typed="10", amount_idr=10_000,
+        description="vegetables", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-10T01:00:00Z",
+    )
+
+    class _Response:
+        status_code = 200
+        def json(self):
+            return {
+                "ok": True,
+                "entry_id": spend.id,
+                "appended": False,
+                "cancelled": True,
+            }
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+    assert asyncio.run(grocery._push_to_sheet(spend)) is False
+
+
+def test_sheet_delete_reconciliation_is_one_atomic_carrier_operation(monkeypatch):
+    node = {
+        "id": "spend-race",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "100",
+        "amount_idr": 100_000,
+        "spend_description": "vegetables",
+        "spent_on": "2026-09-10",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-09-10T01:00:00Z",
+    }
+    actor = {"id": "m1", "name": "Wayan"}
+    seen: list[dict] = []
+
+    class _Response:
+        status_code = 200
+        def json(self):
+            return {
+                "ok": True,
+                "cancelled": True,
+                "original_id": "spend-race",
+                "original_present": True,
+                "reversal_id": "reversal-spend-race",
+            }
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            seen.append(json)
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+
+    assert asyncio.run(grocery._reconcile_sheet_delete(node, actor)) is True
+    assert len(seen) == 1
+    assert seen[0]["action"] == "reconcile_delete"
+    assert seen[0]["original_id"] == "spend-race"
+    assert seen[0]["known_mirrored"] is False
+    assert seen[0]["reversal"]["entry_id"] == "reversal-spend-race"
+    assert seen[0]["reversal"]["row"]["Amount"] == -100_000
+
+
 def test_a_wrong_number_can_be_taken_back(client, monkeypatch):
     async def not_appended(_spend):
         return False
 
-    async def snapshot_without_entry(_pending_ids):
-        return grocery._SheetSnapshot(0, frozenset())
+    async def reconcile_without_entry(_node, _actor):
+        return False
 
     monkeypatch.setattr(grocery, "_push_to_sheet", not_appended)
-    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_without_entry)
-    monkeypatch.setattr(
-        grocery,
-        "_sheet_webhook",
-        lambda: ("https://example.invalid/exec", "shared-secret"),
-    )
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", reconcile_without_entry)
     resident = client.post("/api/household/bootstrap", json={"name": "Putu"})
     if resident.status_code == 409:
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
@@ -554,8 +635,11 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
     async def not_appended(_spend):
         return False
 
+    async def unavailable(_node, _actor):
+        return None
+
     monkeypatch.setattr(grocery, "_push_to_sheet", not_appended)
-    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("", ""))
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", unavailable)
     resident = client.post("/api/household/bootstrap", json={"name": "Retry keeper"})
     if resident.status_code == 409:
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
@@ -570,26 +654,50 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
     assert grocery.graph_service.get_node(spend_id) is not None
 
 
+def test_generic_graph_mutations_cannot_bypass_grocery_reconciliation(
+    client, monkeypatch
+):
+    async def not_appended(_spend):
+        return False
+
+    monkeypatch.setattr(grocery, "_push_to_sheet", not_appended)
+    resident = client.post("/api/household/bootstrap", json={"name": "Boundary keeper"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+    spend_id = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "42", "category": "vegetable"},
+    ).json()["id"]
+
+    patched = client.patch(
+        f"/api/graph/nodes/{spend_id}",
+        json={"properties": {"sheet_synced": True}},
+    )
+    deleted = client.delete(f"/api/graph/nodes/{spend_id}")
+    assert patched.status_code == 403
+    assert deleted.status_code == 403
+    assert grocery.graph_service.get_node(spend_id) is not None
+
+
 def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
     client, monkeypatch
 ):
-    pushed: list[grocery.SpendResponse] = []
-    allow_reversal = False
+    reconciled: list[tuple[str, str]] = []
+    allow_delete = False
 
     async def fake_push(spend):
-        pushed.append(spend)
-        if spend.id.startswith("reversal-"):
-            return allow_reversal
         # Simulate the append/flag crash seam: the Sheet received this row,
         # but the app never committed sheet_synced=True.
         return False
 
+    async def fake_reconcile(node, actor):
+        reversal = grocery._reversal_spend(node, actor)
+        reconciled.append((node["id"], reversal.id))
+        return True if allow_delete else None
+
     monkeypatch.setattr(grocery, "_push_to_sheet", fake_push)
-    monkeypatch.setattr(
-        grocery,
-        "_sheet_webhook",
-        lambda: ("https://example.invalid/exec", "shared-secret"),
-    )
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", fake_reconcile)
     resident = client.post("/api/household/bootstrap", json={"name": "Undo keeper"})
     if resident.status_code == 409:
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
@@ -603,32 +711,24 @@ def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
     spend_id = created.json()["id"]
     assert created.json()["sheet_synced"] is False
 
-    async def snapshot_with_uncertain_append(pending_ids):
-        assert pending_ids == [spend_id, f"reversal-{spend_id}"]
-        return grocery._SheetSnapshot(1_900_000, frozenset({spend_id}))
-
-    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_with_uncertain_append)
-
-    # A failed reversal preserves the visible row. There is no tombstone and
-    # no chance to strand the already-appended Sheet row.
+    # A carrier failure preserves the visible row. There is no tombstone and
+    # no chance to strand the already-started Sheet append.
     deleted = client.delete(
         f"/api/grocery/spend/{spend_id}?actor_token={token}"
     )
     assert deleted.status_code == 503, deleted.text
     assert grocery.graph_service.get_node(spend_id) is not None
 
-    # Retrying emits exactly the same deterministic reversal and only then
-    # physically removes the graph row.
-    allow_reversal = True
+    # Retrying carries exactly the same deterministic IDs through one atomic
+    # carrier operation and only then physically removes the graph row.
+    allow_delete = True
     deleted = client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}")
     assert deleted.status_code == 200, deleted.text
     assert deleted.json()["was_mirrored"] is True
     reversal_id = f"reversal-{spend_id}"
-    assert pushed[-1].id == reversal_id
-    assert pushed[-1].signed_idr == -100_000
-    assert [row.id for row in pushed if row.id.startswith("reversal-")] == [
-        reversal_id,
-        reversal_id,
+    assert reconciled == [
+        (spend_id, reversal_id),
+        (spend_id, reversal_id),
     ]
 
     # Gone means physically gone: unauthenticated generic graph reads cannot
@@ -642,16 +742,11 @@ def test_someone_else_s_entry_is_not_yours_to_delete(client, monkeypatch):
     async def not_appended(_spend):
         return False
 
-    async def snapshot_without_entry(_pending_ids):
-        return grocery._SheetSnapshot(0, frozenset())
+    async def reconcile_without_entry(_node, _actor):
+        return False
 
     monkeypatch.setattr(grocery, "_push_to_sheet", not_appended)
-    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_without_entry)
-    monkeypatch.setattr(
-        grocery,
-        "_sheet_webhook",
-        lambda: ("https://example.invalid/exec", "shared-secret"),
-    )
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", reconcile_without_entry)
     resident = client.post("/api/household/bootstrap", json={"name": "Gede"})
     if resident.status_code == 409:
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
