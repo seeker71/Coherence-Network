@@ -12,7 +12,8 @@
     "knowledge-and-resonance"
   ],
   "spec_ids": [
-    "presence-harmonization"
+    "presence-harmonization",
+    "hati-grocery-ledger"
   ],
   "task_ids": [
     "task-2026-09-03-hati-refine-production-heal"
@@ -31,6 +32,7 @@
   ],
   "change_files": [
     "api/app/services/graph_service.py",
+    "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/routers/grocery.py",
     "api/app/services/substrate/kernel.py",
     "api/app/services/substrate/orm.py",
@@ -39,6 +41,8 @@
     "api/tests/test_flow_presence.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "api/tests/form/grocery_remaining_band.fk",
     "docs/grocery-sheets-setup.md",
     "docs/system_audit/commit_evidence_2026-09-10_hati_app_sheet_and_refine_heal.json",
     "docs/system_audit/model_executor_runs.jsonl",
@@ -48,6 +52,7 @@
   ],
   "files_owned": [
     "api/app/services/graph_service.py",
+    "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/routers/grocery.py",
     "api/app/services/substrate/kernel.py",
     "api/app/services/substrate/orm.py",
@@ -56,6 +61,8 @@
     "api/tests/test_flow_presence.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "api/tests/form/grocery_remaining_band.fk",
     "docs/grocery-sheets-setup.md",
     "docs/system_audit/commit_evidence_2026-09-10_hati_app_sheet_and_refine_heal.json",
     "docs/system_audit/model_executor_runs.jsonl",
@@ -69,7 +76,9 @@
     "The failed Hostinger rollout log showed PostgreSQL rejecting a 10877-character recipe value because uq_substrate_serialized exceeded the btree index-row limit.",
     "The Google Sheets connector verified the configured Hati Suci - Food workbook, its Sheet1 summary formulas, and a current calculated balance without reading or recording household transaction rows in this receipt.",
     "The app contract was write-only: it mirrored graph entries into Sheets but calculated remaining balance solely from graph rows, excluding the pre-app ledger history.",
-    "The totals route now reads only Sheet1 A1:B3 as its historical balance baseline and applies unsynced graph entries as a pending delta; Sheet failure falls back to the graph.",
+    "The first repair read the anonymous CSV export and trusted sheet_synced as an atomic boundary; exact-head review exposed both the privacy leak and the append/flag crash race before merge.",
+    "The repaired carrier authenticates every request, returns only Sisa plus matches among caller-supplied pending entry IDs, and makes appends idempotent with an Entry ID column; the spreadsheet can remain private.",
+    "The historical-baseline choice, signed pending fold, and graph fallback now execute in endpoint_grocery_remaining.fk rather than in the Python HTTP carrier.",
     "Graph identity lookup now recognizes both aliases and legacy_ids with indexed JSON containment and exact membership confirmation.",
     "PostgreSQL substrate uniqueness now uses a bounded md5 expression key while exact full serialized text remains part of every lookup; SQLite retains exact tuple uniqueness.",
     "No private profile content is included in this receipt."
@@ -80,22 +89,23 @@
       "api/.venv/bin/pytest -q api/tests/test_flow_presence.py::test_graph_node_identity_resolves_declared_and_legacy_aliases",
       "cd web && npm test -- --run tests/presence-node.test.ts",
       "api/.venv/bin/pytest -q api/tests/test_intern_count_stone.py api/tests/test_substrate.py api/tests/test_flow_presence.py::test_graph_node_identity_resolves_declared_and_legacy_aliases",
-      "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py",
+      "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py api/tests/test_kernel_submodule_contract.py",
       "ruff check api/app/routers/grocery.py api/tests/test_grocery_ledger.py",
       "api/.venv/bin/python scripts/validate_spec_quality.py --file specs/hati-grocery-ledger.md --strict",
-      "read the connected Sheet balance through the exact A1:B3 production URL without emitting its value",
+      "form/form/validate.sh ../../api/app/form_recipes/endpoint_grocery_remaining.fk ../../api/tests/form/grocery_remaining_band.fk",
+      "scripts/fkwu_run.sh --src api/app/form_recipes/endpoint_grocery_remaining.fk api/tests/form/grocery_remaining_band.fk",
       "api/.venv/bin/pytest -q api/tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "ruff check api/app/services/graph_service.py api/app/services/unified_db.py api/app/services/substrate/orm.py api/app/services/substrate/kernel.py api/tests/test_intern_count_stone.py",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The full local PR guard passes, including 407 API tests, the production web build, and the combined runtime verifier. Focused identity and substrate suites pass 25 tests, the grocery suite passes 31 tests, web resolver coverage passes 15 tests, the timing gate passes in 8.32 seconds, changed production files pass lint, the live bounded Sheet read succeeds, and PostgreSQL mock DDL emits the bounded unique digest index without the full-text constraint."
+    "summary": "The initial full local PR guard passes, including 407 API tests, the production web build, and the combined runtime verifier. After exact-head review, the grocery suite passes 34 tests; the remaining-balance band returns verdict 63 on Go, Rust, TypeScript, and the c-bootstrapped fkwu runtime; changed production files pass lint and strict spec validation. A fresh full guard will bind the amended head before push."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "summary": "Exact-head CI will run after push."
+    "summary": "PR #4040 initial-head CI passed the full Linux/API/web gate; Codex review then identified privacy, idempotency, async-carrier, and Form-ownership gaps. Fresh exact-head CI will run after the reviewed repairs are pushed."
   },
   "deploy_validation": {
     "status": "pending",

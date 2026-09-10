@@ -1,0 +1,11 @@
+; grocery_remaining_band.fk — the Sheet/graph balance policy.
+; Verdict 63: baseline, buys, top-ups, multi-entry folds, and graph fallback
+; agree on every sibling kernel and the c-bootstrapped fkwu runtime.
+(do
+  (let baseline (if (eq (grocery-remaining true 2000000 (list) (list)) 2000000) 1 0))
+  (let pending-buy (if (eq (grocery-remaining true 2000000 (list 100000) (list)) 1900000) 2 0))
+  (let pending-topup (if (eq (grocery-remaining true 2000000 (list -100000) (list)) 2100000) 4 0))
+  (let graph-buy (if (eq (grocery-remaining false 0 (list) (list 100000 200000)) -300000) 8 0))
+  (let graph-mixed (if (eq (grocery-remaining false 0 (list) (list -2000000 100000)) 1900000) 16 0))
+  (let pending-many (if (eq (grocery-remaining true 2000000 (list 100000 -50000 25000) (list)) 1925000) 32 0))
+  (add baseline (add pending-buy (add pending-topup (add graph-buy (add graph-mixed pending-many))))))

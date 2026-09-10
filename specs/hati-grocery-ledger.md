@@ -95,9 +95,11 @@ into a shoebox of receipts, which is the failure this replaces.
   fuller ten-column record.
 
 - [ ] **R6a — The balance includes the ledger that predates the app.** The
-  totals route reads only the Sheet's fixed `Sisa` summary cell (`A1:B3`),
-  then applies graph entries still waiting to sync. It never downloads the
-  household log. If the Sheet is dark, the graph remains a complete fallback.
+  totals route asks an authenticated Apps Script carrier for the Sheet's fixed
+  `Sisa` summary plus acknowledgements for caller-supplied entry IDs, then
+  applies only graph entries the Sheet has not acknowledged. The carrier never
+  returns the household log; an idempotent `Entry ID` closes the append/flag
+  crash seam. If the Sheet is dark, the graph remains a complete fallback.
 
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
@@ -118,6 +120,7 @@ into a shoebox of receipts, which is the failure this replaces.
 
 - `api/app/routers/grocery.py` — ledger routes, totals, places, export, and sheet mirror.
 - `api/app/form_recipes/endpoint_grocery_amount.fk` — exact thousands-to-rupiah recipe.
+- `api/app/form_recipes/endpoint_grocery_remaining.fk` — source selection and signed reconciliation policy.
 - `api/tests/test_grocery_ledger.py` — API and ledger-flow acceptance coverage.
 - `web/app/grocery/page.tsx` — contained phone and laptop grocery surface.
 - `web/tests/hati-grocery-layout.test.ts` — responsive balance-placement invariant.
@@ -171,11 +174,15 @@ is a place with a `kind` and a stored sentence.
 
 **Why a webhook and not a service account.** A service account would put a
 Google credential in our keystore and make the hub's ledger depend on our
-key rotation. An Apps Script Web App URL is deployed by the hub against
-their own sheet: they own the destination, we hold no secret, and revoking
-us is deleting a URL. Setup is documented in `docs/grocery-sheets-setup.md`.
+key rotation. An Apps Script Web App is deployed by the hub against their own
+private sheet; a separate shared secret authenticates its deliberately narrow
+summary and idempotent-append operations. They own the destination, and
+revoking access is deleting the deployment or rotating one scoped secret.
+Setup is documented in `docs/grocery-sheets-setup.md`.
 
-**Why no Python mirror of the arithmetic.** `serve_via_kernel` fails hard
+**Why no Python mirror of the arithmetic.** `endpoint_grocery_remaining.fk`
+owns historical-baseline selection, pending signed-delta reconciliation, and
+the graph fallback. `serve_via_kernel` fails hard
 when the kernel is absent, on purpose — so Python never quietly resumes
 ownership of a computation the body has moved to Form. Resilience for the
 manager belongs at the edge (the offline queue), not as a second

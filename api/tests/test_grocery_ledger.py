@@ -10,6 +10,8 @@ place the household board's tests run).
 """
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -75,12 +77,15 @@ def test_the_mirror_appends_a_signed_row():
         by_id="m1", by_name="Wayan", created_at="2026-07-29T01:00:00Z",
     )
     row = grocery._sheet_row(buy)
-    assert set(row) == set(grocery._SHEET_COLUMNS) == {"When", "Amount", "What"}
+    assert set(row) == set(grocery._SHEET_COLUMNS) == {
+        "When", "Amount", "What", "Entry ID",
+    }
     assert row["Amount"] == 477300 and isinstance(row["Amount"], int)
     assert row["When"] == "2026-07-29"
     # `What` is the column that was empty on every purchase in the real
     # ledger — the app exists to arrive with it already filled.
     assert row["What"] == "pasar pagi — sayur & ikan"
+    assert row["Entry ID"] == "spend-1"
 
     # Money coming in points the other way, in the same column.
     topup = grocery.SpendResponse(
@@ -364,33 +369,59 @@ def test_the_sheet_door_reports_where_the_mirror_lands(client, monkeypatch):
 
     # Configured: the id becomes a link a person can actually open.
     monkeypatch.setattr(grocery, "_sheet_id", lambda: "SHEETID123")
-    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", ""))
+    monkeypatch.setattr(
+        grocery,
+        "_sheet_webhook",
+        lambda: ("https://example.invalid/exec", "shared-secret"),
+    )
     wired = client.get(f"/api/grocery/sheet?token={wtok}")
     assert wired.json()["configured"] is True
     assert wired.json()["sheet_url"] == "https://docs.google.com/spreadsheets/d/SHEETID123/edit"
     assert isinstance(wired.json()["pending"], int)
 
 
-def test_the_sheet_balance_is_read_without_downloading_the_ledger(monkeypatch):
+def test_the_sheet_balance_is_read_through_the_authenticated_bounded_carrier(monkeypatch):
     class _Response:
         status_code = 200
-        text = 'Sisa,"Rp2,419,050"\nBelanja,"Rp3,000,000"\nIsi ulang,"Rp5,419,050"\n'
+        def json(self):
+            return {
+                "ok": True,
+                "remaining_idr": "Rp2,419,050",
+                "acknowledged_ids": ["spend-1", "not-requested"],
+            }
 
-    seen: list[str] = []
+    seen: list[tuple[str, dict]] = []
 
-    def fake_get(url, **_kwargs):
-        seen.append(url)
-        return _Response()
+    class _Client:
+        async def __aenter__(self):
+            return self
 
-    monkeypatch.setattr(grocery, "_sheet_id", lambda: "SHEETID123")
-    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", ""))
-    monkeypatch.setattr(grocery.httpx, "get", fake_get)
+        async def __aexit__(self, *_args):
+            return None
 
-    assert grocery._read_sheet_remaining_idr() == 2_419_050
-    assert seen == [
-        "https://docs.google.com/spreadsheets/d/SHEETID123/export"
-        "?format=csv&gid=0&range=A1:B3"
-    ]
+        async def post(self, url, *, json):
+            seen.append((url, json))
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "shared-secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+
+    snapshot = asyncio.run(grocery._read_sheet_snapshot(["spend-1"]))
+    assert snapshot == grocery._SheetSnapshot(2_419_050, frozenset({"spend-1"}))
+    assert seen == [("https://example.invalid/exec", {
+        "action": "summary",
+        "secret": "shared-secret",
+        "pending_ids": ["spend-1"],
+    })]
+
+
+def test_sheet_read_fails_closed_without_the_shared_secret(monkeypatch):
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "")
+    )
+    assert asyncio.run(grocery._read_sheet_snapshot([])) is None
 
 
 def test_totals_use_sheet_balance_plus_only_pending_graph_delta(client, monkeypatch):
@@ -398,7 +429,10 @@ def test_totals_use_sheet_balance_plus_only_pending_graph_delta(client, monkeypa
     if resident.status_code == 409:
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
     token = resident.json()["token"]
-    monkeypatch.setattr(grocery, "_read_sheet_remaining_idr", lambda: 2_000_000)
+    async def snapshot_without_entry(_pending_ids):
+        return grocery._SheetSnapshot(2_000_000, frozenset())
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_without_entry)
 
     spend = client.post(
         "/api/grocery/spend",
@@ -410,6 +444,70 @@ def test_totals_use_sheet_balance_plus_only_pending_graph_delta(client, monkeypa
     body = client.get(f"/api/grocery/totals?token={token}").json()
     assert body["remaining_idr"] == 1_900_000
     assert body["remaining_source"] == "sheet"
+
+
+def test_totals_do_not_double_apply_an_entry_already_acknowledged_by_sheet(
+    client, monkeypatch
+):
+    resident = client.post("/api/household/bootstrap", json={"name": "Sheet witness"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    spend = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    )
+    assert spend.status_code == 200, spend.text
+    spend_id = spend.json()["id"]
+    assert spend.json()["sheet_synced"] is False
+
+    async def snapshot_with_entry(pending_ids):
+        assert pending_ids == [spend_id]
+        # The Sheet balance already includes this append even though a crash
+        # left the graph flag false. Its acknowledgement makes the read exact.
+        return grocery._SheetSnapshot(1_900_000, frozenset({spend_id}))
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_with_entry)
+    body = client.get(f"/api/grocery/totals?token={token}").json()
+    assert body["remaining_idr"] == 1_900_000
+    assert body["remaining_source"] == "sheet"
+
+
+def test_sheet_append_requires_an_idempotent_entry_acknowledgement(monkeypatch):
+    spend = grocery.SpendResponse(
+        id="spend-idempotent", amount_typed="10", amount_idr=10_000,
+        description="vegetables", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-10T01:00:00Z",
+    )
+    seen: list[dict] = []
+
+    class _Response:
+        status_code = 200
+        def json(self):
+            return {"ok": True, "entry_id": "spend-idempotent", "appended": False}
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            seen.append(json)
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "shared-secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+
+    assert asyncio.run(grocery._push_to_sheet(spend)) is True
+    assert seen[0]["action"] == "append"
+    assert seen[0]["entry_id"] == spend.id
+    assert seen[0]["row"]["Entry ID"] == spend.id
+    assert seen[0]["secret"] == "shared-secret"
 
 
 def test_a_wrong_number_can_be_taken_back(client):
