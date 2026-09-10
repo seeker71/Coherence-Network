@@ -67,9 +67,17 @@ def test_postgres_schema_replaces_unbounded_serialized_unique_constraint(monkeyp
     """Schema setup migrates the old full-text btree key before ingestion."""
     calls: list[str] = []
 
+    class _Result:
+        def mappings(self):
+            return self
+
+        def one(self):
+            return {"legacy_constraint": True, "digest_index": False}
+
     class _Connection:
         def execute(self, statement):
             calls.append(str(statement))
+            return _Result()
 
     class _Begin:
         def __enter__(self):
@@ -85,9 +93,42 @@ def test_postgres_schema_replaces_unbounded_serialized_unique_constraint(monkeyp
     monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
     udb._create_all_idempotent(bind=_Bind(), url="postgresql://db")
 
-    assert calls == list(udb.POSTGRES_SUBSTRATE_UNIQUENESS_DDL)
-    assert "DROP CONSTRAINT IF EXISTS uq_substrate_serialized" in calls[0]
-    assert "md5(serialized)" in calls[1]
+    assert calls[0].strip() == udb.POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL.strip()
+    assert calls[1:] == list(udb.POSTGRES_SUBSTRATE_UNIQUENESS_DDL)
+    assert "DROP CONSTRAINT IF EXISTS uq_substrate_serialized" in calls[1]
+    assert "md5(serialized)" in calls[2]
+
+
+def test_postgres_schema_skips_locking_ddl_after_migration(monkeypatch):
+    calls: list[str] = []
+
+    class _Result:
+        def mappings(self):
+            return self
+
+        def one(self):
+            return {"legacy_constraint": False, "digest_index": True}
+
+    class _Connection:
+        def execute(self, statement):
+            calls.append(str(statement))
+            return _Result()
+
+    class _Begin:
+        def __enter__(self):
+            return _Connection()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _Bind:
+        def begin(self):
+            return _Begin()
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="postgresql://db")
+
+    assert calls == [udb.POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL]
 
 
 def test_sqlite_schema_does_not_run_postgres_substrate_migration(monkeypatch):

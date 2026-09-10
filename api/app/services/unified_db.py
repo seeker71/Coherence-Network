@@ -37,6 +37,22 @@ POSTGRES_SUBSTRATE_UNIQUENESS_DDL = (
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_substrate_serialized_digest "
     "ON substrate_nodes (package, level, domain, md5(serialized))",
 )
+POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL = """
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'substrate_nodes'::regclass
+      AND conname = 'uq_substrate_serialized'
+  ) AS legacy_constraint,
+  EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = current_schema()
+      AND tablename = 'substrate_nodes'
+      AND indexname = 'uq_substrate_serialized_digest'
+  ) AS digest_index
+"""
 
 
 def _normalize_engine_cache() -> dict[str, Any]:
@@ -136,8 +152,13 @@ def _repair_postgres_substrate_uniqueness(*, bind, url: str) -> None:
     if not url.startswith("postgres"):
         return
     with bind.begin() as connection:
-        for statement in POSTGRES_SUBSTRATE_UNIQUENESS_DDL:
-            connection.execute(text(statement))
+        state = connection.execute(
+            text(POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL)
+        ).mappings().one()
+        if state["legacy_constraint"]:
+            connection.execute(text(POSTGRES_SUBSTRATE_UNIQUENESS_DDL[0]))
+        if not state["digest_index"]:
+            connection.execute(text(POSTGRES_SUBSTRATE_UNIQUENESS_DDL[1]))
 
 
 def engine():

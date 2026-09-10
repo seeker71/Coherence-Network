@@ -93,8 +93,12 @@ const HEADERS = ["When", "Amount", "What", "Entry ID"];
 const FIRST_DATA_ROW = 5;
 const RUPIAH = '"Rp"#,##0';
 
-// One-time: reshape the ledger, keeping every value. Safe to re-run.
+// One-time: reshape the ledger, keeping every value. Safe to re-run because
+// it holds the same script lock as append and reconcile_delete throughout.
 function restructure() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getActiveSheet();
   const values = sheet.getDataRange().getValues();
@@ -171,6 +175,9 @@ function restructure() {
   sheet.setColumnWidth(3, Math.max(260, sheet.getColumnWidth(3)));
 
   Logger.log("kept " + kept.length + " events; backup tab: " + backupName);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Find the header row by name, so the log can sit anywhere on the sheet and
