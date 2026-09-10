@@ -159,7 +159,18 @@ def engine():
         _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
     except Exception:
-        pass
+        if url.startswith("postgres"):
+            # The custom substrate migration is part of schema readiness, not
+            # advisory startup work. Returning a cached engine here would let
+            # the process serve with the oversized legacy UNIQUE constraint
+            # still installed and would make every later engine() call skip
+            # the migration. Clear the cache and fail startup so the supervisor
+            # retries the complete schema gate.
+            cache["url"] = None
+            cache["engine"] = None
+            cache["sessionmaker"] = None
+            eng.dispose()
+            raise
     return eng
 
 

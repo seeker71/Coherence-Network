@@ -393,6 +393,42 @@ def _all_spends() -> list[dict]:
     return [n for n in nodes if n.get("type") == _SPEND_TYPE]
 
 
+def _visible_spends(rows: list[dict]) -> list[dict]:
+    """User-facing ledger rows, excluding retained deletion tombstones."""
+    return [n for n in rows if not n.get("deleted_at")]
+
+
+def _reversal_spend(node: dict) -> SpendResponse:
+    """The stable compensating Sheet event for one mirrored deletion."""
+    original = _node_to_spend(node)
+    reversal_kind = _KIND_BUY if original.kind == _KIND_TOPUP else _KIND_TOPUP
+    return SpendResponse(
+        id=f"reversal-{original.id}",
+        amount_typed=original.amount_typed,
+        amount_idr=original.amount_idr,
+        description=f"undo: {original.description}",
+        spent_on=_s(node.get("deleted_on")) or _today_local(),
+        kind=reversal_kind,
+        by_id=_s(node.get("deleted_by_id")) or original.by_id,
+        by_name=_s(node.get("deleted_by_name")) or original.by_name,
+        created_at=_s(node.get("deleted_at")) or _now(),
+        runtime=original.runtime,
+        sheet_synced=bool(node.get("sheet_reversal_synced")),
+    )
+
+
+def _pending_sheet_operations(rows: list[dict]) -> list[tuple[dict, SpendResponse, str]]:
+    """Unsynced appends and deletion reversals, each with its graph flag."""
+    pending: list[tuple[dict, SpendResponse, str]] = []
+    for node in rows:
+        if node.get("deleted_at"):
+            if node.get("sheet_synced") and not node.get("sheet_reversal_synced"):
+                pending.append((node, _reversal_spend(node), "sheet_reversal_synced"))
+        elif not node.get("sheet_synced"):
+            pending.append((node, _node_to_spend(node), "sheet_synced"))
+    return pending
+
+
 def _resolve_description(
     *, note: str | None, category: str | None, shop: dict | None
 ) -> str:
@@ -507,7 +543,7 @@ async def list_spends(
     limit: int = Query(default=100, ge=1, le=1000),
 ) -> list[SpendResponse]:
     _require_member(token)
-    rows = _all_spends()
+    rows = _visible_spends(_all_spends())
     if on:
         rows = [n for n in rows if _s(n.get("spent_on")) == on]
     rows.sort(key=lambda n: (_s(n.get("created_at")) or ""), reverse=True)
@@ -592,7 +628,7 @@ async def delete_spend(
 ) -> DeleteResponse:
     actor = _require_writer(actor_token)
     node = graph_service.get_node(spend_id)
-    if not node or node.get("type") != _SPEND_TYPE:
+    if not node or node.get("type") != _SPEND_TYPE or node.get("deleted_at"):
         raise HTTPException(status_code=404, detail=f"entry {spend_id!r} not found")
     # Your own mistake is yours to undo; a resident can fix anyone's.
     if node.get("by_id") != actor.get("id") and actor.get("role") != "resident":
@@ -600,9 +636,36 @@ async def delete_spend(
             status_code=403, detail="only the person who recorded it, or a resident, can remove it"
         )
     mirrored = bool(node.get("sheet_synced"))
-    graph_service.delete_node(spend_id)
-    # The sheet is the hub's own document; we never reach in and edit rows we
-    # already handed over. Saying so plainly is the honest half of undo.
+    if not mirrored:
+        graph_service.delete_node(spend_id)
+        return DeleteResponse(deleted=spend_id, was_mirrored=False)
+
+    # A mirrored row remains as a private tombstone so graph fallback can omit
+    # it while the Sheet receives a stable compensating event. The reversal ID
+    # is derived from the original ID, so a crash or retry cannot append twice.
+    deleted_at = _now()
+    graph_service.update_node(
+        spend_id,
+        properties={
+            "deleted_at": deleted_at,
+            "deleted_on": _today_local(),
+            "deleted_by_id": actor.get("id", ""),
+            "deleted_by_name": actor.get("name", ""),
+            "sheet_reversal_synced": False,
+        },
+    )
+    tombstone = graph_service.get_node(spend_id) or {
+        **node,
+        "deleted_at": deleted_at,
+        "deleted_on": _today_local(),
+        "deleted_by_id": actor.get("id", ""),
+        "deleted_by_name": actor.get("name", ""),
+        "sheet_reversal_synced": False,
+    }
+    if await _push_to_sheet(_reversal_spend(tombstone)):
+        graph_service.update_node(
+            spend_id, properties={"sheet_reversal_synced": True}
+        )
     return DeleteResponse(deleted=spend_id, was_mirrored=mirrored)
 
 
@@ -650,7 +713,8 @@ async def totals(
     day = (on or "").strip() or _today_local()
     month = day[:7]
     rows = _all_spends()
-    buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
+    visible = _visible_spends(rows)
+    buys = [n for n in visible if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
     day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
     month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
     # The Sheet carries history from before the app existed. Its authenticated
@@ -658,17 +722,17 @@ async def totals(
     # in this graph. That acknowledgement closes the append/flag crash seam:
     # an entry present in the Sheet is never applied twice merely because its
     # local sheet_synced flag was not committed before a crash.
-    pending = [n for n in rows if n.get("sheet_synced") is False]
-    snapshot = await _read_sheet_snapshot([_s(n.get("id")) for n in pending])
+    pending = _pending_sheet_operations(rows)
+    snapshot = await _read_sheet_snapshot([spend.id for _node, spend, _flag in pending])
     pending_signed = [
-        _node_to_spend(n).signed_idr
-        for n in pending
-        if snapshot is None or _s(n.get("id")) not in snapshot.acknowledged_ids
+        spend.signed_idr
+        for _node, spend, _flag in pending
+        if snapshot is None or spend.id not in snapshot.acknowledged_ids
     ]
     remaining = _remaining_balance(
         sheet_remaining=snapshot.remaining_idr if snapshot is not None else None,
         pending_signed=pending_signed,
-        graph_signed=[_node_to_spend(n).signed_idr for n in rows],
+        graph_signed=[_node_to_spend(n).signed_idr for n in visible],
     )
     remaining_source: Literal["sheet", "graph"] = (
         "sheet" if snapshot is not None else "graph"
@@ -853,7 +917,7 @@ async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
         sheet_url=(
             f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit" if sheet_id else None
         ),
-        pending=sum(1 for n in _all_spends() if not n.get("sheet_synced")),
+        pending=len(_pending_sheet_operations(_all_spends())),
     )
 
 
@@ -909,14 +973,13 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
     webhook_url, secret = _sheet_webhook()
     configured = bool(webhook_url and secret)
-    pending = [n for n in _all_spends() if not n.get("sheet_synced")]
-    pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
+    pending = _pending_sheet_operations(_all_spends())
+    pending.sort(key=lambda operation: (_s(operation[0].get("created_at")) or ""))
     synced = 0
     if configured:
-        for node in pending:
-            spend = _node_to_spend(node)
+        for node, spend, sync_flag in pending:
             if await _push_to_sheet(spend):
-                graph_service.update_node(node["id"], properties={"sheet_synced": True})
+                graph_service.update_node(node["id"], properties={sync_flag: True})
                 synced += 1
     return ResyncResponse(attempted=len(pending), synced=synced, configured=configured)
 
@@ -928,7 +991,10 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
 )
 async def export_csv(token: str | None = Query(default=None)) -> PlainTextResponse:
     _require_member(token)
-    rows = sorted(_all_spends(), key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""))
+    rows = sorted(
+        _visible_spends(_all_spends()),
+        key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""),
+    )
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=_CSV_COLUMNS)
     writer.writeheader()
