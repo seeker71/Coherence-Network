@@ -537,6 +537,73 @@ def test_a_wrong_number_can_be_taken_back(client):
     assert client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}").status_code == 404
 
 
+def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
+    client, monkeypatch
+):
+    pushed: list[grocery.SpendResponse] = []
+    allow_reversal = False
+
+    async def fake_push(spend):
+        pushed.append(spend)
+        if spend.id.startswith("reversal-"):
+            return allow_reversal
+        return True
+
+    monkeypatch.setattr(grocery, "_push_to_sheet", fake_push)
+    monkeypatch.setattr(
+        grocery,
+        "_sheet_webhook",
+        lambda: ("https://example.invalid/exec", "shared-secret"),
+    )
+    resident = client.post("/api/household/bootstrap", json={"name": "Undo keeper"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    created = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    )
+    assert created.status_code == 200, created.text
+    spend_id = created.json()["id"]
+    assert created.json()["sheet_synced"] is True
+
+    deleted = client.delete(
+        f"/api/grocery/spend/{spend_id}?actor_token={token}"
+    )
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["was_mirrored"] is True
+    reversal_id = f"reversal-{spend_id}"
+    assert pushed[-1].id == reversal_id
+    assert pushed[-1].signed_idr == -100_000
+
+    # The deleted purchase is absent from the user-facing ledger, while its
+    # private tombstone keeps one stable reversal pending for the Sheet.
+    visible = client.get(f"/api/grocery/spend?token={token}").json()
+    assert all(row["id"] != spend_id for row in visible)
+    tombstone = grocery.graph_service.get_node(spend_id)
+    assert tombstone and tombstone["deleted_at"]
+    assert tombstone["sheet_reversal_synced"] is False
+
+    async def snapshot_before_reversal(pending_ids):
+        assert pending_ids == [reversal_id]
+        return grocery._SheetSnapshot(1_900_000, frozenset())
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_before_reversal)
+    totals = client.get(f"/api/grocery/totals?token={token}").json()
+    assert totals["remaining_idr"] == 2_000_000
+
+    # Resync retries the same reversal ID. Its acknowledgement closes the
+    # tombstone, so subsequent resyncs have no operation left to append.
+    allow_reversal = True
+    resync = client.post(
+        "/api/grocery/sheet/resync", json={"actor_token": token}
+    )
+    assert resync.json()["attempted"] == 1
+    assert resync.json()["synced"] == 1
+    assert grocery.graph_service.get_node(spend_id)["sheet_reversal_synced"] is True
+
+
 def test_someone_else_s_entry_is_not_yours_to_delete(client):
     resident = client.post("/api/household/bootstrap", json={"name": "Gede"})
     if resident.status_code == 409:

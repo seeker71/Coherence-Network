@@ -18,6 +18,8 @@ This file witnesses stone 1: the Postgres engine carries the three GUCs.
 
 from __future__ import annotations
 
+import pytest
+
 from app.services import unified_db as udb
 
 
@@ -94,3 +96,30 @@ def test_sqlite_schema_does_not_run_postgres_substrate_migration(monkeypatch):
 
     monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
     udb._create_all_idempotent(bind=_Bind(), url="sqlite:///:memory:")
+
+
+def test_postgres_schema_migration_failure_blocks_startup_and_clears_cache(monkeypatch):
+    cache = {"url": None, "engine": None, "sessionmaker": None}
+
+    class _Engine:
+        disposed = False
+
+        def dispose(self):
+            self.disposed = True
+
+    eng = _Engine()
+    monkeypatch.setattr(udb, "database_url", lambda: "postgresql://db")
+    monkeypatch.setattr(udb, "_normalize_engine_cache", lambda: cache)
+    monkeypatch.setattr(udb, "_create_engine", lambda _url: eng)
+    monkeypatch.setattr(udb, "sessionmaker", lambda **_kwargs: object())
+
+    def fail_schema(**_kwargs):
+        raise RuntimeError("migration lock timeout")
+
+    monkeypatch.setattr(udb, "_create_all_idempotent", fail_schema)
+
+    with pytest.raises(RuntimeError, match="migration lock timeout"):
+        udb.engine()
+
+    assert cache == {"url": None, "engine": None, "sessionmaker": None}
+    assert eng.disposed is True

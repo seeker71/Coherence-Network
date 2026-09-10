@@ -105,6 +105,7 @@ function restructure() {
   var iAmount = header.indexOf("Amount");
   if (iAmount < 0) iAmount = header.indexOf("Cost");
   const iWhat = header.indexOf("What");
+  const iEntryId = header.indexOf("Entry ID");
   if (iWhen < 0 || iAmount < 0) throw new Error("need a When and a Cost/Amount column");
 
   const kept = [];
@@ -114,7 +115,13 @@ function restructure() {
     const what = iWhat >= 0 ? String(values[i][iWhat] || "").trim() : "";
     if (amount === "" || amount === null) continue;
     if (what.toLowerCase() === "remaining") continue;        // now a formula
-    kept.push([when || "", Number(amount), what.toLowerCase() === "paid" ? "top up" : what]);
+    const entryId = iEntryId >= 0 ? String(values[i][iEntryId] || "").trim() : "";
+    kept.push([
+      when || "",
+      Number(amount),
+      what.toLowerCase() === "paid" ? "top up" : what,
+      entryId,
+    ]);
   }
   kept.sort(function (a, b) {
     return (a[0] instanceof Date && b[0] instanceof Date) ? a[0] - b[0] : 0;
@@ -151,7 +158,7 @@ function restructure() {
   // The log.
   sheet.getRange(4, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight("bold");
   if (kept.length) {
-    sheet.getRange(FIRST_DATA_ROW, 1, kept.length, 3).setValues(kept);
+    sheet.getRange(FIRST_DATA_ROW, 1, kept.length, HEADERS.length).setValues(kept);
   }
   sheet.getRange("A" + FIRST_DATA_ROW + ":A").setNumberFormat("dd/MM/yyyy");
   sheet.getRange("B" + FIRST_DATA_ROW + ":B").setNumberFormat(RUPIAH);

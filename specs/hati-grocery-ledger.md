@@ -109,8 +109,10 @@ into a shoebox of receipts, which is the failure this replaces.
 
 - [ ] **R8 — A wrong number is fixable by the person who typed it.**
   `DELETE /grocery/spend/{id}` removes an entry for its recorder, or any
-  entry for a resident, and says whether the sheet already has the row — we
-  never reach into the hub's own document to edit what we handed over.
+  entry for a resident, and says whether the Sheet already has the row. An
+  unmirrored mistake is removed directly; a mirrored mistake becomes a private
+  graph tombstone and sends one stable compensating Sheet event, so both balance
+  sources agree without editing historical rows in place.
 
 - [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
