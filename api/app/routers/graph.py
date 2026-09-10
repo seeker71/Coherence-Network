@@ -42,7 +42,7 @@ _LOCALIZABLE_NODE_TYPES = {
 # These cells have their own authenticated access contract and external
 # reconciliation. Generic graph access would bypass those privacy and
 # consistency invariants.
-_DEDICATED_NODE_TYPES = frozenset({"grocery_spend"})
+_DEDICATED_NODE_TYPES = graph_service.DEDICATED_PRIVATE_NODE_TYPES
 
 
 def _reject_dedicated_mutation(node: dict | None) -> None:
