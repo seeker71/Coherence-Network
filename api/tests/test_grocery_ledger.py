@@ -155,6 +155,7 @@ def test_a_spend_records_with_the_shop_filling_in_the_description(client):
     assert body["description"] == "pasar pagi — sayur & ikan"
     assert body["spent_on"] == grocery._today_local()
     assert body["by_name"] == "Komang"
+    assert grocery.graph_service.get_node(body["id"])["sheet_protocol"] == "entry-id-v1"
 
     # Away from any shop, an icon plus a custom note still says what it was.
     other = client.post("/api/grocery/spend", json={
@@ -556,6 +557,7 @@ def test_sheet_delete_reconciliation_is_one_atomic_carrier_operation(monkeypatch
         "by_id": "m1",
         "by_name": "Wayan",
         "created_at": "2026-09-10T01:00:00Z",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
     }
     actor = {"id": "m1", "name": "Wayan"}
     seen: list[dict] = []
@@ -594,6 +596,49 @@ def test_sheet_delete_reconciliation_is_one_atomic_carrier_operation(monkeypatch
     assert seen[0]["known_mirrored"] is False
     assert seen[0]["reversal"]["entry_id"] == "reversal-spend-race"
     assert seen[0]["reversal"]["row"]["Amount"] == -100_000
+
+
+def test_legacy_unsynced_entry_remains_unknown_and_is_not_auto_replayed(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-unknown",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "100",
+        "amount_idr": 100_000,
+        "spend_description": "legacy vegetables",
+        "spent_on": "2026-09-10",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-09-10T01:00:00Z",
+        "sheet_synced": False,
+        # No sheet_protocol: a predecessor append may have landed without an ID.
+    }
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+
+    async def must_not_push(_spend):
+        raise AssertionError("legacy unknown entry must not be replayed")
+
+    monkeypatch.setattr(grocery, "_push_to_sheet", must_not_push)
+    assert asyncio.run(grocery._reconcile_sheet_delete(legacy, {"id": "m1"})) is None
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert result.attempted == 0
+    assert result.synced == 0
+    assert result.blocked_legacy == 1
+
+    async def must_not_read(_pending_ids):
+        raise AssertionError("legacy uncertainty must short-circuit the Sheet read")
+
+    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", must_not_read)
+    totals = asyncio.run(grocery.totals(token="member-token", on=None))
+    assert totals.remaining_idr is None
+    assert totals.remaining_source == "unavailable"
 
 
 def test_a_wrong_number_can_be_taken_back(client, monkeypatch):

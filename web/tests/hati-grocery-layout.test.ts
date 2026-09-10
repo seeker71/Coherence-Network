@@ -24,4 +24,9 @@ describe("Hati grocery balance layout", () => {
     expect(source).toContain('remaining={totals?.remaining_idr ?? null}');
     expect(source).not.toContain('remaining={totals?.remaining_idr ?? 0}');
   });
+
+  it("makes a blocked pre-Entry-ID row visible instead of replaying silently", () => {
+    expect(source).toContain("blocked_legacy?: number");
+    expect(source).toContain("sheet.blocked_legacy ?? 0");
+  });
 });

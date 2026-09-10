@@ -86,6 +86,7 @@
     "The app contract was write-only: it mirrored graph entries into Sheets but calculated remaining balance solely from graph rows, excluding the pre-app ledger history.",
     "The first repair read the anonymous CSV export and trusted sheet_synced as an atomic boundary; exact-head review exposed both the privacy leak and the append/flag crash race before merge.",
     "The repaired carrier authenticates every request, returns only Sisa plus matches among caller-supplied pending entry IDs, and makes appends idempotent with an Entry ID column; the spreadsheet can remain private.",
+    "New graph writes carry the entry-id-v1 protocol marker; unmarked unsynced legacy rows remain explicitly unknown, make balance unavailable, and are excluded from automatic replay or deletion until migrated.",
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
     "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
     "Generic graph PATCH and DELETE routes reject grocery_spend nodes so callers cannot bypass household authorization or Sheet reconciliation.",
@@ -115,12 +116,12 @@
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The fresh full local PR guard passes on the fourth review repair, including API tests, the production web build, and the combined runtime verifier. The atomic cancel-or-reverse Sheet operation, generic graph mutation boundary, and lifespan startup propagation pass a 60-test focused grocery, graph, and migration suite. Lint, strict spec validation, Apps Script syntax compilation, evidence validation, and git diff validation pass."
+    "summary": "The final full local PR guard passes on the fifth review repair, including API tests, the production web build, and the combined runtime verifier. New writes are protocol-marked; legacy unknowns fail honest and are excluded from automatic replay/deletion. The focused suite passes 61 tests and the grocery UI passes 9. Correctly scoped Python lint, strict spec validation, evidence validation, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "summary": "PR #4040 passed full Linux/API/web and Windows gates on every pushed head through 1a38f156b. Exact-head Codex review then identified a concurrent append/delete interval, generic graph mutation bypass, and an outer startup exception catch. Fresh exact-head CI will run after those repairs are pushed."
+    "summary": "PR #4040 passed full Linux/API/web and Windows gates on every pushed head through ff0201d98. Exact-head Codex review then identified one legacy pre-Entry-ID uncertainty boundary. Fresh exact-head CI will run after that final upgrade repair is pushed."
   },
   "deploy_validation": {
     "status": "pending",

@@ -549,7 +549,16 @@ curl -X POST https://api.coherencycoin.com/api/grocery/sheet/resync \
 ```
 
 pushes everything the sheet hasn't seen. The response says how many were
-pending, how many landed, and whether a webhook is configured at all.
+pending, how many landed, whether a webhook is configured, and how many legacy
+rows are blocked from automatic replay.
+
+Every new graph write is stamped `sheet_protocol=entry-id-v1`. An older
+unsynced graph row without that marker may have landed through the predecessor
+carrier before Entry IDs existed and then crashed before its local flag was
+saved. Its presence cannot be inferred safely. The balance therefore remains
+unavailable, resync skips it, and deletion preserves it until the matching
+Sheet row is manually identified and given that graph entry's ID (or absence is
+confirmed and the graph row is migrated to `entry-id-v1`).
 
 Deleting also waits for this carrier. Under the same script lock used by every
 append, it records the original ID in a hidden `_Hati App State` cancellation
