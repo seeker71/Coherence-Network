@@ -405,6 +405,7 @@ def test_the_sheet_balance_is_read_through_the_authenticated_bounded_carrier(mon
                 "ok": True,
                 "remaining_idr": "Rp2,419,050",
                 "acknowledged_ids": ["spend-1", "not-requested"],
+                "cancelled_ids": ["spend-cancelled", "not-requested"],
             }
 
     seen: list[tuple[str, dict]] = []
@@ -425,12 +426,18 @@ def test_the_sheet_balance_is_read_through_the_authenticated_bounded_carrier(mon
     )
     monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
 
-    snapshot = asyncio.run(grocery._read_sheet_snapshot(["spend-1"]))
-    assert snapshot == grocery._SheetSnapshot(2_419_050, frozenset({"spend-1"}))
+    snapshot = asyncio.run(
+        grocery._read_sheet_snapshot(["spend-1", "spend-cancelled"])
+    )
+    assert snapshot == grocery._SheetSnapshot(
+        2_419_050,
+        frozenset({"spend-1"}),
+        frozenset({"spend-cancelled"}),
+    )
     assert seen == [("https://example.invalid/exec", {
         "action": "summary",
         "secret": "shared-secret",
-        "pending_ids": ["spend-1"],
+        "pending_ids": ["spend-1", "spend-cancelled"],
     })]
 
 
@@ -447,7 +454,7 @@ def test_totals_use_sheet_balance_plus_only_pending_graph_delta(client, monkeypa
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
     token = resident.json()["token"]
     async def snapshot_without_entry(_pending_ids):
-        return grocery._SheetSnapshot(2_000_000, frozenset())
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
 
     monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_without_entry)
 
@@ -483,11 +490,45 @@ def test_totals_do_not_double_apply_an_entry_already_acknowledged_by_sheet(
         assert pending_ids == [spend_id]
         # The Sheet balance already includes this append even though a crash
         # left the graph flag false. Its acknowledgement makes the read exact.
-        return grocery._SheetSnapshot(1_900_000, frozenset({spend_id}))
+        return grocery._SheetSnapshot(
+            1_900_000, frozenset({spend_id}), frozenset()
+        )
 
     monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_with_entry)
     body = client.get(f"/api/grocery/totals?token={token}").json()
     assert body["remaining_idr"] == 1_900_000
+    assert body["remaining_source"] == "sheet"
+
+
+def test_totals_do_not_apply_an_entry_cancelled_after_the_database_snapshot(
+    client, monkeypatch
+):
+    resident = client.post(
+        "/api/household/bootstrap", json={"name": "Cancellation witness"}
+    )
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    token = resident.json()["token"]
+
+    spend = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    )
+    assert spend.status_code == 200, spend.text
+    spend_id = spend.json()["id"]
+
+    async def snapshot_after_delete(pending_ids):
+        assert pending_ids == [spend_id]
+        # The graph snapshot preceded a completed delete. The same locked
+        # Sheet receipt carries that cancellation, so the stale row is not
+        # applied to the post-delete balance.
+        return grocery._SheetSnapshot(
+            2_000_000, frozenset(), frozenset({spend_id})
+        )
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot_after_delete)
+    body = client.get(f"/api/grocery/totals?token={token}").json()
+    assert body["remaining_idr"] == 2_000_000
     assert body["remaining_source"] == "sheet"
 
 
@@ -715,9 +756,7 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
     assert grocery.graph_service.get_node(spend_id) is not None
 
 
-def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
-    client, monkeypatch
-):
+def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str]:
     async def not_appended(_spend):
         return False
 
@@ -730,6 +769,31 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
         "/api/grocery/spend",
         json={"actor_token": token, "amount": "42", "category": "vegetable"},
     ).json()["id"]
+    public_id = "contributor:grocery-boundary-public"
+    other_id = "asset:grocery-boundary-other"
+    grocery.graph_service.create_node(
+        id=public_id, type="contributor", name="Public boundary witness"
+    )
+    grocery.graph_service.create_node(
+        id=other_id, type="asset", name="Other boundary witness"
+    )
+    grocery.graph_service.create_edge(
+        from_id=public_id,
+        to_id=spend_id,
+        type="depends-on",
+    )
+    grocery.graph_service.create_edge(
+        from_id=spend_id,
+        to_id=other_id,
+        type="depends-on",
+    )
+    return spend_id, public_id, other_id
+
+
+def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
+    client, monkeypatch
+):
+    spend_id, _public_id, other_id = _grocery_privacy_graph(client, monkeypatch)
 
     patched = client.patch(
         f"/api/graph/nodes/{spend_id}",
@@ -740,13 +804,59 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     fetched = client.get(f"/api/graph/nodes/{spend_id}")
     revisions = client.get(f"/api/graph/nodes/{spend_id}/revisions")
     generic = client.get("/api/graph/nodes?limit=500")
+    edges = client.get(f"/api/graph/nodes/{spend_id}/edges")
+    neighbors = client.get(f"/api/graph/nodes/{spend_id}/neighbors")
+    subgraph = client.get(f"/api/graph/nodes/{spend_id}/subgraph")
+    private_path = client.get(
+        f"/api/graph/path?from_id={spend_id}&to_id={other_id}&max_depth=2"
+    )
+    count = client.get("/api/graph/nodes/count?type=grocery_spend")
+    stats = client.get("/api/graph/stats")
+    proof = client.get("/api/graph/proof")
+    profile = client.get(f"/api/profile/{spend_id}")
+    verify = client.get(f"/api/profile/{spend_id}/verify?hash=not-a-real-hash")
+    sign = client.post(f"/api/profile/{spend_id}/sign")
+    resonant = client.get(f"/api/profile/{spend_id}/resonant")
+    resonance = client.post("/api/resonance", json={"a": spend_id, "b": other_id})
     assert patched.status_code == 403
     assert deleted.status_code == 403
     assert listed.status_code == 403
     assert fetched.status_code == 403
     assert revisions.status_code == 403
+    assert edges.status_code == 403
+    assert neighbors.status_code == 403
+    assert subgraph.status_code == 403
+    assert private_path.status_code == 403
+    assert count.status_code == 403
+    assert profile.status_code == 403
+    assert verify.status_code == 403
+    assert sign.status_code == 403
+    assert resonant.status_code == 403
+    assert resonance.status_code == 403
     assert spend_id not in {node["id"] for node in generic.json()["items"]}
+    assert "grocery_spend" not in stats.json()["nodes_by_type"]
+    assert "grocery_spend" not in proof.json()["nodes_by_type"]
     assert grocery.graph_service.get_node(spend_id) is not None
+
+
+def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatch):
+    spend_id, public_id, other_id = _grocery_privacy_graph(client, monkeypatch)
+
+    public_edges = client.get(f"/api/graph/nodes/{public_id}/edges")
+    public_neighbors = client.get(f"/api/graph/nodes/{public_id}/neighbors")
+    public_subgraph = client.get(f"/api/graph/nodes/{public_id}/subgraph?depth=2")
+    path = client.get(
+        f"/api/graph/path?from_id={public_id}&to_id={other_id}&max_depth=2"
+    )
+
+    assert public_edges.json() == []
+    assert public_neighbors.json() == []
+    assert spend_id not in {node["id"] for node in public_subgraph.json()["nodes"]}
+    assert all(
+        spend_id not in (edge["from_id"], edge["to_id"])
+        for edge in public_subgraph.json()["edges"]
+    )
+    assert path.json()["path"] is None
 
 
 def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
@@ -836,7 +946,7 @@ def test_someone_else_s_entry_is_not_yours_to_delete(client, monkeypatch):
 
 def test_topping_up_the_float_and_what_is_left(client, monkeypatch):
     async def empty_sheet_snapshot(_pending_ids):
-        return grocery._SheetSnapshot(0, frozenset())
+        return grocery._SheetSnapshot(0, frozenset(), frozenset())
 
     monkeypatch.setattr(grocery, "_read_sheet_snapshot", empty_sheet_snapshot)
     resident = client.post("/api/household/bootstrap", json={"name": "Ketut"})

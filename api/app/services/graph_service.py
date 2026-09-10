@@ -517,7 +517,10 @@ def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
         return [node.to_dict() for node in nodes]
 
 
-def count_nodes(type: str | None = None) -> dict[str, int]:
+def count_nodes(
+    type: str | None = None,
+    exclude_types: frozenset[str] | None = None,
+) -> dict[str, int]:
     """Count nodes by type.
 
     Mirrors list_nodes' anonymous-meeting trace exclusion so the
@@ -525,13 +528,20 @@ def count_nodes(type: str | None = None) -> dict[str, int]:
     """
     with session() as s:
         trace_filter = ~Node.id.like("anonymous-meeting:%")
+        private_filter = (
+            ~Node.type.in_(exclude_types) if exclude_types else True
+        )
         if type:
-            total = s.query(Node).filter(Node.type == type, trace_filter).count()
+            total = (
+                s.query(Node)
+                .filter(Node.type == type, trace_filter, private_filter)
+                .count()
+            )
             return {"total": total, "type": type}
         # Count all, grouped by type
         rows = (
             s.query(Node.type, func.count(Node.id))
-            .filter(trace_filter)
+            .filter(trace_filter, private_filter)
             .group_by(Node.type)
             .all()
         )
@@ -735,6 +745,7 @@ def get_neighbors(
     depth: int = 1,
     direction: str = "both",
     lifecycle_state: str | None = None,
+    exclude_node_types: frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Get neighboring nodes (1 hop by default).
 
@@ -775,6 +786,8 @@ def get_neighbors(
 
         # Get the actual nodes
         node_q = s.query(Node).filter(Node.id.in_(neighbor_ids))
+        if exclude_node_types:
+            node_q = node_q.filter(~Node.type.in_(exclude_node_types))
         if node_type:
             node_q = node_q.filter(Node.type == node_type)
 
@@ -793,9 +806,26 @@ def get_neighbors(
         return neighbors
 
 
-def get_path(from_id: str, to_id: str, max_depth: int = 5) -> list[dict[str, Any]] | None:
+def get_path(
+    from_id: str,
+    to_id: str,
+    max_depth: int = 5,
+    exclude_node_types: frozenset[str] | None = None,
+) -> list[dict[str, Any]] | None:
     """Find shortest path between two nodes via BFS. Returns list of edges or None."""
     with session() as s:
+        excluded_ids = (
+            {
+                node_id
+                for (node_id,) in s.query(Node.id)
+                .filter(Node.type.in_(exclude_node_types))
+                .all()
+            }
+            if exclude_node_types
+            else set()
+        )
+        if from_id in excluded_ids or to_id in excluded_ids:
+            return None
         visited = {from_id}
         queue = [(from_id, [])]
 
@@ -807,6 +837,8 @@ def get_path(from_id: str, to_id: str, max_depth: int = 5) -> list[dict[str, Any
                 ).all()
                 for edge in edges:
                     other = edge.to_id if edge.from_id == current_id else edge.from_id
+                    if other in excluded_ids:
+                        continue
                     if other == to_id:
                         return path + [edge.to_dict()]
                     if other not in visited:
@@ -823,9 +855,22 @@ def get_subgraph(
     center_id: str,
     depth: int = 1,
     edge_types: list[str] | None = None,
+    exclude_node_types: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Get a subgraph centered on a node. Returns nodes + edges within depth."""
     with session() as s:
+        excluded_ids = (
+            {
+                node_id
+                for (node_id,) in s.query(Node.id)
+                .filter(Node.type.in_(exclude_node_types))
+                .all()
+            }
+            if exclude_node_types
+            else set()
+        )
+        if center_id in excluded_ids:
+            return {"nodes": [], "edges": [], "center": center_id, "depth": depth}
         nodes_seen = {center_id}
         edges_collected = []
         frontier = {center_id}
@@ -841,6 +886,8 @@ def get_subgraph(
                 if edge_types:
                     edge_q = edge_q.filter(Edge.type.in_(edge_types))
                 for edge in edge_q.all():
+                    if edge.from_id in excluded_ids or edge.to_id in excluded_ids:
+                        continue
                     edges_collected.append(edge.to_dict())
                     other = edge.to_id if edge.from_id == nid else edge.from_id
                     if other not in nodes_seen:
@@ -1067,11 +1114,41 @@ def get_neighbors_enriched(
         return {"entity_id": node_id, "neighbors": neighbors, "total": len(neighbors)}
 
 
-def get_stats() -> dict[str, Any]:
+def _excluded_node_ids(s, node_types: frozenset[str] | None) -> set[str]:
+    if not node_types:
+        return set()
+    return {
+        node_id
+        for (node_id,) in s.query(Node.id).filter(Node.type.in_(node_types)).all()
+    }
+
+
+def _exclude_private_edges(query, excluded_ids: set[str]):
+    if not excluded_ids:
+        return query
+    return query.filter(
+        ~Edge.from_id.in_(excluded_ids), ~Edge.to_id.in_(excluded_ids)
+    )
+
+
+def _exclude_private_nodes(query, node_types: frozenset[str] | None):
+    return query.filter(~Node.type.in_(node_types)) if node_types else query
+
+
+def get_stats(
+    exclude_node_types: frozenset[str] | None = None,
+) -> dict[str, Any]:
     """Get graph statistics."""
     with session() as s:
-        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
-        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+        excluded_ids = _excluded_node_ids(s, exclude_node_types)
+        node_query = _exclude_private_nodes(
+            s.query(Node.type, func.count(Node.id)), exclude_node_types
+        )
+        node_counts = node_query.group_by(Node.type).all()
+        edge_query = _exclude_private_edges(
+            s.query(Edge.type, func.count(Edge.id)), excluded_ids
+        )
+        edge_counts = edge_query.group_by(Edge.type).all()
         return {
             "total_nodes": sum(c for _, c in node_counts),
             "total_edges": sum(c for _, c in edge_counts),
@@ -1115,14 +1192,22 @@ def get_edge_type_registry() -> dict[str, Any]:
         return {"edge_types": []}
 
 
-def get_proof() -> dict[str, Any]:
+def get_proof(
+    exclude_node_types: frozenset[str] | None = None,
+) -> dict[str, Any]:
     """Return aggregate proof that the graph is functioning as the fractal data layer.
 
     Spec 169 §GET /api/graph/proof — must return 200 even on empty graph.
     """
     with session() as s:
-        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
-        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+        excluded_ids = _excluded_node_ids(s, exclude_node_types)
+        node_query = _exclude_private_nodes(
+            s.query(Node.type, func.count(Node.id)), exclude_node_types
+        )
+        node_counts = node_query.group_by(Node.type).all()
+        edge_counts = _exclude_private_edges(
+            s.query(Edge.type, func.count(Edge.id)), excluded_ids
+        ).group_by(Edge.type).all()
 
         total_nodes = sum(c for _, c in node_counts)
         total_edges = sum(c for _, c in edge_counts)
@@ -1131,7 +1216,7 @@ def get_proof() -> dict[str, Any]:
 
         # Lifecycle distribution — count nodes per lifecycle_state in payload
         lifecycle_dist: dict[str, int] = {"gas": 0, "ice": 0, "water": 0}
-        all_nodes = s.query(Node).all()
+        all_nodes = _exclude_private_nodes(s.query(Node), exclude_node_types).all()
         for n in all_nodes:
             ls = (n.properties or {}).get("lifecycle_state", n.phase)
             if ls in lifecycle_dist:
@@ -1148,7 +1233,9 @@ def get_proof() -> dict[str, Any]:
         avg_degree = (2 * total_edges / total_nodes) if total_nodes > 0 else 0.0
 
         # Last edge created
-        last_edge = s.query(Edge).order_by(Edge.created_at.desc()).first()
+        last_edge = _exclude_private_edges(
+            s.query(Edge), excluded_ids
+        ).order_by(Edge.created_at.desc()).first()
         last_edge_ts = last_edge.created_at.isoformat() if last_edge and last_edge.created_at else None
 
         # Coverage: ideas with spec, specs with impl, impls with tests (via edges)
@@ -1156,10 +1243,15 @@ def get_proof() -> dict[str, Any]:
         spec_count = nodes_by_type.get("spec", 0)
         impl_count = nodes_by_type.get("implementation", 0)
 
-        ideas_with_spec_edges = s.query(Edge).filter(
-            Edge.type.in_(["implements", "inspires", "depends-on"])
+        ideas_with_spec_edges = _exclude_private_edges(
+            s.query(Edge).filter(
+                Edge.type.in_(["implements", "inspires", "depends-on"])
+            ),
+            excluded_ids,
         ).count()
-        specs_with_impl_edges = s.query(Edge).filter(Edge.type == "implements").count()
+        specs_with_impl_edges = _exclude_private_edges(
+            s.query(Edge).filter(Edge.type == "implements"), excluded_ids
+        ).count()
         artifact_count = nodes_by_type.get("artifact", 0)
 
         def safe_pct(num: int, denom: int) -> float:
