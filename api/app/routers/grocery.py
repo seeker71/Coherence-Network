@@ -17,12 +17,14 @@ When no shop is near (or GPS is off), a category icon carries the meaning
 — fruit, vegetable, fish, spice — and a free-text field takes anything the
 icons don't hold.
 
-**The ledger is not a lock.** The graph holds the entries; Google Sheets is
-a mirror, fed by a webhook URL the hub owns (an Apps Script bound to their
-own sheet — see ``docs/grocery-sheets-setup.md``). If the webhook is unset
-or failing, entries still record and carry ``sheet_synced=false`` until a
-resync. ``GET /grocery/export.csv`` is the always-available door out, so
-leaving this app costs nothing.
+**The ledger is not a lock.** The graph holds app entries; Google Sheets is
+the hub-owned historical balance baseline and outbound mirror (see
+``docs/grocery-sheets-setup.md``). An authenticated Apps Script carrier returns
+only the fixed summary plus acknowledgements and cancellations for entry IDs
+the app already knows, so the household log never becomes a public download.
+If the Sheet is dark, the graph ledger keeps answering while the historical
+balance says it is unavailable. ``GET /grocery/export.csv`` remains the open
+door out.
 
 Identity is the household's: a device token that resolves to a member with
 write access. Seeing the ledger is open to any registered cell here.
@@ -32,7 +34,10 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import re
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
@@ -44,7 +49,6 @@ from pydantic import BaseModel, Field
 from app.routers.household import (
     _PLACE_TYPE,
     _all_places,
-    _member_by_token,
     _node_to_place,
     _now,
     _place_distance,
@@ -64,6 +68,7 @@ _KIND_BUY = "buy"        # money out — a market run
 _KIND_TOPUP = "topup"    # money in — the float topped back up
 _SHOP_KIND = "shop"
 _CURRENCY = "IDR"
+_SHEET_PROTOCOL = "entry-id-v1"
 
 # Bali is UTC+8 with no DST — "today" for the manager standing in the market,
 # not today in UTC. An entry made at 07:30 local must not file as yesterday.
@@ -383,12 +388,26 @@ def _node_to_spend(node: dict) -> SpendResponse:
 
 
 def _all_spends() -> list[dict]:
-    try:
-        response = graph_service.list_nodes(type=_SPEND_TYPE, limit=2000)
-        nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
-    except Exception:
-        nodes = []
-    return [n for n in nodes if n.get("type") == _SPEND_TYPE]
+    return graph_service.list_nodes_by_type_snapshot(_SPEND_TYPE)
+
+
+def _reversal_spend(node: dict, actor: dict) -> SpendResponse:
+    """The stable compensating Sheet event for one reconciled deletion."""
+    original = _node_to_spend(node)
+    reversal_kind = _KIND_BUY if original.kind == _KIND_TOPUP else _KIND_TOPUP
+    return SpendResponse(
+        id=f"reversal-{original.id}",
+        amount_typed=original.amount_typed,
+        amount_idr=original.amount_idr,
+        description=f"undo: {original.description}",
+        spent_on=_today_local(),
+        kind=reversal_kind,
+        by_id=_s(actor.get("id")) or original.by_id,
+        by_name=_s(actor.get("name")) or original.by_name,
+        created_at=_now(),
+        runtime=original.runtime,
+        sheet_synced=False,
+    )
 
 
 def _resolve_description(
@@ -476,6 +495,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "created_at": _now(),
         "runtime": runtime,
         "sheet_synced": False,
+        "sheet_protocol": _SHEET_PROTOCOL,
     }
     graph_service.create_node(
         id=spend_id,
@@ -488,7 +508,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
     spend = _node_to_spend(node)
 
     # The mirror. A dark sheet never costs the manager their entry.
-    if _push_to_sheet(spend):
+    if await _push_to_sheet(spend):
         graph_service.update_node(spend_id, properties={"sheet_synced": True})
         spend.sheet_synced = True
     return spend
@@ -560,6 +580,7 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         "created_at": _now(),
         "runtime": runtime,
         "sheet_synced": False,
+        "sheet_protocol": _SHEET_PROTOCOL,
     }
     graph_service.create_node(
         id=topup_id, type=_SPEND_TYPE,
@@ -568,7 +589,7 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
     )
     node = graph_service.get_node(topup_id) or {"id": topup_id, **props}
     topup = _node_to_spend(node)
-    if _push_to_sheet(topup):
+    if await _push_to_sheet(topup):
         graph_service.update_node(topup_id, properties={"sheet_synced": True})
         topup.sheet_synced = True
     return topup
@@ -597,10 +618,21 @@ async def delete_spend(
         raise HTTPException(
             status_code=403, detail="only the person who recorded it, or a resident, can remove it"
         )
-    mirrored = bool(node.get("sheet_synced"))
-    graph_service.delete_node(spend_id)
-    # The sheet is the hub's own document; we never reach in and edit rows we
-    # already handed over. Saying so plainly is the honest half of undo.
+    # One Apps Script lock covers cancellation, original-ID observation, and
+    # any compensating append. If an append is already in flight it lands
+    # first and is reversed; if deletion gets the lock first, its durable
+    # private cancellation marker prevents that append from landing later.
+    mirrored = await _reconcile_sheet_delete(node, actor)
+    if mirrored is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Sheet reconciliation is unavailable; the entry was preserved",
+        )
+    if not graph_service.delete_node(spend_id):
+        raise HTTPException(
+            status_code=503,
+            detail="The reconciled entry could not be removed; retry is safe",
+        )
     return DeleteResponse(deleted=spend_id, was_mirrored=mirrored)
 
 
@@ -611,7 +643,34 @@ class TotalsResponse(BaseModel):
     day_count: int
     month_total_idr: int
     month_count: int
-    remaining_idr: int = 0     # topped up minus spent — what is left to shop with
+    remaining_idr: int | None = None
+    remaining_source: Literal["sheet", "unavailable"] = "unavailable"
+
+
+def _remaining_balance(
+    *,
+    sheet_remaining: int | None,
+    pending_signed: list[int],
+) -> int | None:
+    """Choose and reconcile the balance on the Form kernel."""
+    value, _runtime = serve_via_kernel(
+        "endpoint_grocery_remaining.fk",
+        bindings={
+            "sheet_available": sheet_remaining is not None,
+            "sheet_remaining": sheet_remaining or 0,
+            "pending_signed": pending_signed,
+        },
+        parse=json.loads,
+    )
+    if (
+        not isinstance(value, list)
+        or len(value) != 2
+        or value[0] != 1
+        or isinstance(value[1], bool)
+        or not isinstance(value[1], int)
+    ):
+        return None
+    return value[1]
 
 
 @router.get(
@@ -630,9 +689,37 @@ async def totals(
     buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
     day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
     month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
-    # One sum over the whole ledger, signed — the same number the sheet's
-    # remaining cell computes, so the two can never quietly disagree.
-    remaining = -sum(_node_to_spend(n).signed_idr for n in rows)
+    # The Sheet carries history from before the app existed. Its authenticated
+    # carrier returns only Sisa plus acknowledgements for IDs already present
+    # in this graph. That acknowledgement closes the append/flag crash seam:
+    # an entry present in the Sheet is never applied twice merely because its
+    # local sheet_synced flag was not committed before a crash.
+    pending_nodes = [n for n in rows if not n.get("sheet_synced")]
+    legacy_unknown = any(
+        _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL for node in pending_nodes
+    )
+    pending = [_node_to_spend(n) for n in pending_nodes]
+    snapshot = (
+        None
+        if legacy_unknown
+        else await _read_sheet_snapshot([spend.id for spend in pending])
+    )
+    pending_signed = [
+        spend.signed_idr
+        for spend in pending
+        if snapshot is None
+        or (
+            spend.id not in snapshot.acknowledged_ids
+            and spend.id not in snapshot.cancelled_ids
+        )
+    ]
+    remaining = _remaining_balance(
+        sheet_remaining=snapshot.remaining_idr if snapshot is not None else None,
+        pending_signed=pending_signed,
+    )
+    remaining_source: Literal["sheet", "unavailable"] = (
+        "sheet" if remaining is not None else "unavailable"
+    )
     return TotalsResponse(
         on=day,
         day_total_idr=sum(int(n.get("amount_idr") or 0) for n in day_rows),
@@ -640,6 +727,7 @@ async def totals(
         month_total_idr=sum(int(n.get("amount_idr") or 0) for n in month_rows),
         month_count=len(month_rows),
         remaining_idr=remaining,
+        remaining_source=remaining_source,
     )
 
 
@@ -662,7 +750,7 @@ async def totals(
 #
 # `What` is the column that matters. In the ledger as we found it, all eight
 # purchases had it empty. Filling it is the whole point of this app.
-_SHEET_COLUMNS = ["When", "Amount", "What"]
+_SHEET_COLUMNS = ["When", "Amount", "What", "Entry ID"]
 
 # The door out stays lossless — everything the graph holds, not just the
 # four columns the sheet shows.
@@ -684,6 +772,7 @@ def _sheet_row(spend: SpendResponse) -> dict[str, Any]:
         "When": spend.spent_on,   # ISO; the script hands the sheet a real date
         "Amount": spend.signed_idr,
         "What": spend.description,
+        "Entry ID": spend.id,
     }
 
 
@@ -705,10 +794,9 @@ def _csv_row(spend: SpendResponse) -> dict[str, Any]:
 def _sheet_webhook() -> tuple[str, str]:
     """The hub's sheet door, from the keystore — `(url, secret)`.
 
-    The URL *is* the credential (anyone holding it can append a row), so it
-    lives beside the other keys in ``~/.coherence-network/keys.json`` under
-    ``grocery_sheet``, read through the one config carrier. Nothing here
-    reads the environment.
+    Both values are scoped credentials and live in
+    ``~/.coherence-network/keys.json`` under ``grocery_sheet``, read through
+    the one config carrier. Nothing here reads the environment.
     """
     return (
         config_service.get_key("grocery_sheet", "webhook_url").strip(),
@@ -731,10 +819,84 @@ def _sheet_id() -> str:
     return str(config_loader.api_config("grocery", "sheet_id", "") or "").strip()
 
 
+def _parse_sheet_idr(value: object) -> int | None:
+    """Read one whole-rupiah formatted Sheet value without using a float."""
+    if isinstance(value, bool):
+        return None
+    compact = re.sub(r"[^0-9,.-]", "", str(value or ""))
+    if not compact:
+        return None
+    if re.fullmatch(r"-?\d{1,3}(?:[,.]\d{3})+", compact):
+        compact = compact.replace(",", "").replace(".", "")
+    if not re.fullmatch(r"-?\d+", compact):
+        return None
+    return int(compact)
+
+
+@dataclass(frozen=True)
+class _SheetSnapshot:
+    remaining_idr: int
+    acknowledged_ids: frozenset[str]
+    cancelled_ids: frozenset[str]
+
+
+async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
+    """Read a private, bounded balance snapshot through Apps Script.
+
+    The shared secret authenticates the request. The carrier returns only
+    ``Sisa`` and the subsets of caller-supplied entry IDs already acknowledged
+    or cancelled; it never exposes the household ledger. Any failure returns
+    ``None`` so the Form policy can report that the historical balance is
+    unavailable.
+    """
+    url, secret = _sheet_webhook()
+    if not url or not secret:
+        return None
+    requested = {entry_id for entry_id in pending_ids if entry_id}
+    try:
+        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
+            response = await client.post(
+                url,
+                json={
+                    "action": "summary",
+                    "secret": secret,
+                    "pending_ids": sorted(requested),
+                },
+            )
+        if response.status_code >= 400:
+            return None
+        payload = response.json()
+        if not isinstance(payload, dict) or payload.get("ok") is not True:
+            return None
+        remaining = _parse_sheet_idr(payload.get("remaining_idr"))
+        raw_acknowledged = payload.get("acknowledged_ids")
+        raw_cancelled = payload.get("cancelled_ids")
+        if (
+            remaining is None
+            or not isinstance(raw_acknowledged, list)
+            or not isinstance(raw_cancelled, list)
+        ):
+            return None
+        acknowledged = frozenset(
+            entry_id
+            for entry_id in raw_acknowledged
+            if isinstance(entry_id, str) and entry_id in requested
+        )
+        cancelled = frozenset(
+            entry_id
+            for entry_id in raw_cancelled
+            if isinstance(entry_id, str) and entry_id in requested
+        )
+        return _SheetSnapshot(remaining, acknowledged, cancelled)
+    except (httpx.HTTPError, TypeError, ValueError):
+        return None
+
+
 class SheetStatus(BaseModel):
     configured: bool          # is there a webhook to push through?
     sheet_url: str | None = None   # where the hub's own copy lives
     pending: int              # entries the sheet has not seen yet
+    blocked_legacy: int = 0   # pre-Entry-ID rows whose presence is unknowable
 
 
 @router.get(
@@ -745,34 +907,100 @@ class SheetStatus(BaseModel):
 async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
     _require_member(token)
     sheet_id = _sheet_id()
+    webhook_url, secret = _sheet_webhook()
+    unsynced = [n for n in _all_spends() if not n.get("sheet_synced")]
     return SheetStatus(
-        configured=bool(_sheet_webhook()[0]),
+        configured=bool(webhook_url and secret),
         sheet_url=(
             f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit" if sheet_id else None
         ),
-        pending=sum(1 for n in _all_spends() if not n.get("sheet_synced")),
+        pending=len(unsynced),
+        blocked_legacy=sum(
+            1 for n in unsynced if _s(n.get("sheet_protocol")) != _SHEET_PROTOCOL
+        ),
     )
 
 
-def _push_to_sheet(spend: SpendResponse) -> bool:
+async def _push_to_sheet(spend: SpendResponse) -> bool:
     """Append one row to the hub's own sheet. False when there's nowhere to push.
 
     The URL is an Apps Script Web App the hub deploys against their own
-    spreadsheet — no service account, and the sheet stays theirs. Any failure
-    is swallowed on purpose: the graph already holds the entry, and
-    `sheet_synced=false` is the handle for a resync.
+    spreadsheet. A shared secret authenticates it and ``entry_id`` makes
+    retries idempotent. Any failure is swallowed on purpose: the graph already
+    holds the entry, and `sheet_synced=false` is the handle for a resync.
     """
     url, secret = _sheet_webhook()
-    if not url:
+    if not url or not secret:
         return False
-    payload: dict[str, Any] = {"row": _sheet_row(spend), "columns": _SHEET_COLUMNS}
-    if secret:
-        payload["secret"] = secret
+    payload: dict[str, Any] = {
+        "action": "append",
+        "entry_id": spend.id,
+        "row": _sheet_row(spend),
+        "columns": _SHEET_COLUMNS,
+        "secret": secret,
+    }
     try:
-        response = httpx.post(url, json=payload, timeout=6.0, follow_redirects=True)
-        return response.status_code < 400
-    except Exception:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+            response = await client.post(url, json=payload)
+        if response.status_code >= 400:
+            return False
+        result = response.json()
+        return (
+            isinstance(result, dict)
+            and result.get("ok") is True
+            and result.get("entry_id") == spend.id
+            and result.get("cancelled") is not True
+        )
+    except (httpx.HTTPError, TypeError, ValueError):
         return False
+
+
+async def _reconcile_sheet_delete(node: dict, actor: dict) -> bool | None:
+    """Atomically cancel an entry and reverse it if the Sheet already has it.
+
+    ``None`` means the private carrier could not prove completion. The caller
+    must retain the graph row so retrying remains safe.
+    """
+    if not node.get("sheet_synced") and _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL:
+        # A predecessor carrier appended without Entry IDs. For these rows a
+        # false local flag cannot distinguish "never sent" from "sent, then
+        # crashed before flagging". Preserve the row until a one-time migration
+        # identifies it; neither deletion nor resync may guess.
+        return None
+    url, secret = _sheet_webhook()
+    if not url or not secret:
+        return None
+    original = _node_to_spend(node)
+    reversal = _reversal_spend(node, actor)
+    payload: dict[str, Any] = {
+        "action": "reconcile_delete",
+        "original_id": original.id,
+        "known_mirrored": bool(node.get("sheet_synced")),
+        "reversal": {
+            "entry_id": reversal.id,
+            "row": _sheet_row(reversal),
+            "columns": _SHEET_COLUMNS,
+        },
+        "secret": secret,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+            response = await client.post(url, json=payload)
+        if response.status_code >= 400:
+            return None
+        result = response.json()
+        if (
+            not isinstance(result, dict)
+            or result.get("ok") is not True
+            or result.get("cancelled") is not True
+            or result.get("original_id") != original.id
+            or result.get("reversal_id") != reversal.id
+            or not isinstance(result.get("original_present"), bool)
+        ):
+            return None
+        return bool(result["original_present"])
+    except (httpx.HTTPError, TypeError, ValueError):
+        return None
 
 
 class ResyncBody(BaseModel):
@@ -783,6 +1011,7 @@ class ResyncResponse(BaseModel):
     attempted: int
     synced: int
     configured: bool
+    blocked_legacy: int = 0
 
 
 @router.post(
@@ -792,17 +1021,27 @@ class ResyncResponse(BaseModel):
 )
 async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
-    configured = bool(_sheet_webhook()[0])
-    pending = [n for n in _all_spends() if not n.get("sheet_synced")]
+    webhook_url, secret = _sheet_webhook()
+    configured = bool(webhook_url and secret)
+    all_pending = [n for n in _all_spends() if not n.get("sheet_synced")]
+    pending = [
+        n for n in all_pending if _s(n.get("sheet_protocol")) == _SHEET_PROTOCOL
+    ]
+    blocked_legacy = len(all_pending) - len(pending)
     pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
     synced = 0
     if configured:
         for node in pending:
             spend = _node_to_spend(node)
-            if _push_to_sheet(spend):
+            if await _push_to_sheet(spend):
                 graph_service.update_node(node["id"], properties={"sheet_synced": True})
                 synced += 1
-    return ResyncResponse(attempted=len(pending), synced=synced, configured=configured)
+    return ResyncResponse(
+        attempted=len(pending),
+        synced=synced,
+        configured=configured,
+        blocked_legacy=blocked_legacy,
+    )
 
 
 @router.get(
@@ -812,7 +1051,10 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
 )
 async def export_csv(token: str | None = Query(default=None)) -> PlainTextResponse:
     _require_member(token)
-    rows = sorted(_all_spends(), key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""))
+    rows = sorted(
+        _all_spends(),
+        key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""),
+    )
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=_CSV_COLUMNS)
     writer.writeheader()

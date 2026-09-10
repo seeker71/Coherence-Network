@@ -23,7 +23,7 @@ def _reset_presence():
 
 
 @pytest.mark.asyncio
-async def test_graph_node_identity_resolves_declared_skill_alias():
+async def test_graph_node_identity_resolves_declared_and_legacy_aliases():
     graph_service.create_node(
         id="skill:canonical-practice",
         type="skill",
@@ -31,11 +31,17 @@ async def test_graph_node_identity_resolves_declared_skill_alias():
         properties={
             "slug": "canonical-practice",
             "aliases": ["practice-doorway"],
+            "legacy_ids": ["practice-old-doorway"],
         },
     )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        for identity in ("practice-doorway", "skill:practice-doorway"):
+        for identity in (
+            "practice-doorway",
+            "skill:practice-doorway",
+            "practice-old-doorway",
+            "skill:practice-old-doorway",
+        ):
             response = await c.get(f"/api/graph/nodes/{identity}")
             assert response.status_code == 200, response.text
             assert response.json()["id"] == "skill:canonical-practice"
