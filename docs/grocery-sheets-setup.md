@@ -1,10 +1,12 @@
 # Mirroring the grocery ledger into your own Google Sheet
 
 New app entries live in the network's graph and mirror into Google Sheets.
-The Sheet also carries the household history from before the app existed, so
-the app reads its fixed `Sisa` summary cell as the balance baseline and applies
-any new graph entries still waiting to sync. Only `A1:B3` is read; the household
-log remains in the Sheet the hub owns.
+The Sheet also carries the household history from before the app existed. An
+authenticated Apps Script request returns its fixed `Sisa` summary plus
+acknowledgements for entry IDs the app already knows. The app applies only
+unacknowledged graph entries, so a retry or crash cannot count a purchase twice.
+The carrier never returns the household log, and the spreadsheet itself can
+remain private.
 
 Nothing here puts a Google credential in our keystore. You deploy a small
 script against your own spreadsheet and hand us a URL; revoking us is
@@ -35,13 +37,13 @@ The new shape puts the balance on top, where a person looks first, and keeps
 an append-only log below it:
 
 ```
-      A           B          C
+      A           B          C                           D
  1    Sisa        Rp2,772,000                            <- what is left
  2    Belanja     Rp3,009,300                            <- spent
  3    Isi ulang   Rp5,781,300                            <- topped up
- 4    When        Amount     What                        <- header (frozen)
+ 4    When        Amount     What                        Entry ID (hidden)
  5    23/07/2026  385000     pasar pagi - sayur & ikan
- 6    26/07/2026  -4000000   top up
+ 6    26/07/2026  -4000000   top up                      topup-...
  7    ...
 ```
 
@@ -87,7 +89,7 @@ from the toolbar. It converts the sheet in place and keeps every value:
 // SUM over one column. Appends land below row 4 and can never disturb the
 // totals above it.
 
-const HEADERS = ["When", "Amount", "What"];
+const HEADERS = ["When", "Amount", "What", "Entry ID"];
 const FIRST_DATA_ROW = 5;
 const RUPIAH = '"Rp"#,##0';
 
@@ -157,6 +159,7 @@ function restructure() {
   // The ledger arrived with a hidden column; What is the column that matters,
   // so every column the log uses is made visible before it is measured.
   sheet.showColumns(1, 3);
+  sheet.hideColumns(4);
   sheet.autoResizeColumns(1, 3);
   sheet.setColumnWidth(3, Math.max(260, sheet.getColumnWidth(3)));
 
@@ -183,27 +186,94 @@ function headerRowOf(sheet) {
 In the same Apps Script project, add this alongside `restructure`:
 
 ```javascript
-// The app appends one event per call - a purchase or a top-up.
-const SECRET = "";  // set to the same value as grocery_sheet.secret
+// The app appends one event per call and reads only the balance summary.
+// Set a strong random value and copy the same value to grocery_sheet.secret.
+const SECRET = "REPLACE_WITH_A_STRONG_RANDOM_SECRET";
+const ENTRY_ID_HEADER = "Entry ID";
+
+function jsonOutput(value) {
+  return ContentService.createTextOutput(JSON.stringify(value))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function entryIdColumn(sheet, hrow, createIfMissing) {
+  const width = Math.max(1, sheet.getLastColumn());
+  const header = sheet.getRange(hrow, 1, 1, width).getValues()[0]
+    .map(function (value) { return String(value).trim(); });
+  var index = header.indexOf(ENTRY_ID_HEADER);
+  if (index < 0 && createIfMissing) {
+    index = header.length;
+    sheet.getRange(hrow, index + 1).setValue(ENTRY_ID_HEADER);
+    sheet.hideColumns(index + 1);
+  }
+  return index;
+}
+
+function acknowledgedIds(sheet, hrow, requested) {
+  if (!Array.isArray(requested) || requested.length === 0) return [];
+  const wanted = new Set(requested.map(String));
+  const index = entryIdColumn(sheet, hrow, false);
+  const count = sheet.getLastRow() - hrow;
+  if (index < 0 || count < 1) return [];
+  return sheet.getRange(hrow + 1, index + 1, count, 1).getDisplayValues()
+    .map(function (row) { return String(row[0]); })
+    .filter(function (entryId) { return wanted.has(entryId); });
+}
+
+function summary(sheet, hrow, requested) {
+  const rows = sheet.getRange("A1:B3").getValues();
+  var remaining = null;
+  rows.forEach(function (row) {
+    if (String(row[0]).trim().toLowerCase() === "sisa") remaining = Number(row[1]);
+  });
+  if (!Number.isFinite(remaining)) return {ok: false, error: "missing Sisa summary"};
+  return {
+    ok: true,
+    remaining_idr: Math.round(remaining),
+    acknowledged_ids: acknowledgedIds(sheet, hrow, requested),
+  };
+}
 
 function doPost(e) {
-  const body = JSON.parse(e.postData.contents);
-  if (SECRET && body.secret !== SECRET) {
-    return ContentService.createTextOutput("forbidden");
-  }
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const hrow = headerRowOf(sheet);
-  const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const body = JSON.parse(e.postData.contents);
+    if (!SECRET || body.secret !== SECRET) {
+      return jsonOutput({ok: false, error: "forbidden"});
+    }
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    const hrow = headerRowOf(sheet);
 
-  // Match columns by NAME, so reordering or adding one never shifts the write.
-  const row = new Array(header.length).fill("");
-  body.columns.forEach(function (c) {
-    const at = header.indexOf(c);
-    if (at < 0) return;
-    row[at] = (c === "When" && body.row[c]) ? new Date(body.row[c]) : body.row[c];
-  });
-  sheet.appendRow(row);
-  return ContentService.createTextOutput("ok");
+    if (body.action === "summary") {
+      return jsonOutput(summary(sheet, hrow, body.pending_ids || []));
+    }
+    if (body.action !== "append") {
+      return jsonOutput({ok: false, error: "unknown action"});
+    }
+
+    const entryId = String(body.entry_id || "").trim();
+    if (!entryId) return jsonOutput({ok: false, error: "entry_id required"});
+    const idIndex = entryIdColumn(sheet, hrow, true);
+    if (acknowledgedIds(sheet, hrow, [entryId]).length) {
+      return jsonOutput({ok: true, appended: false, entry_id: entryId});
+    }
+
+    const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0]
+      .map(function (value) { return String(value).trim(); });
+    const row = new Array(header.length).fill("");
+    body.columns.forEach(function (column) {
+      const at = header.indexOf(column);
+      if (at < 0) return;
+      row[at] = (column === "When" && body.row[column])
+        ? new Date(body.row[column]) : body.row[column];
+    });
+    row[idIndex] = entryId;
+    sheet.appendRow(row);
+    return jsonOutput({ok: true, appended: true, entry_id: entryId});
+  } finally {
+    lock.releaseLock();
+  }
 }
 ```
 
@@ -217,10 +287,10 @@ function doPost(e) {
 Copy the Web app URL — it looks like
 `https://script.google.com/macros/s/AKfy…/exec`.
 
-"Anyone" means anyone with the URL can append a row. The URL is the
-secret. If that's too loose for you, set `SECRET` in the script and
-`grocery_sheet.secret` in the keystore to the same value — then a leaked
-URL alone can't write.
+The web app is reachable by anyone, but every read and append is authenticated
+by `SECRET`. Keep the spreadsheet's Drive sharing **Restricted**; the app never
+uses its public CSV export. A leaked deployment URL alone can neither read the
+balance nor append a row.
 
 ## 4. Point the network at it
 
@@ -232,12 +302,13 @@ in the keystore beside the other keys, at `~/.coherence-network/keys.json`
 {
   "grocery_sheet": {
     "webhook_url": "https://script.google.com/macros/s/AKfy…/exec",
-    "secret": ""
+    "secret": "THE_SAME_STRONG_RANDOM_SECRET"
   }
 }
 ```
 
-Set `secret` only if you set `SECRET` in the script.
+The secret is required. If either copy is empty or differs, Sheet reads and
+writes fail closed and the app uses its graph-backed offline balance.
 
 The sheet's **id** is already set. It ships in `api/config/api.json` under
 `grocery.sheet_id`, so a fresh deploy points at the hub's ledger with
