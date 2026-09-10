@@ -1,11 +1,19 @@
-; grocery_remaining_band.fk — the Sheet/graph balance policy.
-; Verdict 63: baseline, buys, top-ups, multi-entry folds, and graph fallback
+; grocery_remaining_band.fk — the authenticated Sheet balance policy.
+; Verdict 63: availability, baseline, buys, top-ups, and multi-entry folds
 ; agree on every sibling kernel and the c-bootstrapped fkwu runtime.
 (do
-  (let baseline (if (eq (grocery-remaining true 2000000 (list) (list)) 2000000) 1 0))
-  (let pending-buy (if (eq (grocery-remaining true 2000000 (list 100000) (list)) 1900000) 2 0))
-  (let pending-topup (if (eq (grocery-remaining true 2000000 (list -100000) (list)) 2100000) 4 0))
-  (let graph-buy (if (eq (grocery-remaining false 0 (list) (list 100000 200000)) -300000) 8 0))
-  (let graph-mixed (if (eq (grocery-remaining false 0 (list) (list -2000000 100000)) 1900000) 16 0))
-  (let pending-many (if (eq (grocery-remaining true 2000000 (list 100000 -50000 25000) (list)) 1925000) 32 0))
-  (add baseline (add pending-buy (add pending-topup (add graph-buy (add graph-mixed pending-many))))))
+  (let baseline (grocery-remaining true 2000000 (list)))
+  (let pending-buy (grocery-remaining true 2000000 (list 100000)))
+  (let pending-topup (grocery-remaining true 2000000 (list -100000)))
+  (let pending-many (grocery-remaining true 2000000 (list 100000 -50000 25000)))
+  (let unavailable (grocery-remaining false 9999999 (list -2000000 100000)))
+  (let unavailable-empty (grocery-remaining false 0 (list)))
+  (let baseline-ok (if (and (eq (head baseline) 1) (eq (head (tail baseline)) 2000000)) 1 0))
+  (let buy-ok (if (and (eq (head pending-buy) 1) (eq (head (tail pending-buy)) 1900000)) 2 0))
+  (let topup-ok (if (and (eq (head pending-topup) 1) (eq (head (tail pending-topup)) 2100000)) 4 0))
+  (let many-ok (if (and (eq (head pending-many) 1) (eq (head (tail pending-many)) 1925000)) 8 0))
+  (let unavailable-ok (if (and (eq (head unavailable) 0) (eq (head (tail unavailable)) 0)) 16 0))
+  (let unavailable-ignores-values
+    (if (and (eq (head unavailable) (head unavailable-empty))
+             (eq (head (tail unavailable)) (head (tail unavailable-empty)))) 32 0))
+  (add baseline-ok (add buy-ok (add topup-ok (add many-ok (add unavailable-ok unavailable-ignores-values))))))

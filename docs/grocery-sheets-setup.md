@@ -315,7 +315,9 @@ in the keystore beside the other keys, at `~/.coherence-network/keys.json`
 ```
 
 The secret is required. If either copy is empty or differs, Sheet reads and
-writes fail closed and the app uses its graph-backed offline balance.
+writes fail closed. The graph ledger and its day/month totals remain available,
+while **Sisa** displays as temporarily unavailable instead of showing an
+incomplete graph-only balance.
 
 The sheet's **id** is already set. It ships in `api/config/api.json` under
 `grocery.sheet_id`, so a fresh deploy points at the hub's ledger with
@@ -467,6 +469,11 @@ curl -X POST https://api.coherencycoin.com/api/grocery/sheet/resync \
 
 pushes everything the sheet hasn't seen. The response says how many were
 pending, how many landed, and whether a webhook is configured at all.
+
+Deleting also waits for this carrier. If Sheet state cannot be confirmed, the
+API keeps the original graph entry and returns a retryable error. Once the
+carrier is back, the same deletion either removes an unmirrored entry or sends
+one stable compensating Sheet event before removing it from the graph.
 
 ## The door out
 

@@ -48,6 +48,8 @@
     "docs/system_audit/model_executor_runs.jsonl",
     "specs/presence-harmonization.md",
     "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx",
+    "web/tests/hati-grocery-layout.test.ts",
     "web/tests/presence-node.test.ts"
   ],
   "files_owned": [
@@ -68,6 +70,8 @@
     "docs/system_audit/model_executor_runs.jsonl",
     "specs/presence-harmonization.md",
     "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx",
+    "web/tests/hati-grocery-layout.test.ts",
     "web/tests/presence-node.test.ts"
   ],
   "evidence_refs": [
@@ -78,8 +82,8 @@
     "The app contract was write-only: it mirrored graph entries into Sheets but calculated remaining balance solely from graph rows, excluding the pre-app ledger history.",
     "The first repair read the anonymous CSV export and trusted sheet_synced as an atomic boundary; exact-head review exposed both the privacy leak and the append/flag crash race before merge.",
     "The repaired carrier authenticates every request, returns only Sisa plus matches among caller-supplied pending entry IDs, and makes appends idempotent with an Entry ID column; the spreadsheet can remain private.",
-    "The historical-baseline choice, signed pending fold, and graph fallback now execute in endpoint_grocery_remaining.fk rather than in the Python HTTP carrier.",
-    "Mirrored deletions persist a private graph tombstone and one stable reversal operation; Sheet balance reads apply the reversal while pending and acknowledgements prevent replay after delivery.",
+    "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
+    "Deletion first reconciles the original and stable reversal IDs through the authenticated carrier, preserves the graph row on uncertainty, and physically removes it only after Sheet state is safe, so no private tombstone leaks through generic graph reads.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
     "Graph identity lookup now recognizes both aliases and legacy_ids with indexed JSON containment and exact membership confirmation.",
     "PostgreSQL substrate uniqueness now uses a bounded md5 expression key while exact full serialized text remains part of every lookup; SQLite retains exact tuple uniqueness.",
@@ -98,13 +102,14 @@
       "form/form/validate.sh ../../api/app/form_recipes/endpoint_grocery_remaining.fk ../../api/tests/form/grocery_remaining_band.fk",
       "scripts/fkwu_run.sh --src api/app/form_recipes/endpoint_grocery_remaining.fk api/tests/form/grocery_remaining_band.fk",
       "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py api/tests/test_intern_count_stone.py api/tests/test_substrate.py",
+      "cd web && npm test -- --run tests/hati-grocery-layout.test.ts tests/hati-grocery-handoff.test.ts",
       "api/.venv/bin/pytest -q api/tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "ruff check api/app/services/graph_service.py api/app/services/unified_db.py api/app/services/substrate/orm.py api/app/services/substrate/kernel.py api/tests/test_intern_count_stone.py",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The initial full local PR guard passes, including 407 API tests, the production web build, and the combined runtime verifier. The first review repair also passed a fresh full guard and exact-head CI. After the second exact-head review, the grocery, substrate, and migration suites pass 60 tests including mirrored deletion reconciliation and fail-closed PostgreSQL startup; the remaining-balance band returns verdict 63 on Go, Rust, TypeScript, and the c-bootstrapped fkwu runtime; changed production files pass lint and strict spec validation. A final full guard will bind the amended head before push."
+    "summary": "The final full local PR guard passes on the amended head, including API tests, the production web build, and the combined runtime verifier. The final focused grocery suite passes 37 tests; the broader grocery, substrate, and migration suite passes 61 tests; the remaining-balance band returns verdict 63 on Go, Rust, TypeScript, and the c-bootstrapped fkwu runtime. Lint, strict spec validation, evidence validation, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",

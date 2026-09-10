@@ -22,8 +22,8 @@ the hub-owned historical balance baseline and outbound mirror (see
 ``docs/grocery-sheets-setup.md``). An authenticated Apps Script carrier returns
 only the fixed summary and acknowledgements for entry IDs the app already
 knows, so the household log never becomes a public download. If the Sheet is
-dark, the graph keeps answering. ``GET /grocery/export.csv`` remains the open
-door out.
+dark, the graph ledger keeps answering while the historical balance says it is
+unavailable. ``GET /grocery/export.csv`` remains the open door out.
 
 Identity is the household's: a device token that resolves to a member with
 write access. Seeing the ledger is open to any registered cell here.
@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 import uuid
 from dataclasses import dataclass
@@ -393,13 +394,8 @@ def _all_spends() -> list[dict]:
     return [n for n in nodes if n.get("type") == _SPEND_TYPE]
 
 
-def _visible_spends(rows: list[dict]) -> list[dict]:
-    """User-facing ledger rows, excluding retained deletion tombstones."""
-    return [n for n in rows if not n.get("deleted_at")]
-
-
-def _reversal_spend(node: dict) -> SpendResponse:
-    """The stable compensating Sheet event for one mirrored deletion."""
+def _reversal_spend(node: dict, actor: dict) -> SpendResponse:
+    """The stable compensating Sheet event for one reconciled deletion."""
     original = _node_to_spend(node)
     reversal_kind = _KIND_BUY if original.kind == _KIND_TOPUP else _KIND_TOPUP
     return SpendResponse(
@@ -407,26 +403,14 @@ def _reversal_spend(node: dict) -> SpendResponse:
         amount_typed=original.amount_typed,
         amount_idr=original.amount_idr,
         description=f"undo: {original.description}",
-        spent_on=_s(node.get("deleted_on")) or _today_local(),
+        spent_on=_today_local(),
         kind=reversal_kind,
-        by_id=_s(node.get("deleted_by_id")) or original.by_id,
-        by_name=_s(node.get("deleted_by_name")) or original.by_name,
-        created_at=_s(node.get("deleted_at")) or _now(),
+        by_id=_s(actor.get("id")) or original.by_id,
+        by_name=_s(actor.get("name")) or original.by_name,
+        created_at=_now(),
         runtime=original.runtime,
-        sheet_synced=bool(node.get("sheet_reversal_synced")),
+        sheet_synced=False,
     )
-
-
-def _pending_sheet_operations(rows: list[dict]) -> list[tuple[dict, SpendResponse, str]]:
-    """Unsynced appends and deletion reversals, each with its graph flag."""
-    pending: list[tuple[dict, SpendResponse, str]] = []
-    for node in rows:
-        if node.get("deleted_at"):
-            if node.get("sheet_synced") and not node.get("sheet_reversal_synced"):
-                pending.append((node, _reversal_spend(node), "sheet_reversal_synced"))
-        elif not node.get("sheet_synced"):
-            pending.append((node, _node_to_spend(node), "sheet_synced"))
-    return pending
 
 
 def _resolve_description(
@@ -543,7 +527,7 @@ async def list_spends(
     limit: int = Query(default=100, ge=1, le=1000),
 ) -> list[SpendResponse]:
     _require_member(token)
-    rows = _visible_spends(_all_spends())
+    rows = _all_spends()
     if on:
         rows = [n for n in rows if _s(n.get("spent_on")) == on]
     rows.sort(key=lambda n: (_s(n.get("created_at")) or ""), reverse=True)
@@ -628,7 +612,7 @@ async def delete_spend(
 ) -> DeleteResponse:
     actor = _require_writer(actor_token)
     node = graph_service.get_node(spend_id)
-    if not node or node.get("type") != _SPEND_TYPE or node.get("deleted_at"):
+    if not node or node.get("type") != _SPEND_TYPE:
         raise HTTPException(status_code=404, detail=f"entry {spend_id!r} not found")
     # Your own mistake is yours to undo; a resident can fix anyone's.
     if node.get("by_id") != actor.get("id") and actor.get("role") != "resident":
@@ -636,36 +620,41 @@ async def delete_spend(
             status_code=403, detail="only the person who recorded it, or a resident, can remove it"
         )
     mirrored = bool(node.get("sheet_synced"))
-    if not mirrored:
-        graph_service.delete_node(spend_id)
-        return DeleteResponse(deleted=spend_id, was_mirrored=False)
-
-    # A mirrored row remains as a private tombstone so graph fallback can omit
-    # it while the Sheet receives a stable compensating event. The reversal ID
-    # is derived from the original ID, so a crash or retry cannot append twice.
-    deleted_at = _now()
-    graph_service.update_node(
-        spend_id,
-        properties={
-            "deleted_at": deleted_at,
-            "deleted_on": _today_local(),
-            "deleted_by_id": actor.get("id", ""),
-            "deleted_by_name": actor.get("name", ""),
-            "sheet_reversal_synced": False,
-        },
-    )
-    tombstone = graph_service.get_node(spend_id) or {
-        **node,
-        "deleted_at": deleted_at,
-        "deleted_on": _today_local(),
-        "deleted_by_id": actor.get("id", ""),
-        "deleted_by_name": actor.get("name", ""),
-        "sheet_reversal_synced": False,
-    }
-    if await _push_to_sheet(_reversal_spend(tombstone)):
-        graph_service.update_node(
-            spend_id, properties={"sheet_reversal_synced": True}
+    webhook_url, secret = _sheet_webhook()
+    if not webhook_url or not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Sheet reconciliation is unavailable; the entry was preserved",
         )
+
+    # sheet_synced cannot decide deletion safety: the append and graph flag are
+    # not atomic. Ask the authenticated carrier about both deterministic IDs.
+    # If its state is unknown, preserve the entry and return a retryable error.
+    reversal = _reversal_spend(node, actor)
+    snapshot = await _read_sheet_snapshot([spend_id, reversal.id])
+    if snapshot is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Sheet reconciliation is unavailable; the entry was preserved",
+        )
+    sheet_has_original = spend_id in snapshot.acknowledged_ids
+    sheet_has_reversal = reversal.id in snapshot.acknowledged_ids
+    if mirrored and not sheet_has_original:
+        raise HTTPException(
+            status_code=503,
+            detail="Sheet acknowledgement is inconsistent; the entry was preserved",
+        )
+    if sheet_has_original and not sheet_has_reversal:
+        if not await _push_to_sheet(reversal):
+            raise HTTPException(
+                status_code=503,
+                detail="Sheet reversal is pending; the entry was preserved",
+            )
+        mirrored = True
+    elif sheet_has_original:
+        mirrored = True
+
+    graph_service.delete_node(spend_id)
     return DeleteResponse(deleted=spend_id, was_mirrored=mirrored)
 
 
@@ -676,16 +665,15 @@ class TotalsResponse(BaseModel):
     day_count: int
     month_total_idr: int
     month_count: int
-    remaining_idr: int = 0     # topped up minus spent — what is left to shop with
-    remaining_source: Literal["sheet", "graph"] = "graph"
+    remaining_idr: int | None = None
+    remaining_source: Literal["sheet", "unavailable"] = "unavailable"
 
 
 def _remaining_balance(
     *,
     sheet_remaining: int | None,
     pending_signed: list[int],
-    graph_signed: list[int],
-) -> int:
+) -> int | None:
     """Choose and reconcile the balance on the Form kernel."""
     value, _runtime = serve_via_kernel(
         "endpoint_grocery_remaining.fk",
@@ -693,11 +681,18 @@ def _remaining_balance(
             "sheet_available": sheet_remaining is not None,
             "sheet_remaining": sheet_remaining or 0,
             "pending_signed": pending_signed,
-            "graph_signed": graph_signed,
         },
-        parse=int,
+        parse=json.loads,
     )
-    return int(value)
+    if (
+        not isinstance(value, list)
+        or len(value) != 2
+        or value[0] != 1
+        or isinstance(value[1], bool)
+        or not isinstance(value[1], int)
+    ):
+        return None
+    return value[1]
 
 
 @router.get(
@@ -713,8 +708,7 @@ async def totals(
     day = (on or "").strip() or _today_local()
     month = day[:7]
     rows = _all_spends()
-    visible = _visible_spends(rows)
-    buys = [n for n in visible if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
+    buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
     day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
     month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
     # The Sheet carries history from before the app existed. Its authenticated
@@ -722,20 +716,19 @@ async def totals(
     # in this graph. That acknowledgement closes the append/flag crash seam:
     # an entry present in the Sheet is never applied twice merely because its
     # local sheet_synced flag was not committed before a crash.
-    pending = _pending_sheet_operations(rows)
-    snapshot = await _read_sheet_snapshot([spend.id for _node, spend, _flag in pending])
+    pending = [_node_to_spend(n) for n in rows if not n.get("sheet_synced")]
+    snapshot = await _read_sheet_snapshot([spend.id for spend in pending])
     pending_signed = [
         spend.signed_idr
-        for _node, spend, _flag in pending
+        for spend in pending
         if snapshot is None or spend.id not in snapshot.acknowledged_ids
     ]
     remaining = _remaining_balance(
         sheet_remaining=snapshot.remaining_idr if snapshot is not None else None,
         pending_signed=pending_signed,
-        graph_signed=[_node_to_spend(n).signed_idr for n in visible],
     )
-    remaining_source: Literal["sheet", "graph"] = (
-        "sheet" if snapshot is not None else "graph"
+    remaining_source: Literal["sheet", "unavailable"] = (
+        "sheet" if remaining is not None else "unavailable"
     )
     return TotalsResponse(
         on=day,
@@ -862,7 +855,7 @@ async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
     The shared secret authenticates the request. The carrier returns only
     ``Sisa`` and the subset of caller-supplied entry IDs already acknowledged;
     it never exposes the household ledger. Any failure returns ``None`` so the
-    Form policy can choose the graph-backed offline path.
+    Form policy can report that the historical balance is unavailable.
     """
     url, secret = _sheet_webhook()
     if not url or not secret:
@@ -917,7 +910,7 @@ async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
         sheet_url=(
             f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit" if sheet_id else None
         ),
-        pending=len(_pending_sheet_operations(_all_spends())),
+        pending=sum(1 for n in _all_spends() if not n.get("sheet_synced")),
     )
 
 
@@ -973,13 +966,14 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
     webhook_url, secret = _sheet_webhook()
     configured = bool(webhook_url and secret)
-    pending = _pending_sheet_operations(_all_spends())
-    pending.sort(key=lambda operation: (_s(operation[0].get("created_at")) or ""))
+    pending = [n for n in _all_spends() if not n.get("sheet_synced")]
+    pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
     synced = 0
     if configured:
-        for node, spend, sync_flag in pending:
+        for node in pending:
+            spend = _node_to_spend(node)
             if await _push_to_sheet(spend):
-                graph_service.update_node(node["id"], properties={sync_flag: True})
+                graph_service.update_node(node["id"], properties={"sheet_synced": True})
                 synced += 1
     return ResyncResponse(attempted=len(pending), synced=synced, configured=configured)
 
@@ -992,7 +986,7 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
 async def export_csv(token: str | None = Query(default=None)) -> PlainTextResponse:
     _require_member(token)
     rows = sorted(
-        _visible_spends(_all_spends()),
+        _all_spends(),
         key=lambda n: (_s(n.get("spent_on")) or "", _s(n.get("created_at")) or ""),
     )
     buffer = io.StringIO()
