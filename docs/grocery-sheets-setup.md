@@ -194,9 +194,11 @@ In the same Apps Script project, add this alongside `restructure`:
 
 ```javascript
 // The app appends one event per call and reads only the balance summary.
-// Set a strong random value and copy the same value to grocery_sheet.secret.
-const SECRET = "REPLACE_WITH_A_STRONG_RANDOM_SECRET";
+// Store the shared value as the GROCERY_SHEET_SECRET script property and copy
+// the same value to grocery_sheet.secret in the production keystore.
+const SECRET_PROPERTY = "GROCERY_SHEET_SECRET";
 const ENTRY_ID_HEADER = "Entry ID";
+const STATE_SHEET_NAME = "_Hati App State";
 
 function jsonOutput(value) {
   return ContentService.createTextOutput(JSON.stringify(value))
@@ -227,6 +229,35 @@ function acknowledgedIds(sheet, hrow, requested) {
     .filter(function (entryId) { return wanted.has(entryId); });
 }
 
+// A private durable cancellation ledger closes the race between an append and
+// a deletion. It is separate from the human ledger and remains hidden.
+function stateSheet(ss, createIfMissing) {
+  var sheet = ss.getSheetByName(STATE_SHEET_NAME);
+  if (!sheet && createIfMissing) {
+    sheet = ss.insertSheet(STATE_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 2).setValues([["Entry ID", "State"]]);
+    sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function cancelledIds(ss, requested) {
+  if (!Array.isArray(requested) || requested.length === 0) return [];
+  const sheet = stateSheet(ss, false);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const wanted = new Set(requested.map(String));
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getDisplayValues()
+    .filter(function (row) {
+      return wanted.has(String(row[0])) && String(row[1]) === "cancelled";
+    })
+    .map(function (row) { return String(row[0]); });
+}
+
+function markCancelled(ss, entryId) {
+  if (cancelledIds(ss, [entryId]).length) return;
+  stateSheet(ss, true).appendRow([entryId, "cancelled"]);
+}
+
 function summary(sheet, hrow, requested) {
   const rows = sheet.getRange("A1:B3").getValues();
   var remaining = null;
@@ -241,43 +272,89 @@ function summary(sheet, hrow, requested) {
   };
 }
 
+function appendEntry(ss, sheet, hrow, body) {
+  const entryId = String(body.entry_id || "").trim();
+  if (!entryId) return {ok: false, error: "entry_id required"};
+  if (cancelledIds(ss, [entryId]).length) {
+    return {ok: true, appended: false, cancelled: true, entry_id: entryId};
+  }
+  const idIndex = entryIdColumn(sheet, hrow, true);
+  if (acknowledgedIds(sheet, hrow, [entryId]).length) {
+    return {ok: true, appended: false, entry_id: entryId};
+  }
+
+  const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(function (value) { return String(value).trim(); });
+  const row = new Array(header.length).fill("");
+  body.columns.forEach(function (column) {
+    const at = header.indexOf(column);
+    if (at < 0) return;
+    row[at] = (column === "When" && body.row[column])
+      ? new Date(body.row[column]) : body.row[column];
+  });
+  row[idIndex] = entryId;
+  sheet.appendRow(row);
+  return {ok: true, appended: true, entry_id: entryId};
+}
+
+function reconcileDelete(ss, sheet, hrow, body) {
+  const originalId = String(body.original_id || "").trim();
+  const reversal = body.reversal || {};
+  const reversalId = String(reversal.entry_id || "").trim();
+  if (!originalId || !reversalId) {
+    return {ok: false, error: "original_id and reversal.entry_id required"};
+  }
+
+  // A true local flag proves an older carrier returned success even if that
+  // pre-idempotency row has no Entry ID. A false flag never proves absence.
+  const originalPresent = body.known_mirrored === true ||
+    acknowledgedIds(sheet, hrow, [originalId]).length > 0;
+  if (originalPresent && !acknowledgedIds(sheet, hrow, [reversalId]).length) {
+    const reversed = appendEntry(ss, sheet, hrow, reversal);
+    if (!reversed.ok || reversed.cancelled) return reversed;
+  }
+
+  // This marker and all append checks share the same script lock. If an
+  // original append had the lock first it is visible and reversed above; if
+  // deletion had the lock first, the later append observes this marker and
+  // becomes a harmless acknowledged cancellation.
+  markCancelled(ss, originalId);
+  return {
+    ok: true,
+    cancelled: true,
+    original_id: originalId,
+    original_present: originalPresent,
+    reversal_id: reversalId,
+  };
+}
+
 function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const body = JSON.parse(e.postData.contents);
-    if (!SECRET || body.secret !== SECRET) {
+    const secret = String(
+      PropertiesService.getScriptProperties().getProperty(SECRET_PROPERTY) || ""
+    );
+    if (!secret || body.secret !== secret) {
       return jsonOutput({ok: false, error: "forbidden"});
     }
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheets().filter(function (candidate) {
+      return candidate.getName() !== STATE_SHEET_NAME;
+    })[0];
     const hrow = headerRowOf(sheet);
 
     if (body.action === "summary") {
       return jsonOutput(summary(sheet, hrow, body.pending_ids || []));
     }
-    if (body.action !== "append") {
-      return jsonOutput({ok: false, error: "unknown action"});
+    if (body.action === "append") {
+      return jsonOutput(appendEntry(ss, sheet, hrow, body));
     }
-
-    const entryId = String(body.entry_id || "").trim();
-    if (!entryId) return jsonOutput({ok: false, error: "entry_id required"});
-    const idIndex = entryIdColumn(sheet, hrow, true);
-    if (acknowledgedIds(sheet, hrow, [entryId]).length) {
-      return jsonOutput({ok: true, appended: false, entry_id: entryId});
+    if (body.action === "reconcile_delete") {
+      return jsonOutput(reconcileDelete(ss, sheet, hrow, body));
     }
-
-    const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0]
-      .map(function (value) { return String(value).trim(); });
-    const row = new Array(header.length).fill("");
-    body.columns.forEach(function (column) {
-      const at = header.indexOf(column);
-      if (at < 0) return;
-      row[at] = (column === "When" && body.row[column])
-        ? new Date(body.row[column]) : body.row[column];
-    });
-    row[idIndex] = entryId;
-    sheet.appendRow(row);
-    return jsonOutput({ok: true, appended: true, entry_id: entryId});
+    return jsonOutput({ok: false, error: "unknown action"});
   } finally {
     lock.releaseLock();
   }
@@ -285,6 +362,10 @@ function doPost(e) {
 ```
 
 ## 3. Deploy it
+
+Before deploying, open **Project Settings → Script properties** and add
+`GROCERY_SHEET_SECRET` with a strong random value. The value stays outside the
+script source and must match the production keystore value in step 4.
 
 **Deploy → New deployment → Web app**:
 
@@ -470,10 +551,12 @@ curl -X POST https://api.coherencycoin.com/api/grocery/sheet/resync \
 pushes everything the sheet hasn't seen. The response says how many were
 pending, how many landed, and whether a webhook is configured at all.
 
-Deleting also waits for this carrier. If Sheet state cannot be confirmed, the
-API keeps the original graph entry and returns a retryable error. Once the
-carrier is back, the same deletion either removes an unmirrored entry or sends
-one stable compensating Sheet event before removing it from the graph.
+Deleting also waits for this carrier. Under the same script lock used by every
+append, it records the original ID in a hidden `_Hati App State` cancellation
+sheet and sends one stable compensating event if the original already landed.
+An append that arrives after cancellation is acknowledged without writing a
+ledger row. If this atomic receipt cannot be confirmed, the API keeps the
+original graph entry and returns a retryable error.
 
 ## The door out
 

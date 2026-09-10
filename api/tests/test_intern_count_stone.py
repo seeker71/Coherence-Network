@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import pytest
 
+from app import main
 from app.services import unified_db as udb
 
 
@@ -123,3 +124,13 @@ def test_postgres_schema_migration_failure_blocks_startup_and_clears_cache(monke
 
     assert cache == {"url": None, "engine": None, "sessionmaker": None}
     assert eng.disposed is True
+
+
+def test_lifespan_table_gate_propagates_schema_failure(monkeypatch):
+    """The outer startup carrier must not swallow the engine's migration error."""
+    def fail_engine():
+        raise RuntimeError("migration lock timeout")
+
+    monkeypatch.setattr(udb, "engine", fail_engine)
+    with pytest.raises(RuntimeError, match="migration lock timeout"):
+        main._ensure_db_tables()

@@ -112,11 +112,15 @@ into a shoebox of receipts, which is the failure this replaces.
 - [ ] **R8 — A wrong number is fixable by the person who typed it.**
   `DELETE /grocery/spend/{id}` removes an entry for its recorder, or any
   entry for a resident, and says whether the Sheet already has the row. An
-  authenticated summary checks whether even an apparently unmirrored append
-  reached the Sheet. A mirrored mistake sends one stable compensating Sheet
-  event; only after Sheet state is known does the graph row disappear. If the
-  carrier is unavailable or the reversal fails, deletion returns a retryable
-  error and preserves the original row without publishing a tombstone.
+  authenticated carrier checks whether even an apparently unmirrored append
+  reached the Sheet. One Apps Script lock atomically records a private durable
+  cancellation marker and, when needed, one stable compensating Sheet event.
+  An append that held the lock first is reversed; an append that arrives later
+  observes the cancellation and cannot land. Only after that receipt does the
+  graph row disappear. If the carrier is unavailable or reconciliation fails,
+  deletion returns a retryable error and preserves the original row without
+  publishing a graph tombstone. Generic graph PATCH/DELETE routes reject this
+  dedicated node type so they cannot bypass the contract.
 
 - [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage

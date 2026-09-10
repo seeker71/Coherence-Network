@@ -33,6 +33,8 @@
   "change_files": [
     "api/app/services/graph_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
+    "api/app/main.py",
+    "api/app/routers/graph.py",
     "api/app/routers/grocery.py",
     "api/app/services/substrate/kernel.py",
     "api/app/services/substrate/orm.py",
@@ -55,6 +57,8 @@
   "files_owned": [
     "api/app/services/graph_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
+    "api/app/main.py",
+    "api/app/routers/graph.py",
     "api/app/routers/grocery.py",
     "api/app/services/substrate/kernel.py",
     "api/app/services/substrate/orm.py",
@@ -83,11 +87,13 @@
     "The first repair read the anonymous CSV export and trusted sheet_synced as an atomic boundary; exact-head review exposed both the privacy leak and the append/flag crash race before merge.",
     "The repaired carrier authenticates every request, returns only Sisa plus matches among caller-supplied pending entry IDs, and makes appends idempotent with an Entry ID column; the spreadsheet can remain private.",
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
-    "Deletion first reconciles the original and stable reversal IDs through the authenticated carrier, preserves the graph row on uncertainty, and physically removes it only after Sheet state is safe, so no private tombstone leaks through generic graph reads.",
+    "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
+    "Generic graph PATCH and DELETE routes reject grocery_spend nodes so callers cannot bypass household authorization or Sheet reconciliation.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
     "Graph identity lookup now recognizes both aliases and legacy_ids with indexed JSON containment and exact membership confirmation.",
     "PostgreSQL substrate uniqueness now uses a bounded md5 expression key while exact full serialized text remains part of every lookup; SQLite retains exact tuple uniqueness.",
     "A PostgreSQL uniqueness-migration failure now clears the cached engine and raises through startup, guaranteeing the supervisor retries the complete schema gate instead of serving the old constraint.",
+    "The outer lifespan database-table gate now propagates schema failures instead of logging and continuing startup.",
     "No private profile content is included in this receipt."
   ],
   "local_validation": {
@@ -109,12 +115,12 @@
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The final full local PR guard passes on the amended head, including API tests, the production web build, and the combined runtime verifier. The final focused grocery suite passes 37 tests; the broader grocery, substrate, and migration suite passes 61 tests; the remaining-balance band returns verdict 63 on Go, Rust, TypeScript, and the c-bootstrapped fkwu runtime. Lint, strict spec validation, evidence validation, and git diff validation pass."
+    "summary": "The fresh full local PR guard passes on the fourth review repair, including API tests, the production web build, and the combined runtime verifier. The atomic cancel-or-reverse Sheet operation, generic graph mutation boundary, and lifespan startup propagation pass a 60-test focused grocery, graph, and migration suite. Lint, strict spec validation, Apps Script syntax compilation, evidence validation, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "summary": "PR #4040 passed full Linux/API/web and Windows gates on both earlier heads. Exact-head Codex review then identified and drove privacy, idempotency, async-carrier, Form-ownership, mirrored-deletion, fail-closed migration, and restructure-preservation repairs. Final exact-head CI will run after the last reviewed repairs are pushed."
+    "summary": "PR #4040 passed full Linux/API/web and Windows gates on every pushed head through 1a38f156b. Exact-head Codex review then identified a concurrent append/delete interval, generic graph mutation bypass, and an outer startup exception catch. Fresh exact-head CI will run after those repairs are pushed."
   },
   "deploy_validation": {
     "status": "pending",

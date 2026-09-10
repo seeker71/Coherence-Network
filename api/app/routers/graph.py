@@ -39,6 +39,18 @@ _LOCALIZABLE_NODE_TYPES = {
     "event", "scene", "practice", "skill", "concept",
 }
 
+# These cells have their own authenticated mutation contract and external
+# reconciliation. Generic graph mutation would bypass those invariants.
+_DEDICATED_MUTATION_NODE_TYPES = frozenset({"grocery_spend"})
+
+
+def _reject_dedicated_mutation(node: dict | None) -> None:
+    if node and node.get("type") in _DEDICATED_MUTATION_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be changed through its dedicated API",
+        )
+
 
 def _project_node(node: dict | None, lang: str | None) -> dict | None:
     """Project a single graph node's name + description into the caller's
@@ -239,6 +251,7 @@ async def update_node(node_id: str, body: NodeUpdate, request: Request):
     `seed`) and `X-Edit-Author` (an opaque identifier) headers to
     attribute the revision; both default to `api` / empty when absent.
     """
+    _reject_dedicated_mutation(graph_service.get_node(node_id))
     updates = body.model_dump(exclude_none=True)
     source = request.headers.get("x-edit-source") or "api"
     author = request.headers.get("x-edit-author") or ""
@@ -299,6 +312,7 @@ async def get_node_revisions(
 @router.delete("/graph/nodes/{node_id}", summary="Delete a node and all its edges")
 async def delete_node(node_id: str):
     """Delete a node and all its edges."""
+    _reject_dedicated_mutation(graph_service.get_node(node_id))
     if not graph_service.delete_node(node_id):
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return {"deleted": node_id}

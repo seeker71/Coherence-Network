@@ -619,42 +619,21 @@ async def delete_spend(
         raise HTTPException(
             status_code=403, detail="only the person who recorded it, or a resident, can remove it"
         )
-    mirrored = bool(node.get("sheet_synced"))
-    webhook_url, secret = _sheet_webhook()
-    if not webhook_url or not secret:
+    # One Apps Script lock covers cancellation, original-ID observation, and
+    # any compensating append. If an append is already in flight it lands
+    # first and is reversed; if deletion gets the lock first, its durable
+    # private cancellation marker prevents that append from landing later.
+    mirrored = await _reconcile_sheet_delete(node, actor)
+    if mirrored is None:
         raise HTTPException(
             status_code=503,
             detail="Sheet reconciliation is unavailable; the entry was preserved",
         )
-
-    # sheet_synced cannot decide deletion safety: the append and graph flag are
-    # not atomic. Ask the authenticated carrier about both deterministic IDs.
-    # If its state is unknown, preserve the entry and return a retryable error.
-    reversal = _reversal_spend(node, actor)
-    snapshot = await _read_sheet_snapshot([spend_id, reversal.id])
-    if snapshot is None:
+    if not graph_service.delete_node(spend_id):
         raise HTTPException(
             status_code=503,
-            detail="Sheet reconciliation is unavailable; the entry was preserved",
+            detail="The reconciled entry could not be removed; retry is safe",
         )
-    sheet_has_original = spend_id in snapshot.acknowledged_ids
-    sheet_has_reversal = reversal.id in snapshot.acknowledged_ids
-    if mirrored and not sheet_has_original:
-        raise HTTPException(
-            status_code=503,
-            detail="Sheet acknowledgement is inconsistent; the entry was preserved",
-        )
-    if sheet_has_original and not sheet_has_reversal:
-        if not await _push_to_sheet(reversal):
-            raise HTTPException(
-                status_code=503,
-                detail="Sheet reversal is pending; the entry was preserved",
-            )
-        mirrored = True
-    elif sheet_has_original:
-        mirrored = True
-
-    graph_service.delete_node(spend_id)
     return DeleteResponse(deleted=spend_id, was_mirrored=mirrored)
 
 
@@ -942,9 +921,52 @@ async def _push_to_sheet(spend: SpendResponse) -> bool:
             isinstance(result, dict)
             and result.get("ok") is True
             and result.get("entry_id") == spend.id
+            and result.get("cancelled") is not True
         )
     except (httpx.HTTPError, TypeError, ValueError):
         return False
+
+
+async def _reconcile_sheet_delete(node: dict, actor: dict) -> bool | None:
+    """Atomically cancel an entry and reverse it if the Sheet already has it.
+
+    ``None`` means the private carrier could not prove completion. The caller
+    must retain the graph row so retrying remains safe.
+    """
+    url, secret = _sheet_webhook()
+    if not url or not secret:
+        return None
+    original = _node_to_spend(node)
+    reversal = _reversal_spend(node, actor)
+    payload: dict[str, Any] = {
+        "action": "reconcile_delete",
+        "original_id": original.id,
+        "known_mirrored": bool(node.get("sheet_synced")),
+        "reversal": {
+            "entry_id": reversal.id,
+            "row": _sheet_row(reversal),
+            "columns": _SHEET_COLUMNS,
+        },
+        "secret": secret,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+            response = await client.post(url, json=payload)
+        if response.status_code >= 400:
+            return None
+        result = response.json()
+        if (
+            not isinstance(result, dict)
+            or result.get("ok") is not True
+            or result.get("cancelled") is not True
+            or result.get("original_id") != original.id
+            or result.get("reversal_id") != reversal.id
+            or not isinstance(result.get("original_present"), bool)
+        ):
+            return None
+        return bool(result["original_present"])
+    except (httpx.HTTPError, TypeError, ValueError):
+        return None
 
 
 class ResyncBody(BaseModel):
