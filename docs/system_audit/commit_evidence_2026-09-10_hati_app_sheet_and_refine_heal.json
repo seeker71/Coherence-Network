@@ -93,7 +93,7 @@
     "New graph writes carry the entry-id-v1 protocol marker; unmarked unsynced legacy rows remain explicitly unknown, make balance unavailable, and are excluded from automatic replay or deletion until migrated.",
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
     "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
-    "Every generic graph query surface rejects or omits grocery_spend nodes and their connected edges, including list, detail, revisions, edges, neighbors, subgraph, path, counts, stats, proof, profiles, and resonance; generic PATCH and DELETE also reject them.",
+    "The graph service excludes grocery_spend by default from node, edge, traversal, stats, and proof reads, so generic graph routes, flow rendering, edge/entity APIs, public profiles, and future generic consumers cannot expose the private cells or their connected edges; dedicated grocery reconciliation alone uses its purpose-built raw snapshot.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
     "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
@@ -129,7 +129,7 @@
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The full local PR guard passes on the eighth review repair, including 407 API tests, the production web build, and the combined runtime verifier. The focused repair passes 60 grocery, graph, and timing tests: every generic graph query surface now respects the private grocery boundary, and cancellation-aware locked Sheet receipts close the cross-store delete race. One-statement grocery scanning retains the stable snapshot guarantee. The ten-second developer flow gate passes with deterministic explicit plugin loading. All three Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, maintainability audit, and git diff validation pass."
+    "summary": "The full local PR guard passes on the ninth review repair, including 407 API tests, the ten-second developer flow contract, the production web build, and the combined runtime verifier. All 59 focused grocery/graph tests pass: the private boundary now lives in graph-service read defaults and is proven across flow rendering, edge/entity APIs, and public profile traversal. Cancellation-aware locked Sheet receipts retain the cross-store delete guarantee, and one-statement grocery scanning retains the stable snapshot guarantee. All three Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, maintainability audit, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",

@@ -130,10 +130,12 @@ into a shoebox of receipts, which is the failure this replaces.
   deletion returns a retryable error and preserves the original row without
   publishing a graph tombstone. The private boundary covers every generic
   graph read—list, detail, revision, edges, neighbors, subgraph, path, counts,
-  stats, and proof—and the generic profile and resonance reads. Each rejects
-  or omits this private node type and its connected edges; generic PATCH and
-  DELETE reject it as well. These routes cannot expose household records or
-  bypass the contract.
+  stats, and proof—and the generic profile and resonance reads. The exclusion
+  is a graph-service read default, so flow rendering, edge/entity APIs, and
+  future generic consumers inherit it without a router remembering to opt in.
+  Each rejects or omits this private node type and its connected edges; generic
+  PATCH and DELETE reject it as well. These routes cannot expose household
+  records or bypass the contract.
 
 - [ ] **R8a — Maintenance shares the lock.** The one-time/re-runnable Sheet
   restructure holds the same Apps Script lock for its complete read, backup,

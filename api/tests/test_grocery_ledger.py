@@ -756,7 +756,7 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
     assert grocery.graph_service.get_node(spend_id) is not None
 
 
-def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str]:
+def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str, str]:
     async def not_appended(_spend):
         return False
 
@@ -777,7 +777,7 @@ def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str]:
     grocery.graph_service.create_node(
         id=other_id, type="asset", name="Other boundary witness"
     )
-    grocery.graph_service.create_edge(
+    first_edge = grocery.graph_service.create_edge(
         from_id=public_id,
         to_id=spend_id,
         type="depends-on",
@@ -787,13 +787,15 @@ def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str]:
         to_id=other_id,
         type="depends-on",
     )
-    return spend_id, public_id, other_id
+    return spend_id, public_id, other_id, first_edge["id"]
 
 
 def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     client, monkeypatch
 ):
-    spend_id, _public_id, other_id = _grocery_privacy_graph(client, monkeypatch)
+    spend_id, _public_id, other_id, _edge_id = _grocery_privacy_graph(
+        client, monkeypatch
+    )
 
     patched = client.patch(
         f"/api/graph/nodes/{spend_id}",
@@ -840,7 +842,9 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
 
 
 def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatch):
-    spend_id, public_id, other_id = _grocery_privacy_graph(client, monkeypatch)
+    spend_id, public_id, other_id, edge_id = _grocery_privacy_graph(
+        client, monkeypatch
+    )
 
     public_edges = client.get(f"/api/graph/nodes/{public_id}/edges")
     public_neighbors = client.get(f"/api/graph/nodes/{public_id}/neighbors")
@@ -848,6 +852,12 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     path = client.get(
         f"/api/graph/path?from_id={public_id}&to_id={other_id}&max_depth=2"
     )
+    flow = client.get("/api/flow/render")
+    edges = client.get("/api/edges?limit=500")
+    edge = client.get(f"/api/edges/{edge_id}")
+    public_entity_edges = client.get(f"/api/entities/{public_id}/edges")
+    public_entity_neighbors = client.get(f"/api/entities/{public_id}/neighbors")
+    public_profile = client.get(f"/api/profile/{public_id}")
 
     assert public_edges.json() == []
     assert public_neighbors.json() == []
@@ -857,6 +867,18 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
         for edge in public_subgraph.json()["edges"]
     )
     assert path.json()["path"] is None
+    assert spend_id not in {node["id"] for node in flow.json()["nodes"]}
+    assert all(
+        spend_id not in (item["from_id"], item["to_id"])
+        for item in edges.json()["items"]
+    )
+    assert edge.status_code == 404
+    assert public_entity_edges.json()["items"] == []
+    assert public_entity_neighbors.json()["neighbors"] == []
+    assert public_profile.status_code == 200
+    assert spend_id not in {
+        item["dimension"] for item in public_profile.json()["top"]
+    }
 
 
 def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
