@@ -96,10 +96,12 @@ into a shoebox of receipts, which is the failure this replaces.
 
 - [ ] **R6a — The balance includes the ledger that predates the app.** The
   totals route asks an authenticated Apps Script carrier for the Sheet's fixed
-  `Sisa` summary plus acknowledgements for caller-supplied entry IDs, then
-  applies only graph entries the Sheet has not acknowledged. The carrier never
-  returns the household log; an idempotent `Entry ID` closes the append/flag
-  crash seam. If the Sheet is dark, day/month totals and the graph ledger stay
+  `Sisa` summary plus acknowledgements and cancellations for caller-supplied
+  entry IDs, then applies only graph entries the Sheet has neither acknowledged
+  nor cancelled. The carrier never returns the household log; an idempotent
+  `Entry ID` closes the append/flag crash seam, and the cancellation receipt
+  closes a delete that completes after the database snapshot. If the Sheet is
+  dark, day/month totals and the graph ledger stay
   available, while the historical remaining balance is explicitly unavailable
   rather than being replaced by an incomplete graph-only number. New graph
   writes carry an `entry-id-v1` protocol marker. An unsynced row without that
@@ -126,9 +128,12 @@ into a shoebox of receipts, which is the failure this replaces.
   observes the cancellation and cannot land. Only after that receipt does the
   graph row disappear. If the carrier is unavailable or reconciliation fails,
   deletion returns a retryable error and preserves the original row without
-  publishing a graph tombstone. Generic graph list, detail, revision, PATCH,
-  and DELETE routes reject or omit this private node type so they cannot
-  expose household records or bypass the contract.
+  publishing a graph tombstone. The private boundary covers every generic
+  graph read—list, detail, revision, edges, neighbors, subgraph, path, counts,
+  stats, and proof—and the generic profile and resonance reads. Each rejects
+  or omits this private node type and its connected edges; generic PATCH and
+  DELETE reject it as well. These routes cannot expose household records or
+  bypass the contract.
 
 - [ ] **R8a — Maintenance shares the lock.** The one-time/re-runnable Sheet
   restructure holds the same Apps Script lock for its complete read, backup,

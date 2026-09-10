@@ -3,8 +3,9 @@
 New app entries live in the network's graph and mirror into Google Sheets.
 The Sheet also carries the household history from before the app existed. An
 authenticated Apps Script request returns its fixed `Sisa` summary plus
-acknowledgements for entry IDs the app already knows. The app applies only
-unacknowledged graph entries, so a retry or crash cannot count a purchase twice.
+acknowledgements and cancellations for entry IDs the app already knows. The app
+applies only graph entries carrying neither receipt, so retries, crashes, and
+concurrent deletion cannot count a purchase twice.
 The carrier never returns the household log, and the spreadsheet itself can
 remain private.
 
@@ -265,7 +266,7 @@ function markCancelled(ss, entryId) {
   stateSheet(ss, true).appendRow([entryId, "cancelled"]);
 }
 
-function summary(sheet, hrow, requested) {
+function summary(ss, sheet, hrow, requested) {
   const rows = sheet.getRange("A1:B3").getValues();
   var remaining = null;
   rows.forEach(function (row) {
@@ -276,6 +277,7 @@ function summary(sheet, hrow, requested) {
     ok: true,
     remaining_idr: Math.round(remaining),
     acknowledged_ids: acknowledgedIds(sheet, hrow, requested),
+    cancelled_ids: cancelledIds(ss, requested),
   };
 }
 
@@ -353,7 +355,7 @@ function doPost(e) {
     const hrow = headerRowOf(sheet);
 
     if (body.action === "summary") {
-      return jsonOutput(summary(sheet, hrow, body.pending_ids || []));
+      return jsonOutput(summary(ss, sheet, hrow, body.pending_ids || []));
     }
     if (body.action === "append") {
       return jsonOutput(appendEntry(ss, sheet, hrow, body));

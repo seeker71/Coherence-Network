@@ -41,6 +41,7 @@
     "api/app/services/unified_db.py",
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
+    "api/tests/test_developer_quick_start.py",
     "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
@@ -66,6 +67,7 @@
     "api/app/services/unified_db.py",
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
+    "api/tests/test_developer_quick_start.py",
     "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
@@ -91,7 +93,9 @@
     "New graph writes carry the entry-id-v1 protocol marker; unmarked unsynced legacy rows remain explicitly unknown, make balance unavailable, and are excluded from automatic replay or deletion until migrated.",
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
     "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
-    "Generic graph list, detail, revision, PATCH, and DELETE routes reject or omit grocery_spend nodes so unauthenticated callers cannot expose household records or bypass reconciliation.",
+    "Every generic graph query surface rejects or omits grocery_spend nodes and their connected edges, including list, detail, revisions, edges, neighbors, subgraph, path, counts, stats, proof, profiles, and resonance; generic PATCH and DELETE also reject them.",
+    "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
+    "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
     "The restructure now holds the same Apps Script lock for its full snapshot-and-rewrite interval, excluding concurrent append and delete operations.",
     "Grocery reconciliation reads every row with one immutable-ID-ordered database statement before declaring the legacy-unknown set empty; a 2,001-row focused witness proves there is no page ceiling or mutable OFFSET seam.",
@@ -120,15 +124,17 @@
       "ruff check api/app/services/graph_service.py api/app/services/unified_db.py api/app/services/substrate/orm.py api/app/services/substrate/kernel.py api/tests/test_intern_count_stone.py",
       "cd api && pytest -q tests/test_grocery_ledger.py tests/test_graph_layer.py",
       "cd api && ruff check app/routers/graph.py app/routers/grocery.py app/services/graph_service.py tests/test_grocery_ledger.py tests/test_graph_layer.py",
+      "node syntax compilation of all JavaScript blocks in docs/grocery-sheets-setup.md",
+      "cd api && pytest -q tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The full local PR guard passes on the seventh review repair, including API tests, the production web build, and the combined runtime verifier. The focused repair passes 57 grocery and graph tests: one-statement grocery snapshot scanning closes the mutable pagination seam, and generic graph reads no longer expose private grocery rows. Both Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, and git diff validation pass."
+    "summary": "The full local PR guard passes on the eighth review repair, including 407 API tests, the production web build, and the combined runtime verifier. The focused repair passes 60 grocery, graph, and timing tests: every generic graph query surface now respects the private grocery boundary, and cancellation-aware locked Sheet receipts close the cross-store delete race. One-statement grocery scanning retains the stable snapshot guarantee. The ten-second developer flow gate passes with deterministic explicit plugin loading. All three Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, maintainability audit, and git diff validation pass."
   },
   "ci_validation": {
     "status": "pending",
     "commands": [],
-    "summary": "PR #4040 passed full Linux/API/web and Windows gates through ff0201d98; Linux also passed b24521720 before the sixth review arrived. Fresh exact-head CI will run after the locked-restructure, complete-scan, and catalog-gated migration repairs are pushed."
+    "summary": "PR #4040 passed earlier full Linux/API/web and Windows gates. Fresh exact-head CI will run after the complete generic-read privacy boundary and cancellation-aware Sheet snapshot repairs are pushed."
   },
   "deploy_validation": {
     "status": "pending",
@@ -158,7 +164,7 @@
       "frequency_attuned": false,
       "sufficient": false,
       "observed": false,
-      "reason": "The Form lookup for the serialized uniqueness contract did not return and was interrupted after one minute; no native answer is claimed."
+      "reason": "Form lookups for the database and cross-store privacy contracts did not return and were interrupted; no native answer is claimed."
     },
     "runtime_diagnosis": {
       "path": "rented_plus_body_verification",

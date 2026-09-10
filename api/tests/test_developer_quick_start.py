@@ -7,6 +7,7 @@ Covers done_when criteria:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import time
@@ -46,12 +47,25 @@ def test_flow_tests_run_under_10_seconds():
     subprocess and asserts wall-clock time stays under 10s.
     """
     test_file = Path(__file__).with_name("test_flow_core_api.py")
+    child_env = os.environ.copy()
+    child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     t0 = time.perf_counter()
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", str(test_file), "-x", "-q", "--tb=no"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-p",
+            "pytest_asyncio.plugin",
+            str(test_file),
+            "-x",
+            "-q",
+            "--tb=no",
+        ],
         capture_output=True,
         text=True,
         timeout=30,
+        env=child_env,
     )
     elapsed = time.perf_counter() - t0
 

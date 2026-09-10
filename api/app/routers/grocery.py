@@ -20,10 +20,11 @@ icons don't hold.
 **The ledger is not a lock.** The graph holds app entries; Google Sheets is
 the hub-owned historical balance baseline and outbound mirror (see
 ``docs/grocery-sheets-setup.md``). An authenticated Apps Script carrier returns
-only the fixed summary and acknowledgements for entry IDs the app already
-knows, so the household log never becomes a public download. If the Sheet is
-dark, the graph ledger keeps answering while the historical balance says it is
-unavailable. ``GET /grocery/export.csv`` remains the open door out.
+only the fixed summary plus acknowledgements and cancellations for entry IDs
+the app already knows, so the household log never becomes a public download.
+If the Sheet is dark, the graph ledger keeps answering while the historical
+balance says it is unavailable. ``GET /grocery/export.csv`` remains the open
+door out.
 
 Identity is the household's: a device token that resolves to a member with
 write access. Seeing the ledger is open to any registered cell here.
@@ -706,7 +707,11 @@ async def totals(
     pending_signed = [
         spend.signed_idr
         for spend in pending
-        if snapshot is None or spend.id not in snapshot.acknowledged_ids
+        if snapshot is None
+        or (
+            spend.id not in snapshot.acknowledged_ids
+            and spend.id not in snapshot.cancelled_ids
+        )
     ]
     remaining = _remaining_balance(
         sheet_remaining=snapshot.remaining_idr if snapshot is not None else None,
@@ -832,15 +837,17 @@ def _parse_sheet_idr(value: object) -> int | None:
 class _SheetSnapshot:
     remaining_idr: int
     acknowledged_ids: frozenset[str]
+    cancelled_ids: frozenset[str]
 
 
 async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
     """Read a private, bounded balance snapshot through Apps Script.
 
     The shared secret authenticates the request. The carrier returns only
-    ``Sisa`` and the subset of caller-supplied entry IDs already acknowledged;
-    it never exposes the household ledger. Any failure returns ``None`` so the
-    Form policy can report that the historical balance is unavailable.
+    ``Sisa`` and the subsets of caller-supplied entry IDs already acknowledged
+    or cancelled; it never exposes the household ledger. Any failure returns
+    ``None`` so the Form policy can report that the historical balance is
+    unavailable.
     """
     url, secret = _sheet_webhook()
     if not url or not secret:
@@ -863,14 +870,24 @@ async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
             return None
         remaining = _parse_sheet_idr(payload.get("remaining_idr"))
         raw_acknowledged = payload.get("acknowledged_ids")
-        if remaining is None or not isinstance(raw_acknowledged, list):
+        raw_cancelled = payload.get("cancelled_ids")
+        if (
+            remaining is None
+            or not isinstance(raw_acknowledged, list)
+            or not isinstance(raw_cancelled, list)
+        ):
             return None
         acknowledged = frozenset(
             entry_id
             for entry_id in raw_acknowledged
             if isinstance(entry_id, str) and entry_id in requested
         )
-        return _SheetSnapshot(remaining, acknowledged)
+        cancelled = frozenset(
+            entry_id
+            for entry_id in raw_cancelled
+            if isinstance(entry_id, str) and entry_id in requested
+        )
+        return _SheetSnapshot(remaining, acknowledged, cancelled)
     except (httpx.HTTPError, TypeError, ValueError):
         return None
 
