@@ -99,7 +99,9 @@ into a shoebox of receipts, which is the failure this replaces.
   `Sisa` summary plus acknowledgements for caller-supplied entry IDs, then
   applies only graph entries the Sheet has not acknowledged. The carrier never
   returns the household log; an idempotent `Entry ID` closes the append/flag
-  crash seam. If the Sheet is dark, the graph remains a complete fallback.
+  crash seam. If the Sheet is dark, day/month totals and the graph ledger stay
+  available, while the historical remaining balance is explicitly unavailable
+  rather than being replaced by an incomplete graph-only number.
 
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
@@ -110,9 +112,11 @@ into a shoebox of receipts, which is the failure this replaces.
 - [ ] **R8 — A wrong number is fixable by the person who typed it.**
   `DELETE /grocery/spend/{id}` removes an entry for its recorder, or any
   entry for a resident, and says whether the Sheet already has the row. An
-  unmirrored mistake is removed directly; a mirrored mistake becomes a private
-  graph tombstone and sends one stable compensating Sheet event, so both balance
-  sources agree without editing historical rows in place.
+  authenticated summary checks whether even an apparently unmirrored append
+  reached the Sheet. A mirrored mistake sends one stable compensating Sheet
+  event; only after Sheet state is known does the graph row disappear. If the
+  carrier is unavailable or the reversal fails, deletion returns a retryable
+  error and preserves the original row without publishing a tombstone.
 
 - [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
@@ -183,8 +187,9 @@ revoking access is deleting the deployment or rotating one scoped secret.
 Setup is documented in `docs/grocery-sheets-setup.md`.
 
 **Why no Python mirror of the arithmetic.** `endpoint_grocery_remaining.fk`
-owns historical-baseline selection, pending signed-delta reconciliation, and
-the graph fallback. `serve_via_kernel` fails hard
+owns historical-baseline availability and pending signed-delta reconciliation.
+It returns an explicit unavailable result when the Sheet baseline is unknown.
+`serve_via_kernel` fails hard
 when the kernel is absent, on purpose — so Python never quietly resumes
 ownership of a computation the body has moved to Form. Resilience for the
 manager belongs at the edge (the offline queue), not as a second
