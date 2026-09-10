@@ -233,7 +233,7 @@ async def create_node(body: NodeCreate):
 async def count_nodes(type: str | None = None):
     """Count nodes, optionally filtered by type."""
     _reject_dedicated_type(type)
-    return graph_service.count_nodes(type=type, exclude_types=_DEDICATED_NODE_TYPES)
+    return graph_service.count_nodes(type=type)
 
 
 @router.get("/graph/stats", summary="Get graph-wide statistics")

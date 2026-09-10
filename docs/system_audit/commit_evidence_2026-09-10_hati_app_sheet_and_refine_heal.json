@@ -104,10 +104,11 @@
     "A PostgreSQL uniqueness-migration failure now clears the cached engine and raises through startup, guaranteeing the supervisor retries the complete schema gate instead of serving the old constraint.",
     "PostgreSQL startup reads durable catalog state and skips both locking DDL statements once the legacy constraint is absent and the digest index exists.",
     "The outer lifespan database-table gate now propagates schema failures instead of logging and continuing startup.",
+    "The first exact-head Linux run exposed a preserved graph-service source contract: count_nodes must keep the public one-argument signature. Privacy is now unconditional inside that service method, leaving no caller-controlled bypass.",
     "No private profile content is included in this receipt."
   ],
   "local_validation": {
-    "status": "pass",
+    "status": "fail",
     "commands": [
       "api/.venv/bin/pytest -q api/tests/test_flow_presence.py::test_graph_node_identity_resolves_declared_and_legacy_aliases",
       "cd web && npm test -- --run tests/presence-node.test.ts",
@@ -126,15 +127,16 @@
       "cd api && ruff check app/routers/graph.py app/routers/grocery.py app/services/graph_service.py tests/test_grocery_ledger.py tests/test_graph_layer.py",
       "node syntax compilation of all JavaScript blocks in docs/grocery-sheets-setup.md",
       "cd api && pytest -q tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
+      "cd api && pytest -q tests/test_graph_node_form_port.py tests/test_grocery_ledger.py",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "The full local PR guard passes on the ninth review repair, including 407 API tests, the ten-second developer flow contract, the production web build, and the combined runtime verifier. All 59 focused grocery/graph tests pass: the private boundary now lives in graph-service read defaults and is proven across flow rendering, edge/entity APIs, and public profile traversal. Cancellation-aware locked Sheet receipts retain the cross-store delete guarantee, and one-statement grocery scanning retains the stable snapshot guarantee. All three Apps Script blocks compile as JavaScript. Python lint, strict spec validation, evidence validation, maintainability audit, and git diff validation pass."
+    "summary": "The full local PR guard passed on the ninth review repair, including 407 API tests, the ten-second developer flow contract, the production web build, and the combined runtime verifier. All 59 focused grocery/graph tests pass. After exact-head CI exposed a static signature contract, the preserved count_nodes(type: str | None = None) surface plus unconditional internal exclusion passed all 48 graph-port and grocery tests. The post-repair full guard passed every structural check and 406 functional API tests, but its developer quick-start subprocess took 27.5 seconds under concurrent shared Form workloads and failed the ten-second wall-clock gate; an isolated retry took 18.7 seconds. The changed contract remains green, but repository policy keeps the branch blocked until the timing gate passes without interrupting unrelated processes."
   },
   "ci_validation": {
     "status": "pending",
-    "commands": [],
-    "summary": "PR #4040 passed earlier full Linux/API/web and Windows gates. Fresh exact-head CI will run after the complete generic-read privacy boundary and cancellation-aware Sheet snapshot repairs are pushed."
+    "commands": ["gh run view 34452191044 --log-failed"],
+    "summary": "The first exact-head Linux run reached 2,176 passing tests and found one source-contract mismatch in count_nodes; the implementation now preserves that signature and the failed contract passes locally. Fresh exact-head CI will run after this repair is pushed."
   },
   "deploy_validation": {
     "status": "pending",
@@ -182,6 +184,6 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "Local focused proof passes; full gate, exact-head CI, review, merge, rollout, and live click verification remain."
+    "reason": "The changed contract and focused proof pass, but the post-repair local guard is blocked by the ten-second timing witness under concurrent shared Form workloads; exact-head CI/review, merge, rollout, and live click verification remain."
   }
 }

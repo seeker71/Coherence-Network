@@ -521,10 +521,7 @@ def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
         return [node.to_dict() for node in nodes]
 
 
-def count_nodes(
-    type: str | None = None,
-    exclude_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
-) -> dict[str, int]:
+def count_nodes(type: str | None = None) -> dict[str, int]:
     """Count nodes by type.
 
     Mirrors list_nodes' anonymous-meeting trace exclusion so the
@@ -532,9 +529,7 @@ def count_nodes(
     """
     with session() as s:
         trace_filter = ~Node.id.like("anonymous-meeting:%")
-        private_filter = (
-            ~Node.type.in_(exclude_types) if exclude_types else True
-        )
+        private_filter = ~Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES)
         if type:
             total = (
                 s.query(Node)
