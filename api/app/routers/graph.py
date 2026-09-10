@@ -39,16 +39,33 @@ _LOCALIZABLE_NODE_TYPES = {
     "event", "scene", "practice", "skill", "concept",
 }
 
-# These cells have their own authenticated mutation contract and external
-# reconciliation. Generic graph mutation would bypass those invariants.
-_DEDICATED_MUTATION_NODE_TYPES = frozenset({"grocery_spend"})
+# These cells have their own authenticated access contract and external
+# reconciliation. Generic graph access would bypass those privacy and
+# consistency invariants.
+_DEDICATED_NODE_TYPES = frozenset({"grocery_spend"})
 
 
 def _reject_dedicated_mutation(node: dict | None) -> None:
-    if node and node.get("type") in _DEDICATED_MUTATION_NODE_TYPES:
+    if node and node.get("type") in _DEDICATED_NODE_TYPES:
         raise HTTPException(
             status_code=403,
             detail="This node type can only be changed through its dedicated API",
+        )
+
+
+def _reject_dedicated_read(node: dict | None) -> None:
+    if node and node.get("type") in _DEDICATED_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be read through its dedicated API",
+        )
+
+
+def _reject_dedicated_type(node_type: str | None) -> None:
+    if node_type in _DEDICATED_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be read through its dedicated API",
         )
 
 
@@ -167,8 +184,14 @@ async def list_nodes(
     offset: int = Query(default=0, ge=0),
 ):
     """List nodes with optional type, phase, and search filters."""
+    _reject_dedicated_type(type)
     return graph_service.list_nodes(
-        type=type, phase=phase, search=search, limit=limit, offset=offset,
+        type=type,
+        phase=phase,
+        search=search,
+        limit=limit,
+        offset=offset,
+        exclude_types=_DEDICATED_NODE_TYPES,
     )
 
 
@@ -203,6 +226,7 @@ async def create_node(body: NodeCreate):
 @router.get("/graph/nodes/count", summary="Count nodes, optionally filtered by type")
 async def count_nodes(type: str | None = None):
     """Count nodes, optionally filtered by type."""
+    _reject_dedicated_type(type)
     return graph_service.count_nodes(type=type)
 
 
@@ -232,6 +256,7 @@ async def get_node(node_id: str, request: Request, lang: str | None = Query(None
     node = graph_service.resolve_node_identity(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    _reject_dedicated_read(node)
     target_lang = resolve_caller_lang(request, lang)
     return _project_node(node, target_lang)
 
@@ -304,8 +329,10 @@ async def get_node_revisions(
     # Existence check so 404 is honest for a node that was never created
     # (vs 200 with an empty list, which conflates "no edits yet" with
     # "no such node"). Cheap — single primary-key lookup.
-    if not graph_service.get_node(node_id):
+    node = graph_service.get_node(node_id)
+    if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    _reject_dedicated_read(node)
     return graph_service.list_node_revisions(node_id, limit=limit, offset=offset)
 
 

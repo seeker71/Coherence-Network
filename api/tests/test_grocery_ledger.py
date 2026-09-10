@@ -108,26 +108,20 @@ def test_the_csv_door_stays_lossless():
     assert len(grocery._CSV_COLUMNS) > len(grocery._SHEET_COLUMNS)
 
 
-def test_every_grocery_page_is_scanned_before_balance_is_trusted(monkeypatch):
+def test_every_grocery_row_comes_from_one_stable_snapshot(monkeypatch):
     rows = [
         {"id": f"spend-{i}", "type": grocery._SPEND_TYPE}
         for i in range(2001)
     ]
-    offsets: list[int] = []
+    calls: list[str] = []
 
-    def page(*, type, limit, offset):
-        assert type == grocery._SPEND_TYPE
-        offsets.append(offset)
-        return {
-            "items": rows[offset:offset + limit],
-            "total": len(rows),
-            "limit": limit,
-            "offset": offset,
-        }
+    def snapshot(node_type):
+        calls.append(node_type)
+        return rows
 
-    monkeypatch.setattr(grocery.graph_service, "list_nodes", page)
+    monkeypatch.setattr(grocery.graph_service, "list_nodes_by_type_snapshot", snapshot)
     assert len(grocery._all_spends()) == 2001
-    assert offsets == [0, 2000]
+    assert calls == [grocery._SPEND_TYPE]
 
 
 # --------------------------------------------------------------------------
@@ -721,7 +715,7 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
     assert grocery.graph_service.get_node(spend_id) is not None
 
 
-def test_generic_graph_mutations_cannot_bypass_grocery_reconciliation(
+def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     client, monkeypatch
 ):
     async def not_appended(_spend):
@@ -742,8 +736,16 @@ def test_generic_graph_mutations_cannot_bypass_grocery_reconciliation(
         json={"properties": {"sheet_synced": True}},
     )
     deleted = client.delete(f"/api/graph/nodes/{spend_id}")
+    listed = client.get("/api/graph/nodes?type=grocery_spend")
+    fetched = client.get(f"/api/graph/nodes/{spend_id}")
+    revisions = client.get(f"/api/graph/nodes/{spend_id}/revisions")
+    generic = client.get("/api/graph/nodes?limit=500")
     assert patched.status_code == 403
     assert deleted.status_code == 403
+    assert listed.status_code == 403
+    assert fetched.status_code == 403
+    assert revisions.status_code == 403
+    assert spend_id not in {node["id"] for node in generic.json()["items"]}
     assert grocery.graph_service.get_node(spend_id) is not None
 
 

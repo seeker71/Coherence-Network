@@ -454,6 +454,7 @@ def list_nodes(
     search: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    exclude_types: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """List nodes with optional filtering.
 
@@ -469,6 +470,8 @@ def list_nodes(
     """
     with session() as s:
         q = s.query(Node)
+        if exclude_types:
+            q = q.filter(~Node.type.in_(exclude_types))
         if type:
             q = q.filter(Node.type == type)
         if phase:
@@ -494,6 +497,24 @@ def list_nodes(
             "limit": limit,
             "offset": offset,
         }
+
+
+def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
+    """Read every node of one type through a single database statement.
+
+    Internal reconciliation callers need a stable membership view. OFFSET
+    pages ordered by a mutable timestamp can duplicate or omit rows when a
+    concurrent update changes page order; one ordered SELECT receives one
+    database snapshot and avoids that seam.
+    """
+    with session() as s:
+        nodes = (
+            s.query(Node)
+            .filter(Node.type == node_type)
+            .order_by(Node.id.asc())
+            .all()
+        )
+        return [node.to_dict() for node in nodes]
 
 
 def count_nodes(type: str | None = None) -> dict[str, int]:

@@ -105,9 +105,10 @@ into a shoebox of receipts, which is the failure this replaces.
   writes carry an `entry-id-v1` protocol marker. An unsynced row without that
   marker predates ID acknowledgements, so its Sheet presence remains unknown:
   balance is unavailable and automatic resync/deletion preserves it until a
-  one-time migration identifies the corresponding Sheet row. Every grocery
-  graph page is scanned before this gate can declare the legacy-unknown set
-  empty, so growth past one page cannot hide an older uncertain row.
+  one-time migration identifies the corresponding Sheet row. All grocery
+  rows are read by one database statement before this gate can declare the
+  legacy-unknown set empty, so growth or a concurrent update cannot hide an
+  older uncertain row between mutable pagination windows.
 
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
@@ -125,8 +126,9 @@ into a shoebox of receipts, which is the failure this replaces.
   observes the cancellation and cannot land. Only after that receipt does the
   graph row disappear. If the carrier is unavailable or reconciliation fails,
   deletion returns a retryable error and preserves the original row without
-  publishing a graph tombstone. Generic graph PATCH/DELETE routes reject this
-  dedicated node type so they cannot bypass the contract.
+  publishing a graph tombstone. Generic graph list, detail, revision, PATCH,
+  and DELETE routes reject or omit this private node type so they cannot
+  expose household records or bypass the contract.
 
 - [ ] **R8a — Maintenance shares the lock.** The one-time/re-runnable Sheet
   restructure holds the same Apps Script lock for its complete read, backup,
