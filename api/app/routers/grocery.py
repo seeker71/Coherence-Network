@@ -387,12 +387,20 @@ def _node_to_spend(node: dict) -> SpendResponse:
 
 
 def _all_spends() -> list[dict]:
-    try:
-        response = graph_service.list_nodes(type=_SPEND_TYPE, limit=2000)
+    rows: list[dict] = []
+    offset = 0
+    page_size = 2000
+    while True:
+        response = graph_service.list_nodes(
+            type=_SPEND_TYPE, limit=page_size, offset=offset
+        )
         nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
-    except Exception:
-        nodes = []
-    return [n for n in nodes if n.get("type") == _SPEND_TYPE]
+        rows.extend(n for n in nodes if n.get("type") == _SPEND_TYPE)
+        offset += len(nodes)
+        total = int(response.get("total", offset)) if isinstance(response, dict) else offset
+        if not nodes or offset >= total:
+            break
+    return rows
 
 
 def _reversal_spend(node: dict, actor: dict) -> SpendResponse:

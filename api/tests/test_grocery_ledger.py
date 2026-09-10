@@ -108,6 +108,28 @@ def test_the_csv_door_stays_lossless():
     assert len(grocery._CSV_COLUMNS) > len(grocery._SHEET_COLUMNS)
 
 
+def test_every_grocery_page_is_scanned_before_balance_is_trusted(monkeypatch):
+    rows = [
+        {"id": f"spend-{i}", "type": grocery._SPEND_TYPE}
+        for i in range(2001)
+    ]
+    offsets: list[int] = []
+
+    def page(*, type, limit, offset):
+        assert type == grocery._SPEND_TYPE
+        offsets.append(offset)
+        return {
+            "items": rows[offset:offset + limit],
+            "total": len(rows),
+            "limit": limit,
+            "offset": offset,
+        }
+
+    monkeypatch.setattr(grocery.graph_service, "list_nodes", page)
+    assert len(grocery._all_spends()) == 2001
+    assert offsets == [0, 2000]
+
+
 # --------------------------------------------------------------------------
 # The flow — needs the Form kernel, like the household board's tests.
 # --------------------------------------------------------------------------
