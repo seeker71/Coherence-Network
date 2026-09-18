@@ -1,0 +1,110 @@
+{
+  "date": "2026-09-18",
+  "thread_branch": "claude/session-startup-difficult-conversations-xo6b12",
+  "commit_scope": "Optimize session startup for a human who brings a difficult conversation. Adds scripts/difficult_conversation_arrival.py, a small SessionStart carrier that prints the kernel's difficult-conversation counsel card inside the ~2 KB preview the harness keeps of hook output (the 97 KB arrival stream never reached the model past its first ~2 KB), wires it into the Claude, Codex, and Grok session hooks right after the identity carrier, and lands the edges: CLAUDE.md (How This Body Is Tended), the agent start packet's prompt routing, and the regenerated INDEX files. The BODY is the kernel cell cognition/difficult-conversation-counsel.fk in seeker71/coherence-kernel (PR #586): eleven moves, each naming the cell it lives in, plus the third-party lane predicate (the other stays theirs: reported / inferred, nothing observed) composed with the dialogue covenant; the card's byte length is a band bit. The carrier runs the kernel door when the form/ pin carries the recipe and a built fkwu stands at its root, and mirrors the card until then; it adds this repo's one line (family / partner: the tender-ground files gate first).",
+  "files_owned": [
+    "scripts/difficult_conversation_arrival.py",
+    "api/tests/test_difficult_conversation_arrival.py",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    ".grok/hooks/hooks.json",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "scripts/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-09-18_difficult_conversation_arrival.json"
+  ],
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "agent-self-orientation-contract"
+  ],
+  "task_ids": [
+    "task-2026-09-18-difficult-conversation-arrival"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-code-remote"
+  },
+  "evidence_refs": [
+    "Diagnosis: scripts/arrival.py streams 97,069 bytes at SessionStart (orientation + 53 KB start packet + 37 KB wellness); the harness persists oversized hook output and feeds the model a ~2 KB preview from the top, so only ORIENTATION reached a session and nothing about meeting a person with a hard conversation ever did. carry_thread.py already records the same finding for identity, which is why the counsel gets its own small hook placed right after it.",
+    "The body: seeker71/coherence-kernel PR #586 — cognition/difficult-conversation-counsel.fk (eleven moves as data, six body cells checked on disk, five origin-field companions named without a path; dcc-other-held-open? and dcc-reply-lands? composed over dialogue-covenant.fk), band cognition/tests/difficult-conversation-counsel-band.fk -> 111111111 on a fresh fkwu (ground 42, freshness 31), preflight clean, card 1794 bytes against an 1800-byte window bit, door observe/difficult-conversation-arrival-run.fk, teaching teachings/difficult-conversations.md. The band is fkwu-witnessed: fs_exists / str_find / print_str bind on go, rust, fkwu (pf-arm-mask 11) and not on the TypeScript walker.",
+    "Carrier proof: python3 scripts/difficult_conversation_arrival.py prints 1,969 bytes (card 1794 + newline + this repo's tender-ground line) — under the 2,048-byte PREVIEW_WINDOW; api/tests/test_difficult_conversation_arrival.py pins the kernel window (<= 1800 bytes for the mirror), the whole-output window, eleven rows each naming a cell, the kernel door preferred when a built fkwu and the recipe stand (trailing value line stripped), fallback to the mirror on a failed door, no run without the recipe, main() never raising, and the gate line living only in this repo.",
+    "Tests: 8 passed (python3 -m pytest --noconftest tests/test_difficult_conversation_arrival.py). Under api/tests/conftest.py this container cannot import the app (pip install -r requirements.txt failed building the http-ece wheel; pydantic, sqlalchemy, nacl, pywebpush each missing in turn) — the pre-existing tests/test_session_greeting.py errors the same way here, so the conftest run is CI's.",
+    "Hooks: .claude/settings.json, .codex/hooks.json, .grok/hooks/hooks.json each gained one SessionStart command right after their identity/greeting carrier; all three re-load as JSON (json.dump round-trip preserved). The Cursor hook is left alone: its sessionStart has no context-injection output field (documented in .cursor/hooks/coherence-session.sh).",
+    "Edges in the same commit: CLAUDE.md paragraph under Tender ground (the counsel card, the kernel teaching, the family/partner gate), docs/shared/agent-start-packet.md Prompt Routing row, scripts/INDEX.md + api/tests/INDEX.md + MANIFEST.md regenerated (generate_repo_indexes.py --check clean). make wellness: 2 durable docs edited on this branch, every added line speaks from what IS.",
+    "Honest floor: the mirror composts once the form/ gitlink carries the kernel recipe and fkwu host-io runs at SessionStart; until that bump the carrier prints the mirrored card, and a test cross-checking mirror against recipe is the next step after the pin moves."
+  ],
+  "change_files": [
+    "scripts/difficult_conversation_arrival.py",
+    "api/tests/test_difficult_conversation_arrival.py",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    ".grok/hooks/hooks.json",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "scripts/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-09-18_difficult_conversation_arrival.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/difficult_conversation_arrival.py | wc -c  (1969 bytes, under the 2048-byte preview window)",
+      "cd api && python3 -m pytest --noconftest tests/test_difficult_conversation_arrival.py -q  (8 passed)",
+      "python3 -c json.load on .claude/settings.json, .codex/hooks.json, .grok/hooks/hooks.json",
+      "python3 scripts/generate_repo_indexes.py && python3 scripts/generate_repo_indexes.py --check  (all indexes up to date)",
+      "python3 scripts/wellness_check.py  (self-forgiveness: every added durable line speaks from what IS)",
+      "kernel side (seeker71/coherence-kernel PR #586): ./fkwu cognition/tests/difficult-conversation-counsel-band.fk -> 111111111; preflight clean; door-link-health broken=0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Session hooks, a small carrier, a test, and orientation docs; no Form recipe changed in this repo (the recipe lands upstream in the kernel). CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-config",
+    "notes": "No public HTTP endpoint or service changes. The behavior reaches a session when the repo is opened in a local or cloud agent."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local verification passed; CI and merge remain pending, and the kernel PR carries the recipe this carrier mirrors. No deploy applies to this agent-config change."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "On session start (Claude, Codex, Grok) the session receives the difficult-conversation counsel card as its own small hook output — the whole card inside the preview window that actually reaches the model — so a human who brings a conversation they dread is met by the body's unified counsel: fear named once then trust, one lift per reply, judged trust, parts not villains, the other stays theirs, error as signal, and the origin field's relational teachings named; when the conversation is with family or a partner, the tender-ground files gate first.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "Carrier alone: 1969 bytes printed, starts with the card, ends with the tender-ground line.",
+      "Kernel door preferred: a fake kernel root with an executable fkwu and the recipe file yields the door's card with the trailing value line stripped; a failing door and a missing recipe both fall back to the mirror."
+    ]
+  }
+}
