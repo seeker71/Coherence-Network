@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 168
+**Total files**: 169
 
 | Route | File | Purpose |
 |---|---|---|
@@ -156,6 +156,7 @@
 | `/today` | [page.tsx](today/page.tsx) | _no top-of-file purpose_ |
 | `/treasury` | [page.tsx](treasury/page.tsx) | _no top-of-file purpose_ |
 | `/usage` | [page.tsx](usage/page.tsx) | _no top-of-file purpose_ |
+| `/vedic` | [page.tsx](vedic/page.tsx) | /vedic — Urs's Vedic (jyotisha) chat: ask the natively cast chart a question in plain words. |
 | `/verify` | [page.tsx](verify/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]/edit` | [page.tsx](vision/[conceptId]/edit/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]` | [page.tsx](vision/[conceptId]/page.tsx) | _no top-of-file purpose_ |

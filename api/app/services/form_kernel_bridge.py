@@ -226,6 +226,91 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
     return out[0]
 
 
+def _form_source_parent() -> Path:
+    """The directory fkwu must run in for `; preludes:` and BML lowering to resolve.
+
+    fkwu reads `form/form-stdlib/...` relative to its working directory when a
+    staged /tmp source names a prelude; the image lays the kernel flat under
+    /app/form, a checkout nests it under form/form. Both answer the same probe:
+    the parent whose `form/form-stdlib` exists.
+    """
+    for candidate in (_IMAGE_ROOT, _REPO_ROOT, _REPO_ROOT / "form"):
+        if (candidate / "form" / "form-stdlib").is_dir():
+            return candidate
+    return _REPO_ROOT
+
+
+def run_recipe_text(fk_source: str, timeout: float = 10.0) -> str:
+    """Run a recipe whose answer is PRINTED (print_str) and return every line.
+
+    ``run_recipe`` reads the first stdout line: the root value of a scalar
+    recipe. A recipe that speaks in words prints its text and returns 0, so
+    its answer is every line before that trailing root value. Same carrier,
+    same fkwu binary, same failure discipline — only the read differs.
+    """
+    bin_path = kernel_bin_path()
+    if not kernel_available():
+        raise RuntimeError(f"c-bootstrapped fkwu binary not found at {bin_path}")
+
+    source_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            suffix=".fk",
+            delete=False,
+        ) as staged:
+            staged.write(fk_source)
+            staged.write("\n")
+            source_path = Path(staged.name)
+        try:
+            proc = subprocess.Popen(
+                [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=str(_form_source_parent()),
+                **_process_group_kwargs(),
+            )
+        except OSError as exc:
+            raise RuntimeError("native Form source runner could not start") from exc
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            _reap_process_tree(proc)
+            raise RuntimeError(f"fkwu timed out after {timeout:g} seconds") from exc
+    finally:
+        if source_path is not None:
+            source_path.unlink(missing_ok=True)
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"fkwu failed (exit {proc.returncode}): {stderr.strip()}")
+    lines = stdout.rstrip("\n").splitlines()
+    if not lines:
+        raise RuntimeError("fkwu produced no output")
+    # The walker prints the root value last; a text recipe returns 0 there.
+    if lines[-1].strip() == "0":
+        lines = lines[:-1]
+    return "\n".join(lines)
+
+
+def serve_text_via_kernel(
+    recipe_path: str | Path,
+    bindings: Mapping[str, Any],
+    timeout: float = 10.0,
+) -> tuple[str, str]:
+    """``serve_via_kernel`` for recipes that answer in printed text."""
+    fk_source = load_recipe(recipe_path)
+    if bindings:
+        fk_source = inject_bindings(fk_source, bindings)
+    if not kernel_available():
+        raise RuntimeError(
+            f"c-bootstrapped fkwu runtime unavailable at {kernel_bin_path()}"
+        )
+    return run_recipe_text(fk_source, timeout=timeout), "fkwu"
+
+
 def run_inline(fk_source: str) -> Any:
     """The sibling Rust inline carrier is intentionally unavailable."""
     raise RuntimeError("sibling kernels are differential witnesses, not runtimes")

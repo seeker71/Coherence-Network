@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 53
+**Total files**: 54
 
 | File | Purpose |
 |---|---|
@@ -44,6 +44,7 @@
 | [ShareButton.tsx](ShareButton.tsx) | _no top-of-file purpose_ |
 | [SinceLastVisit.tsx](SinceLastVisit.tsx) | _no top-of-file purpose_ |
 | [SubstrateBadge.tsx](SubstrateBadge.tsx) | SubstrateBadge — every page reveals what cells compose it. |
+| [VedicChat.tsx](VedicChat.tsx) | _no top-of-file purpose_ |
 | [active_nav_link.tsx](active_nav_link.tsx) | _no top-of-file purpose_ |
 | [expert-mode-context.tsx](expert-mode-context.tsx) | _no top-of-file purpose_ |
 | [hash-scroller.tsx](hash-scroller.tsx) | _no top-of-file purpose_ |

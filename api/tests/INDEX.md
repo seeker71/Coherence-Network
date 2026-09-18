@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 246
+**Total files**: 247
 
 | File | Purpose |
 |---|---|
@@ -77,7 +77,7 @@
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
 | [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
-| [test_federation_carrier_selection.py](test_federation_carrier_selection.py) | Selection witnesses for the direct fkwu federation admission carrier. |
+| [test_federation_carrier_selection.py](test_federation_carrier_selection.py) | Selection and recovery witnesses for Form federation admission. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
 | [test_federation_peer_poll.py](test_federation_peer_poll.py) | Acceptance tests for federation_peer_poll_service — the heartbeat. |
@@ -248,6 +248,7 @@
 | [test_utils_softmax_weights.py](test_utils_softmax_weights.py) | Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
+| [test_vedic_chat.py](test_vedic_chat.py) | Flow test: /api/vedic/ask carries a question to the native vedic-chat.fk cell and the words back. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_view_recipe_library_choice.py](test_view_recipe_library_choice.py) | _no top-of-file purpose_ |
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
