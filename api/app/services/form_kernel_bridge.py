@@ -171,13 +171,13 @@ def kernel_available() -> bool:
     )
 
 
-def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
-    """Run a Form recipe through c-bootstrapped fkwu, return its root value.
+def _run_staged_source(fk_source: str, timeout: float, cwd: Path | None = None) -> str:
+    """Stage one .fk source, run it on fkwu through the source runner, return stdout.
 
-    fk_source is the textual .fk content — a top-level (do ...) form whose
-    final expression's value is the kernel's printed result.
-
-    Go, Rust, and TypeScript do not enter this path.
+    The single subprocess seam every recipe lane shares: staging, process group,
+    timeout reaping, cleanup, and the exit-code discipline. ``cwd`` is the
+    directory fkwu resolves ``; preludes:`` and BML lowering from; ``None``
+    keeps the caller's working directory.
     """
     bin_path = kernel_bin_path()
     if not kernel_available():
@@ -201,6 +201,7 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                cwd=str(cwd) if cwd is not None else None,
                 **_process_group_kwargs(),
             )
         except OSError as exc:
@@ -209,21 +210,74 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
             stdout, stderr = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired as exc:
             _reap_process_tree(proc)
-            raise RuntimeError(
-                f"fkwu timed out after {timeout:g} seconds"
-            ) from exc
+            raise RuntimeError(f"fkwu timed out after {timeout:g} seconds") from exc
     finally:
         if source_path is not None:
             source_path.unlink(missing_ok=True)
 
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"fkwu failed (exit {proc.returncode}): {stderr.strip()}"
-        )
-    out = stdout.rstrip("\n").splitlines()
+        raise RuntimeError(f"fkwu failed (exit {proc.returncode}): {stderr.strip()}")
+    return stdout
+
+
+def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
+    """Run a Form recipe through c-bootstrapped fkwu, return its root value.
+
+    fk_source is the textual .fk content — a top-level (do ...) form whose
+    final expression's value is the kernel's printed result.
+
+    Go, Rust, and TypeScript do not enter this path.
+    """
+    out = _run_staged_source(fk_source, timeout).rstrip("\n").splitlines()
     if not out:
         raise RuntimeError("fkwu produced no output")
     return out[0]
+
+
+def _form_source_parent() -> Path:
+    """The directory fkwu must run in for `; preludes:` and BML lowering to resolve.
+
+    fkwu reads `form/form-stdlib/...` relative to its working directory when a
+    staged /tmp source names a prelude; the image lays the kernel flat under
+    /app/form, a checkout nests it under form/form. Both answer the same probe:
+    the parent whose `form/form-stdlib` exists.
+    """
+    for candidate in (_IMAGE_ROOT, _REPO_ROOT, _REPO_ROOT / "form"):
+        if (candidate / "form" / "form-stdlib").is_dir():
+            return candidate
+    return _REPO_ROOT
+
+
+def run_recipe_text(fk_source: str, timeout: float = 10.0) -> str:
+    """Run a recipe whose answer is PRINTED (print_str) and return every line.
+
+    ``run_recipe`` reads the first stdout line: the root value of a scalar
+    recipe. A recipe that speaks in words prints its text and returns 0, so
+    its answer is every line before that trailing root value.
+    """
+    lines = _run_staged_source(fk_source, timeout, cwd=_form_source_parent()).rstrip("\n").splitlines()
+    if not lines:
+        raise RuntimeError("fkwu produced no output")
+    # The walker prints the root value last; a text recipe returns 0 there.
+    if lines[-1].strip() == "0":
+        lines = lines[:-1]
+    return "\n".join(lines)
+
+
+def serve_text_via_kernel(
+    recipe_path: str | Path,
+    bindings: Mapping[str, Any],
+    timeout: float = 10.0,
+) -> tuple[str, str]:
+    """``serve_via_kernel`` for recipes that answer in printed text."""
+    fk_source = load_recipe(recipe_path)
+    if bindings:
+        fk_source = inject_bindings(fk_source, bindings)
+    if not kernel_available():
+        raise RuntimeError(
+            f"c-bootstrapped fkwu runtime unavailable at {kernel_bin_path()}"
+        )
+    return run_recipe_text(fk_source, timeout=timeout), "fkwu"
 
 
 def run_inline(fk_source: str) -> Any:

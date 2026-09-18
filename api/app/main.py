@@ -62,6 +62,7 @@ from app.routers import cc_exchange as cc_exchange_router
 from app.routers import rooms as rooms_router
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
+from app.routers import vedic as vedic_router
 from app.routers import concepts
 from app.routers import substrate as substrate_router
 from app.routers import deployment_observer as deployment_observer_router
@@ -949,6 +950,7 @@ app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
 app.include_router(data_retention_router.router, prefix="/api", tags=["data-retention"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
+app.include_router(vedic_router.router, prefix="/api", tags=["vedic"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(graph_zoom.router, prefix="/api", tags=["graph"])
