@@ -149,6 +149,7 @@
     "/today": "web/app/today/page.tsx",
     "/treasury": "web/app/treasury/page.tsx",
     "/usage": "web/app/usage/page.tsx",
+    "/vedic": "web/app/vedic/page.tsx",
     "/verify": "web/app/verify/page.tsx",
     "/vision": "web/app/vision/page.tsx",
     "/vision/[conceptId]": "web/app/vision/[conceptId]/page.tsx",

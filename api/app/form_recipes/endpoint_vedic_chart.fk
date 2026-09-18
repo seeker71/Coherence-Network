@@ -1,0 +1,18 @@
+; endpoint_vedic_chart.fk — a birth-moment in, the Vedic chart out as JSON, from the native jyotisha cell.
+;
+; The body is form-stdlib/vedic-chat.fk (four-way, tests/vedic-chat-band.fk); this recipe
+; carries the route's inputs to (vc-json-chart ...) and PRINTS the JSON so the carrier reads
+; every line. The defaults are the attested ground the door opens on — Urs, 1971-10-06
+; 08:15 UT, Luzern — and any other birth-moment rides the same bindings.
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/ephemeris-planets.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/genekey-profile.fk form-stdlib/zodiac-channel.fk form-stdlib/vedic-chat.fk
+(do
+  (let year 2026.7)
+  (let y 1971)
+  (let m 10)
+  (let d 6)
+  (let uth 8)
+  (let utm 15)
+  (let lat 47.05)
+  (let lon 8.31)
+  (print_str (vc-json-chart (vc-moment y m d uth utm lat lon) year))
+  0)

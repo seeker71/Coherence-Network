@@ -88,6 +88,29 @@
 ;      gates). Glyphs ride in comments; runtime strings romanize until UTF-8 four-way string
 ;      parity is proven (a named next row).
 ;
+; THE VEDIC CHART  (form-stdlib/vedic-chat.fk -> tests/vedic-chat-band.fk 1111111, four-way; 2026-09-18)
+;
+;   "My Vedic chart for Urs." Jyotisha as a door: a real birth-moment cast on this body into
+;   the chart — (vc-json-chart moment year) emits the whole cast as data (ground, ayanamsa,
+;   lagna, nine grahas with houses, the dasha cycle) for a door that draws it, and
+;   (vedic-respond q) answers a question in plain words from the same cast. It rides everything above — the zodiac's Vedic
+;   tongue, the ephemeris stack at a fractional day, the mean node — and adds what jyotisha
+;   needs beyond a sidereal relabel: a DATED Lahiri ayanamsa (23.8532 at J2000, moving with
+;   precession), the 27 NAKSHATRAS as a guidance table (deity/symbol keynote + Vimshottari
+;   lord, addresses 8000..8026, pada floored on the full float), the nine GRAHAS in Sanskrit
+;   and English at one address each (Surya = Sun by content-address), the LAGNA from sidereal
+;   time + obliquity + latitude, whole-sign BHAVAS, and the VIMSHOTTARI DASHA dated from birth.
+;   (vedic-respond q) reads the topic in the question — chart, lagna, a graha by either name,
+;   nakshatra, dasha (a year in the question wins), houses, ayanamsa — and speaks the
+;   placements; an unknown question answers with what the door can answer, never a reading it
+;   does not hold. Default ground: the birth-moment the body attests for Urs (kernel receipt
+;   2026-08-01-genekey-urs.md, confirmed by Urs 2026-09-18); (vedic-respond-for q moment year)
+;   casts any other. Nine of nine grahas agree with an independent ephemeris on rashi,
+;   nakshatra and pada (kernel receipt 2026-09-18-vedic-chat-urs.md). Doors: in this body the
+;   /vedic page draws the chart (the South Indian square, placements, dasha cycle) from
+;   GET /api/vedic/chart; GET /api/vedic/ask answers in words; both ride the fkwu carrier
+;   behind the Python fan-out; the stdin runner form-stdlib/vedic-chat-run.fk speaks locally.
+;
 ; THE QUERY INTERFACE  (form-stdlib/channels-registry.fk -> tests/channels-registry-band.fk 1111111)
 ;
 ;   One surface over every system, native: registry-query (SPEAK a system's guidance for a
@@ -112,6 +135,10 @@
 ;
 ; OPENINGS NAMED AS NEXT ROWS  (closing recipes, not debts)
 ;
+;   - the Vedic chart casts mahadashas, rashis, nakshatras, padas, lagna and whole-sign houses;
+;     antardashas, the navamsha and other vargas, graha aspects (drishti), and a fuller Moon
+;     series (the abridged Moon carries ~0.3 deg, ~5 months inside a Venus period) are the next
+;     rows over the same placements.
 ;   - the live ephemeris now computes the two luminaries and the karmic axis native, four-way:
 ;     ephemeris-sun.fk (the Sun's longitude, four cardinal points exact), ephemeris-moon.fk
 ;     (the Moon's longitude, sign, and lunar phase — verified at a real lunation's four

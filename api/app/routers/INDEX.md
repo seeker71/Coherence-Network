@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 152
+**Total files**: 153
 
 | File | Purpose |
 |---|---|
@@ -151,6 +151,7 @@
 | [ui_preferences.py](ui_preferences.py) | UI Preferences router — spec ux-tabs-mobile-friendly. |
 | [utils.py](utils.py) | Compatibility API module for utility routes implemented as Form recipes. |
 | [value_lineage.py](value_lineage.py) | API routes for value lineage and payout attribution. |
+| [vedic.py](vedic.py) | Vedic (jyotisha) chart — a birth-moment cast by the native vedic-chat.fk cell on fkwu as a chart (JSON) or answered in words; Python only carries the data. |
 | [verification.py](verification.py) | Verification router — public endpoints for auditing CC flows. |
 | [views.py](views.py) | Views router — per-contributor view tracking, analytics, discovery rewards. |
 | [vision.py](vision.py) | Vision content routes backed by graph records. |
