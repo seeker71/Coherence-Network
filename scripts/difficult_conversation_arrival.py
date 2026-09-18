@@ -5,7 +5,7 @@ The BODY is the kernel cell ``cognition/difficult-conversation-counsel.fk`` in
 seeker71/coherence-kernel (pinned here as the ``form/`` submodule): the counsel this body holds
 for someone who brings a conversation they dread, or one that just went wrong — eleven moves,
 each naming the cell it lives in; the card's byte length held by its band
-(``cognition/tests/difficult-conversation-counsel-band.fk`` -> 111111111) so it always fits the
+(``cognition/tests/difficult-conversation-counsel-band.fk`` -> 1111111111) so it always fits the
 session-start window. The kernel door is ``./fkwu observe/difficult-conversation-arrival-run.fk``;
 the reading in full is the kernel teaching ``teachings/difficult-conversations.md``.
 
