@@ -6,7 +6,7 @@
   "date": "2026-09-18",
   "thread_branch": "claude/vedic-chat-urs-vm46jh",
   "change_intent": "runtime_feature",
-  "commit_scope": "Open Urs's Vedic (jyotisha) chat: GET /api/vedic/ask carries a plain-words question to the native vedic-chat.fk cell on the c-bootstrapped fkwu runtime and the words back; /vedic is the web door; the teaching lands in guidance-channels.form and modality-lattices.form.",
+  "commit_scope": "Open Urs's Vedic (jyotisha) chart: GET /api/vedic/chart emits the natal cast as data from the native vedic-chat.fk cell on the c-bootstrapped fkwu runtime and /vedic draws it (the South Indian square, placements, Vimshottari cycle); GET /api/vedic/ask answers in words from the same cell; the teaching lands in guidance-channels.form and modality-lattices.form.",
   "idea_ids": [
     "knowledge-and-resonance"
   ],
@@ -39,6 +39,7 @@
   "change_files": [
     "MANIFEST.md",
     "api/app/data/web_routes.json",
+    "api/app/form_recipes/endpoint_vedic_chart.fk",
     "api/app/form_recipes/endpoint_vedic_chat.fk",
     "api/app/main.py",
     "api/app/routers/INDEX.md",
@@ -56,11 +57,13 @@
     "web/app/INDEX.md",
     "web/app/vedic/page.tsx",
     "web/components/INDEX.md",
+    "web/components/VedicChart.tsx",
     "web/components/VedicChat.tsx"
   ],
   "files_owned": [
     "MANIFEST.md",
     "api/app/data/web_routes.json",
+    "api/app/form_recipes/endpoint_vedic_chart.fk",
     "api/app/form_recipes/endpoint_vedic_chat.fk",
     "api/app/main.py",
     "api/app/routers/INDEX.md",
@@ -78,6 +81,7 @@
     "web/app/INDEX.md",
     "web/app/vedic/page.tsx",
     "web/components/INDEX.md",
+    "web/components/VedicChart.tsx",
     "web/components/VedicChat.tsx"
   ],
   "evidence_refs": [
@@ -89,7 +93,8 @@
     "The production door answers only after this kernel lands and the form gitlink bumps to it; until then GET /api/vedic/ask returns 503 with 'the native jyotisha body is not reachable' and the /vedic page shows that silence plainly.",
     "The birth-moment is the one the kernel body already attests (receipts/2026-08-01-genekey-urs.md) and Urs confirmed it in this session: 6 October 1971, 09:15, Luzern.",
     "Local end-to-end run with form/ checked out at the kernel branch commit (832ffb6f): next dev on :3111 -> /api proxy -> uvicorn :8000 -> fkwu; /vedic opened with the door's own help text, 'where is my moon?' answered Mesha / Bharani pada 1 / house 7 and 'which dasha is running now?' answered the Rahu mahadasha 2012-06 to 2030-06, each stamped 'computed on fkwu' (~120 ms per answer). Screenshots at 1440 and 390 px: no horizontal overflow; the page reads in the site's light theme through shadcn tokens.",
-    "coherence-kernel#587 merged (rebase) as main dca3564901538aa89f3f27267496fbbfa0444f9e; the same five-file change was carried onto the form-submodule distribution lineage as d8d84dda (on 6d6282d, the previous pin), and the form gitlink bumps to that commit. On the distribution tree, fkwu built from its own runtime/fkwu-uni.c answers vedic-chat-band 1111111 (zodiac-channel, chart-cast, genekey-profile bands 1111111 alongside). Urs asked for the merge on 2026-09-18."
+    "Urs: 'Chart not chat' (2026-09-18). The door became the chart: vc-json-chart in the kernel cell emits the cast as JSON (band still 1111111 four-way, 0 divergent), GET /api/vedic/chart carries it, and /vedic draws the South Indian square with placements and the dasha cycle; VedicChat.tsx composted into VedicChart.tsx; /api/vedic/ask keeps the words.",
+    "Kernel lineage: coherence-kernel#587 (main dca3564) and #589 (main cd3bf2c4, the chart-as-data cell) merged; both carried onto the form-submodule distribution lineage as d8d84dda then e651c8f0 on top of the previous pin 6d6282d, so every consumer path this repository reads is preserved. The form gitlink bumps to e651c8f0. On that tree, fkwu built from its own runtime/fkwu-uni.c answers vedic-chat-band 1111111. Urs asked for the merge on 2026-09-18."
   ],
   "local_validation": {
     "status": "pass",
@@ -110,20 +115,21 @@
   },
   "deploy_validation": {
     "status": "pending",
-    "notes": "After #4042 merges, Hostinger auto-deploy rebuilds api/web; verify with curl https://api.coherencycoin.com/api/vedic/ask?q=moon expecting runtime=fkwu and 'Bharani' in answer, then read the witness pulse for new silences."
+    "notes": "After #4042 merges, Hostinger auto-deploy rebuilds api/web; verify with curl https://api.coherencycoin.com/api/vedic/chart expecting runtime=fkwu and lagna.rashi_name=Tula, then open https://coherencycoin.com/vedic and read the witness pulse for new silences."
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "GET /api/vedic/ask?q=<words> returns {answer, ground, year, runtime: fkwu} computed by form-stdlib/vedic-chat.fk; /vedic renders a chat that opens with the door's own help text and answers each question from the same cell.",
+    "expected_behavior_delta": "GET /api/vedic/chart returns {chart:{ground, ayanamsa, lagna, grahas[9], dashas[9]}, ground, year, runtime: fkwu} emitted by form-stdlib/vedic-chat.fk; /vedic renders the South Indian square with the lagna marked, the placements table and the Vimshottari cycle with the running period; GET /api/vedic/ask?q=<words> answers in words from the same cell.",
     "public_endpoints": [
+      "GET /api/vedic/chart",
       "GET /api/vedic/ask",
       "/vedic"
     ],
     "test_flows": [
+      "api/tests/test_vedic_chat.py::test_live_chart_places_the_moon_in_bharani_and_marks_rahu_running (runs where the kernel carries the cell)",
+      "api/tests/test_vedic_chat.py::test_live_moon_answer_names_bharani",
       "api/tests/test_vedic_chat.py::test_route_refuses_plainly_when_the_body_is_unreachable",
-      "api/tests/test_vedic_chat.py::test_live_moon_answer_names_bharani (runs where fkwu is present)",
-      "open /vedic, ask 'where is my moon?', expect Mesha / Bharani pada 1 / house 7 and 'computed on fkwu'",
-      "local: /vedic at 1440 and 390 px against uvicorn + fkwu on the kernel branch — help, moon, dasha answered from the cell (this session, 2026-09-18)"
+      "open /vedic at 1440 and 390 px against uvicorn + fkwu: the square shows Ch 15 deg in Mesha (house 7), La 18 deg in Tula, Rahu running in the dasha list"
     ]
   },
   "phase_gate": {

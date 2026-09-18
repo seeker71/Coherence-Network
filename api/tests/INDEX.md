@@ -248,7 +248,7 @@
 | [test_utils_softmax_weights.py](test_utils_softmax_weights.py) | Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
-| [test_vedic_chat.py](test_vedic_chat.py) | Flow test: /api/vedic/ask carries a question to the native vedic-chat.fk cell and the words back. |
+| [test_vedic_chat.py](test_vedic_chat.py) | Flow tests: /api/vedic/chart and /api/vedic/ask carry a birth-moment to the native vedic-chat.fk cell and its cast back. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_view_recipe_library_choice.py](test_view_recipe_library_choice.py) | _no top-of-file purpose_ |
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |

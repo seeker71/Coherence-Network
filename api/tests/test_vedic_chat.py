@@ -1,4 +1,4 @@
-"""Flow test: /api/vedic/ask carries a question to the native vedic-chat.fk cell and the words back."""
+"""Flow tests: /api/vedic/chart and /api/vedic/ask carry a birth-moment to the native vedic-chat.fk cell and its cast back."""
 
 from __future__ import annotations
 
@@ -48,9 +48,19 @@ def test_bindings_cover_every_route_input():
     assert "(let lat 47.05)" in injected
 
 
-def test_route_is_mounted_under_api():
+def test_routes_are_mounted_under_api():
     # routers are included lazily, so the OpenAPI document is the mounted truth
-    assert "/api/vedic/ask" in app.openapi()["paths"]
+    paths = app.openapi()["paths"]
+    assert "/api/vedic/ask" in paths
+    assert "/api/vedic/chart" in paths
+
+
+def test_chart_recipe_prints_the_cell_json_for_every_route_input():
+    src = load_recipe(vedic.CHART_RECIPE)
+    assert "form-stdlib/vedic-chat.fk" in src
+    assert "(print_str (vc-json-chart (vc-moment y m d uth utm lat lon) year))" in src
+    injected = inject_bindings(src, {"year": 2026.7, "y": 1971, "m": 10, "d": 6, "uth": 8, "utm": 15, "lat": 47.05, "lon": 8.31})
+    assert "(let year 2026.7)" in injected
 
 
 def test_ground_names_urs_only_for_the_attested_moment():
@@ -81,3 +91,21 @@ def test_live_moon_answer_names_bharani():
     assert body["runtime"] == "fkwu"
     assert "Bharani" in body["answer"]
     assert body["ground"].startswith("Urs")
+
+
+@pytest.mark.skipif(
+    not _kernel_carries_the_cell(),
+    reason="needs the c-bootstrapped fkwu and a kernel checkout carrying form-stdlib/vedic-chat.fk",
+)
+def test_live_chart_places_the_moon_in_bharani_and_marks_rahu_running():
+    client = TestClient(app)
+    res = client.get("/api/vedic/chart", params={"year": 2026.7})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["runtime"] == "fkwu"
+    chart = body["chart"]
+    assert chart["lagna"]["rashi_name"] == "Tula"
+    moon = next(g for g in chart["grahas"] if g["english"] == "Moon")
+    assert (moon["rashi_name"], moon["nakshatra_name"], moon["pada"], moon["house"]) == ("Mesha", "Bharani", 1, 7)
+    running = [x["name"] for x in chart["dashas"] if x["running"]]
+    assert running == ["Rahu"]

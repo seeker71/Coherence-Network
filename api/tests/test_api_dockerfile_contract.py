@@ -49,6 +49,7 @@ _APP_ENDPOINT_RECIPES = (
     "endpoint_reaction_resonance.fk",
     "endpoint_request_progress.fk",
     "endpoint_vedic_chat.fk",
+    "endpoint_vedic_chart.fk",
 )
 
 

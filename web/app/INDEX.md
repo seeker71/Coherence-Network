@@ -156,7 +156,7 @@
 | `/today` | [page.tsx](today/page.tsx) | _no top-of-file purpose_ |
 | `/treasury` | [page.tsx](treasury/page.tsx) | _no top-of-file purpose_ |
 | `/usage` | [page.tsx](usage/page.tsx) | _no top-of-file purpose_ |
-| `/vedic` | [page.tsx](vedic/page.tsx) | /vedic — Urs's Vedic (jyotisha) chat: ask the natively cast chart a question in plain words. |
+| `/vedic` | [page.tsx](vedic/page.tsx) | /vedic — Urs's Vedic (jyotisha) chart, cast natively: the square, the placements, the dasha cycle. |
 | `/verify` | [page.tsx](verify/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]/edit` | [page.tsx](vision/[conceptId]/edit/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]` | [page.tsx](vision/[conceptId]/page.tsx) | _no top-of-file purpose_ |
