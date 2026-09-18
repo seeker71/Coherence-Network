@@ -52,6 +52,7 @@
     "docs/coherence-substrate/guidance-channels.form",
     "docs/coherence-substrate/modality-lattices.form",
     "docs/system_audit/commit_evidence_2026-09-18_vedic_chat_urs.json",
+    "form",
     "web/app/INDEX.md",
     "web/app/vedic/page.tsx",
     "web/components/INDEX.md",
@@ -73,6 +74,7 @@
     "docs/coherence-substrate/guidance-channels.form",
     "docs/coherence-substrate/modality-lattices.form",
     "docs/system_audit/commit_evidence_2026-09-18_vedic_chat_urs.json",
+    "form",
     "web/app/INDEX.md",
     "web/app/vedic/page.tsx",
     "web/components/INDEX.md",
@@ -86,7 +88,8 @@
     "The API recipe endpoint_vedic_chat.fk was staged exactly as scripts/fkwu_run.sh --src stages it (core.fk + recipe with inject_bindings) and run on the locally built fkwu from the kernel checkout: the Moon answer names Mesha / Bharani pada 1 / house 7.",
     "The production door answers only after this kernel lands and the form gitlink bumps to it; until then GET /api/vedic/ask returns 503 with 'the native jyotisha body is not reachable' and the /vedic page shows that silence plainly.",
     "The birth-moment is the one the kernel body already attests (receipts/2026-08-01-genekey-urs.md) and Urs confirmed it in this session: 6 October 1971, 09:15, Luzern.",
-    "Local end-to-end run with form/ checked out at the kernel branch commit (832ffb6f): next dev on :3111 -> /api proxy -> uvicorn :8000 -> fkwu; /vedic opened with the door's own help text, 'where is my moon?' answered Mesha / Bharani pada 1 / house 7 and 'which dasha is running now?' answered the Rahu mahadasha 2012-06 to 2030-06, each stamped 'computed on fkwu' (~120 ms per answer). Screenshots at 1440 and 390 px: no horizontal overflow; the page reads in the site's light theme through shadcn tokens."
+    "Local end-to-end run with form/ checked out at the kernel branch commit (832ffb6f): next dev on :3111 -> /api proxy -> uvicorn :8000 -> fkwu; /vedic opened with the door's own help text, 'where is my moon?' answered Mesha / Bharani pada 1 / house 7 and 'which dasha is running now?' answered the Rahu mahadasha 2012-06 to 2030-06, each stamped 'computed on fkwu' (~120 ms per answer). Screenshots at 1440 and 390 px: no horizontal overflow; the page reads in the site's light theme through shadcn tokens.",
+    "coherence-kernel#587 merged (rebase) as main dca3564901538aa89f3f27267496fbbfa0444f9e; the same five-file change was carried onto the form-submodule distribution lineage as d8d84dda (on 6d6282d, the previous pin), and the form gitlink bumps to that commit. On the distribution tree, fkwu built from its own runtime/fkwu-uni.c answers vedic-chat-band 1111111 (zodiac-channel, chart-cast, genekey-profile bands 1111111 alongside). Urs asked for the merge on 2026-09-18."
   ],
   "local_validation": {
     "status": "pass",
@@ -107,7 +110,7 @@
   },
   "deploy_validation": {
     "status": "pending",
-    "notes": "The route serves after the kernel PR merges and the form gitlink bumps; verify with curl https://api.coherencycoin.com/api/vedic/ask?q=moon expecting runtime=fkwu and 'Bharani' in answer."
+    "notes": "After #4042 merges, Hostinger auto-deploy rebuilds api/web; verify with curl https://api.coherencycoin.com/api/vedic/ask?q=moon expecting runtime=fkwu and 'Bharani' in answer, then read the witness pulse for new silences."
   },
   "e2e_validation": {
     "status": "pending",
