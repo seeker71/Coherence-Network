@@ -9,8 +9,11 @@ source:
   - file: form/form/form-stdlib/tests/evidence-grounding-band.fk
   - file: form/form/form-stdlib/tests/zero-point-ladder-band.fk
     symbols: [zpl-claims, zpl-lane-at, zpl-tally, zpl-surface]
+  - file: form/form/form-stdlib/tests/nano-tea-tree-oil-band.fk
+    symbols: [ntto-claims, ntto-lane-at, ntto-tally, ntto-surface]
   - file: form/form/fourth-arm-bands.txt
   - file: docs/vision-kb/resources/zero-point-plasma-water.md
+  - file: docs/vision-kb/resources/nanoparticle-tea-tree-oil.md
   - file: docs/vision-kb/concepts/lc-honest-lane.md
   - file: docs/coherence-substrate/evidence-grounding.form
 requirements:
@@ -90,6 +93,8 @@ Both measured rather than assumed, and built around over the minimal proven core
 ## Files to Create/Modify
 
 - `form/form/form-stdlib/tests/zero-point-ladder-band.fk` — the claim table plus computed assertions (the first instance)
+- `form/form/form-stdlib/tests/nano-tea-tree-oil-band.fk` — the second page's claim table, same shape, its own band
+- `docs/vision-kb/resources/nanoparticle-tea-tree-oil.md` — the second page carrying computed tags, band, verdict, and the manual-transcription edge
 - `form/form/form-stdlib/evidence-grounding.fk` — the classifier the band calls, unchanged by gaining a caller
 - `form/form/fourth-arm-bands.txt` — registers `zero-point-ladder fks 65535` so fkwu is gated
 - `docs/vision-kb/resources/zero-point-plasma-water.md` — carries the computed tags, names the band, names the manual-transcription edge
@@ -136,7 +141,7 @@ cd form/form && sed -i '' 's/(list "water-car"             1 0 0 0 1)/(list "wat
 
 - **Follow-up task `task-2026-07-30-page-band-sync-check`** — no parser compares the Markdown labels to the band output; transcription is manual. The band catches a changed signal or classifier rule, not a hand-edited page. Closing this means a generator or comparison check; until it exists, no no-drift guarantee is claimed.
 - **Follow-up task `task-2026-07-30-signal-provenance`** — the signals themselves are authored. `eg-lane` removes the author's discretion over the *lane*, not over `observed?`/`independent?`/`measured?`/`derived?`/`refuted?`. Bias moves one level down, into units small enough to argue about.
-- **Follow-up task `task-2026-07-30-generalise-claim-table`** — the band covers one page. A second page adopting this shape needs its own band; nothing yet generalises the table format across pages.
+- **Follow-up task `task-2026-07-30-generalise-claim-table`** — each page carries its own band. Two pages now hold the shape (the zero-point ladder and the [nanoparticle tea tree oil](../docs/vision-kb/resources/nanoparticle-tea-tree-oil.md) rungs); the claim-table format is repeated by hand in each band rather than shared, so a generic table walker is still the open lift.
 
 ## The open edge, named
 
