@@ -19,8 +19,6 @@ Spec: specs/universal-node-edge-layer.md
 
 from __future__ import annotations
 
-import pytest
-
 from app.services import graph_service
 
 
@@ -137,6 +135,21 @@ def test_list_nodes_filters_by_type():
     assert "contributor:list-a" in ids
     assert "contributor:list-c" in ids
     assert "asset:list-b" not in ids, "type filter must exclude other types"
+
+
+def test_list_nodes_by_type_snapshot_returns_one_complete_stable_order():
+    """Reconciliation scans use one SELECT, ordered by immutable node id.
+
+    That keeps the membership stable even when another request updates a
+    node's timestamp while the scan is running.
+    """
+    graph_service.create_node(id="snapshot-row:c", type="grocery_spend", name="C")
+    graph_service.create_node(id="snapshot-row:a", type="grocery_spend", name="A")
+    graph_service.create_node(id="snapshot-row:b", type="grocery_spend", name="B")
+
+    rows = graph_service.list_nodes_by_type_snapshot("grocery_spend")
+    ids = [row["id"] for row in rows if row["id"].startswith("snapshot-row:")]
+    assert ids == ["snapshot-row:a", "snapshot-row:b", "snapshot-row:c"]
 
 
 def test_list_nodes_excludes_anonymous_meeting_traces():

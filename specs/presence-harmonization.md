@@ -194,8 +194,9 @@ The right shape is the one this body already speaks: compute the presented form 
 
 - [x] **R13** — Read/refine identity parity. `/people/{identity}` and
   `/people/{identity}/edit` resolve canonical graph ids, bare contributor ids,
-  human-readable slugs, and declared aliases through one shared resolver. A
-  Refine doorway emitted by a readable presence cannot land on a soft 404.
+  human-readable slugs, and declared `aliases` or source-compatible
+  `legacy_ids` through one shared resolver. A Refine doorway emitted by a
+  readable presence cannot land on a soft 404.
 
 ## Research Inputs
 

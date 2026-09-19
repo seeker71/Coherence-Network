@@ -39,6 +39,41 @@ _LOCALIZABLE_NODE_TYPES = {
     "event", "scene", "practice", "skill", "concept",
 }
 
+# These cells have their own authenticated access contract and external
+# reconciliation. Generic graph access would bypass those privacy and
+# consistency invariants.
+_DEDICATED_NODE_TYPES = graph_service.DEDICATED_PRIVATE_NODE_TYPES
+
+
+def _reject_dedicated_mutation(node: dict | None) -> None:
+    if node and node.get("type") in _DEDICATED_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be changed through its dedicated API",
+        )
+
+
+def _reject_dedicated_read(node: dict | None) -> None:
+    if node and node.get("type") in _DEDICATED_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be read through its dedicated API",
+        )
+
+
+def _reject_dedicated_type(node_type: str | None) -> None:
+    if node_type in _DEDICATED_NODE_TYPES:
+        raise HTTPException(
+            status_code=403,
+            detail="This node type can only be read through its dedicated API",
+        )
+
+
+def _reject_dedicated_identity(node_id: str) -> None:
+    node = graph_service.resolve_node_identity(node_id)
+    if node:
+        _reject_dedicated_read(node)
+
 
 def _project_node(node: dict | None, lang: str | None) -> dict | None:
     """Project a single graph node's name + description into the caller's
@@ -155,8 +190,14 @@ async def list_nodes(
     offset: int = Query(default=0, ge=0),
 ):
     """List nodes with optional type, phase, and search filters."""
+    _reject_dedicated_type(type)
     return graph_service.list_nodes(
-        type=type, phase=phase, search=search, limit=limit, offset=offset,
+        type=type,
+        phase=phase,
+        search=search,
+        limit=limit,
+        offset=offset,
+        exclude_types=_DEDICATED_NODE_TYPES,
     )
 
 
@@ -191,13 +232,14 @@ async def create_node(body: NodeCreate):
 @router.get("/graph/nodes/count", summary="Count nodes, optionally filtered by type")
 async def count_nodes(type: str | None = None):
     """Count nodes, optionally filtered by type."""
-    return graph_service.count_nodes(type=type)
+    _reject_dedicated_type(type)
+    return graph_service.count_nodes(type=type, exclude_types=_DEDICATED_NODE_TYPES)
 
 
 @router.get("/graph/stats", summary="Get graph-wide statistics")
 async def graph_stats():
     """Get graph-wide statistics."""
-    return graph_service.get_stats()
+    return graph_service.get_stats(exclude_node_types=_DEDICATED_NODE_TYPES)
 
 
 @router.get("/graph/nodes/{node_id}", summary="Get a single node")
@@ -220,6 +262,7 @@ async def get_node(node_id: str, request: Request, lang: str | None = Query(None
     node = graph_service.resolve_node_identity(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    _reject_dedicated_read(node)
     target_lang = resolve_caller_lang(request, lang)
     return _project_node(node, target_lang)
 
@@ -239,6 +282,7 @@ async def update_node(node_id: str, body: NodeUpdate, request: Request):
     `seed`) and `X-Edit-Author` (an opaque identifier) headers to
     attribute the revision; both default to `api` / empty when absent.
     """
+    _reject_dedicated_mutation(graph_service.get_node(node_id))
     updates = body.model_dump(exclude_none=True)
     source = request.headers.get("x-edit-source") or "api"
     author = request.headers.get("x-edit-author") or ""
@@ -291,14 +335,17 @@ async def get_node_revisions(
     # Existence check so 404 is honest for a node that was never created
     # (vs 200 with an empty list, which conflates "no edits yet" with
     # "no such node"). Cheap — single primary-key lookup.
-    if not graph_service.get_node(node_id):
+    node = graph_service.get_node(node_id)
+    if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    _reject_dedicated_read(node)
     return graph_service.list_node_revisions(node_id, limit=limit, offset=offset)
 
 
 @router.delete("/graph/nodes/{node_id}", summary="Delete a node and all its edges")
 async def delete_node(node_id: str):
     """Delete a node and all its edges."""
+    _reject_dedicated_mutation(graph_service.get_node(node_id))
     if not graph_service.delete_node(node_id):
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return {"deleted": node_id}
@@ -322,9 +369,16 @@ async def get_edges(
     resolved = graph_service.resolve_node_identity(node_id)
     if not resolved:
         return []
-    return graph_service.get_edges(
+    _reject_dedicated_read(resolved)
+    edges = graph_service.get_edges(
         resolved["id"], direction=direction, edge_type=type,
     )
+    return [
+        edge
+        for edge in edges
+        if (edge.get("from_node") or {}).get("type") not in _DEDICATED_NODE_TYPES
+        and (edge.get("to_node") or {}).get("type") not in _DEDICATED_NODE_TYPES
+    ]
 
 
 @router.post("/graph/edges", summary="Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)")
@@ -385,6 +439,10 @@ async def get_neighbors(
     - direction: outgoing/incoming/both
     - depth: 1 or 2
     """
+    _reject_dedicated_type(node_type)
+    resolved = graph_service.resolve_node_identity(node_id)
+    if resolved:
+        _reject_dedicated_read(resolved)
     if lifecycle_state is not None and lifecycle_state not in ("gas", "ice", "water"):
         raise HTTPException(
             status_code=422,
@@ -392,11 +450,12 @@ async def get_neighbors(
         )
     effective_edge_type = rel_type or edge_type
     return graph_service.get_neighbors(
-        node_id,
+        resolved["id"] if resolved else node_id,
         edge_type=effective_edge_type,
         node_type=node_type,
         direction=direction,
         lifecycle_state=lifecycle_state,
+        exclude_node_types=_DEDICATED_NODE_TYPES,
     )
 
 
@@ -407,8 +466,16 @@ async def get_subgraph(
     edge_types: str | None = None,
 ):
     """Get a subgraph centered on a node."""
+    resolved = graph_service.resolve_node_identity(node_id)
+    if resolved:
+        _reject_dedicated_read(resolved)
     types = edge_types.split(",") if edge_types else None
-    return graph_service.get_subgraph(node_id, depth=depth, edge_types=types)
+    return graph_service.get_subgraph(
+        resolved["id"] if resolved else node_id,
+        depth=depth,
+        edge_types=types,
+        exclude_node_types=_DEDICATED_NODE_TYPES,
+    )
 
 
 @router.get("/graph/path", summary="Find shortest path between two nodes")
@@ -418,7 +485,18 @@ async def find_path(
     max_depth: int = Query(default=5, ge=1, le=10),
 ):
     """Find shortest path between two nodes."""
-    path = graph_service.get_path(from_id, to_id, max_depth=max_depth)
+    resolved_from = graph_service.resolve_node_identity(from_id)
+    resolved_to = graph_service.resolve_node_identity(to_id)
+    if resolved_from:
+        _reject_dedicated_read(resolved_from)
+    if resolved_to:
+        _reject_dedicated_read(resolved_to)
+    path = graph_service.get_path(
+        resolved_from["id"] if resolved_from else from_id,
+        resolved_to["id"] if resolved_to else to_id,
+        max_depth=max_depth,
+        exclude_node_types=_DEDICATED_NODE_TYPES,
+    )
     if path is None:
         return {"path": None, "message": f"No path found within {max_depth} hops"}
     return {"path": path, "length": len(path)}
@@ -453,7 +531,7 @@ async def get_graph_proof():
     Returns node/edge counts by type, lifecycle distribution, graph density,
     coverage metrics, and last-edge timestamp. Returns 200 even on empty graph.
     """
-    return graph_service.get_proof()
+    return graph_service.get_proof(exclude_node_types=_DEDICATED_NODE_TYPES)
 
 
 # ── Frequency profile endpoints (universal — any entity) ─────────────
@@ -476,6 +554,7 @@ async def get_entity_profile(entity_id: str):
 
     No auth required — profiles are transparent and verifiable.
     """
+    _reject_dedicated_identity(entity_id)
     from app.services import frequency_profile_service
     resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
     views = frequency_profile_service.get_profile(resolved_entity_id)
@@ -504,6 +583,7 @@ async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., 
 
     No auth required. This is the public verification endpoint for profiles.
     """
+    _reject_dedicated_identity(entity_id)
     from app.services import frequency_profile_service
     resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
     frequency_profile_service.invalidate(resolved_entity_id)
@@ -526,6 +606,8 @@ async def compute_resonance(body: dict):
     from app.services import frequency_profile_service
     a_id = body.get("a", "")
     b_id = body.get("b", "")
+    _reject_dedicated_identity(a_id)
+    _reject_dedicated_identity(b_id)
     score = frequency_profile_service.resonance(a_id, b_id)
     return {"a": a_id, "b": b_id, "resonance": round(score, 4)}
 
@@ -538,6 +620,7 @@ async def sign_entity_profile(entity_id: str):
     Anyone can verify: recompute the profile hash, check the signature
     against the public key. Proves "this entity had this profile at this time."
     """
+    _reject_dedicated_identity(entity_id)
     from app.services import frequency_profile_service
     resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
     views = frequency_profile_service.get_profile(resolved_entity_id)
@@ -553,6 +636,7 @@ async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
     Searches the living-collective concept space by default. Fuses
     structural + categorical + semantic views via inverse-variance weights.
     """
+    _reject_dedicated_identity(entity_id)
     from app.services import frequency_profile_service
     resolved_entity_id = frequency_profile_service.resolve_entity_id(entity_id)
     return frequency_profile_service.find_resonant(resolved_entity_id, top_n=top)

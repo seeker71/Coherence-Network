@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, cast, func, or_
+from sqlalchemy import and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
@@ -35,6 +35,10 @@ _VALID_EDGE_TYPES_MSG = (
 )
 
 _VALID_LIFECYCLE_STATES = frozenset({"gas", "ice", "water"})
+# Generic graph reads are public infrastructure. Dedicated private cells keep
+# their own authenticated routers and must be invisible to generic consumers by
+# default; those routers use purpose-built raw snapshot helpers.
+DEDICATED_PRIVATE_NODE_TYPES = frozenset({"grocery_spend"})
 _SOURCE_PROVENANCE_REQUIRED_KEYS = (
     "source_artifact_id",
     "sensing_id",
@@ -263,7 +267,9 @@ def get_node_by_alias(
 
     Production uses the graph_nodes properties GIN index through JSONB
     containment. SQLite uses a JSON-text prefilter for local portability; both
-    paths confirm exact membership in Python before returning a node.
+    paths confirm exact membership in Python before returning a node. Both the
+    current ``aliases`` field and the source-corpus ``legacy_ids`` field are
+    recognized so existing presence identities remain valid doorways.
     """
     if not alias:
         return None
@@ -272,17 +278,27 @@ def get_node_by_alias(
         if node_type:
             q = q.filter(Node.type == node_type)
         if s.get_bind().dialect.name == "postgresql":
-            alias_filter = Node.properties.op("@>")(
-                cast(json.dumps({"aliases": [alias]}), JSONB)
+            alias_filter = or_(
+                Node.properties.op("@>")(
+                    cast(json.dumps({"aliases": [alias]}), JSONB)
+                ),
+                Node.properties.op("@>")(
+                    cast(json.dumps({"legacy_ids": [alias]}), JSONB)
+                ),
             )
         else:
             marker = json.dumps(alias, ensure_ascii=False)
-            alias_filter = Node.properties["aliases"].as_string().contains(marker)
+            alias_filter = or_(
+                Node.properties["aliases"].as_string().contains(marker),
+                Node.properties["legacy_ids"].as_string().contains(marker),
+            )
         candidates = q.filter(alias_filter).order_by(Node.updated_at.desc()).all()
         for node in candidates:
-            aliases = (node.properties or {}).get("aliases", [])
-            if isinstance(aliases, list) and alias in aliases:
-                return node.to_dict()
+            properties = node.properties or {}
+            for field in ("aliases", "legacy_ids"):
+                aliases = properties.get(field, [])
+                if isinstance(aliases, list) and alias in aliases:
+                    return node.to_dict()
     return None
 
 
@@ -442,6 +458,7 @@ def list_nodes(
     search: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    exclude_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> dict[str, Any]:
     """List nodes with optional filtering.
 
@@ -457,6 +474,8 @@ def list_nodes(
     """
     with session() as s:
         q = s.query(Node)
+        if exclude_types:
+            q = q.filter(~Node.type.in_(exclude_types))
         if type:
             q = q.filter(Node.type == type)
         if phase:
@@ -484,7 +503,28 @@ def list_nodes(
         }
 
 
-def count_nodes(type: str | None = None) -> dict[str, int]:
+def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
+    """Read every node of one type through a single database statement.
+
+    Internal reconciliation callers need a stable membership view. OFFSET
+    pages ordered by a mutable timestamp can duplicate or omit rows when a
+    concurrent update changes page order; one ordered SELECT receives one
+    database snapshot and avoids that seam.
+    """
+    with session() as s:
+        nodes = (
+            s.query(Node)
+            .filter(Node.type == node_type)
+            .order_by(Node.id.asc())
+            .all()
+        )
+        return [node.to_dict() for node in nodes]
+
+
+def count_nodes(
+    type: str | None = None,
+    exclude_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> dict[str, int]:
     """Count nodes by type.
 
     Mirrors list_nodes' anonymous-meeting trace exclusion so the
@@ -492,13 +532,20 @@ def count_nodes(type: str | None = None) -> dict[str, int]:
     """
     with session() as s:
         trace_filter = ~Node.id.like("anonymous-meeting:%")
+        private_filter = (
+            ~Node.type.in_(exclude_types) if exclude_types else True
+        )
         if type:
-            total = s.query(Node).filter(Node.type == type, trace_filter).count()
+            total = (
+                s.query(Node)
+                .filter(Node.type == type, trace_filter, private_filter)
+                .count()
+            )
             return {"total": total, "type": type}
         # Count all, grouped by type
         rows = (
             s.query(Node.type, func.count(Node.id))
-            .filter(trace_filter)
+            .filter(trace_filter, private_filter)
             .group_by(Node.type)
             .all()
         )
@@ -562,6 +609,7 @@ def get_edges(
     node_id: str,
     direction: str = "both",
     edge_type: str | None = None,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> list[dict[str, Any]]:
     """Get edges for a node, enriched with node stubs on both ends.
 
@@ -584,6 +632,7 @@ def get_edges(
 
         if edge_type:
             q = q.filter(Edge.type == edge_type)
+        q = _exclude_private_edges(q, exclude_node_types)
 
         edges = q.order_by(Edge.created_at.desc()).all()
 
@@ -702,6 +751,7 @@ def get_neighbors(
     depth: int = 1,
     direction: str = "both",
     lifecycle_state: str | None = None,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> list[dict[str, Any]]:
     """Get neighboring nodes (1 hop by default).
 
@@ -742,6 +792,8 @@ def get_neighbors(
 
         # Get the actual nodes
         node_q = s.query(Node).filter(Node.id.in_(neighbor_ids))
+        if exclude_node_types:
+            node_q = node_q.filter(~Node.type.in_(exclude_node_types))
         if node_type:
             node_q = node_q.filter(Node.type == node_type)
 
@@ -760,9 +812,26 @@ def get_neighbors(
         return neighbors
 
 
-def get_path(from_id: str, to_id: str, max_depth: int = 5) -> list[dict[str, Any]] | None:
+def get_path(
+    from_id: str,
+    to_id: str,
+    max_depth: int = 5,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> list[dict[str, Any]] | None:
     """Find shortest path between two nodes via BFS. Returns list of edges or None."""
     with session() as s:
+        excluded_ids = (
+            {
+                node_id
+                for (node_id,) in s.query(Node.id)
+                .filter(Node.type.in_(exclude_node_types))
+                .all()
+            }
+            if exclude_node_types
+            else set()
+        )
+        if from_id in excluded_ids or to_id in excluded_ids:
+            return None
         visited = {from_id}
         queue = [(from_id, [])]
 
@@ -774,6 +843,8 @@ def get_path(from_id: str, to_id: str, max_depth: int = 5) -> list[dict[str, Any
                 ).all()
                 for edge in edges:
                     other = edge.to_id if edge.from_id == current_id else edge.from_id
+                    if other in excluded_ids:
+                        continue
                     if other == to_id:
                         return path + [edge.to_dict()]
                     if other not in visited:
@@ -790,9 +861,22 @@ def get_subgraph(
     center_id: str,
     depth: int = 1,
     edge_types: list[str] | None = None,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> dict[str, Any]:
     """Get a subgraph centered on a node. Returns nodes + edges within depth."""
     with session() as s:
+        excluded_ids = (
+            {
+                node_id
+                for (node_id,) in s.query(Node.id)
+                .filter(Node.type.in_(exclude_node_types))
+                .all()
+            }
+            if exclude_node_types
+            else set()
+        )
+        if center_id in excluded_ids:
+            return {"nodes": [], "edges": [], "center": center_id, "depth": depth}
         nodes_seen = {center_id}
         edges_collected = []
         frontier = {center_id}
@@ -808,6 +892,8 @@ def get_subgraph(
                 if edge_types:
                     edge_q = edge_q.filter(Edge.type.in_(edge_types))
                 for edge in edge_q.all():
+                    if edge.from_id in excluded_ids or edge.to_id in excluded_ids:
+                        continue
                     edges_collected.append(edge.to_dict())
                     other = edge.to_id if edge.from_id == nid else edge.from_id
                     if other not in nodes_seen:
@@ -886,10 +972,16 @@ def create_edge_strict(
             return {"error": "edge_exists"}
 
 
-def get_edge_by_id(edge_id: str) -> dict[str, Any] | None:
+def get_edge_by_id(
+    edge_id: str,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> dict[str, Any] | None:
     """Get a single edge by ID, enriched with node stubs."""
     with session() as s:
-        edge = s.get(Edge, edge_id)
+        query = _exclude_private_edges(
+            s.query(Edge).filter(Edge.id == edge_id), exclude_node_types
+        )
+        edge = query.first()
         if not edge:
             return None
         return _enrich_edge(edge, s)
@@ -901,6 +993,7 @@ def list_edges(
     to_id: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> dict[str, Any]:
     """List edges with optional filters, enriched with node stubs."""
     with session() as s:
@@ -911,6 +1004,7 @@ def list_edges(
             q = q.filter(Edge.from_id == from_id)
         if to_id:
             q = q.filter(Edge.to_id == to_id)
+        q = _exclude_private_edges(q, exclude_node_types)
 
         total = q.count()
         edges = q.order_by(Edge.created_at.desc()).offset(offset).limit(limit).all()
@@ -943,6 +1037,7 @@ def list_edges_for_entity(
     direction: str = "both",
     limit: int = 50,
     offset: int = 0,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> dict[str, Any]:
     """List edges for a given entity with optional type and direction filters."""
     with session() as s:
@@ -957,6 +1052,7 @@ def list_edges_for_entity(
 
         if edge_type:
             q = q.filter(Edge.type == edge_type)
+        q = _exclude_private_edges(q, exclude_node_types)
 
         total = q.count()
         edges = q.order_by(Edge.created_at.desc()).offset(offset).limit(limit).all()
@@ -988,6 +1084,7 @@ def get_neighbors_enriched(
     edge_type: str | None = None,
     node_type: str | None = None,
     limit: int = 50,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
 ) -> dict[str, Any]:
     """Get neighboring nodes with edge context for the API /entities/{id}/neighbors endpoint."""
     with session() as s:
@@ -996,6 +1093,7 @@ def get_neighbors_enriched(
         )
         if edge_type:
             edge_q = edge_q.filter(Edge.type == edge_type)
+        edge_q = _exclude_private_edges(edge_q, exclude_node_types)
 
         edges = edge_q.limit(limit * 2).all()  # over-fetch before node_type filter
 
@@ -1034,11 +1132,44 @@ def get_neighbors_enriched(
         return {"entity_id": node_id, "neighbors": neighbors, "total": len(neighbors)}
 
 
-def get_stats() -> dict[str, Any]:
+def _excluded_node_ids(s, node_types: frozenset[str] | None) -> set[str]:
+    if not node_types:
+        return set()
+    return {
+        node_id
+        for (node_id,) in s.query(Node.id).filter(Node.type.in_(node_types)).all()
+    }
+
+
+def _exclude_private_edges(
+    query,
+    node_types: frozenset[str] | None,
+):
+    if not node_types:
+        return query
+    excluded_ids = select(Node.id).where(Node.type.in_(node_types))
+    return query.filter(
+        ~Edge.from_id.in_(excluded_ids), ~Edge.to_id.in_(excluded_ids)
+    )
+
+
+def _exclude_private_nodes(query, node_types: frozenset[str] | None):
+    return query.filter(~Node.type.in_(node_types)) if node_types else query
+
+
+def get_stats(
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> dict[str, Any]:
     """Get graph statistics."""
     with session() as s:
-        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
-        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+        node_query = _exclude_private_nodes(
+            s.query(Node.type, func.count(Node.id)), exclude_node_types
+        )
+        node_counts = node_query.group_by(Node.type).all()
+        edge_query = _exclude_private_edges(
+            s.query(Edge.type, func.count(Edge.id)), exclude_node_types
+        )
+        edge_counts = edge_query.group_by(Edge.type).all()
         return {
             "total_nodes": sum(c for _, c in node_counts),
             "total_edges": sum(c for _, c in edge_counts),
@@ -1082,14 +1213,21 @@ def get_edge_type_registry() -> dict[str, Any]:
         return {"edge_types": []}
 
 
-def get_proof() -> dict[str, Any]:
+def get_proof(
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> dict[str, Any]:
     """Return aggregate proof that the graph is functioning as the fractal data layer.
 
     Spec 169 §GET /api/graph/proof — must return 200 even on empty graph.
     """
     with session() as s:
-        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
-        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+        node_query = _exclude_private_nodes(
+            s.query(Node.type, func.count(Node.id)), exclude_node_types
+        )
+        node_counts = node_query.group_by(Node.type).all()
+        edge_counts = _exclude_private_edges(
+            s.query(Edge.type, func.count(Edge.id)), exclude_node_types
+        ).group_by(Edge.type).all()
 
         total_nodes = sum(c for _, c in node_counts)
         total_edges = sum(c for _, c in edge_counts)
@@ -1098,7 +1236,7 @@ def get_proof() -> dict[str, Any]:
 
         # Lifecycle distribution — count nodes per lifecycle_state in payload
         lifecycle_dist: dict[str, int] = {"gas": 0, "ice": 0, "water": 0}
-        all_nodes = s.query(Node).all()
+        all_nodes = _exclude_private_nodes(s.query(Node), exclude_node_types).all()
         for n in all_nodes:
             ls = (n.properties or {}).get("lifecycle_state", n.phase)
             if ls in lifecycle_dist:
@@ -1115,7 +1253,9 @@ def get_proof() -> dict[str, Any]:
         avg_degree = (2 * total_edges / total_nodes) if total_nodes > 0 else 0.0
 
         # Last edge created
-        last_edge = s.query(Edge).order_by(Edge.created_at.desc()).first()
+        last_edge = _exclude_private_edges(
+            s.query(Edge), exclude_node_types
+        ).order_by(Edge.created_at.desc()).first()
         last_edge_ts = last_edge.created_at.isoformat() if last_edge and last_edge.created_at else None
 
         # Coverage: ideas with spec, specs with impl, impls with tests (via edges)
@@ -1123,10 +1263,15 @@ def get_proof() -> dict[str, Any]:
         spec_count = nodes_by_type.get("spec", 0)
         impl_count = nodes_by_type.get("implementation", 0)
 
-        ideas_with_spec_edges = s.query(Edge).filter(
-            Edge.type.in_(["implements", "inspires", "depends-on"])
+        ideas_with_spec_edges = _exclude_private_edges(
+            s.query(Edge).filter(
+                Edge.type.in_(["implements", "inspires", "depends-on"])
+            ),
+            exclude_node_types,
         ).count()
-        specs_with_impl_edges = s.query(Edge).filter(Edge.type == "implements").count()
+        specs_with_impl_edges = _exclude_private_edges(
+            s.query(Edge).filter(Edge.type == "implements"), exclude_node_types
+        ).count()
         artifact_count = nodes_by_type.get("artifact", 0)
 
         def safe_pct(num: int, denom: int) -> float:

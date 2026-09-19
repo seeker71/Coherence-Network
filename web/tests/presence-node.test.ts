@@ -22,8 +22,7 @@ describe("resolvePresenceGraphNode", () => {
   it("resolves the Urs refinement slug to its canonical graph node", async () => {
     const canonical = {
       id: "contributor:seeker71",
-      slug: "urs-muff",
-      aliases: ["seeker71", "urs-muff", "ursmuff", "urs"],
+      legacy_ids: ["seeker71", "urs-muff", "ursmuff"],
       name: "Urs Muff",
     };
     const fetcher = routedFetcher({

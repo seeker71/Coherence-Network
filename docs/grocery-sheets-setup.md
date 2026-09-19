@@ -1,9 +1,13 @@
 # Mirroring the grocery ledger into your own Google Sheet
 
-The ledger lives in the network's graph. Google Sheets is a **mirror** — a
-copy that lands in a spreadsheet the hub owns, so the record is readable,
-sortable, and shareable by people who will never open the app, and so
-leaving the app costs nothing.
+New app entries live in the network's graph and mirror into Google Sheets.
+The Sheet also carries the household history from before the app existed. An
+authenticated Apps Script request returns its fixed `Sisa` summary plus
+acknowledgements and cancellations for entry IDs the app already knows. The app
+applies only graph entries carrying neither receipt, so retries, crashes, and
+concurrent deletion cannot count a purchase twice.
+The carrier never returns the household log, and the spreadsheet itself can
+remain private.
 
 Nothing here puts a Google credential in our keystore. You deploy a small
 script against your own spreadsheet and hand us a URL; revoking us is
@@ -34,13 +38,13 @@ The new shape puts the balance on top, where a person looks first, and keeps
 an append-only log below it:
 
 ```
-      A           B          C
+      A           B          C                           D
  1    Sisa        Rp2,772,000                            <- what is left
  2    Belanja     Rp3,009,300                            <- spent
  3    Isi ulang   Rp5,781,300                            <- topped up
- 4    When        Amount     What                        <- header (frozen)
+ 4    When        Amount     What                        Entry ID (hidden)
  5    23/07/2026  385000     pasar pagi - sayur & ikan
- 6    26/07/2026  -4000000   top up
+ 6    26/07/2026  -4000000   top up                      topup-...
  7    ...
 ```
 
@@ -86,12 +90,16 @@ from the toolbar. It converts the sheet in place and keeps every value:
 // SUM over one column. Appends land below row 4 and can never disturb the
 // totals above it.
 
-const HEADERS = ["When", "Amount", "What"];
+const HEADERS = ["When", "Amount", "What", "Entry ID"];
 const FIRST_DATA_ROW = 5;
 const RUPIAH = '"Rp"#,##0';
 
-// One-time: reshape the ledger, keeping every value. Safe to re-run.
+// One-time: reshape the ledger, keeping every value. Safe to re-run because
+// it holds the same script lock as append and reconcile_delete throughout.
 function restructure() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getActiveSheet();
   const values = sheet.getDataRange().getValues();
@@ -102,6 +110,7 @@ function restructure() {
   var iAmount = header.indexOf("Amount");
   if (iAmount < 0) iAmount = header.indexOf("Cost");
   const iWhat = header.indexOf("What");
+  const iEntryId = header.indexOf("Entry ID");
   if (iWhen < 0 || iAmount < 0) throw new Error("need a When and a Cost/Amount column");
 
   const kept = [];
@@ -111,7 +120,13 @@ function restructure() {
     const what = iWhat >= 0 ? String(values[i][iWhat] || "").trim() : "";
     if (amount === "" || amount === null) continue;
     if (what.toLowerCase() === "remaining") continue;        // now a formula
-    kept.push([when || "", Number(amount), what.toLowerCase() === "paid" ? "top up" : what]);
+    const entryId = iEntryId >= 0 ? String(values[i][iEntryId] || "").trim() : "";
+    kept.push([
+      when || "",
+      Number(amount),
+      what.toLowerCase() === "paid" ? "top up" : what,
+      entryId,
+    ]);
   }
   kept.sort(function (a, b) {
     return (a[0] instanceof Date && b[0] instanceof Date) ? a[0] - b[0] : 0;
@@ -148,7 +163,7 @@ function restructure() {
   // The log.
   sheet.getRange(4, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight("bold");
   if (kept.length) {
-    sheet.getRange(FIRST_DATA_ROW, 1, kept.length, 3).setValues(kept);
+    sheet.getRange(FIRST_DATA_ROW, 1, kept.length, HEADERS.length).setValues(kept);
   }
   sheet.getRange("A" + FIRST_DATA_ROW + ":A").setNumberFormat("dd/MM/yyyy");
   sheet.getRange("B" + FIRST_DATA_ROW + ":B").setNumberFormat(RUPIAH);
@@ -156,10 +171,14 @@ function restructure() {
   // The ledger arrived with a hidden column; What is the column that matters,
   // so every column the log uses is made visible before it is measured.
   sheet.showColumns(1, 3);
+  sheet.hideColumns(4);
   sheet.autoResizeColumns(1, 3);
   sheet.setColumnWidth(3, Math.max(260, sheet.getColumnWidth(3)));
 
   Logger.log("kept " + kept.length + " events; backup tab: " + backupName);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Find the header row by name, so the log can sit anywhere on the sheet and
@@ -182,31 +201,180 @@ function headerRowOf(sheet) {
 In the same Apps Script project, add this alongside `restructure`:
 
 ```javascript
-// The app appends one event per call - a purchase or a top-up.
-const SECRET = "";  // set to the same value as grocery_sheet.secret
+// The app appends one event per call and reads only the balance summary.
+// Store the shared value as the GROCERY_SHEET_SECRET script property and copy
+// the same value to grocery_sheet.secret in the production keystore.
+const SECRET_PROPERTY = "GROCERY_SHEET_SECRET";
+const ENTRY_ID_HEADER = "Entry ID";
+const STATE_SHEET_NAME = "_Hati App State";
+
+function jsonOutput(value) {
+  return ContentService.createTextOutput(JSON.stringify(value))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function entryIdColumn(sheet, hrow, createIfMissing) {
+  const width = Math.max(1, sheet.getLastColumn());
+  const header = sheet.getRange(hrow, 1, 1, width).getValues()[0]
+    .map(function (value) { return String(value).trim(); });
+  var index = header.indexOf(ENTRY_ID_HEADER);
+  if (index < 0 && createIfMissing) {
+    index = header.length;
+    sheet.getRange(hrow, index + 1).setValue(ENTRY_ID_HEADER);
+    sheet.hideColumns(index + 1);
+  }
+  return index;
+}
+
+function acknowledgedIds(sheet, hrow, requested) {
+  if (!Array.isArray(requested) || requested.length === 0) return [];
+  const wanted = new Set(requested.map(String));
+  const index = entryIdColumn(sheet, hrow, false);
+  const count = sheet.getLastRow() - hrow;
+  if (index < 0 || count < 1) return [];
+  return sheet.getRange(hrow + 1, index + 1, count, 1).getDisplayValues()
+    .map(function (row) { return String(row[0]); })
+    .filter(function (entryId) { return wanted.has(entryId); });
+}
+
+// A private durable cancellation ledger closes the race between an append and
+// a deletion. It is separate from the human ledger and remains hidden.
+function stateSheet(ss, createIfMissing) {
+  var sheet = ss.getSheetByName(STATE_SHEET_NAME);
+  if (!sheet && createIfMissing) {
+    sheet = ss.insertSheet(STATE_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 2).setValues([["Entry ID", "State"]]);
+    sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function cancelledIds(ss, requested) {
+  if (!Array.isArray(requested) || requested.length === 0) return [];
+  const sheet = stateSheet(ss, false);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const wanted = new Set(requested.map(String));
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getDisplayValues()
+    .filter(function (row) {
+      return wanted.has(String(row[0])) && String(row[1]) === "cancelled";
+    })
+    .map(function (row) { return String(row[0]); });
+}
+
+function markCancelled(ss, entryId) {
+  if (cancelledIds(ss, [entryId]).length) return;
+  stateSheet(ss, true).appendRow([entryId, "cancelled"]);
+}
+
+function summary(ss, sheet, hrow, requested) {
+  const rows = sheet.getRange("A1:B3").getValues();
+  var remaining = null;
+  rows.forEach(function (row) {
+    if (String(row[0]).trim().toLowerCase() === "sisa") remaining = Number(row[1]);
+  });
+  if (!Number.isFinite(remaining)) return {ok: false, error: "missing Sisa summary"};
+  return {
+    ok: true,
+    remaining_idr: Math.round(remaining),
+    acknowledged_ids: acknowledgedIds(sheet, hrow, requested),
+    cancelled_ids: cancelledIds(ss, requested),
+  };
+}
+
+function appendEntry(ss, sheet, hrow, body) {
+  const entryId = String(body.entry_id || "").trim();
+  if (!entryId) return {ok: false, error: "entry_id required"};
+  if (cancelledIds(ss, [entryId]).length) {
+    return {ok: true, appended: false, cancelled: true, entry_id: entryId};
+  }
+  const idIndex = entryIdColumn(sheet, hrow, true);
+  if (acknowledgedIds(sheet, hrow, [entryId]).length) {
+    return {ok: true, appended: false, entry_id: entryId};
+  }
+
+  const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(function (value) { return String(value).trim(); });
+  const row = new Array(header.length).fill("");
+  body.columns.forEach(function (column) {
+    const at = header.indexOf(column);
+    if (at < 0) return;
+    row[at] = (column === "When" && body.row[column])
+      ? new Date(body.row[column]) : body.row[column];
+  });
+  row[idIndex] = entryId;
+  sheet.appendRow(row);
+  return {ok: true, appended: true, entry_id: entryId};
+}
+
+function reconcileDelete(ss, sheet, hrow, body) {
+  const originalId = String(body.original_id || "").trim();
+  const reversal = body.reversal || {};
+  const reversalId = String(reversal.entry_id || "").trim();
+  if (!originalId || !reversalId) {
+    return {ok: false, error: "original_id and reversal.entry_id required"};
+  }
+
+  // A true local flag proves an older carrier returned success even if that
+  // pre-idempotency row has no Entry ID. A false flag never proves absence.
+  const originalPresent = body.known_mirrored === true ||
+    acknowledgedIds(sheet, hrow, [originalId]).length > 0;
+  if (originalPresent && !acknowledgedIds(sheet, hrow, [reversalId]).length) {
+    const reversed = appendEntry(ss, sheet, hrow, reversal);
+    if (!reversed.ok || reversed.cancelled) return reversed;
+  }
+
+  // This marker and all append checks share the same script lock. If an
+  // original append had the lock first it is visible and reversed above; if
+  // deletion had the lock first, the later append observes this marker and
+  // becomes a harmless acknowledged cancellation.
+  markCancelled(ss, originalId);
+  return {
+    ok: true,
+    cancelled: true,
+    original_id: originalId,
+    original_present: originalPresent,
+    reversal_id: reversalId,
+  };
+}
 
 function doPost(e) {
-  const body = JSON.parse(e.postData.contents);
-  if (SECRET && body.secret !== SECRET) {
-    return ContentService.createTextOutput("forbidden");
-  }
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  const hrow = headerRowOf(sheet);
-  const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const secret = String(
+      PropertiesService.getScriptProperties().getProperty(SECRET_PROPERTY) || ""
+    );
+    if (!secret || body.secret !== secret) {
+      return jsonOutput({ok: false, error: "forbidden"});
+    }
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheets().filter(function (candidate) {
+      return candidate.getName() !== STATE_SHEET_NAME;
+    })[0];
+    const hrow = headerRowOf(sheet);
 
-  // Match columns by NAME, so reordering or adding one never shifts the write.
-  const row = new Array(header.length).fill("");
-  body.columns.forEach(function (c) {
-    const at = header.indexOf(c);
-    if (at < 0) return;
-    row[at] = (c === "When" && body.row[c]) ? new Date(body.row[c]) : body.row[c];
-  });
-  sheet.appendRow(row);
-  return ContentService.createTextOutput("ok");
+    if (body.action === "summary") {
+      return jsonOutput(summary(ss, sheet, hrow, body.pending_ids || []));
+    }
+    if (body.action === "append") {
+      return jsonOutput(appendEntry(ss, sheet, hrow, body));
+    }
+    if (body.action === "reconcile_delete") {
+      return jsonOutput(reconcileDelete(ss, sheet, hrow, body));
+    }
+    return jsonOutput({ok: false, error: "unknown action"});
+  } finally {
+    lock.releaseLock();
+  }
 }
 ```
 
 ## 3. Deploy it
+
+Before deploying, open **Project Settings → Script properties** and add
+`GROCERY_SHEET_SECRET` with a strong random value. The value stays outside the
+script source and must match the production keystore value in step 4.
 
 **Deploy → New deployment → Web app**:
 
@@ -216,10 +384,10 @@ function doPost(e) {
 Copy the Web app URL — it looks like
 `https://script.google.com/macros/s/AKfy…/exec`.
 
-"Anyone" means anyone with the URL can append a row. The URL is the
-secret. If that's too loose for you, set `SECRET` in the script and
-`grocery_sheet.secret` in the keystore to the same value — then a leaked
-URL alone can't write.
+The web app is reachable by anyone, but every read and append is authenticated
+by `SECRET`. Keep the spreadsheet's Drive sharing **Restricted**; the app never
+uses its public CSV export. A leaked deployment URL alone can neither read the
+balance nor append a row.
 
 ## 4. Point the network at it
 
@@ -231,12 +399,15 @@ in the keystore beside the other keys, at `~/.coherence-network/keys.json`
 {
   "grocery_sheet": {
     "webhook_url": "https://script.google.com/macros/s/AKfy…/exec",
-    "secret": ""
+    "secret": "THE_SAME_STRONG_RANDOM_SECRET"
   }
 }
 ```
 
-Set `secret` only if you set `SECRET` in the script.
+The secret is required. If either copy is empty or differs, Sheet reads and
+writes fail closed. The graph ledger and its day/month totals remain available,
+while **Sisa** displays as temporarily unavailable instead of showing an
+incomplete graph-only balance.
 
 The sheet's **id** is already set. It ships in `api/config/api.json` under
 `grocery.sheet_id`, so a fresh deploy points at the hub's ledger with
@@ -256,9 +427,9 @@ The next entry appends a row. A running API caches config until
 
 ## 5. Watch the float, and say something when it runs low
 
-The balance's source of truth is the graph, so the watch asks the network what
-is left rather than reading the mirror it sits in — a sheet can lag, and an
-alert that trusts a stale mirror is worse than no alert.
+The watch asks the network what is left rather than reading its own formula
+directly. The network reconciles that Sheet baseline with graph entries still
+waiting to sync, so a temporarily lagging mirror does not lose a new spend.
 
 Mail goes out through the account that owns the script, so no mail credential
 lands in the keystore or anywhere else.
@@ -272,9 +443,9 @@ lands in the keystore or anywhere else.
 // ---------------------------------------------------------------------------
 // The low-float watch.
 //
-// The graph is the source of truth for the balance, so the watch asks the
-// network what is left rather than reading the mirror it is sitting in - the
-// sheet can lag, and an alert that trusts a stale mirror is worse than none.
+// Ask the network for the reconciled balance: Sheet baseline plus graph entries
+// still waiting to sync. Reading only this script's formula would miss that
+// pending delta while the mirror is temporarily dark.
 //
 // Set MEMBER_TOKEN and ALERT_TO in Project Settings > Script properties, then
 // add a daily time-driven trigger on watchFloat. Mail goes out through the
@@ -387,7 +558,23 @@ curl -X POST https://api.coherencycoin.com/api/grocery/sheet/resync \
 ```
 
 pushes everything the sheet hasn't seen. The response says how many were
-pending, how many landed, and whether a webhook is configured at all.
+pending, how many landed, whether a webhook is configured, and how many legacy
+rows are blocked from automatic replay.
+
+Every new graph write is stamped `sheet_protocol=entry-id-v1`. An older
+unsynced graph row without that marker may have landed through the predecessor
+carrier before Entry IDs existed and then crashed before its local flag was
+saved. Its presence cannot be inferred safely. The balance therefore remains
+unavailable, resync skips it, and deletion preserves it until the matching
+Sheet row is manually identified and given that graph entry's ID (or absence is
+confirmed and the graph row is migrated to `entry-id-v1`).
+
+Deleting also waits for this carrier. Under the same script lock used by every
+append, it records the original ID in a hidden `_Hati App State` cancellation
+sheet and sends one stable compensating event if the original already landed.
+An append that arrives after cancellation is acknowledged without writing a
+ledger row. If this atomic receipt cannot be confirmed, the API keeps the
+original graph entry and returns a retryable error.
 
 ## The door out
 
