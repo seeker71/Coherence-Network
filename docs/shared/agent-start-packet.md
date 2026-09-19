@@ -758,6 +758,11 @@ and the smallest useful next movement.
   lenses, and JIT misses; lift the smallest generic Form/BML abstraction with proof.
 - "Fix it" → smallest reversible change with smallest proof.
 - "Is this true?" → evidence, inference, direct experience, open mystery separated.
+- "Someone brings a conversation they dread, or one that went wrong" → the
+  difficult-conversation counsel card (SessionStart prints it; kernel teaching
+  `teachings/difficult-conversations.md`, door `./fkwu observe/difficult-conversation-arrival-run.fk`).
+  The other stays theirs — reported or inferred, nothing observed. Family or partner → the
+  tender-ground files gate first.
 - "Return" → six-field trace for changed work; compress for simple answers.
 
 Return template: `who/where | observed | inferred | changed | proof | still tight`.

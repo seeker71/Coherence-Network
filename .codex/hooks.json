@@ -9,6 +9,10 @@
           },
           {
             "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/difficult_conversation_arrival.py\""
+          },
+          {
+            "type": "command",
             "command": "\"$(git rev-parse --show-toplevel)/scripts/ensure_coord_cli.sh\" --agent codex --quiet"
           },
           {
