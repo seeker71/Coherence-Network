@@ -11,6 +11,8 @@ from __future__ import annotations
 import os
 import stat
 import sys
+
+import pytest
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
@@ -80,3 +82,13 @@ def test_gate_line_is_this_repos_own_and_not_in_the_mirror() -> None:
     assert "partner_presence.md" in dca.TENDER_GROUND_LINE
     assert "partner_presence" not in dca.MIRROR_CARD
     assert os.linesep is not None  # the hook prints text; no platform-specific bytes
+
+
+def test_mirror_matches_the_pinned_door_wherever_it_can_run() -> None:
+    """Where form/ is initialized and fkwu is built, the door's card and the mirror are one text."""
+    root = dca.KERNEL_ROOT
+    if not (root / dca.DOOR).is_file() or not os.access(root / "fkwu", os.X_OK):
+        pytest.skip("the pinned kernel door cannot run here (form/ uninitialized or fkwu not built)")
+    card = dca.kernel_card(root)
+    assert card is not None
+    assert card == dca.MIRROR_CARD

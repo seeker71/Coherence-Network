@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-19",
+  "thread_branch": "claude/session-startup-difficult-conversations-xo6b12",
+  "commit_scope": "The difficult-conversation carrier's mirror is held to the kernel door's card: a test runs the pinned door wherever form/ is initialized and form/fkwu is built (CI checks out submodules and builds fkwu) and asserts the door's card equals MIRROR_CARD, skipping where the door cannot run, so the mirror cannot drift from the recipe silently. The carrier's docstring names that hold.",
+  "files_owned": [
+    "scripts/difficult_conversation_arrival.py",
+    "api/tests/test_difficult_conversation_arrival.py",
+    "docs/system_audit/commit_evidence_2026-09-19_difficult_conversation_mirror_held_to_door.json"
+  ],
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "agent-self-orientation-contract"
+  ],
+  "task_ids": [
+    "task-2026-09-19-difficult-conversation-mirror-held-to-door"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-code-remote"
+  },
+  "evidence_refs": [
+    "The cross-check proven against the kernel's form-submodule lineage carrying the counsel (scratch worktree, fresh fkwu): kernel_card(lineage) ran and equaled MIRROR_CARD byte for byte; on the lineage the counsel band answers 1111111111, the covenant band 1111111111, the voice trial 11, the card 1796 bytes, round-ndigits 24, preflight clean on the cell, band, door, and covenant.",
+    "Tests: 8 passed, 1 skipped under the real api/tests/conftest.py (pywebpush stubbed outside the repo; the skip is the cross-check, because this container's form/ is uninitialized). Where CI initializes form/ and builds fkwu, the cross-check runs for real once the form/ pin carries the recipe; until then it skips with its reason named.",
+    "Carrier output unchanged: 1969 bytes. Indexes: generate_repo_indexes.py --check clean. Wellness: every added durable line speaks from what IS.",
+    "Honest floor: the form/ pin (e651c8f0 on the kernel's form-submodule lineage) does not yet carry the counsel; the carry is prepared and validated on that lineage and waits on a push this session's harness does not permit. When the pin moves, this test is what turns the mirror from a copy into a checked one."
+  ],
+  "change_files": [
+    "scripts/difficult_conversation_arrival.py",
+    "api/tests/test_difficult_conversation_arrival.py",
+    "docs/system_audit/commit_evidence_2026-09-19_difficult_conversation_mirror_held_to_door.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && PYTHONPATH=<stub> python3 -m pytest tests/test_difficult_conversation_arrival.py -q  (8 passed, 1 skipped under the real conftest)",
+      "python3 scripts/difficult_conversation_arrival.py | wc -c  (1969)",
+      "python3 scripts/generate_repo_indexes.py --check  (all indexes up to date)",
+      "python3 scripts/wellness_check.py  (self-forgiveness clean)",
+      "kernel_card(<form-submodule lineage + carry>) == MIRROR_CARD  (True)"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Paths outside api/app, form, and deploy/front-door: GitGuardian, validate-thread-process, windows-floor apply; the API suite job does not run on these paths."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-config",
+    "notes": "No public HTTP endpoint or service changes. The behavior reaches a session when the repo is opened in a local or cloud agent."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local verification passed; CI and merge remain pending, and the kernel PR carries the recipe this carrier mirrors. No deploy applies to this agent-config change."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No change to what a session receives at start. Where the pinned kernel's door can run, the test suite now fails if the mirrored card and the door's card differ.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "Cross-check against the carried lineage: door ran, equal to mirror.",
+      "Without a runnable door: the test skips and names why."
+    ]
+  }
+}

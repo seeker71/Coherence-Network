@@ -16,8 +16,8 @@ that window, so the session meets a person already holding the counsel.
 
 Form door first, mirror until then: when the pinned kernel carries the recipe and a built
 ``fkwu`` stands at its root, the card is printed by running the door; otherwise the mirrored card
-below prints. The recipe is the source of truth — the mirror composts once the ``form/`` pin
-carries the recipe and fkwu host-io runs at SessionStart.
+below prints. The recipe is the source of truth; wherever the door can run, the test holds the
+mirror to the door's card, so the mirror cannot drift silently.
 
 One line is this repo's own, never the kernel's: when the conversation is with family or a
 partner, the tender-ground memory files gate first (CLAUDE.md -> "Tender ground"). Private tissue
@@ -43,7 +43,7 @@ DOOR_TIMEOUT_S = 20
 PREVIEW_WINDOW = 2048
 
 # Mirror of the card the kernel door prints (cognition/difficult-conversation-counsel.fk, dcc-card).
-# Composts when the form/ pin carries the recipe and fkwu runs at SessionStart.
+# Held to the door's card by the test wherever the pinned recipe and form/fkwu both stand.
 MIRROR_CARD = "\n".join(
     [
         "⟐ DIFFICULT-CONVERSATION COUNSEL — a talk someone dreads or one that went wrong; the other is in the question, not the room.",
