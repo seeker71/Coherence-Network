@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 406
+**Total files**: 407
 
 | File | Purpose |
 |---|---|
@@ -76,6 +76,7 @@
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
 | [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
+| [difficult_conversation_arrival.py](difficult_conversation_arrival.py) | Difficult-conversation arrival — host-IO CARRIER for the kernel's counsel card at SessionStart. |
 | [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | embodiment_practice_recipe_proof.py — practices as recipes of cells. |
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |

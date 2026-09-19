@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 247
+**Total files**: 248
 
 | File | Purpose |
 |---|---|
@@ -64,6 +64,7 @@
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
 | [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
+| [test_difficult_conversation_arrival.py](test_difficult_conversation_arrival.py) | Difficult-conversation arrival — the SessionStart carrier for the kernel's counsel card. |
 | [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
 | [test_doorway_teaching.py](test_doorway_teaching.py) | Doorway teaching tests — does what /come-in promises actually work? |
