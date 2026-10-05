@@ -30,6 +30,7 @@ from sqlalchemy import func, select
 
 from app.models.graph import Edge, Node
 from app.services import unified_db as _udb
+from app.services.graph_service import DEDICATED_PRIVATE_NODE_TYPES
 
 
 def _clamp(n: int, lo: int = 0, hi: int = 100) -> int:
@@ -213,6 +214,9 @@ def _upsert_node(
         s.flush()
         return node
 
+    if node.type in DEDICATED_PRIVATE_NODE_TYPES:
+        raise ValueError("node id is owned by a dedicated private service")
+
     node.name = name or node.name
     if description:
         node.description = description
@@ -241,6 +245,16 @@ def _upsert_edge(
     strength: float = 1.0,
     created_by: str = "meeting_service",
 ) -> Edge:
+    private_endpoint = (
+        s.query(Node.id)
+        .filter(
+            Node.id.in_((from_id, to_id)),
+            Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES),
+        )
+        .first()
+    )
+    if private_endpoint:
+        raise ValueError("edge endpoint is owned by a dedicated private service")
     edge = s.query(Edge).filter(
         Edge.from_id == from_id,
         Edge.to_id == to_id,

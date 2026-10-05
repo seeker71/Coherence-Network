@@ -32,6 +32,7 @@
   ],
   "change_files": [
     "api/app/services/graph_service.py",
+    "api/app/services/meeting_service.py",
     "api/app/services/zoom_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/main.py",
@@ -60,6 +61,7 @@
   ],
   "files_owned": [
     "api/app/services/graph_service.py",
+    "api/app/services/meeting_service.py",
     "api/app/services/zoom_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/main.py",
@@ -102,6 +104,7 @@
     "ID-based edge patch and deletion now apply the same private endpoint predicate inside graph_service, so both public edge routers preserve relations connected to grocery cells even when an edge ID is known.",
     "The concepts edge fallback now reuses graph_service.get_edges instead of querying Edge directly, preserving the same private-endpoint predicate when a concept has no public neighbors.",
     "A conflicting generic node create now raises a sanitized dedicated-private ownership error instead of returning the existing grocery row from the database integrity-conflict branch.",
+    "Meeting capture now rejects dedicated-private IDs before updating an existing meeting or participant and before creating a concept relation, preventing unauthenticated upsert conflicts from reading or changing grocery cells.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
     "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
@@ -143,7 +146,7 @@
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The wrapper timing witness exceeded ten seconds while the shared host was saturated by several long-running native observers; the exact child command then passed all 13 flow tests in 5.09 seconds. All 63 focused graph-port, grocery reconciliation, privacy, and graph-layer tests pass, including the exact-head review cases for single-node and zoom reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
+    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The wrapper timing witness exceeded ten seconds while the shared host was saturated by several long-running native observers; the exact child command then passed all 13 flow tests in 5.09 seconds. All 64 focused graph-port, grocery reconciliation, privacy, graph-layer, and meeting-capture tests pass, including the exact-head review cases for single-node, zoom, conflict, and raw-upsert reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
   },
   "ci_validation": {
     "status": "pending",

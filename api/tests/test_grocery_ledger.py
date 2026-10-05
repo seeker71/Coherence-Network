@@ -793,7 +793,7 @@ def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str, str]:
 def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     client, monkeypatch
 ):
-    spend_id, _public_id, other_id, edge_id = _grocery_privacy_graph(
+    spend_id, public_id, other_id, edge_id = _grocery_privacy_graph(
         client, monkeypatch
     )
 
@@ -833,6 +833,63 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
             "name": "Attempted duplicate",
         },
     )
+    meeting_capture = client.post(
+        "/api/meetings/captures",
+        json={
+            "meeting_id": spend_id,
+            "title": "Attempted private overwrite",
+            "participants": [
+                {"id": public_id, "name": "Boundary witness", "kind": "person"}
+            ],
+            "concept_resonances": [
+                {
+                    "participant_id": public_id,
+                    "concept_id": "concept-grocery-private-guard",
+                    "concept_part_id": "guard",
+                    "resonance": "boundary",
+                    "strength": 1.0,
+                }
+            ],
+        },
+    )
+    private_concept_capture = client.post(
+        "/api/meetings/captures",
+        json={
+            "meeting_id": "meeting:grocery-private-concept-guard",
+            "title": "Attempted private concept edge",
+            "participants": [
+                {"id": public_id, "name": "Boundary witness", "kind": "person"}
+            ],
+            "concept_resonances": [
+                {
+                    "participant_id": public_id,
+                    "concept_id": spend_id,
+                    "concept_part_id": "guard",
+                    "resonance": "boundary",
+                    "strength": 1.0,
+                }
+            ],
+        },
+    )
+    private_participant_capture = client.post(
+        "/api/meetings/captures",
+        json={
+            "meeting_id": "meeting:grocery-private-participant-guard",
+            "title": "Attempted private participant overwrite",
+            "participants": [
+                {"id": spend_id, "name": "Attempted rename", "kind": "person"}
+            ],
+            "concept_resonances": [
+                {
+                    "participant_id": spend_id,
+                    "concept_id": "concept-grocery-private-guard",
+                    "concept_part_id": "guard",
+                    "resonance": "boundary",
+                    "strength": 1.0,
+                }
+            ],
+        },
+    )
     edge_patch = client.patch(f"/api/edges/{edge_id}", json={"strength": 0.4})
     edge_delete = client.delete(f"/api/edges/{edge_id}")
     graph_edge_delete = client.delete(f"/api/graph/edges/{edge_id}")
@@ -855,6 +912,18 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert edge_create.status_code == 404
     assert duplicate_create.status_code == 422
     assert duplicate_create.json() == {
+        "detail": "node id is owned by a dedicated private service"
+    }
+    assert meeting_capture.status_code == 400
+    assert meeting_capture.json() == {
+        "detail": "node id is owned by a dedicated private service"
+    }
+    assert private_concept_capture.status_code == 400
+    assert private_concept_capture.json() == {
+        "detail": "edge endpoint is owned by a dedicated private service"
+    }
+    assert private_participant_capture.status_code == 400
+    assert private_participant_capture.json() == {
         "detail": "node id is owned by a dedicated private service"
     }
     assert edge_patch.status_code == 404
