@@ -503,6 +503,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         name=f"{_CURRENCY} {amount_idr:,} — {description}",
         description=description,
         properties=props,
+        _include_private=True,
     )
     node = graph_service.get_node_unfiltered(spend_id) or {"id": spend_id, **props}
     spend = _node_to_spend(node)
@@ -590,6 +591,7 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         id=topup_id, type=_SPEND_TYPE,
         name=f"top up {_CURRENCY} {amount_idr:,}",
         description=props["spend_description"], properties=props,
+        _include_private=True,
     )
     node = graph_service.get_node_unfiltered(topup_id) or {"id": topup_id, **props}
     topup = _node_to_spend(node)

@@ -143,9 +143,15 @@ def test_list_nodes_by_type_snapshot_returns_one_complete_stable_order():
     That keeps the membership stable even when another request updates a
     node's timestamp while the scan is running.
     """
-    graph_service.create_node(id="snapshot-row:c", type="grocery_spend", name="C")
-    graph_service.create_node(id="snapshot-row:a", type="grocery_spend", name="A")
-    graph_service.create_node(id="snapshot-row:b", type="grocery_spend", name="B")
+    graph_service.create_node(
+        id="snapshot-row:c", type="grocery_spend", name="C", _include_private=True
+    )
+    graph_service.create_node(
+        id="snapshot-row:a", type="grocery_spend", name="A", _include_private=True
+    )
+    graph_service.create_node(
+        id="snapshot-row:b", type="grocery_spend", name="B", _include_private=True
+    )
 
     rows = graph_service.list_nodes_by_type_snapshot("grocery_spend")
     ids = [row["id"] for row in rows if row["id"].startswith("snapshot-row:")]

@@ -174,6 +174,7 @@ def create_node(
     strict: bool = False,
     source: str = "api",
     author: str = "",
+    _include_private: bool = False,
 ) -> dict[str, Any]:
     """Create a node. Returns the node dict.
 
@@ -182,6 +183,8 @@ def create_node(
     """
     if strict:
         validate_node_type(type)
+    if type in DEDICATED_PRIVATE_NODE_TYPES and not _include_private:
+        raise ValueError("node type is owned by a dedicated private service")
 
     props = dict(properties or {})
 

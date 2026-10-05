@@ -940,6 +940,12 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert "grocery_spend" not in proof.json()["nodes_by_type"]
     assert grocery.graph_service.get_node(spend_id) is None
     assert grocery.graph_service.get_node_unfiltered(spend_id) is not None
+    with pytest.raises(ValueError, match="dedicated private service"):
+        grocery.graph_service.create_node(
+            id="grocery-private-generic-create-denied",
+            type="grocery_spend",
+            name="Denied generic private create",
+        )
     assert grocery.graph_service.update_node(
         spend_id, properties={"sheet_synced": True}
     ) is None
