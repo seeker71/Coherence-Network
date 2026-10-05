@@ -1020,6 +1020,11 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     assert concept_edges.json() == []
     assert contributions.status_code == 200
     assert spend_id not in contributions.text
+    assert grocery.graph_service.get_edge_by_property(
+        edge_type="contribution",
+        property_name="contribution_id",
+        property_value="00000000-0000-0000-0000-000000000042",
+    ) is None
     assert inventory_flow.status_code == 200
     assert spend_id not in inventory_flow.text
     assert spend_id not in {

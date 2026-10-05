@@ -1038,6 +1038,25 @@ def get_edge_by_id(
         return _enrich_edge(edge, s)
 
 
+def get_edge_by_property(
+    *,
+    edge_type: str,
+    property_name: str,
+    property_value: str,
+    exclude_node_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+) -> dict[str, Any] | None:
+    """Get one edge by an exact JSON property behind the private boundary."""
+    with session() as s:
+        query = s.query(Edge).filter(
+            Edge.type == edge_type,
+            Edge.properties[property_name].as_string() == property_value,
+        )
+        edge = _exclude_private_edges(query, exclude_node_types).first()
+        if not edge:
+            return None
+        return _enrich_edge(edge, s)
+
+
 def list_edges(
     edge_type: str | None = None,
     from_id: str | None = None,
