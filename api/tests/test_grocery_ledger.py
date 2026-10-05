@@ -863,6 +863,15 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     spend_id, public_id, other_id, edge_id = _grocery_privacy_graph(
         client, monkeypatch
     )
+    concept_id = "concept-grocery-boundary-public"
+    grocery.graph_service.create_node(
+        id=concept_id, type="concept", name="Public concept boundary witness"
+    )
+    grocery.graph_service.create_edge(
+        from_id=concept_id,
+        to_id=spend_id,
+        type="depends-on",
+    )
 
     public_edges = client.get(f"/api/graph/nodes/{public_id}/edges")
     public_neighbors = client.get(f"/api/graph/nodes/{public_id}/neighbors")
@@ -877,6 +886,7 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     public_entity_neighbors = client.get(f"/api/entities/{public_id}/neighbors")
     public_profile = client.get(f"/api/profile/{public_id}")
     public_zoom = client.get(f"/api/graph/zoom/{public_id}?depth=2")
+    concept_edges = client.get(f"/api/concepts/{concept_id}/edges")
 
     assert public_edges.json() == []
     assert public_neighbors.json() == []
@@ -897,6 +907,8 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     assert public_profile.status_code == 200
     assert public_zoom.status_code == 200
     assert spend_id not in public_zoom.text
+    assert concept_edges.status_code == 200
+    assert concept_edges.json() == []
     assert spend_id not in {
         item["dimension"] for item in public_profile.json()["top"]
     }
