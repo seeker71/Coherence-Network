@@ -16,8 +16,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_
-
 from app.config_loader import get_int
 from app.models.graph import Edge, Node
 from app.models.graph_zoom import (
@@ -28,6 +26,7 @@ from app.models.graph_zoom import (
     ZoomNode,
     ZoomResponse,
 )
+from app.services.graph_service import DEDICATED_PRIVATE_NODE_TYPES
 from app.services.unified_db import session
 
 # Five canonical pillar IDs (stable, never renamed per spec)
@@ -163,7 +162,7 @@ def _fetch_children(node_id: str, s) -> list[tuple[Node, str]]:
     result = []
     for edge in edges:
         child = s.get(Node, edge.to_id)
-        if child:
+        if child and child.type not in DEDICATED_PRIVATE_NODE_TYPES:
             result.append((child, edge.type))
     return result
 
@@ -171,7 +170,12 @@ def _fetch_children(node_id: str, s) -> list[tuple[Node, str]]:
 def _edges_for_node(node_id: str, s) -> list[dict[str, Any]]:
     """Return edge dicts for outgoing edges from node_id."""
     edges = s.query(Edge).filter(Edge.from_id == node_id).all()
-    return [{"from": e.from_id, "to": e.to_id, "edge_type": e.type} for e in edges]
+    return [
+        {"from": e.from_id, "to": e.to_id, "edge_type": e.type}
+        for e in edges
+        if (target := s.get(Node, e.to_id)) is not None
+        and target.type not in DEDICATED_PRIVATE_NODE_TYPES
+    ]
 
 
 def _build_subtree(
@@ -230,7 +234,7 @@ def get_zoom(node_id: str, depth: int) -> ZoomResponse:
     """
     with session() as s:
         root = s.get(Node, node_id)
-        if root is None:
+        if root is None or root.type in DEDICATED_PRIVATE_NODE_TYPES:
             raise KeyError(node_id)
 
         node_count: list[int] = [0]
@@ -250,7 +254,7 @@ def add_question(node_id: str, question_text: str) -> QuestionResponse:
     """
     with session() as s:
         node = s.get(Node, node_id)
-        if node is None:
+        if node is None or node.type in DEDICATED_PRIVATE_NODE_TYPES:
             raise KeyError(node_id)
 
         props = dict(node.properties or {})
@@ -287,7 +291,7 @@ def resolve_question(node_id: str, question_id: str, resolved: bool) -> Question
     """
     with session() as s:
         node = s.get(Node, node_id)
-        if node is None:
+        if node is None or node.type in DEDICATED_PRIVATE_NODE_TYPES:
             raise KeyError(f"node:{node_id}")
 
         props = dict(node.properties or {})

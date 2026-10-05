@@ -17,4 +17,16 @@ describe("Hati grocery balance layout", () => {
   it("keeps the laptop balance in the ledger column", () => {
     expect(source).toContain('className="mb-3 hidden lg:block"');
   });
+
+  it("never turns an unavailable historical Sheet balance into zero", () => {
+    expect(source).toContain('remaining_idr: number | null');
+    expect(source).toContain('remaining === null ? "—" : rupiah(remaining)');
+    expect(source).toContain('remaining={totals?.remaining_idr ?? null}');
+    expect(source).not.toContain('remaining={totals?.remaining_idr ?? 0}');
+  });
+
+  it("makes a blocked pre-Entry-ID row visible instead of replaying silently", () => {
+    expect(source).toContain("blocked_legacy?: number");
+    expect(source).toContain("sheet.blocked_legacy ?? 0");
+  });
 });

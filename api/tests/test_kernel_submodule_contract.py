@@ -13,6 +13,7 @@ APP_RECIPES = {
     "endpoint_gathering_head_value.fk",
     "endpoint_gathering_visible.fk",
     "endpoint_grocery_amount.fk",
+    "endpoint_grocery_remaining.fk",
     "endpoint_household_advance.fk",
     "endpoint_ical_allday.fk",
     "endpoint_ical_field.fk",

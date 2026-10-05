@@ -38,7 +38,7 @@ constraints:
   - "Shops reuse the household_place cell with kind=shop — no parallel location system"
   - "Identity reuses the household device token — no second login"
   - "The amount is computed by the recipe only; no Python mirror of the arithmetic"
-  - "The graph is the source of truth; Sheets is a mirror, never the store"
+  - "The graph owns app writes; the connected Sheet supplies the historical balance baseline until its older rows are represented in the graph"
   - "No Google service-account credentials in the keystore — the hub owns the webhook"
 ---
 
@@ -94,6 +94,24 @@ into a shoebox of receipts, which is the failure this replaces.
   /api/grocery/export.csv` is the door out, always open, and carries the
   fuller ten-column record.
 
+- [ ] **R6a — The balance includes the ledger that predates the app.** The
+  totals route asks an authenticated Apps Script carrier for the Sheet's fixed
+  `Sisa` summary plus acknowledgements and cancellations for caller-supplied
+  entry IDs, then applies only graph entries the Sheet has neither acknowledged
+  nor cancelled. The carrier never returns the household log; an idempotent
+  `Entry ID` closes the append/flag crash seam, and the cancellation receipt
+  closes a delete that completes after the database snapshot. If the Sheet is
+  dark, day/month totals and the graph ledger stay
+  available, while the historical remaining balance is explicitly unavailable
+  rather than being replaced by an incomplete graph-only number. New graph
+  writes carry an `entry-id-v1` protocol marker. An unsynced row without that
+  marker predates ID acknowledgements, so its Sheet presence remains unknown:
+  balance is unavailable and automatic resync/deletion preserves it until a
+  one-time migration identifies the corresponding Sheet row. All grocery
+  rows are read by one database statement before this gate can declare the
+  legacy-unknown set empty, so growth or a concurrent update cannot hide an
+  older uncertain row between mutable pagination windows.
+
 - [ ] **R7 — Both directions, one ledger.** Money in (`POST /grocery/topup`)
   and money out (`POST /grocery/spend`) are the same cell with a `kind`, so
   "what is left to spend" is one signed sum rather than two tables to
@@ -102,8 +120,27 @@ into a shoebox of receipts, which is the failure this replaces.
 
 - [ ] **R8 — A wrong number is fixable by the person who typed it.**
   `DELETE /grocery/spend/{id}` removes an entry for its recorder, or any
-  entry for a resident, and says whether the sheet already has the row — we
-  never reach into the hub's own document to edit what we handed over.
+  entry for a resident, and says whether the Sheet already has the row. An
+  authenticated carrier checks whether even an apparently unmirrored append
+  reached the Sheet. One Apps Script lock atomically records a private durable
+  cancellation marker and, when needed, one stable compensating Sheet event.
+  An append that held the lock first is reversed; an append that arrives later
+  observes the cancellation and cannot land. Only after that receipt does the
+  graph row disappear. If the carrier is unavailable or reconciliation fails,
+  deletion returns a retryable error and preserves the original row without
+  publishing a graph tombstone. The private boundary covers every generic
+  graph read—list, detail, revision, edges, neighbors, subgraph, path, counts,
+  stats, and proof—and the generic profile and resonance reads. The exclusion
+  is a graph-service read default, so flow rendering, edge/entity APIs, and
+  future generic consumers inherit it without a router remembering to opt in.
+  Each rejects or omits this private node type and its connected edges; generic
+  PATCH and DELETE reject it as well. These routes cannot expose household
+  records or bypass the contract.
+
+- [ ] **R8a — Maintenance shares the lock.** The one-time/re-runnable Sheet
+  restructure holds the same Apps Script lock for its complete read, backup,
+  clear, and restore interval, so an append or deletion cannot be acknowledged
+  and then erased by a stale restructure snapshot.
 
 - [ ] **R9 — Signal is not a precondition.** A market with no bars must not
   cost the manager their entry: the web queues unsent drafts in localStorage
@@ -113,6 +150,7 @@ into a shoebox of receipts, which is the failure this replaces.
 
 - `api/app/routers/grocery.py` — ledger routes, totals, places, export, and sheet mirror.
 - `api/app/form_recipes/endpoint_grocery_amount.fk` — exact thousands-to-rupiah recipe.
+- `api/app/form_recipes/endpoint_grocery_remaining.fk` — source selection and signed reconciliation policy.
 - `api/tests/test_grocery_ledger.py` — API and ledger-flow acceptance coverage.
 - `web/app/grocery/page.tsx` — contained phone and laptop grocery surface.
 - `web/tests/hati-grocery-layout.test.ts` — responsive balance-placement invariant.
@@ -142,7 +180,7 @@ cd web && npm run build
 ## Risks and Assumptions
 
 - Tailwind's `lg` breakpoint remains the boundary between the phone-first balance card and the laptop ledger column; the source test and rendered viewport proof guard both sides.
-- The graph totals route remains the source of the displayed amount; layout visibility never substitutes a locally computed balance.
+- The totals route remains the source of the displayed amount; it reconciles the Sheet baseline with pending graph writes, and layout visibility never substitutes a locally computed balance.
 
 ## Known Gaps and Follow-up Tasks
 
@@ -166,11 +204,16 @@ is a place with a `kind` and a stored sentence.
 
 **Why a webhook and not a service account.** A service account would put a
 Google credential in our keystore and make the hub's ledger depend on our
-key rotation. An Apps Script Web App URL is deployed by the hub against
-their own sheet: they own the destination, we hold no secret, and revoking
-us is deleting a URL. Setup is documented in `docs/grocery-sheets-setup.md`.
+key rotation. An Apps Script Web App is deployed by the hub against their own
+private sheet; a separate shared secret authenticates its deliberately narrow
+summary and idempotent-append operations. They own the destination, and
+revoking access is deleting the deployment or rotating one scoped secret.
+Setup is documented in `docs/grocery-sheets-setup.md`.
 
-**Why no Python mirror of the arithmetic.** `serve_via_kernel` fails hard
+**Why no Python mirror of the arithmetic.** `endpoint_grocery_remaining.fk`
+owns historical-baseline availability and pending signed-delta reconciliation.
+It returns an explicit unavailable result when the Sheet baseline is unknown.
+`serve_via_kernel` fails hard
 when the kernel is absent, on purpose — so Python never quietly resumes
 ownership of a computation the body has moved to Form. Resilience for the
 manager belongs at the edge (the offline queue), not as a second

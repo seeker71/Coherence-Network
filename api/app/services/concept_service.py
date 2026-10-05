@@ -494,33 +494,21 @@ def get_concept_edges(concept_id: str) -> list[dict[str, Any]]:
             "created_by": neighbor.get("created_by", ""),
         })
     # Fallback: if graph_service.get_neighbors doesn't return the shape we
-    # need, query edges directly. Edge.to_dict() returns from_id/to_id (the
-    # column names); the API contract is {from, to} so the primary path and
-    # the fallback agree on a single shape downstream.
+    # need, use the graph service's filtered edge carrier. Keeping this read
+    # behind that boundary prevents a raw database query from reintroducing
+    # edges whose other endpoint belongs to a dedicated private service.
     if not edges:
-        try:
-            from app.services.unified_db import session
-            from app.models.graph import Edge
-            with session() as s:
-                db_edges = (
-                    s.query(Edge)
-                    .filter((Edge.from_id == concept_id) | (Edge.to_id == concept_id))
-                    .limit(100)
-                    .all()
-                )
-                edges = [
-                    {
-                        "id": e.id,
-                        "from": e.from_id,
-                        "to": e.to_id,
-                        "type": e.type,
-                        "strength": e.strength,
-                        "created_by": e.created_by,
-                    }
-                    for e in db_edges
-                ]
-        except Exception:
-            pass
+        edges = [
+            {
+                "id": edge["id"],
+                "from": edge["from_id"],
+                "to": edge["to_id"],
+                "type": edge["type"],
+                "strength": edge.get("strength", 1.0),
+                "created_by": edge.get("created_by", ""),
+            }
+            for edge in _gs().get_edges(concept_id, direction="both")[:100]
+        ]
     return edges
 
 

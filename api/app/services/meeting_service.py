@@ -30,6 +30,7 @@ from sqlalchemy import func, select
 
 from app.models.graph import Edge, Node
 from app.services import unified_db as _udb
+from app.services.graph_service import DEDICATED_PRIVATE_NODE_TYPES
 
 
 def _clamp(n: int, lo: int = 0, hi: int = 100) -> int:
@@ -213,6 +214,9 @@ def _upsert_node(
         s.flush()
         return node
 
+    if node.type in DEDICATED_PRIVATE_NODE_TYPES:
+        raise ValueError("node id is owned by a dedicated private service")
+
     node.name = name or node.name
     if description:
         node.description = description
@@ -241,6 +245,16 @@ def _upsert_edge(
     strength: float = 1.0,
     created_by: str = "meeting_service",
 ) -> Edge:
+    private_endpoint = (
+        s.query(Node.id)
+        .filter(
+            Node.id.in_((from_id, to_id)),
+            Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES),
+        )
+        .first()
+    )
+    if private_endpoint:
+        raise ValueError("edge endpoint is owned by a dedicated private service")
     edge = s.query(Edge).filter(
         Edge.from_id == from_id,
         Edge.to_id == to_id,
@@ -447,16 +461,49 @@ def capture_meeting_resonance(body: dict) -> dict:
         }
 
 
-def _node_stub(s, node_id: str, fallback_kind: str | None = None) -> dict:
+def _node_stub(s, node_id: str, fallback_kind: str | None = None) -> dict | None:
     node = s.get(Node, node_id)
     if node is None:
         return {"id": node_id, "name": node_id, "kind": fallback_kind}
+    if node.type in DEDICATED_PRIVATE_NODE_TYPES:
+        return None
     props = dict(node.properties or {})
     kind = props.get("participant_kind") or fallback_kind
     stub = {"id": node.id, "name": node.name, "type": node.type}
     if kind:
         stub["kind"] = kind
     return stub
+
+
+def _public_resonance_stubs(
+    s,
+    resonance: dict,
+    participant_kind: str | None,
+) -> tuple[dict, dict, dict] | None:
+    concept = _node_stub(s, resonance.get("concept_id", ""))
+    participant = _node_stub(
+        s,
+        resonance.get("participant_id", ""),
+        fallback_kind=participant_kind,
+    )
+    part_node_id = resonance.get("concept_part_node_id", "")
+    part_node = s.get(Node, part_node_id) if part_node_id else None
+    if (
+        concept is None
+        or participant is None
+        or (
+            part_node is not None
+            and part_node.type in DEDICATED_PRIVATE_NODE_TYPES
+        )
+    ):
+        return None
+    part = {
+        "id": resonance.get("concept_part_id"),
+        "node_id": part_node_id,
+        "label": resonance.get("concept_part_label"),
+        "excerpt": resonance.get("concept_excerpt"),
+    }
+    return participant, concept, part
 
 
 def _summary_for(items: list[dict]) -> list[dict]:
@@ -522,19 +569,12 @@ def list_meeting_resonance(
                 kind = participant.get("kind")
                 if participant_kind and kind != participant_kind:
                     continue
-                concept = _node_stub(s, resonance.get("concept_id", ""))
-                part = {
-                    "id": resonance.get("concept_part_id"),
-                    "node_id": resonance.get("concept_part_node_id"),
-                    "label": resonance.get("concept_part_label"),
-                    "excerpt": resonance.get("concept_excerpt"),
-                }
+                stubs = _public_resonance_stubs(s, resonance, kind)
+                if stubs is None:
+                    continue
+                participant_stub, concept, part = stubs
                 items.append({
-                    "participant": _node_stub(
-                        s,
-                        resonance.get("participant_id", ""),
-                        fallback_kind=kind,
-                    ),
+                    "participant": participant_stub,
                     "concept": concept,
                     "concept_part": part,
                     "meeting": {

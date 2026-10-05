@@ -18,6 +18,9 @@ This file witnesses stone 1: the Postgres engine carries the three GUCs.
 
 from __future__ import annotations
 
+import pytest
+
+from app import main
 from app.services import unified_db as udb
 
 
@@ -58,3 +61,117 @@ def test_sqlite_engine_gets_no_postgres_options():
                 assert "options" not in part
     finally:
         sqlite.dispose()
+
+
+def test_postgres_schema_replaces_unbounded_serialized_unique_constraint(monkeypatch):
+    """Schema setup migrates the old full-text btree key before ingestion."""
+    calls: list[str] = []
+
+    class _Result:
+        def mappings(self):
+            return self
+
+        def one(self):
+            return {"legacy_constraint": True, "digest_index": False}
+
+    class _Connection:
+        def execute(self, statement):
+            calls.append(str(statement))
+            return _Result()
+
+    class _Begin:
+        def __enter__(self):
+            return _Connection()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _Bind:
+        def begin(self):
+            return _Begin()
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="postgresql://db")
+
+    assert calls[0].strip() == udb.POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL.strip()
+    assert calls[1:] == list(udb.POSTGRES_SUBSTRATE_UNIQUENESS_DDL)
+    assert "DROP CONSTRAINT IF EXISTS uq_substrate_serialized" in calls[1]
+    assert "md5(serialized)" in calls[2]
+
+
+def test_postgres_schema_skips_locking_ddl_after_migration(monkeypatch):
+    calls: list[str] = []
+
+    class _Result:
+        def mappings(self):
+            return self
+
+        def one(self):
+            return {"legacy_constraint": False, "digest_index": True}
+
+    class _Connection:
+        def execute(self, statement):
+            calls.append(str(statement))
+            return _Result()
+
+    class _Begin:
+        def __enter__(self):
+            return _Connection()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _Bind:
+        def begin(self):
+            return _Begin()
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="postgresql://db")
+
+    assert calls == [udb.POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL]
+
+
+def test_sqlite_schema_does_not_run_postgres_substrate_migration(monkeypatch):
+    class _Bind:
+        def begin(self):
+            raise AssertionError("Postgres migration must not run on SQLite")
+
+    monkeypatch.setattr(udb.Base.metadata, "create_all", lambda **_kwargs: None)
+    udb._create_all_idempotent(bind=_Bind(), url="sqlite:///:memory:")
+
+
+def test_postgres_schema_migration_failure_blocks_startup_and_clears_cache(monkeypatch):
+    cache = {"url": None, "engine": None, "sessionmaker": None}
+
+    class _Engine:
+        disposed = False
+
+        def dispose(self):
+            self.disposed = True
+
+    eng = _Engine()
+    monkeypatch.setattr(udb, "database_url", lambda: "postgresql://db")
+    monkeypatch.setattr(udb, "_normalize_engine_cache", lambda: cache)
+    monkeypatch.setattr(udb, "_create_engine", lambda _url: eng)
+    monkeypatch.setattr(udb, "sessionmaker", lambda **_kwargs: object())
+
+    def fail_schema(**_kwargs):
+        raise RuntimeError("migration lock timeout")
+
+    monkeypatch.setattr(udb, "_create_all_idempotent", fail_schema)
+
+    with pytest.raises(RuntimeError, match="migration lock timeout"):
+        udb.engine()
+
+    assert cache == {"url": None, "engine": None, "sessionmaker": None}
+    assert eng.disposed is True
+
+
+def test_lifespan_table_gate_propagates_schema_failure(monkeypatch):
+    """The outer startup carrier must not swallow the engine's migration error."""
+    def fail_engine():
+        raise RuntimeError("migration lock timeout")
+
+    monkeypatch.setattr(udb, "engine", fail_engine)
+    with pytest.raises(RuntimeError, match="migration lock timeout"):
+        main._ensure_db_tables()
