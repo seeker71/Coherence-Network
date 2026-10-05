@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -30,6 +30,29 @@ from app.db.base import Base
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 _SCHEMA_LOCK = threading.Lock()
 _SCHEMA_INITIALIZED: dict[str, bool] = {}
+
+POSTGRES_SUBSTRATE_UNIQUENESS_DDL = (
+    "ALTER TABLE substrate_nodes "
+    "DROP CONSTRAINT IF EXISTS uq_substrate_serialized",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_substrate_serialized_digest "
+    "ON substrate_nodes (package, level, domain, md5(serialized))",
+)
+POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL = """
+SELECT
+  EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'substrate_nodes'::regclass
+      AND conname = 'uq_substrate_serialized'
+  ) AS legacy_constraint,
+  EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = current_schema()
+      AND tablename = 'substrate_nodes'
+      AND indexname = 'uq_substrate_serialized_digest'
+  ) AS digest_index
+"""
 
 
 def _normalize_engine_cache() -> dict[str, Any]:
@@ -115,6 +138,27 @@ def _create_all_idempotent(*, bind, url: str) -> None:
             # SQLite schema setup can race across separate connections during tests.
             return
         raise
+    _repair_postgres_substrate_uniqueness(bind=bind, url=url)
+
+
+def _repair_postgres_substrate_uniqueness(*, bind, url: str) -> None:
+    """Lift unbounded serialized trees out of PostgreSQL's btree payload.
+
+    Older deployments used the full serialized text in a UNIQUE constraint.
+    PostgreSQL refuses values whose index row exceeds roughly one third of a
+    page. A built-in md5 expression keeps the atomic interning backstop bounded;
+    kernel lookups additionally compare the complete serialized text.
+    """
+    if not url.startswith("postgres"):
+        return
+    with bind.begin() as connection:
+        state = connection.execute(
+            text(POSTGRES_SUBSTRATE_UNIQUENESS_STATE_SQL)
+        ).mappings().one()
+        if state["legacy_constraint"]:
+            connection.execute(text(POSTGRES_SUBSTRATE_UNIQUENESS_DDL[0]))
+        if not state["digest_index"]:
+            connection.execute(text(POSTGRES_SUBSTRATE_UNIQUENESS_DDL[1]))
 
 
 def engine():
@@ -136,7 +180,18 @@ def engine():
         _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
     except Exception:
-        pass
+        if url.startswith("postgres"):
+            # The custom substrate migration is part of schema readiness, not
+            # advisory startup work. Returning a cached engine here would let
+            # the process serve with the oversized legacy UNIQUE constraint
+            # still installed and would make every later engine() call skip
+            # the migration. Clear the cache and fail startup so the supervisor
+            # retries the complete schema gate.
+            cache["url"] = None
+            cache["engine"] = None
+            cache["sessionmaker"] = None
+            eng.dispose()
+            raise
     return eng
 
 

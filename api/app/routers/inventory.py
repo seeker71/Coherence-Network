@@ -10,7 +10,6 @@ from app.adapters.graph_store import GraphStore
 from app.config_loader import get_bool
 from app.core.ttl_cache import ttl_cached
 from app.services import agent_execution_service
-from app.services import agent_service
 from app.services import commit_evidence_registry_service
 from app.services import inventory_service
 from app.services import page_lineage_service
@@ -364,8 +363,6 @@ def _build_flow_compat_rows(
     the expensive aggregation separately from the request handling.
     """
     from app.services import graph_service as _gs
-    from app.models.graph import Edge
-    from app.services.unified_db import session as _sess
 
     def _compat_row(node: dict) -> dict:
         row = dict(node)
@@ -389,11 +386,12 @@ def _build_flow_compat_rows(
         _compat_row(n)
         for n in _gs.list_nodes(type="asset", limit=asset_limit).get("items", [])
     ]
-    with _sess() as s:
-        contribution_rows = [
-            _compat_edge(e.to_dict())
-            for e in s.query(Edge).filter(Edge.type == "contribution").limit(contribution_limit).all()
-        ]
+    contribution_rows = [
+        _compat_edge(edge)
+        for edge in _gs.list_edges(
+            edge_type="contribution", limit=contribution_limit
+        ).get("items", [])
+    ]
     return contributor_rows, asset_rows, contribution_rows
 
 

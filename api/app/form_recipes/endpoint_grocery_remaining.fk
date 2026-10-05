@@ -1,0 +1,13 @@
+(do
+  (defn grocery-signed-total (values)
+    (if (eq (len values) 0)
+      0
+      (add (head values) (grocery-signed-total (tail values)))))
+  (defn grocery-remaining (sheet-available sheet-remaining pending-signed)
+    (if sheet-available
+      (list 1 (sub sheet-remaining (grocery-signed-total pending-signed)))
+      (list 0 0)))
+  (let sheet_available false)
+  (let sheet_remaining 0)
+  (let pending_signed (list))
+  (grocery-remaining sheet_available sheet_remaining pending_signed))

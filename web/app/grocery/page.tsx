@@ -52,6 +52,7 @@ type SheetStatus = {
   configured: boolean;
   sheet_url?: string | null;
   pending: number;
+  blocked_legacy?: number;
 };
 
 type Totals = {
@@ -60,7 +61,8 @@ type Totals = {
   day_count: number;
   month_total_idr: number;
   month_count: number;
-  remaining_idr: number;
+  remaining_idr: number | null;
+  remaining_source: "sheet" | "unavailable";
 };
 
 type SendResult =
@@ -138,6 +140,7 @@ const T = {
     csv: "Download CSV",
     openSheet: "Open the sheet",
     waiting: "waiting",
+    needsReview: "legacy entry needs review",
     zero: "Type an amount first",
     savedOk: "Recorded",
     modeBuy: "Spent",
@@ -147,7 +150,9 @@ const T = {
     saveTop: "Add to the float",
     undo: "Undo",
     refused: "That amount wasn't accepted — check it and try again.",
-    removedMirrored: "Removed here. It already reached the sheet — delete that row there too.",
+    removedMirrored: "Removed and reconciled with the sheet.",
+    removeUnavailable: "The sheet could not confirm the change. The entry is still here — try again shortly.",
+    balanceUnavailable: "Sheet temporarily unavailable",
     remove: "Remove",
   },
   id: {
@@ -187,6 +192,7 @@ const T = {
     csv: "Unduh CSV",
     openSheet: "Buka sheet",
     waiting: "menunggu",
+    needsReview: "catatan lama perlu diperiksa",
     zero: "Isi jumlahnya dulu",
     savedOk: "Tercatat",
     modeBuy: "Belanja",
@@ -196,7 +202,9 @@ const T = {
     saveTop: "Tambah ke kas",
     undo: "Batalkan",
     refused: "Jumlahnya tidak diterima — periksa lalu coba lagi.",
-    removedMirrored: "Dihapus di sini. Sudah masuk sheet — hapus barisnya di sana juga.",
+    removedMirrored: "Dihapus dan diselaraskan dengan sheet.",
+    removeUnavailable: "Sheet belum dapat mengonfirmasi perubahan. Catatan masih ada — coba lagi sebentar.",
+    balanceUnavailable: "Sheet sementara tidak tersedia",
     remove: "Hapus",
   },
 } as const;
@@ -209,18 +217,23 @@ function rupiah(n: number): string {
 function BalanceCard({
   label,
   remaining,
+  unavailable,
   className = "",
 }: {
   label: string;
-  remaining: number;
+  remaining: number | null;
+  unavailable: string;
   className?: string;
 }) {
   return (
     <div className={`rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 ${className}`}>
       <div className="text-[11px] uppercase tracking-wider text-amber-600">{label}</div>
       <div className="mt-1 truncate text-2xl font-medium tabular-nums text-amber-300">
-        {rupiah(remaining)}
+        {remaining === null ? "—" : rupiah(remaining)}
       </div>
+      {remaining === null && (
+        <div className="mt-1 text-xs text-amber-200/70">{unavailable}</div>
+      )}
     </div>
   );
 }
@@ -495,13 +508,15 @@ export default function GroceryPage() {
       if (res.ok) {
         const body = (await res.json()) as { was_mirrored: boolean };
         setSaved(null);
-        // The sheet is the hub's own document — we never reach in and edit a
-        // row we already handed over, so say when one needs removing by hand.
+        // Reconciliation uses one stable compensating entry; the app only
+        // removes the graph row after the private carrier confirms its state.
         setFlash(body.was_mirrored ? t.removedMirrored : null);
         void refresh();
+      } else {
+        setFlash(t.removeUnavailable);
       }
     } catch {
-      /* leave it in place; the ledger is still the record */
+      setFlash(t.removeUnavailable);
     }
     setBusy(false);
   }, [token, refresh, t]);
@@ -655,7 +670,8 @@ export default function GroceryPage() {
         {/* A phone opens on the question this ledger exists to answer. */}
         <BalanceCard
           label={t.remaining}
-          remaining={totals?.remaining_idr ?? 0}
+          remaining={totals?.remaining_idr ?? null}
+          unavailable={t.balanceUnavailable}
           className="mt-6 lg:hidden"
         />
 
@@ -948,7 +964,8 @@ export default function GroceryPage() {
           <aside className="min-w-0">
             <BalanceCard
               label={t.remaining}
-              remaining={totals?.remaining_idr ?? 0}
+              remaining={totals?.remaining_idr ?? null}
+              unavailable={t.balanceUnavailable}
               className="mb-3 hidden lg:block"
             />
 
@@ -1028,6 +1045,7 @@ export default function GroceryPage() {
                 >
                   {t.openSheet}
                   {sheet.pending > 0 ? ` · ${sheet.pending} ${t.waiting}` : ""}
+                  {(sheet.blocked_legacy ?? 0) > 0 ? ` · ${t.needsReview}` : ""}
                 </a>
               )}
             </div>

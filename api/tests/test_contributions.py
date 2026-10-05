@@ -8,7 +8,7 @@ complexity).
 """
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -97,3 +97,30 @@ def test_calculate_coherence_increases_with_quality_signals():
     assert 0.0 <= bare_score <= 1.0
     assert 0.0 <= rich_score <= 1.0
     assert rich_score >= bare_score
+
+
+@pytest.mark.asyncio
+async def test_get_contribution_uses_one_filtered_property_lookup(monkeypatch):
+    from app.routers import contributions
+
+    target = uuid4()
+    lookups: list[tuple[str, str, str]] = []
+
+    def fake_get_edge_by_property(*, edge_type, property_name, property_value):
+        assert edge_type == "contribution"
+        lookups.append((edge_type, property_name, property_value))
+        return {
+            "id": "edge-target",
+            "properties": {"contribution_id": str(target)},
+        }
+
+    monkeypatch.setattr(
+        contributions.graph_service,
+        "get_edge_by_property",
+        fake_get_edge_by_property,
+    )
+
+    found = await contributions.get_contribution(target)
+
+    assert found.id == target
+    assert lookups == [("contribution", "contribution_id", str(target))]

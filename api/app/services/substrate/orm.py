@@ -27,6 +27,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 
 from app.services.unified_db import Base
@@ -36,8 +37,9 @@ class SubstrateNodeORM(Base):
     """One interned shape (Blueprint or Recipe) in the lattice.
 
     The (package, level, domain, serialized) tuple uniquely identifies a
-    structural shape. Two parses of the same shape collide on UNIQUE and
-    re-use the existing node_id.
+    structural shape. SQLite enforces the complete tuple directly. PostgreSQL
+    indexes the serialized value's digest because btree entries cannot carry
+    arbitrarily large recipe trees; exact text is still confirmed on reads.
     """
 
     __tablename__ = "substrate_nodes"
@@ -58,7 +60,15 @@ class SubstrateNodeORM(Base):
         UniqueConstraint(
             "package", "level", "domain", "serialized",
             name="uq_substrate_serialized",
-        ),
+        ).ddl_if(dialect="sqlite"),
+        Index(
+            "uq_substrate_serialized_digest",
+            "package",
+            "level",
+            "domain",
+            func.md5(serialized),
+            unique=True,
+        ).ddl_if(dialect="postgresql"),
         Index("ix_substrate_lookup", "package", "level", "type", "instance"),
         Index("ix_substrate_count_desc", "count"),
     )
