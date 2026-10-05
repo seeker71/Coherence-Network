@@ -115,6 +115,7 @@
     "Graph-service node updates, node deletion, ordinary edge creation, strict edge creation, and provenance-edge creation now reject dedicated-private endpoints by default; the authenticated grocery carrier opts in explicitly only for its own reconciliation writes.",
     "Contribution detail lookup now uses one exact JSON-property query with the shared private-edge predicate, preserving privacy and no-row-ceiling behavior without an OFFSET race.",
     "Graph-service node creation now also defaults to denying dedicated-private types; the authenticated grocery writer and explicit reconciliation fixtures are the only callers that name private-create intent.",
+    "Meeting resonance recall now drops any item whose participant, concept, or concept-part node resolves to a dedicated-private type, so forged public capture metadata cannot serialize a grocery row.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
     "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",

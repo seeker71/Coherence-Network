@@ -461,10 +461,12 @@ def capture_meeting_resonance(body: dict) -> dict:
         }
 
 
-def _node_stub(s, node_id: str, fallback_kind: str | None = None) -> dict:
+def _node_stub(s, node_id: str, fallback_kind: str | None = None) -> dict | None:
     node = s.get(Node, node_id)
     if node is None:
         return {"id": node_id, "name": node_id, "kind": fallback_kind}
+    if node.type in DEDICATED_PRIVATE_NODE_TYPES:
+        return None
     props = dict(node.properties or {})
     kind = props.get("participant_kind") or fallback_kind
     stub = {"id": node.id, "name": node.name, "type": node.type}
@@ -537,6 +539,22 @@ def list_meeting_resonance(
                 if participant_kind and kind != participant_kind:
                     continue
                 concept = _node_stub(s, resonance.get("concept_id", ""))
+                participant_stub = _node_stub(
+                    s,
+                    resonance.get("participant_id", ""),
+                    fallback_kind=kind,
+                )
+                part_node_id = resonance.get("concept_part_node_id", "")
+                part_node = s.get(Node, part_node_id) if part_node_id else None
+                if (
+                    concept is None
+                    or participant_stub is None
+                    or (
+                        part_node is not None
+                        and part_node.type in DEDICATED_PRIVATE_NODE_TYPES
+                    )
+                ):
+                    continue
                 part = {
                     "id": resonance.get("concept_part_id"),
                     "node_id": resonance.get("concept_part_node_id"),
@@ -544,11 +562,7 @@ def list_meeting_resonance(
                     "excerpt": resonance.get("concept_excerpt"),
                 }
                 items.append({
-                    "participant": _node_stub(
-                        s,
-                        resonance.get("participant_id", ""),
-                        fallback_kind=kind,
-                    ),
+                    "participant": participant_stub,
                     "concept": concept,
                     "concept_part": part,
                     "meeting": {

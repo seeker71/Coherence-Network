@@ -892,6 +892,32 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
             ],
         },
     )
+    forged_meeting_id = "meeting:grocery-private-read-guard"
+    grocery.graph_service.create_node(
+        id=forged_meeting_id,
+        type="event",
+        name="Forged public meeting",
+        properties={
+            "meeting_capture": True,
+            "participants": [
+                {"id": spend_id, "name": "Forged participant", "kind": "person"}
+            ],
+            "concept_resonances": [
+                {
+                    "participant_id": spend_id,
+                    "concept_id": spend_id,
+                    "concept_part_id": "forged",
+                    "concept_part_node_id": spend_id,
+                    "concept_part_label": "Forged part",
+                    "resonance": "forged",
+                    "strength": 1.0,
+                }
+            ],
+        },
+    )
+    forged_recall = client.get(
+        "/api/meetings/resonance", params={"meeting_id": forged_meeting_id}
+    )
     edge_patch = client.patch(f"/api/edges/{edge_id}", json={"strength": 0.4})
     edge_delete = client.delete(f"/api/edges/{edge_id}")
     graph_edge_delete = client.delete(f"/api/graph/edges/{edge_id}")
@@ -928,6 +954,8 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert private_participant_capture.json() == {
         "detail": "node id is owned by a dedicated private service"
     }
+    assert forged_recall.status_code == 200
+    assert forged_recall.json()["items"] == []
     assert edge_patch.status_code == 404
     assert edge_delete.status_code == 404
     assert graph_edge_delete.status_code == 404
