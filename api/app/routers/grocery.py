@@ -509,7 +509,11 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
 
     # The mirror. A dark sheet never costs the manager their entry.
     if await _push_to_sheet(spend):
-        graph_service.update_node(spend_id, properties={"sheet_synced": True})
+        graph_service.update_node(
+            spend_id,
+            _include_private=True,
+            properties={"sheet_synced": True},
+        )
         spend.sheet_synced = True
     return spend
 
@@ -590,7 +594,11 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
     node = graph_service.get_node_unfiltered(topup_id) or {"id": topup_id, **props}
     topup = _node_to_spend(node)
     if await _push_to_sheet(topup):
-        graph_service.update_node(topup_id, properties={"sheet_synced": True})
+        graph_service.update_node(
+            topup_id,
+            _include_private=True,
+            properties={"sheet_synced": True},
+        )
         topup.sheet_synced = True
     return topup
 
@@ -628,7 +636,7 @@ async def delete_spend(
             status_code=503,
             detail="Sheet reconciliation is unavailable; the entry was preserved",
         )
-    if not graph_service.delete_node(spend_id):
+    if not graph_service.delete_node(spend_id, _include_private=True):
         raise HTTPException(
             status_code=503,
             detail="The reconciled entry could not be removed; retry is safe",
@@ -1034,7 +1042,11 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
         for node in pending:
             spend = _node_to_spend(node)
             if await _push_to_sheet(spend):
-                graph_service.update_node(node["id"], properties={"sheet_synced": True})
+                graph_service.update_node(
+                    node["id"],
+                    _include_private=True,
+                    properties={"sheet_synced": True},
+                )
                 synced += 1
     return ResyncResponse(
         attempted=len(pending),

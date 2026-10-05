@@ -781,11 +781,13 @@ def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str, str]:
         from_id=public_id,
         to_id=spend_id,
         type="depends-on",
+        _include_private=True,
     )
     grocery.graph_service.create_edge(
         from_id=spend_id,
         to_id=other_id,
         type="depends-on",
+        _include_private=True,
     )
     return spend_id, public_id, other_id, first_edge["id"]
 
@@ -938,6 +940,16 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert "grocery_spend" not in proof.json()["nodes_by_type"]
     assert grocery.graph_service.get_node(spend_id) is None
     assert grocery.graph_service.get_node_unfiltered(spend_id) is not None
+    assert grocery.graph_service.update_node(
+        spend_id, properties={"sheet_synced": True}
+    ) is None
+    assert grocery.graph_service.delete_node(spend_id) is False
+    with pytest.raises(ValueError, match="dedicated private service"):
+        grocery.graph_service.create_edge(
+            from_id=spend_id,
+            to_id=other_id,
+            type="depends-on",
+        )
 
 
 def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatch):
@@ -952,12 +964,14 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
         from_id=concept_id,
         to_id=spend_id,
         type="depends-on",
+        _include_private=True,
     )
     grocery.graph_service.create_edge(
         from_id=public_id,
         to_id=spend_id,
         type="contribution",
         properties={"contribution_id": "00000000-0000-0000-0000-000000000042"},
+        _include_private=True,
     )
 
     public_edges = client.get(f"/api/graph/nodes/{public_id}/edges")

@@ -364,6 +364,7 @@ def update_node(
     *,
     _source: str = "api",
     _author: str = "",
+    _include_private: bool = False,
     **updates: Any,
 ) -> dict[str, Any] | None:
     """Update a node. Supports name, description, phase, properties,
@@ -383,6 +384,8 @@ def update_node(
     with session() as s:
         node = s.get(Node, node_id)
         if not node:
+            return None
+        if node.type in DEDICATED_PRIVATE_NODE_TYPES and not _include_private:
             return None
 
         fields_changed: list[str] = []
@@ -458,11 +461,13 @@ def list_node_revisions(
         }
 
 
-def delete_node(node_id: str) -> bool:
+def delete_node(node_id: str, *, _include_private: bool = False) -> bool:
     """Delete a node and all its edges."""
     with session() as s:
         node = s.get(Node, node_id)
         if not node:
+            return False
+        if node.type in DEDICATED_PRIVATE_NODE_TYPES and not _include_private:
             return False
         # Delete connected edges
         s.query(Edge).filter(
@@ -572,6 +577,18 @@ def count_nodes(type: str | None = None) -> dict[str, int]:
 # ── Edge CRUD ────────────────────────────────────────────────────────
 
 
+def _has_dedicated_private_endpoint(s, from_id: str, to_id: str) -> bool:
+    return (
+        s.query(Node.id)
+        .filter(
+            Node.id.in_((from_id, to_id)),
+            Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES),
+        )
+        .first()
+        is not None
+    )
+
+
 def create_edge(
     *,
     from_id: str,
@@ -581,6 +598,7 @@ def create_edge(
     strength: float = 1.0,
     created_by: str = "system",
     strict: bool = False,
+    _include_private: bool = False,
 ) -> dict[str, Any]:
     """Create an edge between two nodes.
 
@@ -593,6 +611,10 @@ def create_edge(
 
     edge_id = str(uuid.uuid4())[:12]
     with session() as s:
+        if not _include_private and _has_dedicated_private_endpoint(
+            s, from_id, to_id
+        ):
+            raise ValueError("edge endpoint is owned by a dedicated private service")
         edge = Edge(
             id=edge_id,
             from_id=from_id,
@@ -724,6 +746,8 @@ def create_provenance_edge(
     properties = validate_source_edge_provenance(provenance)
 
     with session() as s:
+        if _has_dedicated_private_endpoint(s, from_id, to_id):
+            raise ValueError("edge endpoint is owned by a dedicated private service")
         existing = s.query(Edge).filter(
             and_(Edge.from_id == from_id, Edge.to_id == to_id, Edge.type == type)
         ).first()
@@ -975,6 +999,8 @@ def create_edge_strict(
     """Create an edge. Returns {'error': 'edge_exists'} on duplicate instead of updating."""
     edge_id = str(uuid.uuid4())[:12]
     with session() as s:
+        if _has_dedicated_private_endpoint(s, from_id, to_id):
+            raise ValueError("edge endpoint is owned by a dedicated private service")
         edge = Edge(
             id=edge_id,
             from_id=from_id,
