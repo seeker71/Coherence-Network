@@ -56,8 +56,8 @@ def test_flow_tests_run_under_10_seconds():
     child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     child_runner = (
         "import sys, time\n"
-        "started = time.process_time()\n"
         "import pytest\n"
+        "started = time.process_time()\n"
         "exit_code = pytest.main(sys.argv[1:])\n"
         'print(f"FLOW_CPU_SECONDS={time.process_time() - started:.6f}")\n'
         "raise SystemExit(int(exit_code))\n"

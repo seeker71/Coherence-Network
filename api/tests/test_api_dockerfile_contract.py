@@ -122,6 +122,21 @@ def test_api_docker_requirements_cover_pyproject_runtime_dependencies() -> None:
     assert sorted(project_dependencies - docker_requirements) == []
 
 
+def test_api_runtime_installs_the_sqlalchemy_psycopg3_driver() -> None:
+    requirements = (REPO_ROOT / "api" / "requirements.txt").read_text(
+        encoding="utf-8"
+    )
+    pyproject = tomllib.loads(
+        (REPO_ROOT / "api" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+
+    assert "psycopg[binary]>=" in requirements
+    assert any(
+        dependency.startswith("psycopg[binary]>=")
+        for dependency in pyproject["project"]["dependencies"]
+    )
+
+
 def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypatch) -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
     config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
