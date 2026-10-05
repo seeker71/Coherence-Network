@@ -224,6 +224,10 @@ def create_node(
             s.rollback()
             log.warning("Node %s already exists", node_id)
             existing = s.get(Node, node_id)
+            if existing and existing.type in DEDICATED_PRIVATE_NODE_TYPES:
+                raise ValueError(
+                    "node id is owned by a dedicated private service"
+                ) from None
             return existing.to_dict() if existing else {"id": node_id, "error": "exists"}
 
 

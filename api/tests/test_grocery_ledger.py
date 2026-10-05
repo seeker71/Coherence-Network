@@ -825,6 +825,14 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
         "/api/edges",
         json={"from_id": spend_id, "to_id": other_id, "type": "depends-on"},
     )
+    duplicate_create = client.post(
+        "/api/graph/nodes",
+        json={
+            "id": spend_id,
+            "type": "concept",
+            "name": "Attempted duplicate",
+        },
+    )
     edge_patch = client.patch(f"/api/edges/{edge_id}", json={"strength": 0.4})
     edge_delete = client.delete(f"/api/edges/{edge_id}")
     graph_edge_delete = client.delete(f"/api/graph/edges/{edge_id}")
@@ -845,6 +853,10 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert resonance.status_code == 403
     assert zoom.status_code == 404
     assert edge_create.status_code == 404
+    assert duplicate_create.status_code == 422
+    assert duplicate_create.json() == {
+        "detail": "node id is owned by a dedicated private service"
+    }
     assert edge_patch.status_code == 404
     assert edge_delete.status_code == 404
     assert graph_edge_delete.status_code == 404
