@@ -8,6 +8,7 @@ Covers done_when criteria:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -44,7 +45,7 @@ def test_flow_tests_run_under_10_seconds():
     """All flow tests complete in under 10 seconds.
 
     This is a meta-test: it invokes pytest on the core flow tests in a
-    subprocess and asserts its child user-CPU time stays under 10s.
+    subprocess and asserts its child CPU time stays under 10s.
 
     Wall time is retained in the failure message, but is not the performance
     contract: shared-runner scheduling and filesystem I/O can pause a healthy
@@ -53,13 +54,20 @@ def test_flow_tests_run_under_10_seconds():
     test_file = Path(__file__).with_name("test_flow_core_api.py")
     child_env = os.environ.copy()
     child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    child_before = os.times()
+    child_runner = (
+        "import sys, time\n"
+        "started = time.process_time()\n"
+        "import pytest\n"
+        "exit_code = pytest.main(sys.argv[1:])\n"
+        'print(f"FLOW_CPU_SECONDS={time.process_time() - started:.6f}")\n'
+        "raise SystemExit(int(exit_code))\n"
+    )
     wall_started = time.perf_counter()
     result = subprocess.run(
         [
             sys.executable,
-            "-m",
-            "pytest",
+            "-c",
+            child_runner,
             "--assert=plain",
             "-p",
             "pytest_asyncio.plugin",
@@ -74,17 +82,14 @@ def test_flow_tests_run_under_10_seconds():
         env=child_env,
     )
     wall_elapsed = time.perf_counter() - wall_started
-    child_after = os.times()
-    user_cpu_elapsed = child_after.children_user - child_before.children_user
-    system_cpu_elapsed = (
-        child_after.children_system - child_before.children_system
-    )
     # The tests should pass
     assert result.returncode == 0, (
         f"Flow tests failed (exit {result.returncode}):\n{result.stdout}\n{result.stderr}"
     )
-    assert user_cpu_elapsed < 10.0, (
-        f"Flow tests used {user_cpu_elapsed:.1f}s user CPU, "
-        f"{system_cpu_elapsed:.1f}s system CPU, and {wall_elapsed:.1f}s wall "
-        "(user-CPU limit 10s)"
+    measured = re.findall(r"^FLOW_CPU_SECONDS=([0-9]+(?:\.[0-9]+)?)$", result.stdout, re.M)
+    assert measured, f"child did not report CPU time:\n{result.stdout}"
+    child_cpu_elapsed = float(measured[-1])
+    assert child_cpu_elapsed < 10.0, (
+        f"Flow tests used {child_cpu_elapsed:.1f}s CPU and "
+        f"{wall_elapsed:.1f}s wall (CPU limit 10s)"
     )
