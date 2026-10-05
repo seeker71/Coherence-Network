@@ -32,19 +32,24 @@ write access. Seeing the ledger is open to any registered cell here.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import json
 import re
+import threading
+import time
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.routers.household import (
     _PLACE_TYPE,
@@ -69,6 +74,27 @@ _KIND_TOPUP = "topup"    # money in — the float topped back up
 _SHOP_KIND = "shop"
 _CURRENCY = "IDR"
 _SHEET_PROTOCOL = "entry-id-v1"
+_SHEET_READ_ATTEMPT_TIMEOUT = 6.5
+_SHEET_READ_TOTAL_TIMEOUT = 13.0
+_SHEET_WRITE_ATTEMPT_TIMEOUT = 6.0
+_SHEET_WRITE_TOTAL_TIMEOUT = 6.5
+# libpq enforces a two-second connect-timeout floor. Keep another half-second
+# for handoff/flush overhead so a Sheet attempt always leaves a viable durable
+# receipt window inside the shared proxy deadline.
+_SHEET_RECEIPT_MIN_TIMEOUT = 2.5
+_SHEET_RESYNC_TOTAL_TIMEOUT = 13.0
+_GROCERY_REQUEST_TOTAL_TIMEOUT = 13.0
+_SHEET_APPEND_RETRY_DELAY_SECONDS = 30
+
+
+def _monotonic() -> float:
+    return time.monotonic()
+
+
+def _current_sheet_attempt_fits(deadline: float) -> bool:
+    required = _SHEET_WRITE_TOTAL_TIMEOUT + _SHEET_RECEIPT_MIN_TIMEOUT
+    return deadline - _monotonic() >= required
+
 
 # Bali is UTC+8 with no DST — "today" for the manager standing in the market,
 # not today in UTC. An entry made at 07:30 local must not file as yesterday.
@@ -388,7 +414,11 @@ def _node_to_spend(node: dict) -> SpendResponse:
 
 
 def _all_spends() -> list[dict]:
-    return graph_service.list_nodes_by_type_snapshot(_SPEND_TYPE)
+    return [
+        node
+        for node in graph_service.list_nodes_by_type_snapshot(_SPEND_TYPE)
+        if not node.get("sheet_cancelled")
+    ]
 
 
 def _reversal_spend(node: dict, actor: dict) -> SpendResponse:
@@ -620,6 +650,7 @@ async def delete_spend(
     actor_token: str = Query(..., description="the device token of the recorder or a resident"),
 ) -> DeleteResponse:
     actor = _require_writer(actor_token)
+    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
     node = graph_service.get_node_unfiltered(spend_id)
     if not node or node.get("type") != _SPEND_TYPE:
         raise HTTPException(status_code=404, detail=f"entry {spend_id!r} not found")
@@ -638,7 +669,36 @@ async def delete_spend(
             status_code=503,
             detail="Sheet reconciliation is unavailable; the entry was preserved",
         )
-    if not graph_service.delete_node(spend_id, _include_private=True):
+    remaining = deadline - _monotonic()
+    if remaining <= 0:
+        raise HTTPException(
+            status_code=503,
+            detail="The reconciled entry could not be removed; retry is safe",
+        )
+    deletion = asyncio.create_task(
+        asyncio.to_thread(
+            graph_service.delete_node,
+            spend_id,
+            _include_private=True,
+            _deadline=deadline,
+        )
+    )
+    try:
+        deleted = await asyncio.wait_for(asyncio.shield(deletion), timeout=remaining)
+    except asyncio.TimeoutError:
+        try:
+            deleted = await deletion
+        except Exception:
+            deleted = False
+    except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError):
+        deleted = False
+    except asyncio.CancelledError:
+        try:
+            await deletion
+        except Exception:
+            pass
+        raise
+    if not deleted:
         raise HTTPException(
             status_code=503,
             detail="The reconciled entry could not be removed; retry is safe",
@@ -661,17 +721,30 @@ def _remaining_balance(
     *,
     sheet_remaining: int | None,
     pending_signed: list[int],
+    deadline: float | None = None,
 ) -> int | None:
     """Choose and reconcile the balance on the Form kernel."""
-    value, _runtime = serve_via_kernel(
-        "endpoint_grocery_remaining.fk",
-        bindings={
-            "sheet_available": sheet_remaining is not None,
-            "sheet_remaining": sheet_remaining or 0,
-            "pending_signed": pending_signed,
-        },
-        parse=json.loads,
-    )
+    kernel_timeout = 10.0
+    if deadline is not None:
+        kernel_timeout = deadline - _monotonic()
+        if kernel_timeout <= 0:
+            return None
+        kernel_timeout = min(10.0, kernel_timeout)
+    try:
+        value, _runtime = serve_via_kernel(
+            "endpoint_grocery_remaining.fk",
+            bindings={
+                "sheet_available": sheet_remaining is not None,
+                "sheet_remaining": sheet_remaining or 0,
+                "pending_signed": pending_signed,
+            },
+            parse=json.loads,
+            timeout=kernel_timeout,
+        )
+    except RuntimeError:
+        if deadline is not None and deadline <= _monotonic():
+            return None
+        raise
     if (
         not isinstance(value, list)
         or len(value) != 2
@@ -681,6 +754,364 @@ def _remaining_balance(
     ):
         return None
     return value[1]
+
+
+def _legacy_sheet_signature(spend: SpendResponse) -> tuple[str, int, str]:
+    """Mirror the Apps Script signature normalization at the carrier boundary."""
+    return (
+        spend.spent_on.strip()[:10],
+        spend.signed_idr,
+        spend.description.strip(),
+    )
+
+
+def _legacy_reconciliation_batch(
+    pending_nodes: list[dict],
+    pending: list[SpendResponse],
+    *,
+    all_nodes: list[dict],
+    all_entries: list[SpendResponse],
+    deadline: float | None = None,
+) -> list[tuple[dict, SpendResponse]]:
+    if deadline is not None and deadline <= _monotonic():
+        raise asyncio.TimeoutError
+    if len(pending_nodes) != len(pending):
+        raise RuntimeError("pending grocery reconciliation rows are misaligned")
+    if len(all_nodes) != len(all_entries):
+        raise RuntimeError("grocery reconciliation ledger rows are misaligned")
+    pending_by_position = {
+        position: (node, spend)
+        for position, (node, spend) in enumerate(zip(pending_nodes, pending))
+    }
+    signature_counts = Counter(
+        _legacy_sheet_signature(spend)
+        for node, spend in zip(all_nodes, all_entries)
+        if _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL
+    )
+    policy_rows = [
+        [
+            position,
+            spend.id,
+            1,
+            _s(node.get("sheet_protocol")) or "",
+            signature_counts[_legacy_sheet_signature(spend)],
+            _s(node.get("sheet_reconcile_attempted_at")) or "",
+            _s(node.get("sheet_append_retry_after")) or "",
+            1 if node.get("sheet_cancelled") else 0,
+            1 if node.get("sheet_append_yield_legacy") else 0,
+        ]
+        for position, (node, spend) in enumerate(zip(pending_nodes, pending))
+    ]
+    if any(
+        "|" in str(value) or ";" in str(value)
+        for row in policy_rows
+        for value in row
+    ):
+        raise RuntimeError("grocery reconciliation policy field contains a delimiter")
+    entries_wire = ";".join(
+        "|".join(str(value) for value in row) for row in policy_rows
+    )
+    kernel_timeout = 10.0
+    if deadline is not None:
+        kernel_timeout = deadline - _monotonic()
+        if kernel_timeout <= 0:
+            raise asyncio.TimeoutError
+        kernel_timeout = min(10.0, kernel_timeout)
+    try:
+        selected_positions, _runtime = serve_via_kernel(
+            "endpoint_grocery_reconcile_selection.fk",
+            bindings={
+                "entries_wire": entries_wire,
+                "selection_mode": "legacy",
+                "now": "",
+            },
+            parse=json.loads,
+            timeout=kernel_timeout,
+        )
+    except RuntimeError as exc:
+        if deadline is not None and deadline <= _monotonic():
+            raise asyncio.TimeoutError from exc
+        raise
+    if (
+        not isinstance(selected_positions, list)
+        or any(
+            not isinstance(position, int) or isinstance(position, bool)
+            for position in selected_positions
+        )
+        or len(selected_positions) != len(set(selected_positions))
+        or any(position not in pending_by_position for position in selected_positions)
+    ):
+        raise RuntimeError("Form returned an invalid grocery reconciliation selection")
+    return [pending_by_position[position] for position in selected_positions]
+
+
+def _persist_sheet_receipts(
+    pending_nodes: list[dict],
+    legacy_batch: list[tuple[dict, SpendResponse]],
+    snapshot: _SheetSnapshot | None,
+    *,
+    deadline: float | None = None,
+) -> dict[str, dict[str, Any]]:
+    if snapshot is None:
+        return {}
+    attempted_at = _now()
+    updates: dict[str, dict[str, Any]] = {}
+    for _node, spend in legacy_batch:
+        properties: dict[str, Any] = {
+            "sheet_reconcile_attempted_at": attempted_at,
+        }
+        properties.update(_sheet_receipt_properties(spend.id, snapshot))
+        updates[spend.id] = properties
+
+    legacy_batch_ids = {spend.id for _node, spend in legacy_batch}
+    for node in pending_nodes:
+        entry_id = _s(node.get("id"))
+        if (
+            _s(node.get("sheet_protocol")) == _SHEET_PROTOCOL
+            and node.get("sheet_append_yield_legacy")
+        ):
+            updates.setdefault(entry_id, {})["sheet_append_yield_legacy"] = False
+        receipt_properties = _sheet_receipt_properties(entry_id, snapshot)
+        if entry_id in legacy_batch_ids or not receipt_properties:
+            continue
+        updates.setdefault(entry_id, {}).update(receipt_properties)
+
+    persisted = graph_service.update_node_properties_batch(
+        updates,
+        _include_private=True,
+        _source="grocery-sheet-reconciliation",
+        _deadline=deadline,
+    )
+    return {entry_id: updates[entry_id] for entry_id in persisted}
+
+
+def _sheet_receipt_properties(
+    entry_id: str,
+    snapshot: _SheetSnapshot,
+) -> dict[str, Any]:
+    """Cancellation is the terminal Sheet receipt, even when the row exists."""
+    if entry_id in snapshot.cancelled_ids:
+        return {"sheet_cancelled": True, "sheet_append_yield_legacy": False}
+    if entry_id in snapshot.acknowledged_ids:
+        return {"sheet_synced": True, "sheet_protocol": _SHEET_PROTOCOL}
+    return {}
+
+
+def _has_unresolved_legacy(pending_nodes: list[dict]) -> bool:
+    return any(
+        not node.get("sheet_cancelled")
+        and not node.get("sheet_synced")
+        and _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL
+        for node in pending_nodes
+    )
+
+
+def _blocked_legacy_count(pending_nodes: list[dict]) -> int:
+    return sum(
+        1
+        for node in pending_nodes
+        if not node.get("sheet_cancelled")
+        and not node.get("sheet_synced")
+        and _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL
+    )
+
+
+def _current_sheet_retry_batch(
+    rows: list[dict],
+    now: str,
+    *,
+    deadline: float,
+) -> list[dict]:
+    """Let Form choose current-protocol rows whose retry window is open."""
+    if deadline <= _monotonic():
+        raise asyncio.TimeoutError
+    policy_rows = [
+        [
+            position,
+            _s(node.get("id")),
+            0 if node.get("sheet_synced") else 1,
+            _s(node.get("sheet_protocol")) or "",
+            0,
+            "",
+            _s(node.get("sheet_append_retry_after")) or "",
+            1 if node.get("sheet_cancelled") else 0,
+            1 if node.get("sheet_append_yield_legacy") else 0,
+        ]
+        for position, node in enumerate(rows)
+    ]
+    if any(
+        "|" in str(value) or ";" in str(value)
+        for row in policy_rows
+        for value in row
+    ):
+        raise RuntimeError("grocery current-retry policy field contains a delimiter")
+    entries_wire = ";".join(
+        "|".join(str(value) for value in row) for row in policy_rows
+    )
+    kernel_timeout = deadline - _monotonic()
+    if kernel_timeout <= 0:
+        raise asyncio.TimeoutError
+    try:
+        selected_positions, _runtime = serve_via_kernel(
+            "endpoint_grocery_reconcile_selection.fk",
+            bindings={
+                "entries_wire": entries_wire,
+                "selection_mode": "current-retry",
+                "now": now,
+            },
+            parse=json.loads,
+            timeout=min(10.0, kernel_timeout),
+        )
+    except RuntimeError as exc:
+        if deadline <= _monotonic():
+            raise asyncio.TimeoutError from exc
+        raise
+    if (
+        not isinstance(selected_positions, list)
+        or any(
+            not isinstance(position, int) or isinstance(position, bool)
+            for position in selected_positions
+        )
+        or len(selected_positions) != len(set(selected_positions))
+        or any(position < 0 or position >= len(rows) for position in selected_positions)
+    ):
+        raise RuntimeError("Form returned an invalid current retry selection")
+    return [rows[position] for position in selected_positions]
+
+
+async def _joined_current_sheet_retry_batch(
+    rows: list[dict],
+    now: str,
+    *,
+    deadline: float,
+) -> list[dict]:
+    """Run current retry policy off-loop within its queue-inclusive deadline."""
+    return await _run_joined_deadline(
+        lambda: _current_sheet_retry_batch(rows, now, deadline=deadline),
+        deadline=deadline,
+    )
+
+
+async def _run_joined_deadline(
+    function: Callable[[], Any],
+    *,
+    deadline: float,
+) -> Any:
+    """Bound executor queue + runtime, skipping queued work and joining started work."""
+    state_lock = threading.Lock()
+    state = {"started": False, "skip": False}
+
+    def run() -> Any:
+        with state_lock:
+            if state["skip"]:
+                raise asyncio.TimeoutError
+            state["started"] = True
+        return function()
+
+    remaining = deadline - _monotonic()
+    if remaining <= 0:
+        raise asyncio.TimeoutError
+    selection = asyncio.create_task(asyncio.to_thread(run))
+    try:
+        return await asyncio.wait_for(asyncio.shield(selection), timeout=remaining)
+    except asyncio.TimeoutError:
+        with state_lock:
+            queued = not state["started"]
+            if queued:
+                state["skip"] = True
+        if queued:
+            selection.cancel()
+        try:
+            await selection
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
+        except Exception:
+            pass
+        raise
+    except asyncio.CancelledError:
+        with state_lock:
+            queued = not state["started"]
+            if queued:
+                state["skip"] = True
+        if queued:
+            selection.cancel()
+        try:
+            await selection
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass
+        raise
+
+
+async def _reconciled_sheet_snapshot(
+    pending_nodes: list[dict],
+    pending: list[SpendResponse],
+    *,
+    all_nodes: list[dict],
+    all_entries: list[SpendResponse],
+    deadline: float | None = None,
+) -> _SheetSnapshot | None:
+    if deadline is None:
+        deadline = _monotonic() + _SHEET_RESYNC_TOTAL_TIMEOUT
+
+    async def reconcile_within_deadline() -> _SheetSnapshot | None:
+        legacy_batch = await _run_joined_deadline(
+            lambda: _legacy_reconciliation_batch(
+                pending_nodes,
+                pending,
+                all_nodes=all_nodes,
+                all_entries=all_entries,
+                deadline=deadline,
+            ),
+            deadline=deadline,
+        )
+        pending_ids = [spend.id for spend in pending]
+        snapshot = (
+            await _read_sheet_snapshot(
+                pending_ids,
+                legacy_entries=[spend for _node, spend in legacy_batch],
+            )
+            if legacy_batch
+            else await _read_sheet_snapshot(pending_ids)
+        )
+        persistence = asyncio.create_task(
+            asyncio.to_thread(
+                _persist_sheet_receipts,
+                pending_nodes,
+                legacy_batch,
+                snapshot,
+                deadline=deadline,
+            )
+        )
+        try:
+            persisted_updates = await asyncio.shield(persistence)
+        except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError):
+            return None
+        except asyncio.CancelledError:
+            # Cancelling to_thread only cancels its awaiter. The database-side
+            # timeout above bounds the transaction; wait for its commit or
+            # rollback so retries cannot accumulate background writers.
+            try:
+                await persistence
+            except Exception:
+                pass
+            raise
+        pending_by_id = {_s(node.get("id")): node for node in pending_nodes}
+        for entry_id, properties in persisted_updates.items():
+            pending_by_id[entry_id].update(properties)
+        return None if _has_unresolved_legacy(pending_nodes) else snapshot
+
+    remaining = deadline - _monotonic()
+    if remaining <= 0:
+        return None
+    try:
+        return await asyncio.wait_for(
+            reconcile_within_deadline(),
+            timeout=remaining,
+        )
+    except asyncio.TimeoutError:
+        return None
 
 
 @router.get(
@@ -693,6 +1124,7 @@ async def totals(
     on: str | None = Query(default=None),
 ) -> TotalsResponse:
     _require_member(token)
+    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
     day = (on or "").strip() or _today_local()
     month = day[:7]
     rows = _all_spends()
@@ -705,27 +1137,39 @@ async def totals(
     # an entry present in the Sheet is never applied twice merely because its
     # local sheet_synced flag was not committed before a crash.
     pending_nodes = [n for n in rows if not n.get("sheet_synced")]
-    legacy_unknown = any(
-        _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL for node in pending_nodes
-    )
     pending = [_node_to_spend(n) for n in pending_nodes]
-    snapshot = (
-        None
-        if legacy_unknown
-        else await _read_sheet_snapshot([spend.id for spend in pending])
-    )
+    # GET remains a read for every member, including see-only watchers. A
+    # writer explicitly advances predecessor-row reconciliation through the
+    # resync endpoint; until then, an unproven legacy row keeps Sisa unavailable.
+    if _has_unresolved_legacy(pending_nodes):
+        balance_snapshot = None
+    else:
+        remaining = deadline - _monotonic()
+        if remaining <= 0:
+            balance_snapshot = None
+        else:
+            try:
+                balance_snapshot = await asyncio.wait_for(
+                    _read_sheet_snapshot([spend.id for spend in pending]),
+                    timeout=remaining,
+                )
+            except asyncio.TimeoutError:
+                balance_snapshot = None
     pending_signed = [
         spend.signed_idr
         for spend in pending
-        if snapshot is None
+        if balance_snapshot is None
         or (
-            spend.id not in snapshot.acknowledged_ids
-            and spend.id not in snapshot.cancelled_ids
+            spend.id not in balance_snapshot.acknowledged_ids
+            and spend.id not in balance_snapshot.cancelled_ids
         )
     ]
     remaining = _remaining_balance(
-        sheet_remaining=snapshot.remaining_idr if snapshot is not None else None,
+        sheet_remaining=(
+            balance_snapshot.remaining_idr if balance_snapshot is not None else None
+        ),
         pending_signed=pending_signed,
+        deadline=deadline,
     )
     remaining_source: Literal["sheet", "unavailable"] = (
         "sheet" if remaining is not None else "unavailable"
@@ -850,7 +1294,59 @@ class _SheetSnapshot:
     cancelled_ids: frozenset[str]
 
 
-async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
+async def _request_sheet_snapshot(
+    url: str,
+    body: dict[str, Any],
+    requested: set[str],
+) -> _SheetSnapshot | None:
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(
+                timeout=_SHEET_READ_ATTEMPT_TIMEOUT,
+                follow_redirects=True,
+            ) as client:
+                response = await client.post(url, json=body)
+            if response.status_code >= 500 and attempt == 0:
+                continue
+            if response.status_code >= 400:
+                return None
+            payload = response.json()
+            if not isinstance(payload, dict) or payload.get("ok") is not True:
+                return None
+            remaining = _parse_sheet_idr(payload.get("remaining_idr"))
+            raw_acknowledged = payload.get("acknowledged_ids")
+            raw_cancelled = payload.get("cancelled_ids")
+            if (
+                remaining is None
+                or not isinstance(raw_acknowledged, list)
+                or not isinstance(raw_cancelled, list)
+            ):
+                return None
+            acknowledged = frozenset(
+                entry_id
+                for entry_id in raw_acknowledged
+                if isinstance(entry_id, str) and entry_id in requested
+            )
+            cancelled = frozenset(
+                entry_id
+                for entry_id in raw_cancelled
+                if isinstance(entry_id, str) and entry_id in requested
+            )
+            return _SheetSnapshot(remaining, acknowledged, cancelled)
+        except httpx.HTTPError:
+            if attempt == 0:
+                continue
+            return None
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+async def _read_sheet_snapshot(
+    pending_ids: list[str],
+    *,
+    legacy_entries: list[SpendResponse] | None = None,
+) -> _SheetSnapshot | None:
     """Read a private, bounded balance snapshot through Apps Script.
 
     The shared secret authenticates the request. The carrier returns only
@@ -863,42 +1359,32 @@ async def _read_sheet_snapshot(pending_ids: list[str]) -> _SheetSnapshot | None:
     if not url or not secret:
         return None
     requested = {entry_id for entry_id in pending_ids if entry_id}
+    legacy = list(legacy_entries or [])
+    body: dict[str, Any] = {
+        "action": "summary",
+        "secret": secret,
+        "pending_ids": sorted(requested),
+    }
+    if legacy:
+        body["legacy_entries"] = [
+            {
+                "entry_id": spend.id,
+                "row": _sheet_row(spend),
+                "columns": _SHEET_COLUMNS,
+            }
+            for spend in legacy
+        ]
+
+    # Apps Script cold starts can outlive a four-second request. Summary and
+    # legacy reconciliation are entry-ID idempotent, so one retry is safe. The
+    # outer wall-clock deadline includes redirects and every HTTP phase, keeping
+    # the whole operation inside the grocery proxy's 15-second ceiling.
     try:
-        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
-            response = await client.post(
-                url,
-                json={
-                    "action": "summary",
-                    "secret": secret,
-                    "pending_ids": sorted(requested),
-                },
-            )
-        if response.status_code >= 400:
-            return None
-        payload = response.json()
-        if not isinstance(payload, dict) or payload.get("ok") is not True:
-            return None
-        remaining = _parse_sheet_idr(payload.get("remaining_idr"))
-        raw_acknowledged = payload.get("acknowledged_ids")
-        raw_cancelled = payload.get("cancelled_ids")
-        if (
-            remaining is None
-            or not isinstance(raw_acknowledged, list)
-            or not isinstance(raw_cancelled, list)
-        ):
-            return None
-        acknowledged = frozenset(
-            entry_id
-            for entry_id in raw_acknowledged
-            if isinstance(entry_id, str) and entry_id in requested
+        return await asyncio.wait_for(
+            _request_sheet_snapshot(url, body, requested),
+            timeout=_SHEET_READ_TOTAL_TIMEOUT,
         )
-        cancelled = frozenset(
-            entry_id
-            for entry_id in raw_cancelled
-            if isinstance(entry_id, str) and entry_id in requested
-        )
-        return _SheetSnapshot(remaining, acknowledged, cancelled)
-    except (httpx.HTTPError, TypeError, ValueError):
+    except asyncio.TimeoutError:
         return None
 
 
@@ -931,17 +1417,19 @@ async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
     )
 
 
-async def _push_to_sheet(spend: SpendResponse) -> bool:
-    """Append one row to the hub's own sheet. False when there's nowhere to push.
+async def _push_to_sheet_status(
+    spend: SpendResponse,
+) -> Literal["synced", "cancelled", "unavailable"]:
+    """Append one row and distinguish acknowledgement from cancellation.
 
     The URL is an Apps Script Web App the hub deploys against their own
     spreadsheet. A shared secret authenticates it and ``entry_id`` makes
-    retries idempotent. Any failure is swallowed on purpose: the graph already
-    holds the entry, and `sheet_synced=false` is the handle for a resync.
+    retries idempotent. Any failure becomes ``unavailable`` on purpose: the
+    graph already holds the entry, and ``sheet_synced=false`` is the retry handle.
     """
     url, secret = _sheet_webhook()
     if not url or not secret:
-        return False
+        return "unavailable"
     payload: dict[str, Any] = {
         "action": "append",
         "entry_id": spend.id,
@@ -950,18 +1438,90 @@ async def _push_to_sheet(spend: SpendResponse) -> bool:
         "secret": secret,
     }
     try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-            response = await client.post(url, json=payload)
+        async with httpx.AsyncClient(
+            timeout=_SHEET_WRITE_ATTEMPT_TIMEOUT,
+            follow_redirects=True,
+        ) as client:
+            response = await asyncio.wait_for(
+                client.post(url, json=payload),
+                timeout=_SHEET_WRITE_TOTAL_TIMEOUT,
+            )
         if response.status_code >= 400:
-            return False
+            return "unavailable"
         result = response.json()
-        return (
-            isinstance(result, dict)
-            and result.get("ok") is True
-            and result.get("entry_id") == spend.id
-            and result.get("cancelled") is not True
+        if (
+            not isinstance(result, dict)
+            or result.get("ok") is not True
+            or result.get("entry_id") != spend.id
+        ):
+            return "unavailable"
+        return "cancelled" if result.get("cancelled") is True else "synced"
+    except (asyncio.TimeoutError, httpx.HTTPError, TypeError, ValueError):
+        return "unavailable"
+
+
+async def _push_to_sheet(spend: SpendResponse) -> bool:
+    """Compatibility wrapper for callers that only need acknowledgement."""
+    return await _push_to_sheet_status(spend) == "synced"
+
+
+def _persist_sheet_append_status(
+    node: dict,
+    append_status: Literal["synced", "cancelled", "unavailable"],
+    *,
+    deadline: float,
+) -> bool:
+    """Carry one append outcome into durable graph retry state."""
+    if append_status == "synced":
+        properties: dict[str, Any] = {
+            "sheet_synced": True,
+            "sheet_append_yield_legacy": False,
+        }
+    elif append_status == "cancelled":
+        properties = {
+            "sheet_cancelled": True,
+            "sheet_append_yield_legacy": False,
+        }
+    else:
+        retry_after = (
+            datetime.now(timezone.utc)
+            + timedelta(seconds=_SHEET_APPEND_RETRY_DELAY_SECONDS)
+        ).isoformat()
+        properties = {
+            "sheet_append_retry_after": retry_after,
+            "sheet_append_yield_legacy": True,
+        }
+    persisted = graph_service.update_node_properties_batch(
+        {node["id"]: properties},
+        _include_private=True,
+        _source="grocery-sheet-resync",
+        _deadline=deadline,
+    )
+    if node["id"] not in persisted:
+        return False
+    node.update(properties)
+    return append_status == "synced"
+
+
+async def _persist_current_sheet_append_status(
+    node: dict,
+    append_status: Literal["synced", "cancelled", "unavailable"],
+    *,
+    deadline: float,
+) -> bool:
+    """Bound executor queue and receipt write so no database worker escapes."""
+    try:
+        return await _run_joined_deadline(
+            lambda: _persist_sheet_append_status(
+                node,
+                append_status,
+                deadline=deadline,
+            ),
+            deadline=deadline,
         )
-    except (httpx.HTTPError, TypeError, ValueError):
+    except asyncio.TimeoutError:
+        return False
+    except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError):
         return False
 
 
@@ -993,9 +1553,27 @@ async def _reconcile_sheet_delete(node: dict, actor: dict) -> bool | None:
         },
         "secret": secret,
     }
+    if (
+        node.get("sheet_synced")
+        and _s(node.get("sheet_protocol")) != _SHEET_PROTOCOL
+    ):
+        # A predecessor row can be proven present while still lacking an Entry
+        # ID. The carrier must tag that exact row before reversal so deleting
+        # this graph node cannot make its signature available to a duplicate.
+        payload["legacy_original"] = {
+            "entry_id": original.id,
+            "row": _sheet_row(original),
+            "columns": _SHEET_COLUMNS,
+        }
     try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-            response = await client.post(url, json=payload)
+        async with httpx.AsyncClient(
+            timeout=_SHEET_WRITE_ATTEMPT_TIMEOUT,
+            follow_redirects=True,
+        ) as client:
+            response = await asyncio.wait_for(
+                client.post(url, json=payload),
+                timeout=_SHEET_WRITE_TOTAL_TIMEOUT,
+            )
         if response.status_code >= 400:
             return None
         result = response.json()
@@ -1009,7 +1587,7 @@ async def _reconcile_sheet_delete(node: dict, actor: dict) -> bool | None:
         ):
             return None
         return bool(result["original_present"])
-    except (httpx.HTTPError, TypeError, ValueError):
+    except (asyncio.TimeoutError, httpx.HTTPError, TypeError, ValueError):
         return None
 
 
@@ -1033,25 +1611,78 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
     _require_writer(body.actor_token)
     webhook_url, secret = _sheet_webhook()
     configured = bool(webhook_url and secret)
-    all_pending = [n for n in _all_spends() if not n.get("sheet_synced")]
-    pending = [
-        n for n in all_pending if _s(n.get("sheet_protocol")) == _SHEET_PROTOCOL
+    rows = _all_spends()
+    all_pending = [
+        n
+        for n in rows
+        if not n.get("sheet_synced") and not n.get("sheet_cancelled")
     ]
-    blocked_legacy = len(all_pending) - len(pending)
+    had_unresolved_legacy = _has_unresolved_legacy(all_pending)
+    blocked_legacy = _blocked_legacy_count(all_pending)
+    if not configured:
+        return ResyncResponse(
+            attempted=sum(
+                1
+                for node in all_pending
+                if _s(node.get("sheet_protocol")) == _SHEET_PROTOCOL
+            ),
+            synced=0,
+            configured=False,
+            blocked_legacy=blocked_legacy,
+        )
+    now = _now()
+    deadline = _monotonic() + _SHEET_RESYNC_TOTAL_TIMEOUT
+    try:
+        pending = await _joined_current_sheet_retry_batch(
+            all_pending,
+            now,
+            deadline=deadline,
+        )
+    except (asyncio.TimeoutError, RuntimeError):
+        return ResyncResponse(
+            attempted=0,
+            synced=0,
+            configured=configured,
+            blocked_legacy=blocked_legacy,
+        )
+    legacy_turn = had_unresolved_legacy and (
+        not pending or not _current_sheet_attempt_fits(deadline)
+    )
+    if configured and legacy_turn:
+        await _reconciled_sheet_snapshot(
+            all_pending,
+            [_node_to_spend(n) for n in all_pending],
+            all_nodes=rows,
+            all_entries=[_node_to_spend(n) for n in rows],
+            deadline=deadline,
+        )
+        # Keep the request within the same-origin proxy deadline: a legacy
+        # summary can consume nearly all of its thirteen-second budget, so
+        # current-protocol appends belong to the next idempotent resync call.
+        return ResyncResponse(
+            attempted=0,
+            synced=0,
+            configured=True,
+            blocked_legacy=_blocked_legacy_count(all_pending),
+        )
     pending.sort(key=lambda n: (_s(n.get("created_at")) or ""))
     synced = 0
+    attempted = len(pending) if not configured else 0
     if configured:
         for node in pending:
+            if not _current_sheet_attempt_fits(deadline):
+                break
+            attempted += 1
             spend = _node_to_spend(node)
-            if await _push_to_sheet(spend):
-                graph_service.update_node(
-                    node["id"],
-                    _include_private=True,
-                    properties={"sheet_synced": True},
-                )
+            append_status = await _push_to_sheet_status(spend)
+            if await _persist_current_sheet_append_status(
+                node,
+                append_status,
+                deadline=deadline,
+            ):
                 synced += 1
     return ResyncResponse(
-        attempted=len(pending),
+        attempted=attempted,
         synced=synced,
         configured=configured,
         blocked_legacy=blocked_legacy,

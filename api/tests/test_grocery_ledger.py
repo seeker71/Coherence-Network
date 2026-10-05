@@ -11,23 +11,102 @@ place the household board's tests run).
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from pathlib import Path
+import sqlite3
+import threading
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import grocery
+from app.services import unified_db
+from app.services.form_kernel_bridge import run_kernel
 
 
 _SHEET_SETUP = (
     Path(__file__).resolve().parents[2] / "docs" / "grocery-sheets-setup.md"
 )
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_RECONCILIATION_BML = (
+    _REPO_ROOT
+    / "api"
+    / "app"
+    / "form_recipes"
+    / "endpoint_grocery_reconcile_selection.bml"
+)
+_RECONCILIATION_RECIPE = _RECONCILIATION_BML.with_suffix(".fk")
+
+
+def _pending_grocery_node(node_id: str, description: str, created_at: str) -> dict:
+    return {
+        "id": node_id,
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": description,
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": created_at,
+        "sheet_synced": False,
+    }
+
+
+def _configure_receipt_reserve_test(monkeypatch, legacy, current, reconciled):
+    async def select_current(_rows, _now, *, deadline):
+        assert deadline == grocery._SHEET_RESYNC_TOTAL_TIMEOUT
+        return [current]
+
+    async def reconcile(pending_nodes, _pending, **_kwargs):
+        reconciled.extend(node["id"] for node in pending_nodes)
+        legacy.update(sheet_synced=True, sheet_protocol=grocery._SHEET_PROTOCOL)
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
+
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(grocery, "_joined_current_sheet_retry_batch", select_current)
+    monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", reconcile)
+    monkeypatch.setattr(
+        grocery,
+        "_push_to_sheet_status",
+        lambda _spend: pytest.fail("an append without receipt budget must not start"),
+    )
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+def test_reconciliation_policy_band_runs_on_production_form():
+    recipe = _RECONCILIATION_RECIPE.read_text()
+    band = (
+        _REPO_ROOT
+        / "api"
+        / "tests"
+        / "form"
+        / "grocery-reconcile-selection-band.fk"
+    ).read_text()
+    band = band.replace(
+        "; preludes: ../../api/app/form_recipes/"
+        "endpoint_grocery_reconcile_selection.fk\n",
+        "",
+    )
+
+    verdict, runtime = run_kernel(f"{recipe}\n{band}", parse=int, timeout=30)
+
+    assert runtime == "fkwu"
+    assert verdict == 255
+
+
+def test_reconciliation_recipe_is_generated_from_current_bml_source():
+    source_digest = hashlib.sha256(_RECONCILIATION_BML.read_bytes()).hexdigest()
+    recipe = _RECONCILIATION_RECIPE.read_text()
+
+    assert f"; BML-SHA256: {source_digest}" in recipe.splitlines()[:3]
+    assert "(defn GroceryReconciliationPolicy" in recipe
 
 
 # --------------------------------------------------------------------------
@@ -410,7 +489,7 @@ def test_the_sheet_balance_is_read_through_the_authenticated_bounded_carrier(mon
             return {
                 "ok": True,
                 "remaining_idr": "Rp2,419,050",
-                "acknowledged_ids": ["spend-1", "not-requested"],
+                "acknowledged_ids": ["spend-1", "spend-legacy", "not-requested"],
                 "cancelled_ids": ["spend-cancelled", "not-requested"],
             }
 
@@ -432,19 +511,154 @@ def test_the_sheet_balance_is_read_through_the_authenticated_bounded_carrier(mon
     )
     monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
 
+    legacy = grocery.SpendResponse(
+        id="spend-legacy", amount_typed="10", amount_idr=10_000,
+        description="vegetables", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-10T01:00:00Z",
+    )
+
     snapshot = asyncio.run(
-        grocery._read_sheet_snapshot(["spend-1", "spend-cancelled"])
+        grocery._read_sheet_snapshot(
+            ["spend-1", "spend-cancelled", "spend-legacy"],
+            legacy_entries=[legacy],
+        )
     )
     assert snapshot == grocery._SheetSnapshot(
         2_419_050,
-        frozenset({"spend-1"}),
+        frozenset({"spend-1", "spend-legacy"}),
         frozenset({"spend-cancelled"}),
     )
     assert seen == [("https://example.invalid/exec", {
         "action": "summary",
         "secret": "shared-secret",
-        "pending_ids": ["spend-1", "spend-cancelled"],
+        "pending_ids": ["spend-1", "spend-cancelled", "spend-legacy"],
+        "legacy_entries": [{
+            "entry_id": "spend-legacy",
+            "row": {
+                "When": "2026-09-10",
+                "Amount": 10_000,
+                "What": "vegetables",
+                "Entry ID": "spend-legacy",
+            },
+            "columns": ["When", "Amount", "What", "Entry ID"],
+        }],
     })]
+
+
+def test_sheet_read_retries_one_transient_cold_start(monkeypatch):
+    attempts = 0
+    timeouts: list[float] = []
+
+    class _Response:
+        status_code = 200
+
+        def json(self):
+            return {
+                "ok": True,
+                "remaining_idr": 42,
+                "acknowledged_ids": [],
+                "cancelled_ids": [],
+            }
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise grocery.httpx.ReadTimeout("cold start")
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    def client(**kwargs):
+        timeouts.append(kwargs["timeout"])
+        return _Client()
+
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", client)
+
+    snapshot = asyncio.run(grocery._read_sheet_snapshot([]))
+    assert snapshot == grocery._SheetSnapshot(42, frozenset(), frozenset())
+    assert attempts == 2
+    assert timeouts == [grocery._SHEET_READ_ATTEMPT_TIMEOUT] * 2
+    assert sum(timeouts) < 15
+    assert grocery._SHEET_READ_TOTAL_TIMEOUT < 15
+
+
+def test_sheet_read_has_one_wall_clock_deadline(monkeypatch):
+    attempts = 0
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            nonlocal attempts
+            attempts += 1
+            await asyncio.sleep(1)
+            raise AssertionError("the total deadline should cancel this request")
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+    monkeypatch.setattr(grocery, "_SHEET_READ_TOTAL_TIMEOUT", 0.01)
+
+    assert asyncio.run(grocery._read_sheet_snapshot([])) is None
+    assert attempts == 1
+
+
+def test_totals_share_one_deadline_with_sheet_and_form(monkeypatch):
+    observed_timeouts: list[float] = []
+    ticks = iter([100.0, 100.0, 112.25])
+
+    async def snapshot(_pending_ids):
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
+
+    def kernel(_recipe, *, bindings, parse, timeout):
+        observed_timeouts.append(timeout)
+        return [1, bindings["sheet_remaining"]], "fkwu"
+
+    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [])
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot)
+    monkeypatch.setattr(grocery, "_monotonic", lambda: next(ticks))
+    monkeypatch.setattr(grocery, "serve_via_kernel", kernel)
+
+    result = asyncio.run(grocery.totals(token="member-token", on=None))
+
+    assert result.remaining_source == "sheet"
+    assert observed_timeouts == [pytest.approx(0.75)]
+
+
+def test_totals_do_not_start_form_after_the_shared_deadline(monkeypatch):
+    ticks = iter([100.0, 100.0, 113.01])
+
+    async def snapshot(_pending_ids):
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
+
+    def kernel(*_args, **_kwargs):
+        raise AssertionError("an expired totals request must not start Form")
+
+    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [])
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot)
+    monkeypatch.setattr(grocery, "_monotonic", lambda: next(ticks))
+    monkeypatch.setattr(grocery, "serve_via_kernel", kernel)
+
+    result = asyncio.run(grocery.totals(token="member-token", on=None))
+
+    assert result.remaining_idr is None
+    assert result.remaining_source == "unavailable"
 
 
 def test_sheet_read_fails_closed_without_the_shared_secret(monkeypatch):
@@ -605,6 +819,33 @@ def test_sheet_append_does_not_acknowledge_a_cancelled_entry(monkeypatch):
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
     monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+    assert asyncio.run(grocery._push_to_sheet_status(spend)) == "cancelled"
+
+
+def test_sheet_append_has_one_wall_clock_deadline(monkeypatch):
+    spend = grocery.SpendResponse(
+        id="spend-write-timeout", amount_typed="10", amount_idr=10_000,
+        description="vegetables", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-10T01:00:00Z",
+    )
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            await asyncio.sleep(1)
+            raise AssertionError("the total deadline should cancel this request")
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+    monkeypatch.setattr(grocery, "_SHEET_WRITE_TOTAL_TIMEOUT", 0.01)
+
     assert asyncio.run(grocery._push_to_sheet(spend)) is False
 
 
@@ -661,7 +902,55 @@ def test_sheet_delete_reconciliation_is_one_atomic_carrier_operation(monkeypatch
     assert seen[0]["reversal"]["row"]["Amount"] == -100_000
 
 
-def test_legacy_unsynced_entry_remains_unknown_and_is_not_auto_replayed(monkeypatch):
+def test_sheet_delete_tags_a_synced_legacy_original_before_reversal(monkeypatch):
+    node = {
+        "id": "spend-legacy-synced",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "100",
+        "amount_idr": 100_000,
+        "spend_description": "vegetables",
+        "spent_on": "2026-09-10",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-09-10T01:00:00Z",
+        "sheet_synced": True,
+    }
+    seen: list[dict] = []
+
+    class _Response:
+        status_code = 200
+        def json(self):
+            return {
+                "ok": True,
+                "cancelled": True,
+                "original_id": "spend-legacy-synced",
+                "original_present": True,
+                "reversal_id": "reversal-spend-legacy-synced",
+            }
+
+    class _Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, _url, *, json):
+            seen.append(json)
+            return _Response()
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery.httpx, "AsyncClient", lambda **_kwargs: _Client())
+
+    assert asyncio.run(grocery._reconcile_sheet_delete(node, {"id": "m1"})) is True
+    assert seen[0]["legacy_original"]["entry_id"] == "spend-legacy-synced"
+    assert seen[0]["legacy_original"]["row"]["What"] == "vegetables"
+
+
+def test_legacy_unsynced_entry_is_reconciled_before_balance(monkeypatch):
     legacy = {
         "id": "spend-legacy-unknown",
         "type": grocery._SPEND_TYPE,
@@ -687,21 +976,1375 @@ def test_legacy_unsynced_entry_remains_unknown_and_is_not_auto_replayed(monkeypa
 
     monkeypatch.setattr(grocery, "_push_to_sheet", must_not_push)
     assert asyncio.run(grocery._reconcile_sheet_delete(legacy, {"id": "m1"})) is None
+    seen_updates: list[tuple[dict[str, dict], dict]] = []
+
+    async def must_not_read_while_legacy_is_unresolved(_pending_ids):
+        pytest.fail("a known legacy block must not wait on the Sheet")
+
+    monkeypatch.setattr(
+        grocery,
+        "_require_member",
+        lambda _token: {"id": "watcher", "write_access": False},
+    )
+    monkeypatch.setattr(
+        grocery,
+        "_read_sheet_snapshot",
+        must_not_read_while_legacy_is_unresolved,
+    )
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **kwargs: (
+            seen_updates.append((updates, kwargs)) or set(updates)
+        ),
+    )
+    totals = asyncio.run(grocery.totals(token="member-token", on=None))
+    assert totals.remaining_idr is None
+    assert totals.remaining_source == "unavailable"
+    assert seen_updates == []
+    assert "sheet_reconcile_attempted_at" not in legacy
+
+    async def reconcile_legacy(pending_ids, *, legacy_entries):
+        assert pending_ids == ["spend-legacy-unknown"]
+        assert [entry.id for entry in legacy_entries] == ["spend-legacy-unknown"]
+        return grocery._SheetSnapshot(
+            2_000_000,
+            frozenset({"spend-legacy-unknown"}),
+            frozenset(),
+        )
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", reconcile_legacy)
     result = asyncio.run(
         grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
     )
     assert result.attempted == 0
     assert result.synced == 0
+    assert result.blocked_legacy == 0
+    assert len(seen_updates) == 1
+    updates, update_kwargs = seen_updates[0]
+    assert set(updates) == {"spend-legacy-unknown"}
+    assert update_kwargs["_include_private"] is True
+    assert updates["spend-legacy-unknown"]["sheet_synced"] is True
+    assert (
+        updates["spend-legacy-unknown"]["sheet_protocol"]
+        == grocery._SHEET_PROTOCOL
+    )
+    assert updates["spend-legacy-unknown"]["sheet_reconcile_attempted_at"]
+
+    async def read_only_summary(pending_ids):
+        assert pending_ids == []
+        return grocery._SheetSnapshot(
+            2_000_000,
+            frozenset(),
+            frozenset(),
+        )
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", read_only_summary)
+    totals = asyncio.run(grocery.totals(token="member-token", on=None))
+    assert totals.remaining_idr == 2_000_000
+    assert totals.remaining_source == "sheet"
+
+
+def test_unavailable_sheet_does_not_persist_reconciliation_rotation(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-unavailable",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-09-10",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-09-10T01:00:00Z",
+        "sheet_synced": False,
+    }
+
+    async def unavailable(_pending_ids, *, legacy_entries):
+        assert [entry.id for entry in legacy_entries] == [legacy["id"]]
+        return None
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", unavailable)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda *_args, **_kwargs: pytest.fail("an unavailable carrier must not write"),
+    )
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert result.blocked_legacy == 1
+    assert "sheet_reconcile_attempted_at" not in legacy
+
+
+def test_legacy_resync_has_one_wall_clock_deadline(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-total-deadline",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+    }
+
+    selection_finished = threading.Event()
+
+    def slow_selection(*_args, **_kwargs):
+        grocery.time.sleep(0.05)
+        selection_finished.set()
+        return []
+
+    async def must_not_read(*_args, **_kwargs):
+        pytest.fail("the resync deadline must expire before Sheet I/O starts")
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_legacy_reconciliation_batch", slow_selection)
+    monkeypatch.setattr(
+        grocery, "_current_sheet_retry_batch", lambda *_args, **_kwargs: []
+    )
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", must_not_read)
+    monkeypatch.setattr(grocery, "_SHEET_RESYNC_TOTAL_TIMEOUT", 0.01)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda *_args, **_kwargs: pytest.fail("timed-out resync must not persist"),
+    )
+
+    started = grocery.time.monotonic()
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert grocery.time.monotonic() - started >= 0.04
+    assert selection_finished.is_set()
+    assert result.attempted == 0
+    assert result.synced == 0
     assert result.blocked_legacy == 1
 
-    async def must_not_read(_pending_ids):
-        raise AssertionError("legacy uncertainty must short-circuit the Sheet read")
 
-    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_read_sheet_snapshot", must_not_read)
-    totals = asyncio.run(grocery.totals(token="member-token", on=None))
-    assert totals.remaining_idr is None
-    assert totals.remaining_source == "unavailable"
+def test_legacy_selection_passes_its_remaining_deadline_to_form(monkeypatch):
+    node = {"id": "spend-form-deadline", "sheet_synced": False}
+    spend = grocery.SpendResponse(
+        id=node["id"],
+        amount_typed="1",
+        amount_idr=1_000,
+        description="rice",
+        spent_on="2026-10-07",
+        by_id="m1",
+        by_name="Wayan",
+        created_at="2026-10-07T01:00:00Z",
+    )
+    observed_timeout: list[float] = []
+
+    def form_selection(_recipe, *, bindings, parse, timeout):
+        assert bindings["entries_wire"]
+        assert parse is grocery.json.loads
+        observed_timeout.append(timeout)
+        return [0], "fkwu"
+
+    monkeypatch.setattr(grocery, "serve_via_kernel", form_selection)
+    deadline = grocery.time.monotonic() + 0.5
+    batch = grocery._legacy_reconciliation_batch(
+        [node],
+        [spend],
+        all_nodes=[node],
+        all_entries=[spend],
+        deadline=deadline,
+    )
+
+    assert [entry.id for _node, entry in batch] == [spend.id]
+    assert len(observed_timeout) == 1
+    assert 0 < observed_timeout[0] <= 0.5
+    with pytest.raises(asyncio.TimeoutError):
+        grocery._legacy_reconciliation_batch(
+            [node],
+            [spend],
+            all_nodes=[node],
+            all_entries=[spend],
+            deadline=grocery.time.monotonic() - 1,
+        )
+
+
+def test_current_retry_selection_runs_on_form_policy():
+    rows = [
+        {
+            "id": "ready",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+        },
+        {
+            "id": "waiting",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+            "sheet_append_retry_after": "2026-10-07T02:00:00Z",
+        },
+        {
+            "id": "elapsed",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+            "sheet_append_retry_after": "2026-10-07T00:00:00Z",
+        },
+        {
+            "id": "cancelled",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+            "sheet_cancelled": True,
+        },
+        {"id": "legacy", "sheet_synced": False},
+        {
+            "id": "yielding",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+            "sheet_append_yield_legacy": True,
+        },
+    ]
+
+    selected = grocery._current_sheet_retry_batch(
+        rows,
+        "2026-10-07T01:00:00Z",
+        deadline=grocery.time.monotonic() + 10,
+    )
+
+    assert [row["id"] for row in selected] == ["ready", "elapsed"]
+
+    selected_after_legacy = grocery._current_sheet_retry_batch(
+        [rows[-1]],
+        "2026-10-07T01:00:00Z",
+        deadline=grocery.time.monotonic() + 10,
+    )
+
+    assert [row["id"] for row in selected_after_legacy] == ["yielding"]
+
+
+def test_successful_legacy_snapshot_returns_the_next_turn_to_current(monkeypatch):
+    current = {
+        "id": "current-yielded-to-legacy",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+        "sheet_append_yield_legacy": True,
+    }
+    observed: list[dict[str, dict]] = []
+
+    def persist(updates, **_kwargs):
+        observed.append(updates)
+        return set(updates)
+
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        persist,
+    )
+
+    persisted = grocery._persist_sheet_receipts(
+        [current],
+        [],
+        grocery._SheetSnapshot(2_000_000, frozenset(), frozenset()),
+    )
+
+    assert persisted == {
+        current["id"]: {"sheet_append_yield_legacy": False}
+    }
+    assert observed == [persisted]
+
+
+def test_cancelled_sheet_receipt_precedes_acknowledgement(monkeypatch):
+    current = {
+        "id": "current-cancelled-after-delete",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+        "sheet_append_yield_legacy": True,
+    }
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **_kwargs: set(updates),
+    )
+    entry_id = current["id"]
+
+    persisted = grocery._persist_sheet_receipts(
+        [current],
+        [],
+        grocery._SheetSnapshot(
+            2_000_000,
+            frozenset({entry_id}),
+            frozenset({entry_id}),
+        ),
+    )
+
+    assert persisted == {
+        entry_id: {
+            "sheet_cancelled": True,
+            "sheet_append_yield_legacy": False,
+        }
+    }
+
+
+def test_current_retry_selection_worker_is_joined_on_cancellation(monkeypatch):
+    finished = threading.Event()
+
+    def slow_selection(*_args, **_kwargs):
+        grocery.time.sleep(0.05)
+        finished.set()
+        return []
+
+    async def cancel_selection():
+        selection = asyncio.create_task(
+            grocery._joined_current_sheet_retry_batch(
+                [],
+                "2026-10-07T01:00:00Z",
+                deadline=grocery.time.monotonic() + 1,
+            )
+        )
+        await asyncio.sleep(0.005)
+        selection.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await selection
+
+    monkeypatch.setattr(grocery, "_current_sheet_retry_batch", slow_selection)
+
+    asyncio.run(cancel_selection())
+
+    assert finished.is_set()
+
+
+def test_current_retry_selection_deadline_includes_executor_queue(monkeypatch):
+    async def queued_without_starting(_function, *_args, **_kwargs):
+        await asyncio.Future()
+
+    monkeypatch.setattr(grocery.asyncio, "to_thread", queued_without_starting)
+    started = grocery.time.monotonic()
+
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(
+            grocery._joined_current_sheet_retry_batch(
+                [],
+                "2026-10-07T01:00:00Z",
+                deadline=grocery.time.monotonic() + 0.01,
+            )
+        )
+
+    assert grocery.time.monotonic() - started < 0.1
+
+
+def test_current_receipt_deadline_cancels_queued_worker(monkeypatch):
+    async def queued_without_starting(_function, *_args, **_kwargs):
+        await asyncio.Future()
+
+    monkeypatch.setattr(grocery.asyncio, "to_thread", queued_without_starting)
+    started = grocery.time.monotonic()
+
+    persisted = asyncio.run(
+        grocery._persist_current_sheet_append_status(
+            {"id": "queued-current-receipt"},
+            "unavailable",
+            deadline=grocery.time.monotonic() + 0.01,
+        )
+    )
+
+    assert persisted is False
+    assert grocery.time.monotonic() - started < 0.1
+
+
+def test_legacy_selection_deadline_includes_executor_queue(monkeypatch):
+    async def queued_without_starting(_function, *_args, **_kwargs):
+        await asyncio.Future()
+
+    monkeypatch.setattr(grocery.asyncio, "to_thread", queued_without_starting)
+    started = grocery.time.monotonic()
+
+    snapshot = asyncio.run(
+        grocery._reconciled_sheet_snapshot(
+            [],
+            [],
+            all_nodes=[],
+            all_entries=[],
+            deadline=grocery.time.monotonic() + 0.01,
+        )
+    )
+
+    assert snapshot is None
+    assert grocery.time.monotonic() - started < 0.1
+
+
+def test_legacy_resync_waits_for_receipt_transaction_after_deadline(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-receipt-deadline",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+    }
+    transaction_finished = threading.Event()
+    observed_deadline: list[float] = []
+    observed_remaining: list[float] = []
+
+    def select_one(pending_nodes, pending, **_kwargs):
+        return [(pending_nodes[0], pending[0])]
+
+    async def acknowledge(pending_ids, *, legacy_entries):
+        assert pending_ids == [legacy["id"]]
+        assert [entry.id for entry in legacy_entries] == [legacy["id"]]
+        return grocery._SheetSnapshot(
+            2_000_000,
+            frozenset({legacy["id"]}),
+            frozenset(),
+        )
+
+    def slow_receipt_write(updates, **kwargs):
+        observed_deadline.append(kwargs["_deadline"])
+        observed_remaining.append(kwargs["_deadline"] - grocery.time.monotonic())
+        grocery.time.sleep(0.05)
+        transaction_finished.set()
+        return set(updates)
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_legacy_reconciliation_batch", select_one)
+    monkeypatch.setattr(
+        grocery, "_current_sheet_retry_batch", lambda *_args, **_kwargs: []
+    )
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", acknowledge)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        slow_receipt_write,
+    )
+    monkeypatch.setattr(grocery, "_SHEET_RESYNC_TOTAL_TIMEOUT", 0.01)
+
+    started = grocery.time.monotonic()
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert grocery.time.monotonic() - started >= 0.04
+    assert transaction_finished.is_set()
+    assert len(observed_deadline) == 1
+    assert observed_deadline[0] > started
+    assert observed_remaining[0] <= grocery._SHEET_RESYNC_TOTAL_TIMEOUT
+    assert result.blocked_legacy == 1
+
+
+def test_graph_transaction_deadline_expires_before_the_next_operation():
+    with pytest.raises(
+        grocery.graph_service.TransactionDeadlineExceeded,
+        match="deadline exhausted",
+    ):
+        grocery.graph_service._apply_transaction_deadline(
+            None,
+            grocery.graph_service.time.monotonic() - 1,
+        )
+
+
+def test_graph_batch_preserves_an_expired_caller_deadline():
+    deadline = grocery.graph_service.time.monotonic() + 0.01
+    grocery.time.sleep(0.02)
+
+    with pytest.raises(
+        unified_db.SQLAlchemyTimeoutError,
+        match="deadline exhausted before connect",
+    ):
+        grocery.graph_service.update_node_properties_batch(
+            {"queued-receipt": {"sheet_synced": True}},
+            _include_private=True,
+            _deadline=deadline,
+        )
+
+
+def test_deadline_postgres_connect_is_direct_and_bounded(monkeypatch):
+    captured: dict = {}
+    sentinel = object()
+
+    def fake_create_engine(url, **kwargs):
+        captured.update({"url": url, **kwargs})
+        return sentinel
+
+    monkeypatch.setattr(unified_db, "create_engine", fake_create_engine)
+    deadline = unified_db.time.monotonic() + 2.9
+
+    result = unified_db._create_deadline_engine(
+        "postgresql+psycopg://user@example.invalid/database",
+        deadline,
+    )
+
+    assert result is sentinel
+    assert captured["pool_pre_ping"] is False
+    assert captured["poolclass"] is unified_db.NullPool
+    assert captured["connect_args"]["connect_timeout"] == 2
+    with pytest.raises(
+        unified_db.SQLAlchemyTimeoutError,
+        match="no bounded PostgreSQL connect window",
+    ):
+        unified_db._create_deadline_engine(
+            "postgresql+psycopg://user@example.invalid/database",
+            unified_db.time.monotonic() + 1.9,
+        )
+
+
+def test_deadline_sqlite_connect_carries_the_absolute_budget(monkeypatch):
+    captured: dict = {}
+    sentinel = object()
+
+    def fake_create_engine(url, **kwargs):
+        captured.update({"url": url, **kwargs})
+        return sentinel
+
+    monkeypatch.setattr(unified_db, "_create_engine", fake_create_engine)
+    deadline = unified_db.time.monotonic() + 0.2
+
+    result = unified_db._create_deadline_engine(
+        "sqlite+pysqlite:////tmp/coherence-deadline-test.db",
+        deadline,
+    )
+
+    assert result is sentinel
+    assert captured["isolated"] is True
+    assert 0 < captured["sqlite_timeout_seconds"] <= 0.2
+    assert captured["sqlite_deadline"] == deadline
+
+
+def test_deadline_sqlite_connection_initialization_does_not_outlive_lock(
+    monkeypatch,
+    tmp_path,
+):
+    database_path = tmp_path / "locked-receipts.db"
+    lock = sqlite3.connect(database_path)
+    lock.execute("CREATE TABLE receipts (value INTEGER NOT NULL)")
+    lock.commit()
+    lock.execute("BEGIN EXCLUSIVE")
+    lock.execute("INSERT INTO receipts VALUES (1)")
+    monkeypatch.setattr(
+        unified_db,
+        "database_url",
+        lambda: f"sqlite+pysqlite:///{database_path}",
+    )
+
+    started = unified_db.time.monotonic()
+    try:
+        with pytest.raises((unified_db.OperationalError, sqlite3.OperationalError)):
+            with unified_db.deadline_session(started + 0.2) as receipt_session:
+                receipt_session.execute(
+                    unified_db.text("INSERT INTO receipts VALUES (2)")
+                )
+    finally:
+        lock.rollback()
+        lock.close()
+
+    assert unified_db.time.monotonic() - started < 1.0
+
+
+def test_cursor_deadline_shrinks_before_each_statement(monkeypatch):
+    class Cursor:
+        def __init__(self):
+            self.calls: list[tuple[str, tuple[str, str]]] = []
+
+        def execute(self, statement, parameters):
+            self.calls.append((statement, parameters))
+
+    cursor = Cursor()
+    clock = iter([100.0, 100.4, 101.1])
+    monkeypatch.setattr(unified_db.time, "monotonic", lambda: next(clock))
+
+    unified_db._apply_cursor_deadline(cursor, "postgresql", 101.0)
+    unified_db._apply_cursor_deadline(cursor, "postgresql", 101.0)
+    with pytest.raises(unified_db.SQLAlchemyTimeoutError, match="deadline exhausted"):
+        unified_db._apply_cursor_deadline(cursor, "postgresql", 101.0)
+
+    first_ms = int(cursor.calls[0][1][0][:-2])
+    second_ms = int(cursor.calls[1][1][0][:-2])
+    assert 0 < second_ms < first_ms <= 1_000
+
+
+def test_connection_deadline_cancels_the_active_operation():
+    cancelled = threading.Event()
+
+    class DriverConnection:
+        def cancel(self):
+            cancelled.set()
+
+    class ConnectionFairy:
+        driver_connection = DriverConnection()
+
+    class Connection:
+        connection = ConnectionFairy()
+
+    timer = unified_db._arm_connection_deadline(
+        Connection(),
+        unified_db.time.monotonic() + 0.01,
+    )
+    try:
+        assert cancelled.wait(0.2)
+    finally:
+        timer.cancel()
+
+
+def test_connection_deadline_closes_when_driver_cancel_fails():
+    closed = threading.Event()
+
+    class DriverConnection:
+        def cancel(self):
+            raise RuntimeError("cancel carrier unavailable")
+
+        def close(self):
+            closed.set()
+
+    class ConnectionFairy:
+        driver_connection = DriverConnection()
+
+    class Connection:
+        connection = ConnectionFairy()
+
+    timer = unified_db._arm_connection_deadline(
+        Connection(),
+        unified_db.time.monotonic() + 0.01,
+    )
+    try:
+        assert closed.wait(0.2)
+    finally:
+        timer.cancel()
+
+
+def test_connection_deadline_closes_when_driver_cancel_stalls():
+    closed = threading.Event()
+    release_cancel = threading.Event()
+
+    class DriverConnection:
+        def cancel(self):
+            release_cancel.wait(1)
+
+        def close(self):
+            closed.set()
+            release_cancel.set()
+
+    class ConnectionFairy:
+        driver_connection = DriverConnection()
+
+    class Connection:
+        connection = ConnectionFairy()
+
+    timer = unified_db._arm_connection_deadline(
+        Connection(),
+        unified_db.time.monotonic() + 0.01,
+    )
+    try:
+        assert closed.wait(0.3)
+    finally:
+        release_cancel.set()
+        timer.cancel()
+
+
+def test_deadline_batch_rechecks_each_orm_flush_statement(monkeypatch):
+    node_ids = ["deadline-flush-one", "deadline-flush-two"]
+    for node_id in node_ids:
+        grocery.graph_service.create_node(
+            id=node_id,
+            type="concept",
+            name=node_id,
+        )
+    observed: list[tuple[str, float]] = []
+    apply_cursor_deadline = unified_db._apply_cursor_deadline
+
+    def observe(cursor, dialect_name, deadline):
+        observed.append((dialect_name, deadline))
+        apply_cursor_deadline(cursor, dialect_name, deadline)
+
+    monkeypatch.setattr(unified_db, "_apply_cursor_deadline", observe)
+    deadline = unified_db.time.monotonic() + 2
+    persisted = grocery.graph_service.update_node_properties_batch(
+        {node_id: {"deadline_probe": True} for node_id in node_ids},
+        _deadline=deadline,
+    )
+
+    assert persisted == set(node_ids)
+    assert len(observed) >= 4
+    assert all(dialect == "sqlite" for dialect, _deadline in observed)
+    assert all(seen_deadline == deadline for _dialect, seen_deadline in observed)
+
+
+def test_current_protocol_resync_skips_the_legacy_summary_preflight(monkeypatch):
+    current = {
+        "id": "spend-current-unsynced",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "current",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    pushed: list[str] = []
+
+    async def must_not_preflight(*_args, **_kwargs):
+        pytest.fail("current-protocol resync must not spend the summary deadline")
+
+    async def append_current(spend):
+        pushed.append(spend.id)
+        return "synced"
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", must_not_preflight)
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", append_current)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **_kwargs: set(updates),
+    )
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert result.attempted == 1
+    assert result.synced == 1
+    assert result.blocked_legacy == 0
+    assert pushed == [current["id"]]
+
+
+def test_unconfigured_resync_returns_without_starting_form(monkeypatch):
+    current = {
+        "id": "spend-current-unconfigured",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    legacy = {"id": "spend-legacy-unconfigured", "sheet_synced": False}
+
+    async def must_not_select(*_args, **_kwargs):
+        pytest.fail("an unconfigured Sheet must return before Form selection")
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [current, legacy])
+    monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("", ""))
+    monkeypatch.setattr(grocery, "_joined_current_sheet_retry_batch", must_not_select)
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert result.configured is False
+    assert result.attempted == 1
+    assert result.synced == 0
+    assert result.blocked_legacy == 1
+
+
+def test_current_retry_selection_excludes_synced_history(monkeypatch):
+    synced_history = [
+        {
+            "id": f"spend-synced-{index}",
+            "sheet_synced": True,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+        }
+        for index in range(500)
+    ]
+    current = {
+        "id": "spend-current-after-history",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "current",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    observed: list[list[str]] = []
+
+    async def select(pending_rows, _now, *, deadline):
+        assert deadline > grocery.time.monotonic()
+        observed.append([row["id"] for row in pending_rows])
+        return pending_rows
+
+    async def append(_spend):
+        return "synced"
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [*synced_history, current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_joined_current_sheet_retry_batch", select)
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", append)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **_kwargs: set(updates),
+    )
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert observed == [[current["id"]]]
+    assert result.attempted == 1
+    assert result.synced == 1
+
+
+def test_current_resync_stops_before_the_proxy_budget_is_exhausted(monkeypatch):
+    rows = [
+        {
+            "id": f"spend-current-{index}",
+            "type": grocery._SPEND_TYPE,
+            "amount_typed": "1",
+            "amount_idr": 1_000,
+            "spend_description": f"current {index}",
+            "spent_on": "2026-10-07",
+            "kind": "buy",
+            "by_id": "m1",
+            "by_name": "Wayan",
+            "created_at": f"2026-10-07T0{index}:00:00Z",
+            "sheet_synced": False,
+            "sheet_protocol": grocery._SHEET_PROTOCOL,
+        }
+        for index in range(1, 4)
+    ]
+    pushed: list[str] = []
+    clock = iter([0.0, 0.0, 0.1, 0.1, 7.0])
+
+    async def append_current(spend):
+        pushed.append(spend.id)
+        return "synced"
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: rows)
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", append_current)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **_kwargs: set(updates),
+    )
+    monkeypatch.setattr(
+        grocery, "_current_sheet_retry_batch", lambda selected, *_args, **_kwargs: selected
+    )
+    monkeypatch.setattr(grocery, "_monotonic", lambda: next(clock))
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert result.attempted == 1
+    assert result.synced == 1
+    assert pushed == [rows[0]["id"]]
+
+
+def test_current_resync_reserves_receipt_budget_and_advances_legacy(monkeypatch):
+    legacy = _pending_grocery_node(
+        "spend-legacy-receipt-reserve",
+        "legacy reserve",
+        "2026-10-07T01:00:00Z",
+    )
+    current = {
+        **legacy,
+        "id": "spend-current-receipt-reserve",
+        "spend_description": "current reserve",
+        "created_at": "2026-10-07T02:00:00Z",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    reconciled: list[str] = []
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    _configure_receipt_reserve_test(monkeypatch, legacy, current, reconciled)
+    clock = iter([0.0, 4.1])
+    monkeypatch.setattr(grocery, "_monotonic", lambda: next(clock))
+
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+
+    assert result.attempted == 0
+    assert result.synced == 0
+    assert result.blocked_legacy == 0
+    assert reconciled == [legacy["id"], current["id"]]
+
+
+def test_current_resync_bounds_and_joins_receipt_write(monkeypatch):
+    current = {
+        "id": "spend-current-slow-receipt",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "slow receipt",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    completed = threading.Event()
+    received_deadlines: list[float] = []
+    received_remaining: list[float] = []
+
+    async def append_current(_spend):
+        return "synced"
+
+    def slow_receipt(updates, **kwargs):
+        assert set(updates) == {current["id"]}
+        received_deadlines.append(kwargs["_deadline"])
+        received_remaining.append(kwargs["_deadline"] - grocery.time.monotonic())
+        grocery.time.sleep(0.05)
+        completed.set()
+        return set(updates)
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", append_current)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        slow_receipt,
+    )
+    monkeypatch.setattr(
+        grocery, "_current_sheet_retry_batch", lambda selected, *_args, **_kwargs: selected
+    )
+    monkeypatch.setattr(grocery, "_SHEET_WRITE_TOTAL_TIMEOUT", 0.005)
+    monkeypatch.setattr(grocery, "_SHEET_RECEIPT_MIN_TIMEOUT", 0.001)
+    monkeypatch.setattr(grocery, "_SHEET_RESYNC_TOTAL_TIMEOUT", 0.01)
+
+    started = grocery.time.monotonic()
+    result = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    elapsed = grocery.time.monotonic() - started
+
+    assert result.attempted == 1
+    assert result.synced == 0
+    assert completed.is_set()
+    assert elapsed >= 0.04
+    assert len(received_deadlines) == 1
+    assert received_deadlines[0] > started
+    assert received_remaining[0] <= grocery._SHEET_RESYNC_TOTAL_TIMEOUT
+
+
+def test_mixed_resync_advances_current_before_legacy(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-mixed",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+    }
+    current = {
+        **legacy,
+        "id": "spend-current-mixed",
+        "spend_description": "current",
+        "created_at": "2026-10-07T02:00:00Z",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    pushed: list[str] = []
+
+    async def reconcile(pending_ids, *, legacy_entries):
+        assert pending_ids == [legacy["id"]]
+        assert [entry.id for entry in legacy_entries] == [legacy["id"]]
+        return grocery._SheetSnapshot(
+            2_000_000,
+            frozenset({legacy["id"]}),
+            frozenset(),
+        )
+
+    async def append_current(spend):
+        pushed.append(spend.id)
+        return "synced"
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", reconcile)
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", append_current)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda updates, **_kwargs: set(updates),
+    )
+
+    append = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert append.attempted == 1
+    assert append.synced == 1
+    assert append.blocked_legacy == 1
+    assert pushed == [current["id"]]
+
+    migration = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert migration.attempted == 0
+    assert migration.synced == 0
+    assert migration.blocked_legacy == 0
+    assert pushed == [current["id"]]
+
+
+def test_cancelled_current_row_does_not_starve_legacy_reconciliation(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-after-cancel",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+    }
+    current = {
+        **legacy,
+        "id": "spend-current-cancelled",
+        "spend_description": "cancelled current",
+        "created_at": "2026-10-07T02:00:00Z",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    reconciled: list[str] = []
+
+    async def cancelled(_spend):
+        return "cancelled"
+
+    async def reconcile(pending_nodes, _pending, **_kwargs):
+        reconciled.extend(node["id"] for node in pending_nodes)
+        legacy["sheet_synced"] = True
+        legacy["sheet_protocol"] = grocery._SHEET_PROTOCOL
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
+
+    def persist_marker(updates, **_kwargs):
+        assert set(updates) == {current["id"]}
+        return set(updates)
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", cancelled)
+    monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", reconcile)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        persist_marker,
+    )
+
+    first = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert first.attempted == 1
+    assert first.synced == 0
+    assert first.blocked_legacy == 1
+    assert current["sheet_cancelled"] is True
+    assert reconciled == []
+
+    second = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert second.attempted == 0
+    assert second.synced == 0
+    assert second.blocked_legacy == 0
+    assert reconciled == [legacy["id"]]
+
+
+def test_unavailable_current_row_defers_to_legacy_reconciliation(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-after-current-failure",
+        "type": grocery._SPEND_TYPE,
+        "amount_typed": "1",
+        "amount_idr": 1_000,
+        "spend_description": "legacy",
+        "spent_on": "2026-10-07",
+        "kind": "buy",
+        "by_id": "m1",
+        "by_name": "Wayan",
+        "created_at": "2026-10-07T01:00:00Z",
+        "sheet_synced": False,
+    }
+    current = {
+        **legacy,
+        "id": "spend-current-unavailable",
+        "spend_description": "unavailable current",
+        "created_at": "2026-10-07T02:00:00Z",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    reconciled: list[str] = []
+
+    async def unavailable(_spend):
+        return "unavailable"
+
+    async def reconcile(pending_nodes, _pending, **_kwargs):
+        reconciled.extend(node["id"] for node in pending_nodes)
+        legacy["sheet_synced"] = True
+        legacy["sheet_protocol"] = grocery._SHEET_PROTOCOL
+        return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
+
+    def persist_retry(updates, **_kwargs):
+        assert set(updates) == {current["id"]}
+        return set(updates)
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", unavailable)
+    monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", reconcile)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        persist_retry,
+    )
+
+    first = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert first.attempted == 1
+    assert first.synced == 0
+    assert first.blocked_legacy == 1
+    assert current["sheet_append_retry_after"] > grocery._now()
+    assert current["sheet_append_yield_legacy"] is True
+    assert reconciled == []
+
+    # Even when a manually spaced retry arrives after the time window, the
+    # persisted yield signal lets legacy work advance before this row retries.
+    current["sheet_append_retry_after"] = "2026-10-07T00:00:00+00:00"
+    second = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert second.attempted == 0
+    assert second.synced == 0
+    assert second.blocked_legacy == 0
+    assert legacy["id"] in reconciled
+
+
+def test_legacy_reconciliation_advances_in_bounded_batches(monkeypatch):
+    legacy = [
+        {
+            "id": f"spend-legacy-{index:03d}",
+            "type": grocery._SPEND_TYPE,
+            "amount_typed": "1",
+            "amount_idr": 1_000,
+            "spend_description": f"legacy {index}",
+            "spent_on": "2026-09-10",
+            "kind": "buy",
+            "by_id": "m1",
+            "by_name": "Wayan",
+            "created_at": f"2026-09-10T01:{index % 60:02d}:00Z",
+            "sheet_synced": False,
+        }
+        for index in range(101)
+    ]
+    updates: list[str] = []
+    batches: list[list[str]] = []
+
+    async def reconcile_batch(pending_ids, *, legacy_entries):
+        assert len(pending_ids) == 101
+        assert len(legacy_entries) == 100
+        batch = [entry.id for entry in legacy_entries]
+        batches.append(batch)
+        return grocery._SheetSnapshot(
+            2_000_000,
+            (
+                frozenset()
+                if len(batches) == 1
+                else frozenset({"spend-legacy-100"})
+            ),
+            frozenset(),
+        )
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda: legacy)
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", reconcile_batch)
+    monkeypatch.setattr(
+        grocery.graph_service,
+        "update_node_properties_batch",
+        lambda batch, **_kwargs: (updates.extend(batch) or set(batch)),
+    )
+
+    first = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert first.blocked_legacy == 101
+    assert "spend-legacy-100" not in batches[0]
+    assert all(not node.get("sheet_synced") for node in legacy)
+
+    second = asyncio.run(
+        grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+    )
+    assert second.blocked_legacy == 100
+    assert "spend-legacy-100" in batches[1]
+    assert legacy[100]["sheet_synced"] is True
+    assert len(updates) == 200
+
+
+def test_legacy_reconciliation_excludes_all_duplicate_graph_signatures():
+    nodes = [
+        {
+            "id": "spend-duplicate-a",
+            "sheet_synced": False,
+        },
+        {
+            "id": "spend-duplicate-b",
+            "sheet_synced": False,
+        },
+        {
+            "id": "spend-unique",
+            "sheet_synced": False,
+        },
+    ]
+    spends = [
+        grocery.SpendResponse(
+            id="spend-duplicate-a", amount_typed="10", amount_idr=10_000,
+            description="vegetables", spent_on="2026-09-10",
+            by_id="m1", by_name="Wayan", created_at="2026-09-10T01:00:00Z",
+        ),
+        grocery.SpendResponse(
+            id="spend-duplicate-b", amount_typed="10", amount_idr=10_000,
+            description=" vegetables ", spent_on="2026-09-10",
+            by_id="m1", by_name="Wayan", created_at="2026-09-10T02:00:00Z",
+        ),
+        grocery.SpendResponse(
+            id="spend-unique", amount_typed="20", amount_idr=20_000,
+            description="fruit", spent_on="2026-09-10",
+            by_id="m1", by_name="Wayan", created_at="2026-09-10T03:00:00Z",
+        ),
+    ]
+    synced_pre_protocol_duplicate = grocery.SpendResponse(
+        id="spend-synced-duplicate", amount_typed="10", amount_idr=10_000,
+        description="vegetables", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-09T01:00:00Z",
+    )
+    all_nodes = [
+        {"id": "spend-synced-duplicate", "sheet_synced": True},
+        *nodes,
+    ]
+
+    batch = grocery._legacy_reconciliation_batch(
+        nodes,
+        spends,
+        all_nodes=all_nodes,
+        all_entries=[synced_pre_protocol_duplicate, *spends],
+    )
+    assert [spend.id for _node, spend in batch] == ["spend-unique"]
+
+
+def test_legacy_policy_wire_excludes_synced_history(monkeypatch):
+    pending_node = {"id": "spend-pending-only", "sheet_synced": False}
+    pending = grocery.SpendResponse(
+        id=pending_node["id"], amount_typed="20", amount_idr=20_000,
+        description="fruit", spent_on="2026-09-10",
+        by_id="m1", by_name="Wayan", created_at="2026-09-10T03:00:00Z",
+    )
+    synced_nodes = [
+        {"id": f"spend-synced-{index}", "sheet_synced": True}
+        for index in range(2_000)
+    ]
+    synced_spends = [
+        pending.model_copy(update={"id": node["id"], "description": node["id"]})
+        for node in synced_nodes
+    ]
+
+    def select(_recipe, *, bindings, **_kwargs):
+        assert bindings["entries_wire"].count(";") == 0
+        assert "spend-pending-only" in bindings["entries_wire"]
+        return [0], "fkwu"
+
+    monkeypatch.setattr(grocery, "serve_via_kernel", select)
+    batch = grocery._legacy_reconciliation_batch(
+        [pending_node],
+        [pending],
+        all_nodes=[*synced_nodes, pending_node],
+        all_entries=[*synced_spends, pending],
+    )
+
+    assert [spend.id for _node, spend in batch] == [pending.id]
+
+
+def test_legacy_reconciliation_rejects_misaligned_carrier_rows():
+    spend = grocery.SpendResponse(
+        id="spend-misaligned", amount_typed="1", amount_idr=1_000,
+        description="rice", spent_on="2026-10-07",
+        by_id="m1", by_name="Wayan", created_at="2026-10-07T01:00:00Z",
+    )
+
+    with pytest.raises(RuntimeError, match="pending.*misaligned"):
+        grocery._legacy_reconciliation_batch(
+            [], [spend], all_nodes=[], all_entries=[]
+        )
+
+
+def test_large_legacy_backlog_keeps_only_the_next_hundred_candidates():
+    nodes = [
+        {"id": f"spend-large-{index:04d}", "sheet_synced": False}
+        for index in range(2_001)
+    ]
+    spends = [
+        grocery.SpendResponse(
+            id=node["id"], amount_typed="1", amount_idr=1_000,
+            description=f"item {index}", spent_on="2026-10-07",
+            by_id="m1", by_name="Wayan", created_at="2026-10-07T01:00:00Z",
+        )
+        for index, node in enumerate(nodes)
+    ]
+
+    batch = grocery._legacy_reconciliation_batch(
+        nodes,
+        spends,
+        all_nodes=nodes,
+        all_entries=spends,
+    )
+
+    assert [spend.id for _node, spend in batch] == [
+        f"spend-large-{index:04d}" for index in range(100)
+    ]
 
 
 def test_a_wrong_number_can_be_taken_back(client, monkeypatch):
@@ -735,6 +2378,74 @@ def test_a_wrong_number_can_be_taken_back(client, monkeypatch):
 
     # Gone means gone.
     assert client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}").status_code == 404
+
+
+def test_delete_shares_one_deadline_with_the_database_commit(monkeypatch):
+    node = {
+        "id": "spend-bounded-delete",
+        "type": grocery._SPEND_TYPE,
+        "by_id": "m1",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+    observed: list[tuple[str, bool, float]] = []
+
+    async def reconciled(_node, _actor):
+        return True
+
+    def bounded_delete(node_id, *, _include_private, _deadline):
+        observed.append((node_id, _include_private, _deadline))
+        return True
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(
+        grocery.graph_service, "get_node_unfiltered", lambda _node_id: node
+    )
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", reconciled)
+    monkeypatch.setattr(grocery.graph_service, "delete_node", bounded_delete)
+    monkeypatch.setattr(grocery, "_monotonic", lambda: 100.0)
+
+    result = asyncio.run(
+        grocery.delete_spend("spend-bounded-delete", actor_token="writer-token")
+    )
+
+    assert result.was_mirrored is True
+    assert observed == [
+        ("spend-bounded-delete", True, 100.0 + grocery._GROCERY_REQUEST_TOTAL_TIMEOUT)
+    ]
+
+
+def test_delete_returns_success_when_commit_wins_the_timeout_boundary(monkeypatch):
+    node = {
+        "id": "spend-boundary-delete",
+        "type": grocery._SPEND_TYPE,
+        "by_id": "m1",
+        "sheet_protocol": grocery._SHEET_PROTOCOL,
+    }
+
+    async def reconciled(_node, _actor):
+        return True
+
+    def committed(*_args, **_kwargs):
+        return True
+
+    async def boundary_timeout(_future, *, timeout):
+        assert timeout == grocery._GROCERY_REQUEST_TOTAL_TIMEOUT
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(
+        grocery.graph_service, "get_node_unfiltered", lambda _node_id: node
+    )
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", reconciled)
+    monkeypatch.setattr(grocery.graph_service, "delete_node", committed)
+    monkeypatch.setattr(grocery, "_monotonic", lambda: 100.0)
+    monkeypatch.setattr(grocery.asyncio, "wait_for", boundary_timeout)
+
+    result = asyncio.run(
+        grocery.delete_spend("spend-boundary-delete", actor_token="writer-token")
+    )
+
+    assert result.deleted == "spend-boundary-delete"
 
 
 def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
@@ -983,6 +2694,23 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert grocery.graph_service.update_node(
         spend_id, properties={"sheet_synced": True}
     ) is None
+    assert grocery.graph_service.update_node_properties_batch(
+        {spend_id: {"batch_probe": "blocked"}}
+    ) == set()
+    assert grocery.graph_service.update_node_properties_batch(
+        {
+            spend_id: {"batch_probe": "private"},
+            public_id: {"batch_probe": "public"},
+        },
+        _include_private=True,
+        _source="grocery-batch-test",
+        _timeout_seconds=0.1,
+    ) == {spend_id, public_id}
+    assert (
+        grocery.graph_service.get_node_unfiltered(spend_id)["batch_probe"]
+        == "private"
+    )
+    assert grocery.graph_service.get_node(public_id)["batch_probe"] == "public"
     assert grocery.graph_service.delete_node(spend_id) is False
     with pytest.raises(ValueError, match="dedicated private service"):
         grocery.graph_service.create_edge(
@@ -1221,3 +2949,18 @@ def test_sheet_carrier_binds_to_the_restructured_tab_identity():
     assert "const sheet = ledgerSheet(ss);" in carrier
     assert "if (candidates.length !== 1)" in carrier
     assert "getName() !== STATE_SHEET_NAME;\n    })[0]" not in carrier
+    assert "function reconcileLegacy(ss, sheet, hrow, entries)" in carrier
+    assert 'if (body.action === "reconcile_legacy")' in carrier
+    assert "if (matches.length === 1)" in carrier
+    assert "signatureCounts.get(wantedSignature) !== 1" in carrier
+    assert "if (pass === 1 && existingWhat)" not in carrier
+    assert "const acknowledgedSet = new Set(rows.map(function (row)" in carrier
+    assert "if (acknowledgedSet.has(entryId))" in carrier
+    assert "acknowledgedSet.add(entryId);" in carrier
+    assert "setValues(idValues);" in carrier
+    assert "setValue(entryId);" not in carrier
+    assert "const legacyOriginal = body.legacy_original || null;" in carrier
+    assert "legacy original could not be uniquely tagged" in carrier
+    assert "const historicalDeletionSignatures = new Set();" in carrier
+    assert "acknowledgedSet.has(originalId)" in carrier
+    assert "historicalDeletionSignatures.has(historicalDeletion)" in carrier

@@ -336,6 +336,116 @@ function summary(ss, sheet, hrow, requested) {
   };
 }
 
+// Reconcile rows written by the predecessor carrier, which had no Entry ID.
+// Only one exact date/amount/description match is proof. Ambiguous or absent
+// rows remain unknown for a person to reconcile; they are never guessed or
+// replayed. Each Sheet row is consumed at most once.
+function reconcileLegacy(ss, sheet, hrow, entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return {ok: true, acknowledged_ids: []};
+  }
+  if (entries.length > 100) return {ok: false, error: "too many legacy entries"};
+
+  const idIndex = entryIdColumn(sheet, hrow, true);
+  const width = Math.max(sheet.getLastColumn(), idIndex + 1);
+  const header = sheet.getRange(hrow, 1, 1, width).getValues()[0]
+    .map(function (value) { return String(value).trim(); });
+  const whenIndex = header.indexOf("When");
+  const amountIndex = header.indexOf("Amount");
+  const whatIndex = header.indexOf("What");
+  if (whenIndex < 0 || amountIndex < 0 || whatIndex < 0) {
+    return {ok: false, error: "legacy reconciliation needs When, Amount, and What"};
+  }
+
+  const count = Math.max(0, sheet.getLastRow() - hrow);
+  const rows = count ? sheet.getRange(hrow + 1, 1, count, width).getValues() : [];
+  const used = new Set();
+  const acknowledged = [];
+  const idValues = rows.map(function (row) { return [row[idIndex] || ""]; });
+  let idsChanged = false;
+  const acknowledgedSet = new Set(rows.map(function (row) {
+    return String(row[idIndex] || "").trim();
+  }).filter(function (entryId) { return entryId; }));
+  const day = function (value) {
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      return Utilities.formatDate(value, "Asia/Makassar", "yyyy-MM-dd");
+    }
+    return String(value || "").trim().slice(0, 10);
+  };
+  const signature = function (row) {
+    return [
+      day(row.When),
+      String(Number(row.Amount)),
+      String(row.What || "").trim(),
+    ].join("\u001f");
+  };
+  // The predecessor delete carrier appended a stable `reversal-<id>` row but
+  // could leave its original row blank in Entry ID. Its reversal amount and
+  // `undo: <what>` text are a durable deletion receipt. Conservatively exclude
+  // every matching blank original; ambiguity stays blocked instead of letting
+  // a later graph row claim an already-reversed Sheet row.
+  const historicalDeletionSignatures = new Set();
+  rows.forEach(function (row) {
+    const entryId = String(row[idIndex] || "").trim();
+    const what = String(row[whatIndex] || "").trim();
+    const amount = Number(row[amountIndex]);
+    if (entryId.indexOf("reversal-") !== 0) return;
+    const originalId = entryId.slice("reversal-".length);
+    if (!originalId || acknowledgedSet.has(originalId)) return;
+    if (what.indexOf("undo: ") !== 0 || !Number.isFinite(amount)) return;
+    historicalDeletionSignatures.add([
+      String(-amount),
+      what.slice("undo: ".length).trim(),
+    ].join("\u001f"));
+  });
+  const signatureCounts = new Map();
+  entries.forEach(function (entry) {
+    const key = signature(entry.row || {});
+    signatureCounts.set(key, (signatureCounts.get(key) || 0) + 1);
+  });
+
+  entries.forEach(function (entry) {
+    const entryId = String(entry.entry_id || "").trim();
+    if (!entryId) return;
+    if (acknowledgedSet.has(entryId)) {
+      acknowledged.push(entryId);
+      return;
+    }
+    const wanted = entry.row || {};
+    const wantedDay = day(wanted.When);
+    const wantedAmount = Number(wanted.Amount);
+    const wantedWhat = String(wanted.What || "").trim();
+    const wantedSignature = signature(wanted);
+    if (signatureCounts.get(wantedSignature) !== 1) return;
+    const matches = [];
+    for (var index = 0; index < rows.length; index++) {
+      if (used.has(index) || String(rows[index][idIndex] || "").trim()) continue;
+      const historicalDeletion = [
+        String(Number(rows[index][amountIndex])),
+        String(rows[index][whatIndex] || "").trim(),
+      ].join("\u001f");
+      if (historicalDeletionSignatures.has(historicalDeletion)) continue;
+      if (day(rows[index][whenIndex]) !== wantedDay) continue;
+      if (Number(rows[index][amountIndex]) !== wantedAmount) continue;
+      if (String(rows[index][whatIndex] || "").trim() !== wantedWhat) continue;
+      matches.push(index);
+    }
+    if (matches.length === 1) {
+      const matched = matches[0];
+      rows[matched][idIndex] = entryId;
+      idValues[matched][0] = entryId;
+      idsChanged = true;
+      acknowledgedSet.add(entryId);
+      used.add(matched);
+      acknowledged.push(entryId);
+    }
+  });
+  if (idsChanged) {
+    sheet.getRange(hrow + 1, idIndex + 1, count, 1).setValues(idValues);
+  }
+  return {ok: true, acknowledged_ids: acknowledged};
+}
+
 function appendEntry(ss, sheet, hrow, body) {
   const entryId = String(body.entry_id || "").trim();
   if (!entryId) return {ok: false, error: "entry_id required"};
@@ -369,8 +479,21 @@ function reconcileDelete(ss, sheet, hrow, body) {
     return {ok: false, error: "original_id and reversal.entry_id required"};
   }
 
-  // A true local flag proves an older carrier returned success even if that
-  // pre-idempotency row has no Entry ID. A false flag never proves absence.
+  // A predecessor row can be known mirrored while still lacking an Entry ID.
+  // Tag its one exact match before reversal so deleting the graph entry never
+  // makes that blank-ID row available to another legacy entry with the same
+  // signature. An ambiguous or absent match keeps the graph entry intact.
+  const legacyOriginal = body.legacy_original || null;
+  if (legacyOriginal && !acknowledgedIds(sheet, hrow, [originalId]).length) {
+    const tagged = reconcileLegacy(ss, sheet, hrow, [legacyOriginal]);
+    if (!tagged.ok) return tagged;
+    if ((tagged.acknowledged_ids || []).indexOf(originalId) < 0) {
+      return {ok: false, error: "legacy original could not be uniquely tagged"};
+    }
+  }
+
+  // A true local flag proves an older carrier returned success. A false flag
+  // never proves absence.
   const originalPresent = body.known_mirrored === true ||
     acknowledgedIds(sheet, hrow, [originalId]).length > 0;
   if (originalPresent && !acknowledgedIds(sheet, hrow, [reversalId]).length) {
@@ -408,7 +531,18 @@ function doPost(e) {
     const hrow = headerRowOf(sheet);
 
     if (body.action === "summary") {
-      return jsonOutput(summary(ss, sheet, hrow, body.pending_ids || []));
+      const reconciled = reconcileLegacy(
+        ss, sheet, hrow, body.legacy_entries || []
+      );
+      if (!reconciled.ok) return jsonOutput(reconciled);
+      const result = summary(ss, sheet, hrow, body.pending_ids || []);
+      result.acknowledged_ids = Array.from(new Set(
+        (result.acknowledged_ids || []).concat(reconciled.acknowledged_ids || [])
+      ));
+      return jsonOutput(result);
+    }
+    if (body.action === "reconcile_legacy") {
+      return jsonOutput(reconcileLegacy(ss, sheet, hrow, body.entries || []));
     }
     if (body.action === "append") {
       return jsonOutput(appendEntry(ss, sheet, hrow, body));
@@ -617,10 +751,13 @@ rows are blocked from automatic replay.
 Every new graph write is stamped `sheet_protocol=entry-id-v1`. An older
 unsynced graph row without that marker may have landed through the predecessor
 carrier before Entry IDs existed and then crashed before its local flag was
-saved. Its presence cannot be inferred safely. The balance therefore remains
-unavailable, resync skips it, and deletion preserves it until the matching
-Sheet row is manually identified and given that graph entry's ID (or absence is
-confirmed and the graph row is migrated to `entry-id-v1`).
+saved. Its presence cannot be inferred safely. An ordinary totals read never
+mutates either ledger: the balance remains unavailable until a write-capable
+member explicitly calls resync. That maintenance call offers at most 100
+unique exact date, signed-amount, and description matches to the carrier; it
+persists rotation or acknowledgement state only after a real carrier response.
+Absent, ambiguous, and duplicate matches stay blocked instead of being guessed
+or replayed.
 
 Deleting also waits for this carrier. Under the same script lock used by every
 append, it records the original ID in a hidden `_Hati App State` cancellation
