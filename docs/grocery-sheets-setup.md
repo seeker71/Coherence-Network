@@ -15,8 +15,9 @@ deleting that URL.
 
 ## 1. Make the sheet
 
-Create a spreadsheet, or use one you already have. Name the first tab
-`Belanja` (or anything — the script writes to the active sheet).
+Create a spreadsheet, or use one you already have. Select the ledger tab before
+running `restructure`; the script binds the carrier to that exact tab by its
+immutable Sheet ID, so later renames, reordering, and backup tabs are harmless.
 
 Its id is the long string in the URL:
 
@@ -93,6 +94,7 @@ from the toolbar. It converts the sheet in place and keeps every value:
 const HEADERS = ["When", "Amount", "What", "Entry ID"];
 const FIRST_DATA_ROW = 5;
 const RUPIAH = '"Rp"#,##0';
+const LEDGER_SHEET_ID_PROPERTY = "GROCERY_LEDGER_SHEET_ID";
 
 // One-time: reshape the ledger, keeping every value. Safe to re-run because
 // it holds the same script lock as append and reconcile_delete throughout.
@@ -175,6 +177,13 @@ function restructure() {
   sheet.autoResizeColumns(1, 3);
   sheet.setColumnWidth(3, Math.max(260, sheet.getColumnWidth(3)));
 
+  // Bind the web carrier to this immutable tab identity. A later rename or
+  // reorder cannot silently redirect acknowledged writes to another tab.
+  PropertiesService.getScriptProperties().setProperty(
+    LEDGER_SHEET_ID_PROPERTY,
+    String(sheet.getSheetId())
+  );
+
   Logger.log("kept " + kept.length + " events; backup tab: " + backupName);
   } finally {
     lock.releaseLock();
@@ -235,6 +244,52 @@ function acknowledgedIds(sheet, hrow, requested) {
   return sheet.getRange(hrow + 1, index + 1, count, 1).getDisplayValues()
     .map(function (row) { return String(row[0]); })
     .filter(function (entryId) { return wanted.has(entryId); });
+}
+
+function hasLedgerShape(sheet) {
+  try {
+    const hrow = headerRowOf(sheet);
+    const header = sheet.getRange(hrow, 1, 1, sheet.getLastColumn()).getValues()[0]
+      .map(function (value) { return String(value).trim(); });
+    const labels = sheet.getRange("A1:A3").getDisplayValues()
+      .map(function (row) { return String(row[0]).trim().toLowerCase(); });
+    return labels.indexOf("sisa") >= 0 &&
+      header.indexOf("When") >= 0 &&
+      header.indexOf("Amount") >= 0 &&
+      header.indexOf("What") >= 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+function ledgerSheet(ss) {
+  const props = PropertiesService.getScriptProperties();
+  const storedId = String(props.getProperty(LEDGER_SHEET_ID_PROPERTY) || "");
+  if (storedId) {
+    const matched = ss.getSheets().filter(function (candidate) {
+      return String(candidate.getSheetId()) === storedId;
+    });
+    if (matched.length !== 1) {
+      throw new Error("configured grocery ledger sheet is missing; run restructure");
+    }
+    return matched[0];
+  }
+
+  // One-time migration for an already restructured workbook. Bind only when
+  // its shape identifies exactly one tab; ambiguity fails closed instead of
+  // acknowledging a write against the wrong sheet.
+  const candidates = ss.getSheets().filter(function (candidate) {
+    return candidate.getName() !== STATE_SHEET_NAME && hasLedgerShape(candidate);
+  });
+  if (candidates.length !== 1) {
+    throw new Error(
+      "expected one restructured grocery ledger; found " + candidates.length +
+      "; run restructure on the intended tab"
+    );
+  }
+  const sheet = candidates[0];
+  props.setProperty(LEDGER_SHEET_ID_PROPERTY, String(sheet.getSheetId()));
+  return sheet;
 }
 
 // A private durable cancellation ledger closes the race between an append and
@@ -349,9 +404,7 @@ function doPost(e) {
       return jsonOutput({ok: false, error: "forbidden"});
     }
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheets().filter(function (candidate) {
-      return candidate.getName() !== STATE_SHEET_NAME;
-    })[0];
+    const sheet = ledgerSheet(ss);
     const hrow = headerRowOf(sheet);
 
     if (body.action === "summary") {

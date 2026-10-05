@@ -70,7 +70,7 @@ def test_flow_tests_run_under_10_seconds():
         ],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=120,
         env=child_env,
     )
     wall_elapsed = time.perf_counter() - wall_started

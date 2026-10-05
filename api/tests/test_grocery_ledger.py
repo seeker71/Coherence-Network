@@ -11,12 +11,18 @@ place the household board's tests run).
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import grocery
+
+
+_SHEET_SETUP = (
+    Path(__file__).resolve().parents[2] / "docs" / "grocery-sheets-setup.md"
+)
 
 
 @pytest.fixture
@@ -1205,3 +1211,13 @@ def test_a_top_up_of_zero_is_refused(client):
         pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
     token = resident.json()["token"]
     assert client.post("/api/grocery/topup", json={"actor_token": token, "amount": "0"}).status_code == 422
+
+
+def test_sheet_carrier_binds_to_the_restructured_tab_identity():
+    carrier = _SHEET_SETUP.read_text(encoding="utf-8")
+
+    assert 'const LEDGER_SHEET_ID_PROPERTY = "GROCERY_LEDGER_SHEET_ID";' in carrier
+    assert "String(sheet.getSheetId())" in carrier
+    assert "const sheet = ledgerSheet(ss);" in carrier
+    assert "if (candidates.length !== 1)" in carrier
+    assert "getName() !== STATE_SHEET_NAME;\n    })[0]" not in carrier

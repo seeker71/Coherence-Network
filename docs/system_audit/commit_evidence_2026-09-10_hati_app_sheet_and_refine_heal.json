@@ -118,7 +118,8 @@
     "Meeting resonance recall now drops any item whose participant, concept, or concept-part node resolves to a dedicated-private type, so forged public capture metadata cannot serialize a grocery row.",
     "The meeting-recall private-stub decision lives in a focused helper, restoring the maintainability audit to its 112-long-function baseline after exact-head CI detected a one-function regression.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
-    "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin, disables unrelated host plugin autoload and assertion rewriting, and gates on child user-CPU time while retaining system and wall time in failures; the ten-second work budget is therefore independent of shared-runner scheduling and filesystem stalls.",
+    "Restructure persists the exact ledger tab's immutable Sheet ID; the carrier resolves only that ID thereafter, while a legacy unbound workbook may self-bind only when exactly one tab has the restructured ledger shape. Missing or ambiguous identity fails closed before any write is acknowledged.",
+    "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin, disables unrelated host plugin autoload and assertion rewriting, and gates on child user-CPU time while retaining system and wall time in failures; its 120-second safety ceiling permits heavily stalled hosts to reach that measurement without weakening the ten-second work budget.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
     "The restructure now holds the same Apps Script lock for its full snapshot-and-rewrite interval, excluding concurrent append and delete operations.",
     "Grocery reconciliation reads every row with one immutable-ID-ordered database statement before declaring the legacy-unknown set empty; a 2,001-row focused witness proves there is no page ceiling or mutable OFFSET seam.",
@@ -156,16 +157,18 @@
       "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 api/.venv/bin/python -m pytest -p pytest_asyncio.plugin api/tests/test_flow_core_api.py -x -q --tb=no",
       "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.hati.json --fail-on-regression",
       "api/.venv/bin/pytest -q api/tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
+      "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py::test_sheet_carrier_binds_to_the_restructured_tab_identity",
+      "sed -n '79,205p;213,423p' docs/grocery-sheets-setup.md | node --check -",
       "cd api && pytest -q tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The flow child passes all 13 tests; its performance witness now enforces the ten-second user-CPU budget instead of variable host wall time, and the focused meta-test passes under the same saturated local Form body that previously produced wall times from 5.09 to 19.2 seconds. All 73 focused graph-port, grocery reconciliation, privacy, graph-layer, meeting-capture, and contribution tests pass, including the exact-head review cases for single-node, zoom, conflict, raw-upsert, raw-edge, and unbounded filtered detail reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
+    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The flow child passes all 13 tests; its performance witness enforces the ten-second user-CPU budget instead of variable host wall time, including a focused pass that took 48.41 seconds wall on the saturated host. The documented carrier compiles as JavaScript and a focused contract proves it persists and resolves the immutable restructured-tab identity rather than tab order. All 73 focused graph-port, grocery reconciliation, privacy, graph-layer, meeting-capture, and contribution tests pass, including the exact-head review cases for single-node, zoom, conflict, raw-upsert, raw-edge, and unbounded filtered detail reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
   },
   "ci_validation": {
     "status": "pending",
     "commands": ["gh run view 37264719839 --log-failed"],
-    "summary": "The exact-head Linux run passed evidence, drift, maintainability, native Form proof, and 2,193 functional API tests, then failed only because the developer-speed meta-test measured 10.8 seconds of shared-runner wall time. The repaired witness preserves the ten-second work budget as child user-CPU time and reports system/wall time diagnostically; its focused local proof passes under heavier wall-time contention. Fresh exact-head CI will run after this repair is pushed."
+    "summary": "The exact-head Linux run passed evidence, drift, maintainability, native Form proof, and 2,193 functional API tests, then failed only because the developer-speed meta-test measured 10.8 seconds of shared-runner wall time. That witness now preserves the ten-second work budget as child user-CPU time and reports system/wall time diagnostically. Exact-head review then found that tab-order selection could redirect the carrier; immutable tab binding with fail-closed legacy discovery and focused proof repairs that stability gap. Fresh exact-head CI will run after this repair is pushed."
   },
   "deploy_validation": {
     "status": "pending",
