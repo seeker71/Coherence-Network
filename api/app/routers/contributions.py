@@ -18,6 +18,7 @@ from app.services.contribution_cost_service import (
     ESTIMATOR_VERSION,
     estimate_commit_cost_with_provenance,
 )
+from app.services import contribution_ledger_service
 
 router = APIRouter()
 
@@ -242,16 +243,13 @@ async def get_contribution_flow(
 )
 async def get_contribution(contribution_id: UUID) -> Contribution:
     """Retrieve a single contribution record by its unique identifier."""
-    from sqlalchemy import or_
-    from app.models.graph import Edge
-    from app.services.unified_db import session
-
-    with session() as s:
-        edges = s.query(Edge).filter(Edge.type == "contribution").all()
-        for e in edges:
-            props = e.properties or {}
-            if props.get("contribution_id") == str(contribution_id):
-                return _edge_to_contribution(e.to_dict())
+    edges = graph_service.list_edges(
+        edge_type="contribution", limit=10000
+    ).get("items", [])
+    for edge in edges:
+        props = edge.get("properties") or {}
+        if props.get("contribution_id") == str(contribution_id):
+            return _edge_to_contribution(edge)
     raise HTTPException(status_code=404, detail="Contribution not found")
 
 
@@ -261,14 +259,11 @@ def list_contributions(
     offset: int = Query(0, ge=0, description="Number of items to skip"),
 ) -> PaginatedResponse[Contribution]:
     """List all contributions with pagination metadata."""
-    from app.models.graph import Edge
-    from app.services.unified_db import session
-
-    with session() as s:
-        q = s.query(Edge).filter(Edge.type == "contribution").order_by(Edge.created_at.desc())
-        total = q.count()
-        edges = q.offset(offset).limit(limit).all()
-        items = [_edge_to_contribution(e.to_dict()) for e in edges]
+    result = graph_service.list_edges(
+        edge_type="contribution", limit=limit, offset=offset
+    )
+    total = result.get("total", 0)
+    items = [_edge_to_contribution(edge) for edge in result.get("items", [])]
     return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
 
 
@@ -337,7 +332,7 @@ async def track_github_contribution(payload: GitHubContribution) -> Contribution
         node_id = f"contributor:{contrib.name}"
         contributor_node = graph_service.create_node(
             id=node_id, type="contributor", name=contrib.name,
-            description=f"HUMAN contributor",
+            description="HUMAN contributor",
             phase="water",
             properties={
                 "contributor_type": "HUMAN",
@@ -403,8 +398,6 @@ async def track_github_contribution(payload: GitHubContribution) -> Contribution
 # ---------------------------------------------------------------------------
 # Contribution Ledger endpoints (CC staking / resource tracking)
 # ---------------------------------------------------------------------------
-
-from app.services import contribution_ledger_service
 
 
 class OpenContributionRequest(BaseModel):

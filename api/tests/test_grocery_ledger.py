@@ -953,6 +953,12 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
         to_id=spend_id,
         type="depends-on",
     )
+    grocery.graph_service.create_edge(
+        from_id=public_id,
+        to_id=spend_id,
+        type="contribution",
+        properties={"contribution_id": "00000000-0000-0000-0000-000000000042"},
+    )
 
     public_edges = client.get(f"/api/graph/nodes/{public_id}/edges")
     public_neighbors = client.get(f"/api/graph/nodes/{public_id}/neighbors")
@@ -968,6 +974,8 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     public_profile = client.get(f"/api/profile/{public_id}")
     public_zoom = client.get(f"/api/graph/zoom/{public_id}?depth=2")
     concept_edges = client.get(f"/api/concepts/{concept_id}/edges")
+    contributions = client.get("/api/contributions")
+    inventory_flow = client.get("/api/inventory/flow?contribution_limit=100")
 
     assert public_edges.json() == []
     assert public_neighbors.json() == []
@@ -990,6 +998,10 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     assert spend_id not in public_zoom.text
     assert concept_edges.status_code == 200
     assert concept_edges.json() == []
+    assert contributions.status_code == 200
+    assert spend_id not in contributions.text
+    assert inventory_flow.status_code == 200
+    assert spend_id not in inventory_flow.text
     assert spend_id not in {
         item["dimension"] for item in public_profile.json()["top"]
     }
