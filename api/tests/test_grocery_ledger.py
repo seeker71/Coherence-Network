@@ -793,7 +793,7 @@ def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str, str]:
 def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     client, monkeypatch
 ):
-    spend_id, _public_id, other_id, _edge_id = _grocery_privacy_graph(
+    spend_id, _public_id, other_id, edge_id = _grocery_privacy_graph(
         client, monkeypatch
     )
 
@@ -825,6 +825,9 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
         "/api/edges",
         json={"from_id": spend_id, "to_id": other_id, "type": "depends-on"},
     )
+    edge_patch = client.patch(f"/api/edges/{edge_id}", json={"strength": 0.4})
+    edge_delete = client.delete(f"/api/edges/{edge_id}")
+    graph_edge_delete = client.delete(f"/api/graph/edges/{edge_id}")
     assert patched.status_code == 403
     assert deleted.status_code == 403
     assert listed.status_code == 403
@@ -842,6 +845,13 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert resonance.status_code == 403
     assert zoom.status_code == 404
     assert edge_create.status_code == 404
+    assert edge_patch.status_code == 404
+    assert edge_delete.status_code == 404
+    assert graph_edge_delete.status_code == 404
+    assert grocery.graph_service.get_edge_by_id(edge_id) is None
+    assert grocery.graph_service.get_edge_by_id(
+        edge_id, exclude_node_types=None
+    ) is not None
     assert spend_id not in {node["id"] for node in generic.json()["items"]}
     assert "grocery_spend" not in stats.json()["nodes_by_type"]
     assert "grocery_spend" not in proof.json()["nodes_by_type"]

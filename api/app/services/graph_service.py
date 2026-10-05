@@ -671,9 +671,12 @@ def get_edges(
 
 
 def delete_edge(edge_id: str) -> bool:
-    """Delete an edge."""
+    """Delete a public edge, preserving dedicated-service relationships."""
     with session() as s:
-        edge = s.get(Edge, edge_id)
+        edge = _exclude_private_edges(
+            s.query(Edge).filter(Edge.id == edge_id),
+            DEDICATED_PRIVATE_NODE_TYPES,
+        ).first()
         if not edge:
             return False
         s.delete(edge)
@@ -682,9 +685,12 @@ def delete_edge(edge_id: str) -> bool:
 
 
 def update_edge(edge_id: str, **updates) -> dict[str, Any] | None:
-    """Update an edge's properties and/or strength."""
+    """Update a public edge's properties and/or strength."""
     with session() as s:
-        edge = s.get(Edge, edge_id)
+        edge = _exclude_private_edges(
+            s.query(Edge).filter(Edge.id == edge_id),
+            DEDICATED_PRIVATE_NODE_TYPES,
+        ).first()
         if not edge:
             return None
         if "properties" in updates:
