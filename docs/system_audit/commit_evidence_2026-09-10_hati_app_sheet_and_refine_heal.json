@@ -47,6 +47,7 @@
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
     "api/tests/test_developer_quick_start.py",
+    "api/tests/test_contributions.py",
     "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
@@ -78,6 +79,7 @@
     "api/tests/INDEX.md",
     "api/tests/test_flow_presence.py",
     "api/tests/test_developer_quick_start.py",
+    "api/tests/test_contributions.py",
     "api/tests/test_graph_layer.py",
     "api/tests/test_grocery_ledger.py",
     "api/tests/test_intern_count_stone.py",
@@ -111,6 +113,7 @@
     "Meeting capture now rejects dedicated-private IDs before updating an existing meeting or participant and before creating a concept relation, preventing unauthenticated upsert conflicts from reading or changing grocery cells.",
     "Contribution listing, contribution lookup, and inventory-flow aggregation now read edges through graph_service.list_edges, preventing raw contribution queries from exposing relations connected to grocery cells.",
     "Graph-service node updates, node deletion, ordinary edge creation, strict edge creation, and provenance-edge creation now reject dedicated-private endpoints by default; the authenticated grocery carrier opts in explicitly only for its own reconciliation writes.",
+    "Contribution detail lookup now walks every filtered graph-service page until it finds the requested public contribution or exhausts the set, preserving both privacy and the pre-existing no-row-ceiling behavior.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
     "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
@@ -152,7 +155,7 @@
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The wrapper timing witness exceeded ten seconds while the shared host was saturated by several long-running native observers; the exact child command then passed all 13 flow tests in 5.09 seconds. All 72 focused graph-port, grocery reconciliation, privacy, graph-layer, meeting-capture, and contribution tests pass, including the exact-head review cases for single-node, zoom, conflict, raw-upsert, and raw-edge reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
+    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The wrapper timing witness exceeded ten seconds while the shared host was saturated by several long-running native observers; the exact child command then passed all 13 flow tests in 5.09 seconds. All 73 focused graph-port, grocery reconciliation, privacy, graph-layer, meeting-capture, and contribution tests pass, including the exact-head review cases for single-node, zoom, conflict, raw-upsert, raw-edge, and unbounded filtered detail reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
   },
   "ci_validation": {
     "status": "pending",

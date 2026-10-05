@@ -8,7 +8,7 @@ complexity).
 """
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -97,3 +97,39 @@ def test_calculate_coherence_increases_with_quality_signals():
     assert 0.0 <= bare_score <= 1.0
     assert 0.0 <= rich_score <= 1.0
     assert rich_score >= bare_score
+
+
+@pytest.mark.asyncio
+async def test_get_contribution_walks_filtered_pages_until_match(monkeypatch):
+    from app.routers import contributions
+
+    target = uuid4()
+    other = uuid4()
+    first_page = [
+        {"id": f"edge-{index}", "properties": {"contribution_id": str(other)}}
+        for index in range(500)
+    ]
+    requested_offsets: list[int] = []
+
+    def fake_list_edges(*, edge_type, limit, offset):
+        assert edge_type == "contribution"
+        assert limit == 500
+        requested_offsets.append(offset)
+        if offset == 0:
+            return {"items": first_page, "total": 501}
+        return {
+            "items": [
+                {
+                    "id": "edge-target",
+                    "properties": {"contribution_id": str(target)},
+                }
+            ],
+            "total": 501,
+        }
+
+    monkeypatch.setattr(contributions.graph_service, "list_edges", fake_list_edges)
+
+    found = await contributions.get_contribution(target)
+
+    assert found.id == target
+    assert requested_offsets == [0, 500]

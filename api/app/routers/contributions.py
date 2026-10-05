@@ -243,13 +243,22 @@ async def get_contribution_flow(
 )
 async def get_contribution(contribution_id: UUID) -> Contribution:
     """Retrieve a single contribution record by its unique identifier."""
-    edges = graph_service.list_edges(
-        edge_type="contribution", limit=10000
-    ).get("items", [])
-    for edge in edges:
-        props = edge.get("properties") or {}
-        if props.get("contribution_id") == str(contribution_id):
-            return _edge_to_contribution(edge)
+    offset = 0
+    page_size = 500
+    while True:
+        page = graph_service.list_edges(
+            edge_type="contribution",
+            limit=page_size,
+            offset=offset,
+        )
+        edges = page.get("items", [])
+        for edge in edges:
+            props = edge.get("properties") or {}
+            if props.get("contribution_id") == str(contribution_id):
+                return _edge_to_contribution(edge)
+        offset += len(edges)
+        if not edges or offset >= page.get("total", 0):
+            break
     raise HTTPException(status_code=404, detail="Contribution not found")
 
 
