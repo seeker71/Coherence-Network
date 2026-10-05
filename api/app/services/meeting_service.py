@@ -475,6 +475,37 @@ def _node_stub(s, node_id: str, fallback_kind: str | None = None) -> dict | None
     return stub
 
 
+def _public_resonance_stubs(
+    s,
+    resonance: dict,
+    participant_kind: str | None,
+) -> tuple[dict, dict, dict] | None:
+    concept = _node_stub(s, resonance.get("concept_id", ""))
+    participant = _node_stub(
+        s,
+        resonance.get("participant_id", ""),
+        fallback_kind=participant_kind,
+    )
+    part_node_id = resonance.get("concept_part_node_id", "")
+    part_node = s.get(Node, part_node_id) if part_node_id else None
+    if (
+        concept is None
+        or participant is None
+        or (
+            part_node is not None
+            and part_node.type in DEDICATED_PRIVATE_NODE_TYPES
+        )
+    ):
+        return None
+    part = {
+        "id": resonance.get("concept_part_id"),
+        "node_id": part_node_id,
+        "label": resonance.get("concept_part_label"),
+        "excerpt": resonance.get("concept_excerpt"),
+    }
+    return participant, concept, part
+
+
 def _summary_for(items: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str], dict] = {}
     for item in items:
@@ -538,29 +569,10 @@ def list_meeting_resonance(
                 kind = participant.get("kind")
                 if participant_kind and kind != participant_kind:
                     continue
-                concept = _node_stub(s, resonance.get("concept_id", ""))
-                participant_stub = _node_stub(
-                    s,
-                    resonance.get("participant_id", ""),
-                    fallback_kind=kind,
-                )
-                part_node_id = resonance.get("concept_part_node_id", "")
-                part_node = s.get(Node, part_node_id) if part_node_id else None
-                if (
-                    concept is None
-                    or participant_stub is None
-                    or (
-                        part_node is not None
-                        and part_node.type in DEDICATED_PRIVATE_NODE_TYPES
-                    )
-                ):
+                stubs = _public_resonance_stubs(s, resonance, kind)
+                if stubs is None:
                     continue
-                part = {
-                    "id": resonance.get("concept_part_id"),
-                    "node_id": resonance.get("concept_part_node_id"),
-                    "label": resonance.get("concept_part_label"),
-                    "excerpt": resonance.get("concept_excerpt"),
-                }
+                participant_stub, concept, part = stubs
                 items.append({
                     "participant": participant_stub,
                     "concept": concept,
