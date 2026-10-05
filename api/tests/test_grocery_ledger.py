@@ -171,7 +171,7 @@ def test_a_spend_records_with_the_shop_filling_in_the_description(client):
     assert body["description"] == "pasar pagi — sayur & ikan"
     assert body["spent_on"] == grocery._today_local()
     assert body["by_name"] == "Komang"
-    assert grocery.graph_service.get_node(body["id"])["sheet_protocol"] == "entry-id-v1"
+    assert grocery.graph_service.get_node_unfiltered(body["id"])["sheet_protocol"] == "entry-id-v1"
 
     # Away from any shop, an icon plus a custom note still says what it was.
     other = client.post("/api/grocery/spend", json={
@@ -753,7 +753,7 @@ def test_delete_preserves_the_entry_while_sheet_state_is_unavailable(
 
     deleted = client.delete(f"/api/grocery/spend/{spend_id}?actor_token={token}")
     assert deleted.status_code == 503
-    assert grocery.graph_service.get_node(spend_id) is not None
+    assert grocery.graph_service.get_node_unfiltered(spend_id) is not None
 
 
 def _grocery_privacy_graph(client, monkeypatch) -> tuple[str, str, str, str]:
@@ -820,6 +820,11 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     sign = client.post(f"/api/profile/{spend_id}/sign")
     resonant = client.get(f"/api/profile/{spend_id}/resonant")
     resonance = client.post("/api/resonance", json={"a": spend_id, "b": other_id})
+    zoom = client.get(f"/api/graph/zoom/{spend_id}")
+    edge_create = client.post(
+        "/api/edges",
+        json={"from_id": spend_id, "to_id": other_id, "type": "depends-on"},
+    )
     assert patched.status_code == 403
     assert deleted.status_code == 403
     assert listed.status_code == 403
@@ -835,10 +840,13 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert sign.status_code == 403
     assert resonant.status_code == 403
     assert resonance.status_code == 403
+    assert zoom.status_code == 404
+    assert edge_create.status_code == 404
     assert spend_id not in {node["id"] for node in generic.json()["items"]}
     assert "grocery_spend" not in stats.json()["nodes_by_type"]
     assert "grocery_spend" not in proof.json()["nodes_by_type"]
-    assert grocery.graph_service.get_node(spend_id) is not None
+    assert grocery.graph_service.get_node(spend_id) is None
+    assert grocery.graph_service.get_node_unfiltered(spend_id) is not None
 
 
 def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatch):
@@ -858,6 +866,7 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     public_entity_edges = client.get(f"/api/entities/{public_id}/edges")
     public_entity_neighbors = client.get(f"/api/entities/{public_id}/neighbors")
     public_profile = client.get(f"/api/profile/{public_id}")
+    public_zoom = client.get(f"/api/graph/zoom/{public_id}?depth=2")
 
     assert public_edges.json() == []
     assert public_neighbors.json() == []
@@ -876,6 +885,8 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     assert public_entity_edges.json()["items"] == []
     assert public_entity_neighbors.json()["neighbors"] == []
     assert public_profile.status_code == 200
+    assert public_zoom.status_code == 200
+    assert spend_id not in public_zoom.text
     assert spend_id not in {
         item["dimension"] for item in public_profile.json()["top"]
     }
@@ -918,7 +929,7 @@ def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
         f"/api/grocery/spend/{spend_id}?actor_token={token}"
     )
     assert deleted.status_code == 503, deleted.text
-    assert grocery.graph_service.get_node(spend_id) is not None
+    assert grocery.graph_service.get_node_unfiltered(spend_id) is not None
 
     # Retrying carries exactly the same deterministic IDs through one atomic
     # carrier operation and only then physically removes the graph row.
@@ -936,7 +947,7 @@ def test_a_mirrored_deletion_is_reconciled_by_one_idempotent_reversal(
     # expose a supposedly private tombstone.
     visible = client.get(f"/api/grocery/spend?token={token}").json()
     assert all(row["id"] != spend_id for row in visible)
-    assert grocery.graph_service.get_node(spend_id) is None
+    assert grocery.graph_service.get_node_unfiltered(spend_id) is None
 
 
 def test_someone_else_s_entry_is_not_yours_to_delete(client, monkeypatch):

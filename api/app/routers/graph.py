@@ -70,6 +70,10 @@ def _reject_dedicated_type(node_type: str | None) -> None:
 
 
 def _reject_dedicated_identity(node_id: str) -> None:
+    node = graph_service.get_node_unfiltered(node_id)
+    if node:
+        _reject_dedicated_read(node)
+        return
     node = graph_service.resolve_node_identity(node_id)
     if node:
         _reject_dedicated_read(node)
@@ -259,6 +263,7 @@ async def get_node(node_id: str, request: Request, lang: str | None = Query(None
     path; the current read keeps source-language text rather than
     blocking on translation latency.
     """
+    _reject_dedicated_identity(node_id)
     node = graph_service.resolve_node_identity(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
@@ -282,7 +287,7 @@ async def update_node(node_id: str, body: NodeUpdate, request: Request):
     `seed`) and `X-Edit-Author` (an opaque identifier) headers to
     attribute the revision; both default to `api` / empty when absent.
     """
-    _reject_dedicated_mutation(graph_service.get_node(node_id))
+    _reject_dedicated_mutation(graph_service.get_node_unfiltered(node_id))
     updates = body.model_dump(exclude_none=True)
     source = request.headers.get("x-edit-source") or "api"
     author = request.headers.get("x-edit-author") or ""
@@ -335,7 +340,7 @@ async def get_node_revisions(
     # Existence check so 404 is honest for a node that was never created
     # (vs 200 with an empty list, which conflates "no edits yet" with
     # "no such node"). Cheap — single primary-key lookup.
-    node = graph_service.get_node(node_id)
+    node = graph_service.get_node_unfiltered(node_id)
     if not node:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     _reject_dedicated_read(node)
@@ -345,7 +350,7 @@ async def get_node_revisions(
 @router.delete("/graph/nodes/{node_id}", summary="Delete a node and all its edges")
 async def delete_node(node_id: str):
     """Delete a node and all its edges."""
-    _reject_dedicated_mutation(graph_service.get_node(node_id))
+    _reject_dedicated_mutation(graph_service.get_node_unfiltered(node_id))
     if not graph_service.delete_node(node_id):
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return {"deleted": node_id}
@@ -366,6 +371,7 @@ async def get_edges(
     `GET /graph/nodes/{node_id}` so callers using the human-readable
     URL get the right edges without a second round-trip.
     """
+    _reject_dedicated_identity(node_id)
     resolved = graph_service.resolve_node_identity(node_id)
     if not resolved:
         return []
@@ -384,6 +390,8 @@ async def get_edges(
 @router.post("/graph/edges", summary="Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)")
 async def create_edge(body: EdgeCreate):
     """Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)."""
+    _reject_dedicated_identity(body.from_id)
+    _reject_dedicated_identity(body.to_id)
     # Canonical edge type validation
     if body.type not in CANONICAL_EDGE_TYPE_SET:
         raise HTTPException(
@@ -440,6 +448,7 @@ async def get_neighbors(
     - depth: 1 or 2
     """
     _reject_dedicated_type(node_type)
+    _reject_dedicated_identity(node_id)
     resolved = graph_service.resolve_node_identity(node_id)
     if resolved:
         _reject_dedicated_read(resolved)
@@ -466,6 +475,7 @@ async def get_subgraph(
     edge_types: str | None = None,
 ):
     """Get a subgraph centered on a node."""
+    _reject_dedicated_identity(node_id)
     resolved = graph_service.resolve_node_identity(node_id)
     if resolved:
         _reject_dedicated_read(resolved)
@@ -485,6 +495,8 @@ async def find_path(
     max_depth: int = Query(default=5, ge=1, le=10),
 ):
     """Find shortest path between two nodes."""
+    _reject_dedicated_identity(from_id)
+    _reject_dedicated_identity(to_id)
     resolved_from = graph_service.resolve_node_identity(from_id)
     resolved_to = graph_service.resolve_node_identity(to_id)
     if resolved_from:

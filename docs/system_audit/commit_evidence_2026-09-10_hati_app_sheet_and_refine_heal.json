@@ -32,6 +32,7 @@
   ],
   "change_files": [
     "api/app/services/graph_service.py",
+    "api/app/services/zoom_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/main.py",
     "api/app/routers/graph.py",
@@ -58,6 +59,7 @@
   ],
   "files_owned": [
     "api/app/services/graph_service.py",
+    "api/app/services/zoom_service.py",
     "api/app/form_recipes/endpoint_grocery_remaining.fk",
     "api/app/main.py",
     "api/app/routers/graph.py",
@@ -94,6 +96,7 @@
     "Historical-baseline availability and the signed pending fold now execute in endpoint_grocery_remaining.fk; an unavailable Sheet produces an explicit unavailable balance rather than an incomplete graph-only number.",
     "Deletion uses one Apps Script lock to serialize original appends, a private durable cancellation marker, and the stable reversal; it preserves the graph row on uncertainty and physically removes it only after the atomic carrier receipt.",
     "The graph service excludes grocery_spend by default from node, edge, traversal, stats, and proof reads, so generic graph routes, flow rendering, edge/entity APIs, public profiles, and future generic consumers cannot expose the private cells or their connected edges; dedicated grocery reconciliation alone uses its purpose-built raw snapshot.",
+    "Single-node reads now inherit the same private default, the authenticated grocery carrier names its unfiltered lookup explicitly, and zoom roots, descendants, edges, and question mutations prune grocery cells before rendering or mutation.",
     "The Apps Script summary returns both acknowledged and cancelled subsets under the same lock; a deletion completed after the database snapshot therefore cannot leave a stale pending amount in the returned balance.",
     "The developer quick-start timing witness explicitly loads the required pytest-asyncio plugin while disabling unrelated host plugin autoload, keeping the ten-second gate deterministic under a busy local Form body.",
     "The documented Sheet restructure preserves existing Entry IDs across re-runs instead of erasing the idempotency ledger.",
@@ -129,16 +132,18 @@
       "cd api && pytest -q tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "cd api && pytest -q tests/test_graph_node_form_port.py tests/test_grocery_ledger.py",
       "cd api && pytest -q tests/test_graph_node_form_port.py tests/test_grocery_ledger.py tests/test_read_tracking.py::test_record_read_is_non_blocking",
+      "api/.venv/bin/pytest -q api/tests/test_grocery_ledger.py api/tests/test_graph_node_form_port.py api/tests/test_graph_layer.py",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 api/.venv/bin/python -m pytest -p pytest_asyncio.plugin api/tests/test_flow_core_api.py -x -q --tb=no",
       "cd api && pytest -q tests/test_developer_quick_start.py::test_flow_tests_run_under_10_seconds",
       "SQLAlchemy PostgreSQL mock DDL compilation for substrate_nodes",
       "git diff --check"
     ],
-    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The full-suite timing witness was transiently delayed to 12.2 seconds under shared host contention, then the required targeted rerun passed its child under the ten-second contract (outer meta-test 11.05 seconds). All 49 focused graph-port, grocery reconciliation, privacy, and read-tracking tests pass. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
+    "summary": "After rebasing all eleven repair commits onto origin/main at 8aed234c2, every structural guard and 406 functional API tests passed. The wrapper timing witness exceeded ten seconds while the shared host was saturated by several long-running native observers; the exact child command then passed all 13 flow tests in 5.09 seconds. All 63 focused graph-port, grocery reconciliation, privacy, and graph-layer tests pass, including the exact-head review cases for single-node and zoom reads. The authenticated Apps Script carrier is saved in the live project without its persistent secret or deployment yet; no household transaction rows or exact balance were read."
   },
   "ci_validation": {
     "status": "pending",
     "commands": ["gh run view 34452191044 --log-failed"],
-    "summary": "The first exact-head Linux run reached 2,176 passing tests and found one source-contract mismatch in count_nodes; the implementation now preserves that signature and the failed contract passes locally. Fresh exact-head CI will run after this repair is pushed."
+    "summary": "Linux Thread Gates, Windows Host Floor, and GitGuardian passed for 6ddf5e0de7928a871ef4a9831d81d59f1b31f28d. Its exact-head review found remaining single-node and graph-zoom privacy bypasses; both are repaired locally with focused regression proof. Fresh exact-head CI will run after this repair is pushed."
   },
   "deploy_validation": {
     "status": "pending",

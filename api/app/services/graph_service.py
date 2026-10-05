@@ -228,7 +228,21 @@ def create_node(
 
 
 def get_node(node_id: str) -> dict[str, Any] | None:
-    """Get a node by ID."""
+    """Get a publicly addressable node by ID.
+
+    Cells owned by a dedicated authenticated service stay invisible here so
+    every generic caller inherits the privacy boundary, including callers
+    added after the dedicated service shipped.
+    """
+    with session() as s:
+        node = s.get(Node, node_id)
+        if node is None or node.type in DEDICATED_PRIVATE_NODE_TYPES:
+            return None
+        return node.to_dict()
+
+
+def get_node_unfiltered(node_id: str) -> dict[str, Any] | None:
+    """Get any node for a dedicated service that enforces its own access."""
     with session() as s:
         node = s.get(Node, node_id)
         return node.to_dict() if node else None
@@ -252,7 +266,10 @@ def get_node_by_slug(
         # Postgres + SQLite both store properties as JSON; the SQLAlchemy
         # JSON column adapter exposes ``Node.properties["slug"]`` as a
         # comparable expression on either backend.
-        q = s.query(Node).filter(Node.properties["slug"].as_string() == slug)
+        q = s.query(Node).filter(
+            Node.properties["slug"].as_string() == slug,
+            ~Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES),
+        )
         if node_type:
             q = q.filter(Node.type == node_type)
         node = q.first()
@@ -274,7 +291,7 @@ def get_node_by_alias(
     if not alias:
         return None
     with session() as s:
-        q = s.query(Node)
+        q = s.query(Node).filter(~Node.type.in_(DEDICATED_PRIVATE_NODE_TYPES))
         if node_type:
             q = q.filter(Node.type == node_type)
         if s.get_bind().dialect.name == "postgresql":

@@ -504,7 +504,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         description=description,
         properties=props,
     )
-    node = graph_service.get_node(spend_id) or {"id": spend_id, **props}
+    node = graph_service.get_node_unfiltered(spend_id) or {"id": spend_id, **props}
     spend = _node_to_spend(node)
 
     # The mirror. A dark sheet never costs the manager their entry.
@@ -587,7 +587,7 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         name=f"top up {_CURRENCY} {amount_idr:,}",
         description=props["spend_description"], properties=props,
     )
-    node = graph_service.get_node(topup_id) or {"id": topup_id, **props}
+    node = graph_service.get_node_unfiltered(topup_id) or {"id": topup_id, **props}
     topup = _node_to_spend(node)
     if await _push_to_sheet(topup):
         graph_service.update_node(topup_id, properties={"sheet_synced": True})
@@ -610,7 +610,7 @@ async def delete_spend(
     actor_token: str = Query(..., description="the device token of the recorder or a resident"),
 ) -> DeleteResponse:
     actor = _require_writer(actor_token)
-    node = graph_service.get_node(spend_id)
+    node = graph_service.get_node_unfiltered(spend_id)
     if not node or node.get("type") != _SPEND_TYPE:
         raise HTTPException(status_code=404, detail=f"entry {spend_id!r} not found")
     # Your own mistake is yours to undo; a resident can fix anyone's.
