@@ -1,0 +1,253 @@
+// endpoint_grocery_reconcile_selection.bml
+//
+// Source authority for the grocery Sheet reconciliation policy.  The policy
+// is authored in BML's domain grammar and lowered by the Form source compiler
+// into endpoint_grocery_reconcile_selection.fk for the deployed fkwu runtime.
+// The checked-in recipe is a deploy artifact; edit this source, then regenerate
+// and prove it with api/tests/test_grocery_ledger.py.
+
+section [form.bml] {
+    class GroceryReconciliationPolicy {
+        def grs-reverse-onto(remaining, reversed) {
+            if eq(len(remaining), 0) then reversed
+            else grs-reverse-onto(tail(remaining), cons(head(remaining), reversed));
+        }
+        def grs-reverse(values) = grs-reverse-onto(values, empty());
+
+        def grs-split-loop(value, separator, start, reversed) {
+            let next = str_find(value, separator, start);
+            if lt(next, 0) then
+                grs-reverse(cons(substring(value, start, str_len(value)), reversed))
+            else
+                grs-split-loop(
+                    value,
+                    separator,
+                    add(next, str_len(separator)),
+                    cons(substring(value, start, next), reversed)
+                );
+        }
+        def grs-split(value, separator) = grs-split-loop(value, separator, 0, empty());
+
+        def grs-decode-entry(wire) {
+            let fields = grs-split(wire, "|");
+            list(
+                str_to_int(nth(fields, 0)),
+                nth(fields, 1),
+                str_eq(nth(fields, 2), "1"),
+                nth(fields, 3),
+                str_to_int(nth(fields, 4)),
+                nth(fields, 5),
+                nth(fields, 6),
+                str_eq(nth(fields, 7), "1"),
+                str_eq(nth(fields, 8), "1")
+            );
+        }
+
+        def grs-position(entry) = nth(entry, 0);
+        def grs-id(entry) = nth(entry, 1);
+        def grs-pending?(entry) = nth(entry, 2);
+        def grs-protocol(entry) = nth(entry, 3);
+        def grs-signature-count(entry) = nth(entry, 4);
+        def grs-attempted-at(entry) = nth(entry, 5);
+        def grs-retry-after(entry) = nth(entry, 6);
+        def grs-cancelled?(entry) = nth(entry, 7);
+        def grs-yield-legacy?(entry) = nth(entry, 8);
+        def grs-legacy?(entry) = eq(str_eq(grs-protocol(entry), "entry-id-v1"), false);
+        def grs-eligible?(entry) {
+            and(
+                grs-pending?(entry),
+                and(grs-legacy?(entry), eq(grs-signature-count(entry), 1))
+            );
+        }
+
+        def grs-str-lt(a, b) {
+            if eq(str_len(a), 0) then gt(str_len(b), 0)
+            else if eq(str_len(b), 0) then false
+            else grs-str-lt-nonempty(a, b, ord(char_at(a, 0)), ord(char_at(b, 0)));
+        }
+        def grs-str-lt-nonempty(a, b, ca, cb) {
+            if lt(ca, cb) then true
+            else if gt(ca, cb) then false
+            else grs-str-lt(substring(a, 1, str_len(a)), substring(b, 1, str_len(b)));
+        }
+        def grs-before?(a, b) {
+            if str_eq(grs-attempted-at(a), grs-attempted-at(b)) then grs-str-lt(grs-id(a), grs-id(b))
+            else grs-str-lt(grs-attempted-at(a), grs-attempted-at(b));
+        }
+        def grs-str-le(a, b) = or(str_eq(a, b), grs-str-lt(a, b));
+        def grs-pending-legacy?(entry) {
+            and(grs-pending?(entry), and(grs-legacy?(entry), eq(grs-cancelled?(entry), false)));
+        }
+        def grs-any-pending-legacy?(remaining) {
+            if eq(len(remaining), 0) then false
+            else if grs-pending-legacy?(head(remaining)) then true
+            else grs-any-pending-legacy?(tail(remaining));
+        }
+        def grs-current-ready?(entry, now, has-pending-legacy) {
+            and(
+                grs-pending?(entry),
+                and(
+                    str_eq(grs-protocol(entry), "entry-id-v1"),
+                    and(
+                        eq(grs-cancelled?(entry), false),
+                        and(
+                            or(eq(grs-yield-legacy?(entry), false), eq(has-pending-legacy, false)),
+                            or(eq(str_len(grs-retry-after(entry)), 0), grs-str-le(grs-retry-after(entry), now))
+                        )
+                    )
+                )
+            );
+        }
+
+        def grs-insert(entry, sorted) {
+            if eq(len(sorted), 0) then list(entry)
+            else if grs-before?(entry, head(sorted)) then cons(entry, sorted)
+            else cons(head(sorted), grs-insert(entry, tail(sorted)));
+        }
+        def grs-take(entries, remaining) {
+            if or(eq(len(entries), 0), le(remaining, 0)) then empty()
+            else cons(head(entries), grs-take(tail(entries), sub(remaining, 1)));
+        }
+        def grs-insert-bounded(entry, selected) = grs-take(grs-insert(entry, selected), 100);
+        def grs-last(entries) {
+            if eq(len(tail(entries)), 0) then head(entries)
+            else grs-last(tail(entries));
+        }
+
+        def grs-select(remaining, selected, selected-count, worst) {
+            if eq(len(remaining), 0) then selected
+            else if grs-eligible?(head(remaining)) then
+                grs-select-eligible(remaining, selected, selected-count, worst)
+            else grs-select(tail(remaining), selected, selected-count, worst);
+        }
+        def grs-select-eligible(remaining, selected, selected-count, worst) {
+            if lt(selected-count, 100) then
+                grs-select-growing(remaining, selected, selected-count, worst)
+            else if grs-before?(head(remaining), worst) then
+                grs-select-replacing(remaining, selected, selected-count)
+            else grs-select(tail(remaining), selected, selected-count, worst);
+        }
+        def grs-select-growing(remaining, selected, selected-count, worst) {
+            let next-selected = grs-insert(head(remaining), selected);
+            let next-count = add(selected-count, 1);
+            grs-select(
+                tail(remaining),
+                next-selected,
+                next-count,
+                if eq(next-count, 100) then grs-last(next-selected) else worst
+            );
+        }
+        def grs-select-replacing(remaining, selected, selected-count) {
+            let next-selected = grs-insert-bounded(head(remaining), selected);
+            grs-select(tail(remaining), next-selected, selected-count, grs-last(next-selected));
+        }
+
+        def grs-select-wire(wire, start, selected, selected-count, worst) {
+            if ge(start, str_len(wire)) then selected
+            else grs-select-wire-next(wire, start, selected, selected-count, worst, str_find(wire, ";", start));
+        }
+        def grs-select-wire-next(wire, start, selected, selected-count, worst, next) {
+            let stop = if lt(next, 0) then str_len(wire) else next;
+            let next-start = if lt(next, 0) then str_len(wire) else add(next, 1);
+            let entry = grs-decode-entry(substring(wire, start, stop));
+            if grs-eligible?(entry) then
+                grs-select-wire-eligible(wire, next-start, entry, selected, selected-count, worst)
+            else grs-select-wire(wire, next-start, selected, selected-count, worst);
+        }
+        def grs-select-wire-eligible(wire, next-start, entry, selected, selected-count, worst) {
+            if lt(selected-count, 100) then
+                grs-select-wire-growing(wire, next-start, entry, selected, selected-count, worst)
+            else if grs-before?(entry, worst) then
+                grs-select-wire-replacing(wire, next-start, entry, selected, selected-count)
+            else grs-select-wire(wire, next-start, selected, selected-count, worst);
+        }
+        def grs-select-wire-growing(wire, next-start, entry, selected, selected-count, worst) {
+            let next-selected = grs-insert(entry, selected);
+            let next-count = add(selected-count, 1);
+            grs-select-wire(
+                wire,
+                next-start,
+                next-selected,
+                next-count,
+                if eq(next-count, 100) then grs-last(next-selected) else worst
+            );
+        }
+        def grs-select-wire-replacing(wire, next-start, entry, selected, selected-count) {
+            let next-selected = grs-insert-bounded(entry, selected);
+            grs-select-wire(wire, next-start, next-selected, selected-count, grs-last(next-selected));
+        }
+
+        def grs-positions(entries) {
+            if eq(len(entries), 0) then empty()
+            else cons(grs-position(head(entries)), grs-positions(tail(entries)));
+        }
+        def grocery-reconcile-selection(entries) = grs-positions(grs-select(entries, empty(), 0, empty()));
+        def grocery-reconcile-selection-wire(wire) = grs-positions(grs-select-wire(wire, 0, empty(), 0, empty()));
+
+        def grs-current-ready-selection(remaining, now, has-pending-legacy, reversed) {
+            if eq(len(remaining), 0) then grs-reverse(reversed)
+            else grs-current-ready-selection(
+                tail(remaining),
+                now,
+                has-pending-legacy,
+                if grs-current-ready?(head(remaining), now, has-pending-legacy)
+                    then cons(grs-position(head(remaining)), reversed)
+                    else reversed
+            );
+        }
+        def grocery-current-retry-selection(entries, now) {
+            grs-current-ready-selection(entries, now, grs-any-pending-legacy?(entries), empty());
+        }
+
+        def grs-wire-has-pending-legacy?(wire, start) {
+            if ge(start, str_len(wire)) then false
+            else grs-wire-has-pending-legacy-next(wire, start, str_find(wire, ";", start));
+        }
+        def grs-wire-has-pending-legacy-next(wire, start, next) {
+            let stop = if lt(next, 0) then str_len(wire) else next;
+            let next-start = if lt(next, 0) then str_len(wire) else add(next, 1);
+            let entry = grs-decode-entry(substring(wire, start, stop));
+            if grs-pending-legacy?(entry) then true
+            else grs-wire-has-pending-legacy?(wire, next-start);
+        }
+        def grs-current-ready-selection-wire(wire, start, now, has-pending-legacy, reversed) {
+            if ge(start, str_len(wire)) then grs-reverse(reversed)
+            else grs-current-ready-selection-wire-next(
+                wire,
+                start,
+                now,
+                has-pending-legacy,
+                reversed,
+                str_find(wire, ";", start)
+            );
+        }
+        def grs-current-ready-selection-wire-next(wire, start, now, has-pending-legacy, reversed, next) {
+            let stop = if lt(next, 0) then str_len(wire) else next;
+            let next-start = if lt(next, 0) then str_len(wire) else add(next, 1);
+            let entry = grs-decode-entry(substring(wire, start, stop));
+            grs-current-ready-selection-wire(
+                wire,
+                next-start,
+                now,
+                has-pending-legacy,
+                if grs-current-ready?(entry, now, has-pending-legacy)
+                    then cons(grs-position(entry), reversed)
+                    else reversed
+            );
+        }
+        def grocery-current-retry-selection-wire(wire, now) {
+            grs-current-ready-selection-wire(
+                wire,
+                0,
+                now,
+                grs-wire-has-pending-legacy?(wire, 0),
+                empty()
+            );
+        }
+        def grocery-reconcile-main(entries-wire, selection-mode, now) {
+            if str_eq(selection-mode, "current-retry")
+                then grocery-current-retry-selection-wire(entries-wire, now)
+                else grocery-reconcile-selection-wire(entries-wire);
+        }
+    }
+}

@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, cast, func, or_, select
+from sqlalchemy import and_, cast, func, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
@@ -25,7 +26,7 @@ from app.models.graph import (
     CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET, NODE_TYPE_SET,
     LIFECYCLE_DEFAULTS,
 )
-from app.services.unified_db import session
+from app.services.unified_db import deadline_session, session
 from app.config.edge_types import CANONICAL_EDGE_TYPES
 
 log = logging.getLogger(__name__)
@@ -47,6 +48,32 @@ _SOURCE_PROVENANCE_REQUIRED_KEYS = (
     "ingestion_policy",
     "rationale",
 )
+
+
+class TransactionDeadlineExceeded(RuntimeError):
+    """A bounded graph transaction exhausted its complete wall-clock budget."""
+
+
+def _apply_transaction_deadline(s, deadline: float | None) -> None:
+    """Bound the next database operation by one shared transaction deadline."""
+    if deadline is None:
+        return
+    remaining_ms = int((deadline - time.monotonic()) * 1000)
+    if remaining_ms <= 0:
+        raise TransactionDeadlineExceeded("graph transaction deadline exhausted")
+    dialect = s.get_bind().dialect.name
+    if dialect == "postgresql":
+        timeout_value = f"{remaining_ms}ms"
+        s.execute(
+            text(
+                "SELECT "
+                "set_config('statement_timeout', :value, true), "
+                "set_config('lock_timeout', :value, true)"
+            ),
+            {"value": timeout_value},
+        )
+    elif dialect == "sqlite":
+        s.execute(text(f"PRAGMA busy_timeout = {remaining_ms}"))
 
 
 # ── Spec 169: Semantic validation helpers ────────────────────────────
@@ -435,6 +462,91 @@ def update_node(
         return node.to_dict()
 
 
+def update_node_properties_batch(
+    updates: dict[str, dict[str, Any]],
+    *,
+    _source: str = "api",
+    _author: str = "",
+    _include_private: bool = False,
+    _timeout_seconds: float | None = None,
+    _deadline: float | None = None,
+) -> set[str]:
+    """Merge properties for many nodes in one transaction.
+
+    The per-node update contract is preserved, including revision receipts,
+    while one load, one revision-number read, and one commit keep bounded
+    reconciliation work inside its caller's deadline. An absolute ``_deadline``
+    preserves that budget when an async caller waits for a worker thread;
+    ``_timeout_seconds`` remains the relative-budget interface for direct calls.
+    """
+    normalized = {
+        str(node_id): dict(properties)
+        for node_id, properties in updates.items()
+        if node_id and isinstance(properties, dict)
+    }
+    if not normalized:
+        return set()
+
+    deadline = _deadline
+    if deadline is None and _timeout_seconds is not None:
+        deadline = time.monotonic() + max(0.001, _timeout_seconds)
+    session_scope = deadline_session(deadline) if deadline is not None else session()
+    with session_scope as s:
+        nodes = s.query(Node).filter(Node.id.in_(normalized)).all()
+        eligible = [
+            node
+            for node in nodes
+            if _include_private or node.type not in DEDICATED_PRIVATE_NODE_TYPES
+        ]
+        node_ids = [node.id for node in eligible]
+        revision_numbers = {
+            node_id: int(number or 0)
+            for node_id, number in (
+                s.query(NodeRevision.node_id, func.max(NodeRevision.revision_number))
+                .filter(NodeRevision.node_id.in_(node_ids))
+                .group_by(NodeRevision.node_id)
+                .all()
+                if node_ids
+                else []
+            )
+        }
+        persisted: set[str] = set()
+        changed_at = datetime.now(timezone.utc)
+        for node in eligible:
+            wanted = normalized[node.id]
+            current = dict(node.properties or {})
+            fields_changed = [
+                f"properties.{key}"
+                for key, value in wanted.items()
+                if current.get(key) != value
+            ]
+            persisted.add(node.id)
+            if not fields_changed:
+                continue
+            current.update(wanted)
+            node.properties = current
+            node.updated_at = changed_at
+            revision_number = revision_numbers.get(node.id, 0) + 1
+            revision_numbers[node.id] = revision_number
+            s.add(
+                NodeRevision(
+                    id=str(uuid.uuid4()),
+                    node_id=node.id,
+                    revision_number=revision_number,
+                    source=_source or "api",
+                    author=_author or "",
+                    fields_changed=fields_changed,
+                    snapshot=node.to_dict(),
+                )
+            )
+        # Flush can emit several UPDATE and INSERT statements. The deadline
+        # session recomputes the remaining server timeout before every one.
+        s.flush()
+        _apply_transaction_deadline(s, deadline)
+        s.commit()
+        return persisted
+
+
 def list_node_revisions(
     node_id: str,
     *,
@@ -464,9 +576,15 @@ def list_node_revisions(
         }
 
 
-def delete_node(node_id: str, *, _include_private: bool = False) -> bool:
-    """Delete a node and all its edges."""
-    with session() as s:
+def delete_node(
+    node_id: str,
+    *,
+    _include_private: bool = False,
+    _deadline: float | None = None,
+) -> bool:
+    """Delete a node and all its edges within an optional absolute deadline."""
+    session_scope = deadline_session(_deadline) if _deadline is not None else session()
+    with session_scope as s:
         node = s.get(Node, node_id)
         if not node:
             return False
@@ -477,6 +595,7 @@ def delete_node(node_id: str, *, _include_private: bool = False) -> bool:
             or_(Edge.from_id == node_id, Edge.to_id == node_id)
         ).delete(synchronize_session=False)
         s.delete(node)
+        _apply_transaction_deadline(s, _deadline)
         s.commit()
         return True
 

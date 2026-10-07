@@ -1,0 +1,104 @@
+; grocery-reconcile-selection-band.fk — predecessor-row reconciliation policy.
+; preludes: ../../api/app/form_recipes/endpoint_grocery_reconcile_selection.fk
+; Verdict 255 proves legacy eligibility, global signature uniqueness, retry
+; ordering, ID tie-breaking, the 100-row batch boundary, and current-row
+; retry eligibility on four kernels.
+(do
+  (defn grsb-entry
+    (position id pending protocol day amount description attempted signature-count)
+    (list position id pending protocol signature-count attempted))
+  (defn grsb-many (n)
+    (if (le n 0)
+      (list)
+      (cons
+        (grsb-entry
+          n
+          (str_concat "entry-" (int_to_str n))
+          true
+          ""
+          "2026-10-07"
+          n
+          (str_concat "item-" (int_to_str n))
+          ""
+          1)
+        (grsb-many (sub n 1)))))
+  (let current
+    (grocery-reconcile-selection
+      (list (grsb-entry 1 "current" true "entry-id-v1" "2026-10-01" 1 "current" "" 1))))
+  (let synced
+    (grocery-reconcile-selection
+      (list (grsb-entry 2 "synced" false "" "2026-10-01" 2 "synced" "" 1))))
+  (let duplicate
+    (grocery-reconcile-selection
+      (list
+        (grsb-entry 3 "duplicate-pending" true "" "2026-10-01" 3 "same" "" 2)
+        (grsb-entry 4 "duplicate-synced" false "" "2026-10-01" 3 "same" "" 2))))
+  (let unique
+    (grocery-reconcile-selection
+      (list (grsb-entry 5 "unique" true "" "2026-10-01" 4 "unique" "" 1))))
+  (let unattempted-first
+    (grocery-reconcile-selection
+      (list
+        (grsb-entry 6 "attempted" true "" "2026-10-01" 5 "a" "2026-10-07T01:00:00Z" 1)
+        (grsb-entry 7 "fresh" true "" "2026-10-01" 6 "b" "" 1))))
+  (let timestamp-order
+    (grocery-reconcile-selection
+      (list
+        (grsb-entry 8 "later" true "" "2026-10-01" 7 "c" "2026-10-07T02:00:00Z" 1)
+        (grsb-entry 9 "earlier" true "" "2026-10-01" 8 "d" "2026-10-07T01:00:00Z" 1))))
+  (let id-order
+    (grocery-reconcile-selection
+      (list
+        (grsb-entry 10 "z-id" true "" "2026-10-01" 9 "e" "2026-10-07T01:00:00Z" 1)
+        (grsb-entry 11 "a-id" true "" "2026-10-01" 10 "f" "2026-10-07T01:00:00Z" 1))))
+  (let bounded (grocery-reconcile-selection (grsb-many 101)))
+  (let current-retry
+    (grocery-current-retry-selection
+      (list
+        (list 20 "ready" true "entry-id-v1" 0 "" "" false false)
+        (list 21 "waiting" true "entry-id-v1" 0 "" "2026-10-07T02:00:00Z" false false)
+        (list 22 "elapsed" true "entry-id-v1" 0 "" "2026-10-07T00:00:00Z" false false)
+        (list 23 "cancelled" true "entry-id-v1" 0 "" "" true false)
+        (list 24 "legacy" true "" 0 "" "" false false)
+        (list 25 "yielding" true "entry-id-v1" 0 "" "" false true))
+      "2026-10-07T01:00:00Z"))
+  (let current-after-legacy
+    (grocery-current-retry-selection
+      (list (list 25 "yielding" true "entry-id-v1" 0 "" "" false true))
+      "2026-10-07T01:00:00Z"))
+  (let current-retry-wire
+    (grocery-current-retry-selection-wire
+      "30|wire-ready|1|entry-id-v1|0|||0|0;31|wire-wait|1|entry-id-v1|0||2026-10-07T02:00:00Z|0|0"
+      "2026-10-07T01:00:00Z"))
+  (add
+    (if
+      (and
+        (eq (len current) 0)
+        (and
+          (and
+            (eq (len current-retry) 2)
+            (and
+              (eq (nth current-retry 0) 20)
+              (and
+                (eq (nth current-retry 1) 22)
+                (and
+                  (eq (len current-after-legacy) 1)
+                  (eq (head current-after-legacy) 25)))))
+          (and
+            (eq (len current-retry-wire) 1)
+            (eq (head current-retry-wire) 30))))
+      1
+      0)
+    (add
+      (if (eq (len synced) 0) 2 0)
+      (add
+        (if (eq (len duplicate) 0) 4 0)
+        (add
+          (if (and (eq (len unique) 1) (eq (head unique) 5)) 8 0)
+          (add
+            (if (eq (head unattempted-first) 7) 16 0)
+            (add
+              (if (eq (head timestamp-order) 9) 32 0)
+              (add
+                (if (eq (head id-order) 11) 64 0)
+                (if (eq (len bounded) 100) 128 0)))))))))
