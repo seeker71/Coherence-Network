@@ -1,0 +1,169 @@
+{
+  "date": "2026-10-05",
+  "thread_branch": "codex/hati-sheet-stable-reconcile-20261005",
+  "commit_scope": "Keep the private Hati grocery Sheet readable through Apps Script cold starts and reconcile pre-idempotency rows without duplicate appends.",
+  "files_owned": [
+    "api/app/form_recipes/endpoint_grocery_reconcile_selection.bml",
+    "api/app/form_recipes/endpoint_grocery_reconcile_selection.fk",
+    "api/app/routers/grocery.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/unified_db.py",
+    "api/tests/form/grocery-reconcile-selection-band.fk",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-05_hati_sheet_stable_reconcile.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction", "deployment-authorization"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["knowledge-and-resonance"],
+  "spec_ids": ["hati-grocery-ledger"],
+  "task_ids": ["task-2026-10-05-hati-sheet-stable-reconcile"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "The live Apps Script version 2 accepted authenticated summary requests, while production still held eight unsynced rows without the entry-id-v1 protocol marker.",
+    "The scoped live version 3 migration reconciled the eight observed predecessor rows. Exact-head review then exposed that blank-description fallback was not a reusable proof; the canonical carrier now acknowledges only one exact date, amount, and description match and never guesses or replays an unresolved legacy row.",
+    "The live one-time carrier receipt acknowledged all eight legacy entries before their graph metadata moved to sheet_synced=true and entry-id-v1.",
+    "The production Sheet now has Restricted Drive access; Apps Script remains the only authenticated balance and append carrier.",
+    "Observed Apps Script cold starts exceeded the former four-second client timeout; the API now wraps two idempotent attempts in one thirteen-second wall-clock deadline that includes redirects and every network phase, below the web proxy's fifteen-second ceiling.",
+    "Legacy reconciliation advances at most 100 rows per read, persists every proven receipt, rotates unresolved rows through a private attempted-at cursor, and keeps the balance unavailable until no unproven legacy row remains.",
+    "Duplicate signatures are counted across every pre-protocol graph entry, including entries already marked synced, before reconciliation; Apps Script version 8 independently requires each submitted signature to be unique before assigning an Entry ID.",
+    "Apps Script version 8 is live. Deletion of a synced pre-protocol entry first requires the carrier to tag its one exact original row with the stable Entry ID; an absent or ambiguous row keeps the graph entry intact, so a later duplicate cannot claim an already-reversed row.",
+    "Legacy reconciliation reads the Sheet's Entry ID column once into an in-memory set and batches all assignments into at most one column write, eliminating up to 100 repeated reads and writes per batch.",
+    "GET totals is strictly read-only for writers and see-only watchers; predecessor-row mutation and graph receipt persistence run only through the writer-authorized resync endpoint, and an unavailable carrier creates no rotation or audit writes.",
+    "GET totals returns immediately when unresolved legacy state already makes the balance unavailable, avoiding a remote Sheet wait that cannot change the response.",
+    "Writer resync skips the 13-second summary preflight when every pending row already uses entry-id-v1, leaving the app's 15-second proxy window for the idempotent append itself.",
+    "A mixed legacy/current backlog advances current-protocol rows first so ambiguous predecessor rows cannot starve new idempotent writes; a later bounded request handles the remaining legacy phase.",
+    "Append and delete carriers now have one 6.5-second wall-clock deadline across redirects and HTTP phases; retry remains safe because Entry IDs and reversal IDs are idempotent.",
+    "GET totals gives the private Sheet read and the following Form balance calculation one shared 13-second wall-clock deadline, so a cold carrier cannot leave an independent kernel timeout running past the web proxy ceiling.",
+    "Delete starts one 13-second request deadline before Sheet reconciliation and carries the remaining allowance into one unpooled graph deletion transaction. The former separate cancellation update was removed; the Sheet's durable cancellation receipt keeps retry idempotent while the bounded delete either commits or rolls back before the response.",
+    "Current-only resync checks the remaining 13-second handler budget before starting each bounded append and reports only the rows actually attempted, leaving later rows for a safe retry.",
+    "Each current-row append and its graph receipt now share that same absolute 13-second deadline. The caller passes the absolute deadline through the thread boundary, so executor queue delay consumes rather than resets the database allowance; timeout or cancellation joins the worker before returning so no database write escapes into a retry.",
+    "Deadline-scoped receipts bypass the shared connection pool and open one direct connection with a connect timeout fitted inside the caller's remaining budget. Windows below libpq's documented two-second timeout floor fail before connecting, so PostgreSQL checkout, pre-ping, or driver timeout cannot sit outside the resync deadline.",
+    "The deadline session recomputes PostgreSQL statement and lock timeouts before every ORM-emitted statement. Batch flush is explicit before commit, so multiple node updates and revision inserts consume one cumulative allowance rather than each receiving the original duration.",
+    "After the bounded direct connection opens, a one-shot DBAPI cancellation timer is armed at the same absolute deadline. It covers the first timeout-installation query, every flush statement, and commit even if the network stops responding; driver cancellation runs in a daemon helper with a short grace period, and failure or stall forcibly closes the one-use connection while successful completion cancels the timer before closing it normally.",
+    "The carrier aggregates legacy signature frequencies once in O(n), then Form streams the compact policy carrier and owns the uniqueness decision while maintaining only the next 100 retry candidates; four consecutive 2,001-row production-fkwu pytest witnesses completed below the ten-second recipe timeout and selected exactly 100 rows.",
+    "Signature-frequency aggregation remains an explicit Python carrier bridge because record_new is not available on the production fkwu source surface; eligibility, uniqueness acceptance, retry ordering, ID tie-breaking, and the cap remain Form policy.",
+    "Reconciliation receipts now merge properties and append revisions for the whole batch in one graph transaction with one commit, eliminating up to 100 serial transaction boundaries after the Sheet call.",
+    "Legacy resync places Form selection, Sheet I/O, and the one-transaction receipt commit under one 13-second wall-clock deadline; kernel and database work run off the event loop so the proxy receives a bounded response even when either synchronous phase is slow.",
+    "The absolute resync deadline crosses the Form worker boundary too. Queue delay consumes the fkwu allowance, subprocess timeout reaps the complete process tree, and cancellation joins the selection worker before returning so retries cannot accumulate background Form work.",
+    "Current and legacy Form selection now share one queue-inclusive worker boundary. Deadline expiry atomically skips and cancels a worker that has not started, while a worker that has started is joined through its remaining fkwu allowance; executor saturation cannot carry either lane beyond the proxy budget.",
+    "Current append receipt persistence now uses that same queue-inclusive worker boundary. If the executor is saturated, a receipt job that has not started is marked to skip and cancelled at the absolute deadline; a transaction that has started is still joined through its database deadline, so neither queued nor active work escapes into a retry after the Sheet has mutated.",
+    "Receipt persistence receives one absolute deadline from the remaining resync budget and recomputes PostgreSQL statement/lock or SQLite busy timeouts before each query and commit. If the outer coroutine is cancelled, it waits for that bounded transaction to commit or roll back before returning, preventing background writer accumulation and revision races.",
+    "A carrier-confirmed cancellation is persisted as a private graph tombstone when resync rediscovers it. Direct delete instead relies on the Sheet's durable cancellation receipt and one bounded graph delete transaction, avoiding two post-carrier commits. Cancelled current-protocol rows are excluded from visible ledger snapshots and future resync gates, so they cannot starve unrelated legacy reconciliation.",
+    "A current-protocol append that returns unavailable remains pending but receives a short persisted retry window. The next bounded request can advance legacy reconciliation, and the current row becomes eligible again after the window instead of monopolizing every resync.",
+    "Current-row retry eligibility now executes in the Form reconciliation recipe: Python supplies pending/protocol/cancellation state, retry-after, current time, and the absolute request deadline, then validates and maps Form's selected positions. The off-loop worker's outer wait includes executor queue time; expiry atomically marks queued work to skip before cancelling it, while a worker that already started is joined before timeout or cancellation returns. The band proves ready, deferred, elapsed, cancelled, and legacy cases with verdict 255 on production fkwu, Go, Rust, and TypeScript.",
+    "The resync deadline now begins before current-row Form scheduling and is carried unchanged into either legacy reconciliation or current append receipts, so lifting retry policy into Form does not add a fresh timeout outside the web proxy budget.",
+    "An unconfigured Sheet returns its structural current and legacy pending counts before any Form subprocess or remote carrier is started.",
+    "An unavailable current append persists a Form-readable yield-to-legacy signal, so a retry after the 30-second window still advances legacy work. A successful legacy snapshot clears that signal in the same bounded receipt transaction, returning the next turn to the current row even when legacy matching made no progress; neither lane can starve the other.",
+    "Current retry selection receives only unsynced, uncancelled rows; a mature synced history is excluded before wire serialization, so completed ledger growth cannot consume the resync deadline.",
+    "Legacy Form selection also serializes only the current pending rows. Python still computes signature counts across the complete pre-protocol ledger, preserving graph-wide duplicate rejection without making the recursive policy scan an ever-growing synced history inside the 13-second request budget.",
+    "A current append starts only when the shared request deadline still contains the 6.5-second Sheet allowance plus a 2.5-second database-receipt reserve, covering libpq's two-second connect floor and handoff overhead. When that complete window is absent and legacy work exists, the request advances bounded legacy reconciliation instead of repeatedly selecting a current row whose yield receipt could not be made durable.",
+    "When the Sheet reports the same Entry ID as both present and cancelled, reconciliation persists the cancellation tombstone and clears any yield flag before considering acknowledgement. A row reversed by reconcile_delete therefore disappears from graph-visible ledger state even when its earlier append remains present in the Sheet.",
+    "Legacy matching derives conservative historical-deletion signatures only from stable reversal Entry IDs whose corresponding original Entry ID is absent, plus the opposite signed amount and carrier-authored undo description. This distinguishes predecessor blank-row deletions from ordinary current-protocol deletions; only matching blank originals are excluded, so neither an already-reversed row nor an unrelated legacy row can be claimed incorrectly.",
+    "Legacy eligibility, graph-wide signature uniqueness, retry ordering, ID tie-breaking, and the 100-row reconciliation boundary now execute in the Form recipe endpoint_grocery_reconcile_selection.fk; its band returns verdict 255 on fkwu, Go, Rust, and TypeScript.",
+    "The reconciliation policy is authored as the GroceryReconciliationPolicy BML domain class and lowered through form-source-compile-file into the deployed Form recipe. The artifact records the exact BML SHA-256, and the grocery test rejects source/artifact drift while the existing four-way band proves the lowered behavior.",
+    "SQLite deadline sessions pass their remaining budget into the driver before connection initialization, install that absolute remainder as busy_timeout in the connect hook, and reuse the database's journal mode rather than attempting a lock-contending WAL mutation. A real exclusive-lock regression proves the isolated receipt connection exits inside the 0.2-second budget instead of inheriting SQLite's five-second default wait.",
+    "The Form recipe returns integer source positions rather than native string-list syntax, leaving Python with validation and transport mapping rather than duplicated selection policy.",
+    "Every asyncio wait_for boundary catches asyncio.TimeoutError explicitly, preserving the fail-closed timeout behavior on the supported Python 3.9 and 3.10 runtimes as well as newer aliases.",
+    "Graph-wide legacy signatures apply the carrier's date slicing and description trimming before duplicate counting, so whitespace variants remain ambiguous across bounded batches instead of claiming one Sheet row.",
+    "Legacy carrier lists are length-checked before ordinary zip iteration, preserving the alignment invariant without Python-3.10-only strict keyword arguments.",
+    "No household balance, transaction row, shared secret, or deployment credential is recorded in this evidence."
+  ],
+  "change_files": [
+    "api/app/form_recipes/endpoint_grocery_reconcile_selection.bml",
+    "api/app/form_recipes/endpoint_grocery_reconcile_selection.fk",
+    "api/app/routers/grocery.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/unified_db.py",
+    "api/tests/form/grocery-reconcile-selection-band.fk",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-05_hati_sheet_stable_reconcile.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_grocery_ledger.py",
+      "cd api && .venv/bin/pytest -q tests/test_kernel_submodule_contract.py::test_network_endpoint_recipes_are_owned_by_the_api",
+      "cd api && ruff check app/routers/grocery.py app/services/graph_service.py app/services/unified_db.py tests/test_grocery_ledger.py",
+      "cd form/form && ./validate.sh ../../api/app/form_recipes/endpoint_grocery_reconcile_selection.fk ../../api/tests/form/grocery-reconcile-selection-band.fk",
+      "python3 api/scripts/run_maintainability_audit.py --output /tmp/maintainability_audit_report.hati-sheet.json --fail-on-regression",
+      "git diff --check"
+    ],
+    "summary": "All 90 grocery tests plus the endpoint ownership contract pass, including one absolute 13-second deadline carried across executor queueing, current and legacy Form scheduling, and either resync path, totals' Sheet read and Form calculation, delete's Sheet reconciliation and single graph deletion transaction, current append and its queue-inclusive joined graph receipt, and legacy Sheet I/O and receipt persistence. Both Form lanes and current receipt persistence share one queue-inclusive worker boundary: queued work is skipped and cancelled before it starts when the deadline expires, while started work is joined through its remaining database or fkwu allowance. Current and legacy policy wires contain only unsynced, uncancelled pending rows, while legacy signature counts still cover the complete pre-protocol ledger; mature synced history therefore preserves global duplicate rejection without consuming the recursive Form budget. An unconfigured Sheet returns before Form, and the same band proves ready, deferred, elapsed, cancelled, legacy, and yield-to-legacy cases with verdict 255 on production fkwu, Go, Rust, and TypeScript. A current append reserves both its 6.5-second carrier window and a 2.5-second durable-receipt window; when that combined allowance is absent, bounded legacy reconciliation advances instead of letting an unreceipted current retry starve it. Cancellation receipts outrank simultaneous Sheet acknowledgements, and stable reversal receipts disqualify matching blank-ID predecessor rows only when the corresponding original Entry ID is absent. The policy now originates in a BML GroceryReconciliationPolicy class; form-source-compile-file emits the deployed recipe, whose recorded source digest rejects drift. An unavailable current row yields to legacy even after its retry window expires; a successful legacy snapshot clears that signal in the same bounded receipt transaction so current work gets the following turn. The delete path joins its bounded worker and returns success when the commit wins the outer timeout boundary, preventing a false 503 followed by a retry 404. Deadline-scoped graph work uses an unpooled direct connection with a caller-budgeted connect timeout; SQLite installs the absolute remaining busy timeout during connection initialization and skips lock-contending journal-mode mutation, while PostgreSQL receives the bounded driver timeout. A real SQLite exclusive-lock regression exits within a 0.2-second budget. After connection, a DBAPI cancellation timer covers timeout installation, every flush statement, and commit at the same absolute deadline. Driver cancellation itself is isolated in a daemon helper, and failure or stall forcibly closes the one-use connection. Each statement also recomputes the remaining PostgreSQL or SQLite server limit, so connection acquisition and cumulative multi-statement persistence cannot reset the allowance. Cancellation-safe completion, durable Sheet cancellation receipts, resync tombstones, and Form-owned current retry windows cannot starve either lane. Four consecutive 2,001-row bounded-selection witnesses pass through production fkwu. One wall-clock deadline covers every Sheet write; Python 3.9-compatible carrier alignment and asyncio timeout handling, carrier-equivalent normalized duplicate signatures, current-protocol resync without a legacy summary preflight, a mixed backlog that advances current rows before legacy reconciliation, authenticated legacy payload shape, read-only totals for see-only members, writer-authorized exact-only reconciliation, no reconciliation-receipt persistence during carrier failure, graph-wide duplicate rejection, original-row tagging before legacy deletion, rotating 100-row migration progress, and metadata healing all pass. Focused Ruff and diff checks pass; the maintainability audit remains at its 112-long-function baseline with no regression."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "app.hati.earth renders the Sheet-backed remaining balance reliably while the Sheet stays Restricted.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Read the private Sheet through the authenticated Apps Script carrier after a cold start.",
+      "Confirm the live grocery page no longer renders Sheet temporarily unavailable.",
+      "Confirm the Sheet remains Restricted after the app read."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query returned no result; no native answer is claimed."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; repository tests, live carrier receipts, production metadata counts, and browser observations provide the proof."
+    },
+    "reconciliation_selection": {
+      "path": "native",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": false,
+      "reason": "The policy executes on fkwu and returns the same verdict 255 as Go, Rust, and TypeScript; it carries no lattice NodeID, so full native trust is not claimed."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the source contracts, tests, live Apps Script timing, production pending-row count, browser witness, and the executing four-kernel reconciliation policy; Python still carries one-pass signature aggregation because production fkwu source records cannot yet grow a map. The body did not generate the repair.",
+    "standard_receipt": "The Form contender can ground structural lookups but returned no result for this runtime boundary."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting exact-head CI, review, merge, production roll-forward, and final live verification."
+  }
+}
