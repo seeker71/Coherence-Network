@@ -187,7 +187,11 @@ RUN install -d -m 0700 \
 
 EXPOSE 8000
 
+# Docker liveness must stay independent of deep health/audit work. The full
+# /api/health contract remains a release proof, while /api/ping answers only
+# from the event loop and keeps Traefik from withdrawing a living API during
+# cold-cache or substrate maintenance.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8000/api/health || exit 1
+    CMD curl -fsS http://127.0.0.1:8000/api/ping || exit 1
 
 CMD ["python", "-m", "app.server"]

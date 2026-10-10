@@ -67,6 +67,7 @@
     "_doc": "Server behavior.",
     "environment": "development",
     "enable_hsts": false,
+    "startup_cache_warm_enabled": false,
     "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
     "_environment_doc": "development or production. Production enforces real API keys."
   },

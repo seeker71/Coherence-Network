@@ -287,6 +287,17 @@ def _warm_startup_caches() -> None:
         _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
 
 
+def _start_startup_cache_warm() -> bool:
+    """Start the optional cache prefill without making it an availability tax."""
+    if not get_bool("server", "startup_cache_warm_enabled", False):
+        _startup_logger.info("api_startup_cache_warm disabled; caches fill on demand")
+        return False
+    threading.Thread(
+        target=_warm_startup_caches, name="startup-cache-warm", daemon=True
+    ).start()
+    return True
+
+
 async def _setup_service_registry(app: FastAPI) -> None:
     try:
         from app.services.service_registry import ServiceRegistry
@@ -326,17 +337,11 @@ async def _setup_service_registry(app: FastAPI) -> None:
 async def lifespan(app: FastAPI):
     _warn_on_suspect_cors_config()
     _ensure_db_tables()
-    # Warm read caches in the BACKGROUND so the app reports healthy in ~1-2s
-    # rather than blocking startup for the full warm (~22s). The warm is pure
-    # pre-population — every cache it fills also fills lazily on first request —
-    # so until it finishes the first requests just take the cold path and still
-    # return 200. Blocking here kept each freshly recreated container unhealthy
-    # for the whole warm, so every `api` deploy opened a Traefik-404 / CF-502
-    # window with no healthy backend; that gap is what surfaced as the reported
-    # POST /api/ideas "404 page not found".
-    threading.Thread(
-        target=_warm_startup_caches, name="startup-cache-warm", daemon=True
-    ).start()
+    # Every warmed cache also fills lazily. Production keeps this disabled:
+    # the complete-body prefill now lasts minutes and competes with liveness and
+    # user traffic. Operators can opt in through file-backed configuration for
+    # a measured environment where the warm remains beneficial.
+    _start_startup_cache_warm()
     await _setup_service_registry(app)
 
     # Register the on-demand translator backend. Because the app uses a
@@ -490,10 +495,21 @@ def _query_summary(query_params) -> tuple[int, list[dict[str, str]], dict[str, s
     }
     summary: dict[str, str] = {}
     for key, value in query_params.multi_items():
+        normalized_key = key.lower().replace("-", "_")
+        sensitive = normalized_key in {
+            "authorization",
+            "auth",
+            "api_key",
+            "key",
+            "password",
+            "secret",
+            "token",
+        } or normalized_key.endswith(("_key", "_password", "_secret", "_token"))
+        observed_value = "[redacted]" if sensitive else value
         if key in heavy_keys:
-            summary[key] = value
+            summary[key] = observed_value
         if len(items) < 8:
-            items.append({"k": key, "v": value})
+            items.append({"k": key, "v": observed_value})
     return len(query_params), items, summary
 
 
