@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-lightweight-public-verify-20261011",
+  "commit_scope": "Reuse one deep API health snapshot per public verification attempt so deployment proof cannot amplify serving-process load.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_lightweight_public_verify.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Keep Hati Sheet tracking available while public deployment verification proves health, SHA parity, native authority, CORS, and pulse state.",
+    "files_allowed": [
+      "scripts/verify_web_api_deploy.sh",
+      "scripts/test_verify_web_api_sha_patience.sh",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_lightweight_public_verify.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "One deep API health response is reused by direct health, SHA-parity, and fkwu-authority checks within each verifier attempt.",
+      "CORS availability uses the lightweight ping route and web health-proxy proof performs one request instead of two.",
+      "Focused verifier tests, local guards, exact-head CI/review, rollout, observer, public probes, and authenticated Hati Sheet recovery pass."
+    ],
+    "commands": [
+      "bash scripts/test_verify_web_api_sha_patience.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "bash scripts/test_verify_web_api_css_assets.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n scripts/verify_web_api_deploy.sh scripts/test_verify_web_api_sha_patience.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_lightweight_public_verify.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve deployed-SHA, fkwu-authority, persistence, web-proxy, CORS, pulse, and public-page evidence.",
+      "Keep the private Sheet restricted and preserve the authenticated server-side read path.",
+      "Do not expose household tokens, balances, transaction rows, Sheet secrets, SSH material, or private URLs."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-11-hati-lightweight-public-verify"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger activation run 38074213429 deployed merge 86b6229459923788c5514919e4a53ff2fce42046 and initially marked the API container healthy.",
+    "The complete grounded sidecar finished, then three broad public verification attempts repeatedly read deep health and the API became slow, silent, and finally unreachable while the static Hati shell remained available.",
+    "A same-SHA recovery rerun restored lightweight ping before this repair was authored.",
+    "The focused regression proves SHA and fkwu checks reuse the captured health snapshot without another direct API health request.",
+    "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_lightweight_public_verify.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash scripts/test_verify_web_api_sha_patience.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "bash scripts/test_verify_web_api_css_assets.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n scripts/verify_web_api_deploy.sh scripts/test_verify_web_api_sha_patience.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_lightweight_public_verify.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "Snapshot reuse, SHA patience, pulse, CSS, Hostinger path, shell syntax, and whitespace proofs pass. Evidence validation and full local guards are part of the pre-commit gate."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public verification keeps deep health evidence while avoiding repeated expensive reads that can starve Hati's Sheet-backed API path.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Complete exact-head rollout and independent image-bound observation.",
+      "Run the full public verifier without repeated deep-health amplification.",
+      "Reload the authenticated app and observe a confirmed Sheet-backed balance state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The bounded native Form query produced no grounded answer for the public-verifier load boundary."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 correlated the exact deploy timeline with repeated deep-health reads; regression tests, CI, rollout, public probes, and browser behavior provide verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the deploy trace, ping/deep-health split, tests, workflow gates, and live browser behavior. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this verifier-load failure."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting full local guards, exact-head CI/review, merge, production rollout, independent observation, public verification, and final authenticated browser proof."
+  }
+}

@@ -60,6 +60,9 @@ curl() {
     http://api.example/api/gates/main-head)
       body="{\"sha\":\"$target_sha\"}"
       ;;
+    http://api.example/api/utils/kernel_status)
+      body='{"active":"fkwu","available":true,"binary_available":true}'
+      ;;
     http://web.example/api/health-proxy)
       local calls
       calls="$(cat "$web_proxy_calls_file")"
@@ -97,6 +100,38 @@ grep -F "WARN: API deployed SHA does not match expected main-head SHA; retrying"
 grep -F "OK: API runtime SHA parity settled after 2 attempt(s)" <<<"$api_output" >/dev/null
 grep -F "PASS" <<<"$api_output" >/dev/null
 
+printf '0\n' > "$api_health_calls_file"
+cat > "$API_HEALTH_SNAPSHOT_FILE" <<JSON
+{
+  "deployed_sha": "$target_sha",
+  "kernel_runtime": "fkwu",
+  "native_runtime_observation": {
+    "verified": true,
+    "kernel": {
+      "verified": true,
+      "runtime": "fkwu",
+      "execution_authority": "c-bootstrap-fkwu",
+      "sibling_kernel_role": "differential-reference-only"
+    },
+    "form_cli": {"verified": true}
+  }
+}
+JSON
+
+cached_api_output="$(
+  check_api_runtime_sha \
+    "http://api.example/api/health" \
+    "http://api.example/api/gates/main-head" \
+    1 \
+    "$API_HEALTH_SNAPSHOT_FILE"
+)"
+grep -F "PASS" <<<"$cached_api_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "0" ]]
+
+cached_fkwu_output="$(check_fkwu_native_authority)"
+grep -F "PASS: c-bootstrap fkwu is verified" <<<"$cached_fkwu_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "0" ]]
+
 web_output="$(
   SHA_PARITY_PATIENCE_SECONDS=2 \
   SHA_PARITY_PATIENCE_INTERVAL=0 \
@@ -106,4 +141,10 @@ grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying"
 grep -F "OK: Web runtime SHA parity settled after 2 attempt(s)" <<<"$web_output" >/dev/null
 grep -F "PASS" <<<"$web_output" >/dev/null
 
-echo "PASS: API and web SHA parity wait through rollout mismatch"
+grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
+if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then
+  echo "duplicate web health-proxy read remains" >&2
+  exit 1
+fi
+
+echo "PASS: API health snapshot is reused and SHA parity waits through rollout mismatch"
