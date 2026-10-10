@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-observer-dockerfile-repro-20261010",
+  "commit_scope": "Remove the observer's duplicate native build recipe and reproduce the target release through its exact kernel-builder Dockerfile stage.",
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_observer_dockerfile_reproduction.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Make independent native-byte observation execute the exact target Dockerfile build recipe instead of a parallel handwritten approximation.",
+    "files_allowed": [
+      ".github/workflows/public-deployment-observer.yml",
+      "api/tests/test_deployment_observer_oidc.py",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_observer_dockerfile_reproduction.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The observer assembles the pinned kernel source as the target Dockerfile's form context and builds its exact kernel-builder target.",
+      "The observer extracts both binaries from that target without retaining handwritten compiler or form-cli build commands.",
+      "Focused observer contracts, local PR guard, exact-head CI, and review pass before activation."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_observer_dockerfile_reproduction.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Do not activate the revised observer until its workflow has a permanent on-main merge SHA.",
+      "Keep the observer fail-closed and source-bound.",
+      "Do not expose household or deployment secrets."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["public-deployment-observer", "fkwu-only-kernel-collapse"],
+  "task_ids": ["task-2026-10-10-hati-observer-dockerfile-reproduction"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38057725762 attempt 2 deployed bb7e1c184b96708c44d5c2fb8debce29799769b5 successfully, then strict observation found the handwritten reproduction's fkwu bytes differed.",
+    "The pinned GCC image itself matched, narrowing the remaining authority split to duplicated build invocation context.",
+    "The fkwu source explicitly includes __DATE__ and __TIME__ in its builder identity, so a later activation will set a fixed SOURCE_DATE_EPOCH in the shared Dockerfile recipe.",
+    "This phase only lands dormant observer support for building the exact target Dockerfile kernel-builder stage; active production pins remain unchanged.",
+    "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_observer_dockerfile_reproduction.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_observer_dockerfile_reproduction.json",
+      "git diff --check"
+    ],
+    "summary": "All 22 focused observer contracts pass, the workflow parses as YAML, evidence validation passes, and whitespace checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Dormant workflow only; production activation follows its permanent merge SHA."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "No active production behavior changes in this phase; the observer gains one build authority shared with the target release.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Land the dormant observer at a permanent main SHA.",
+      "Activate it atomically with a fixed source-date epoch in the target Dockerfile.",
+      "Require production rollout, byte reproduction, and authenticated Hati Sheet recovery."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native query returned no answer within 30 seconds; the exact failed run and source macros supplied the diagnosis."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; the live observer failure, source, tests, CI, and later deployment provide verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact failed observer trace, Dockerfile authority, timestamp-bearing source, and contract suite. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this same-image byte mismatch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting focused validation, exact-head CI/review, merge, and atomic activation from the permanent workflow SHA."
+  }
+}

@@ -171,20 +171,15 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
         REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
     ).read_text(encoding="utf-8")
     expected_paths = (
-        "/source/runtime",
-        "/source/form/form-stdlib",
-        "/source/form/scripts",
-        "/source/form/build-form-cli.sh",
-        "/source/bootstrap/ground.fk",
         "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256",
         "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt",
         "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp",
     )
     for path in expected_paths:
         assert path in workflow
-    assert "cp /source/bootstrap/ground.fk /build/ground.fk" in workflow
-    assert "/out/fkwu --src /build/ground.fk" in workflow
-    assert "/out/fkwu --src /source/bootstrap/ground.fk" not in workflow
+    assert 'cp -a "$source_dir/." "$context_dir/form/"' in workflow
+    assert "./fkwu --src bootstrap/ground.fk" in workflow
+    assert "--target kernel-builder" in workflow
     assert "/source/form-stdlib" not in workflow
     assert "/source/form/bootstrap/ground.fk" not in workflow
     assert "$source_dir/form-stdlib" not in workflow
@@ -201,7 +196,15 @@ def test_observer_reuses_the_target_dockerfiles_immutable_toolchain() -> None:
     assert "/${TARGET_SHA}/Dockerfile.api" in reproduction
     assert "FROM (\\S+) AS kernel-builder" in reproduction
     assert "docker\\.io/library/gcc:12\\.5\\.0-bookworm@sha256:" in reproduction
-    assert '"$builder" bash -lc' in reproduction
+    assert 'cp "$dockerfile_source" "$context_dir/Dockerfile.api"' in reproduction
+    assert "docker build --platform linux/amd64" in reproduction
+    assert "--target kernel-builder" in reproduction
+    assert '--build-arg "COHERENCE_SOURCE_SHA=$TARGET_SHA"' in reproduction
+    assert '--build-arg "COHERENCE_FORM_SHA=$form_source_commit"' in reproduction
+    assert 'docker cp "$reproduced_container:/build/fkwu"' in reproduction
+    assert 'docker cp "$reproduced_container:/build/form-cli"' in reproduction
+    assert "CC=cc FORM_CLI_FORCE_LINK=1" not in reproduction
+    assert "cc -O2 -o /out/fkwu" not in reproduction
     assert "apt-get" not in reproduction
 
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
