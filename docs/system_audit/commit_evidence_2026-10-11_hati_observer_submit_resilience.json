@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-observer-submit-resilience-20261011",
+  "commit_scope": "Keep authenticated deployment observation submission within the public request deadline by publishing only the newly recorded WITNESS instead of healing the whole body corpus.",
+  "files_owned": [
+    "api/app/routers/deployment_observer.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_observer_submit_resilience.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Complete the live Hati deployment observer reliably after the native carriers pass by removing whole-body reconciliation from the authenticated recorder request.",
+    "files_allowed": [
+      "api/app/routers/deployment_observer.py",
+      "api/tests/test_deployment_observer_oidc.py",
+      "api/tests/test_form_cli_grounding_runtime.py",
+      "deploy/hostinger/auto-deploy.sh",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_observer_submit_resilience.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The release reconciles source deletions before the recorder publishes the persisted WITNESS through the bounded refresh carrier and never invokes whole-body heal.",
+      "Focused observer and native grounding tests pass.",
+      "Exact-head CI/review, merge, rollout, authenticated observation recording, native readback, public endpoints, and authenticated Hati checks pass."
+    ],
+    "commands": [
+      "api/.venv/bin/pytest -q api/tests/test_deployment_observer_oidc.py api/tests/test_form_cli_grounding_runtime.py",
+      "ruff check api/app/routers/deployment_observer.py api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_observer_submit_resilience.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve the committed authenticated WITNESS and fail closed if bounded index publication fails.",
+      "Keep whole-body reconciliation in the release path, outside the public recorder request.",
+      "Keep Sheet, household, balance, token, nonce, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience", "bounded-observer-publication"],
+  "spec_ids": ["public-deployment-observer", "form-first-reasoning"],
+  "task_ids": ["task-2026-10-11-hati-observer-submit-resilience"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38092956157 deployed exact main SHA 58d5cb684430b2d5bfe0a94f9f10078aa9a03ea1 and passed direct carrier execution plus independent native verification.",
+    "The same run returned HTTP 502 after roughly 50 seconds only while submitting the byte-bound observation; the recorded-answer replay was therefore skipped.",
+    "The recorder route persisted the WITNESS and then invoked whole-body heal inside the request even though a bounded one-WITNESS refresh carrier was already shipped.",
+    "The regression test invokes the recorder publication boundary, observes the bounded refresh, and rejects any heal(INDEX) call in the route.",
+    "Exact-head review identified deletion-only releases as a stale-row edge; the release path now performs its complete bootstrap and heal when an ingestable source was removed.",
+    "No secret, token, nonce, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "api/app/routers/deployment_observer.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_observer_submit_resilience.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "77 deployment-observer and grounding-runtime tests",
+      "Ruff on the changed Python route and tests",
+      "whitespace validation"
+    ],
+    "summary": "The release path now reconciles deleted sources, while the authenticated recorder calls only the bounded WITNESS refresh, remains fail-closed on publication error, and cannot regress to whole-body heal without breaking focused tests."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Authenticated observation submission completes before the public proxy deadline, allowing native recorded-answer readback to run while Hati remains available.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health/pulse",
+      "GET https://app.hati.earth/",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Observe exact-head Hostinger rollout and successful byte-bound observation submission.",
+      "Observe authenticated native recorded-answer readback.",
+      "Run the hardened public deployment verifier and reload authenticated Hati without exposing its balance."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_and_http_runtime_evidence",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "The exact production step sequence proves native carrier execution and verification passed before the recorder POST returned HTTP 502 at the proxy boundary."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_repository_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query returned no answer in 30 seconds; OpenAI GPT-5 traced the stale heal call and the repository tests verify the bounded replacement."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the production step trace, native pass evidence, existing bounded refresh carrier, request boundary, and focused tests; it verifies but did not generate the edit.",
+    "standard_receipt": "The production failure is grounded and observed; the repair choice remains rented reasoning after a native Form timeout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting evidence validation, parent guards, exact-head CI/review, merge, rollout, recorder submission, native readback, public verification, and authenticated Hati proof."
+  }
+}

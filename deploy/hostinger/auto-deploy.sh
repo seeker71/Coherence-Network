@@ -1215,6 +1215,8 @@ run_substrate_ingest() {
   local from="$1" to="$2"
   require_file "$MAINTENANCE_COMPOSE_FILE"
   local started ended elapsed all_changed full_refresh_reason="" old_form_sha new_form_sha
+  local removed_ingestable=""
+  local ingestable_pattern='^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form/form-stdlib/.*\.fk$'
   started="$(date +%s)"
 
   if [[ -z "$from" || "$from" == "$to" ]]; then
@@ -1228,13 +1230,26 @@ run_substrate_ingest() {
       <<< "$all_changed"; then
     full_refresh_reason="grounding bootstrap/RAG carrier changed"
   else
-    old_form_sha="$(git -C "$REPO_DIR" rev-parse "${from}:form" 2>/dev/null || true)"
-    new_form_sha="$(git -C "$REPO_DIR" rev-parse "${to}:form" 2>/dev/null || true)"
-    if [[ -n "$old_form_sha" && -n "$new_form_sha" && "$old_form_sha" != "$new_form_sha" ]]; then
-      # The persisted RAG binding includes the native Form source identity.
-      # Incremental ingest must not ask an old binding to interpret a new body;
-      # rebuild the complete grounded index first, then heal its carrier stamp.
-      full_refresh_reason="native Form source identity changed"
+    removed_ingestable="$(printf '%s\n' "$all_changed" \
+      | grep -E "$ingestable_pattern" \
+      | while IFS= read -r path; do
+          [[ ! -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
+        done \
+      || true)"
+    if [[ -n "$removed_ingestable" ]]; then
+      # Incremental ingest cannot retract a row whose source no longer exists.
+      # Reconcile removals in the release path so the later public observer can
+      # publish only its one dynamic WITNESS within the proxy deadline.
+      full_refresh_reason="ingestable source removed"
+    else
+      old_form_sha="$(git -C "$REPO_DIR" rev-parse "${from}:form" 2>/dev/null || true)"
+      new_form_sha="$(git -C "$REPO_DIR" rev-parse "${to}:form" 2>/dev/null || true)"
+      if [[ -n "$old_form_sha" && -n "$new_form_sha" && "$old_form_sha" != "$new_form_sha" ]]; then
+        # The persisted RAG binding includes the native Form source identity.
+        # Incremental ingest must not ask an old binding to interpret a new body;
+        # rebuild the complete grounded index first, then heal its carrier stamp.
+        full_refresh_reason="native Form source identity changed"
+      fi
     fi
   fi
 
@@ -1271,7 +1286,7 @@ run_substrate_ingest() {
   # the per-file loop below dispatches every path through ingest-paths.
   local changed
   changed="$(printf '%s\n' "$all_changed" \
-              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form/form-stdlib/.*\.fk$' \
+              | grep -E "$ingestable_pattern" \
               | while IFS= read -r path; do
                   [[ -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
                 done \
