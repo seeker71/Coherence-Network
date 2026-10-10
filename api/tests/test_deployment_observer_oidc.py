@@ -218,6 +218,27 @@ def test_observer_reuses_the_target_dockerfiles_immutable_toolchain() -> None:
     assert builder_match.group(1) == REPRODUCIBLE_BUILDER_IMAGE
 
 
+def test_observer_binds_immutable_oci_labels_to_the_serving_image_id() -> None:
+    workflow = (
+        REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    direct = workflow.split(
+        "- name: Execute carriers directly in the deployed container", 1
+    )[1].split("- name: Observe and independently verify both native carriers", 1)[0]
+
+    assert 'ps --status running -q api' in direct
+    assert 'com.docker.compose.oneoff' in direct
+    assert '[[ "${#serving[@]}" == 1 ]]' in direct
+    assert 'image_id="$(docker inspect --format \'{{.Image}}\' "$container")"' in direct
+    assert 'image_ref="$(docker inspect --format \'{{.Config.Image}}\' "$container")"' in direct
+    assert 'docker image inspect "$image_ref"' in direct
+    assert '[[ "${image_metadata[0]}" == "$image_id" ]]' in direct
+    assert 'image_revision="${image_metadata[1]}"' in direct
+    assert 'image_form_revision="${image_metadata[2]}"' in direct
+    assert 'org.opencontainers.image.revision' in direct
+    assert 'org.opencontainers.image.coherence-form-revision' in direct
+
+
 def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> None:
     workflow = (
         REPO_ROOT / ".github" / "workflows" / "public-deployment-observer.yml"
