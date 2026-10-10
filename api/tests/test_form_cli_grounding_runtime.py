@@ -1125,6 +1125,22 @@ def test_deploy_bootstraps_before_heal_when_grounding_carriers_change():
     assert deploy.index(bootstrap, full_refresh) < deploy.index(heal, full_refresh)
 
 
+def test_deploy_reconciles_deleted_sources_before_bounded_witness_refresh():
+    deploy = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
+        encoding="utf-8"
+    )
+
+    removal_gate = 'full_refresh_reason="ingestable source removed"'
+    bootstrap = "python3 scripts/coh_substrate.py bootstrap"
+    heal = "python3 scripts/form_cli_rag.py heal"
+
+    assert 'local removed_ingestable=""' in deploy
+    assert '[[ ! -f "$REPO_DIR/$path" ]]' in deploy
+    assert removal_gate in deploy
+    full_refresh = deploy.index(removal_gate)
+    assert deploy.index(bootstrap, full_refresh) < deploy.index(heal, full_refresh)
+
+
 def test_rag_source_identity_is_platform_independent():
     assert (
         rag._canonical_source_path(r"form\form\form-stdlib\rag-ask.fk")
