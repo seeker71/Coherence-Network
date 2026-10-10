@@ -1,0 +1,9 @@
+; Household membership lookup outcome: only a completed readable miss is unauthorized.
+(do
+  (defn membership-lookup-status (store-readable member-found)
+    (if store-readable
+      (if member-found 200 401)
+      503))
+  (let store_readable true)
+  (let member_found false)
+  (membership-lookup-status store_readable member_found))

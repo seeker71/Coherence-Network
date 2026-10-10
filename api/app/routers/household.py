@@ -125,12 +125,33 @@ def _member_private(node: dict) -> MemberPrivate:
     return MemberPrivate(**pub, token=node.get("token", ""), phone=(node.get("phone") or None))
 
 
+def _membership_lookup_status(*, store_readable: bool, member_found: bool) -> int:
+    """Resolve identity lookup truth through the Form-owned outage membrane."""
+    status, _runtime = serve_via_kernel(
+        "endpoint_membership_lookup_status.fk",
+        bindings={
+            "store_readable": store_readable,
+            "member_found": member_found,
+        },
+        parse=int,
+    )
+    return status
+
+
 def _all_members() -> list[dict]:
     try:
         response = graph_service.list_nodes(type=_MEMBER_TYPE, limit=1000)
         nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
-    except Exception:
-        nodes = []
+    except Exception as exc:
+        # Form keeps 401 reserved for a completed readable miss. The Python
+        # bridge only carries that decision into the HTTP membrane.
+        raise HTTPException(
+            status_code=_membership_lookup_status(
+                store_readable=False,
+                member_found=False,
+            ),
+            detail="household membership is temporarily unavailable",
+        ) from exc
     return [n for n in nodes if n.get("type") == _MEMBER_TYPE]
 
 
@@ -296,14 +317,26 @@ def _require_member(token: str | None) -> dict:
     cost — the field's own tissue, witnessed by its cells, not the open internet."""
     member = _member_by_token(token)
     if not member:
-        raise HTTPException(status_code=401, detail="register or open your invite link to see the board")
+        raise HTTPException(
+            status_code=_membership_lookup_status(
+                store_readable=True,
+                member_found=False,
+            ),
+            detail="register or open your invite link to see the board",
+        )
     return member
 
 
 def _require_writer(token: str | None) -> dict:
     member = _member_by_token(token)
     if not member:
-        raise HTTPException(status_code=401, detail="register or open your invite link first")
+        raise HTTPException(
+            status_code=_membership_lookup_status(
+                store_readable=True,
+                member_found=False,
+            ),
+            detail="register or open your invite link first",
+        )
     if not member.get("write_access"):
         raise HTTPException(status_code=403, detail="a resident needs to grant you write access first")
     return member
