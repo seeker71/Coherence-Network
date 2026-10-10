@@ -124,6 +124,105 @@ grep -Fq '?? new-band.fk' <<<"$prompt_gate_output" \
 cleanup_prompt_gate_fixture
 trap - EXIT
 
+# Execute the exact embedded Compose reconciler. Production has used both
+# mapping and list label syntax, so the repair must preserve either shape,
+# retain unrelated labels, and become a no-op once both public doors exist.
+python3 - "$DEPLOY_SCRIPT" <<'PY' || fail "public host route reconciler is not idempotent across Compose label styles"
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+deploy_path = Path(sys.argv[1])
+source = deploy_path.read_text(encoding="utf-8")
+function_at = source.index("ensure_public_host_routes()")
+script_start = source.index("from __future__ import annotations", function_at)
+script_end = source.index('\nPY\n)"', script_start)
+reconciler = source[script_start:script_end]
+
+with tempfile.TemporaryDirectory() as raw_tmp:
+    compose_path = Path(raw_tmp) / "docker-compose.yml"
+    compose_path.write_text(
+        """services:
+  api:
+    image: coherence-api
+    labels:
+      existing.api: "kept"
+  web:
+    image: coherence-web
+    labels:
+      - "existing.web=kept"
+""",
+        encoding="utf-8",
+    )
+    env = {**os.environ, "COMPOSE_FILE": str(compose_path)}
+    first = subprocess.run(
+        [sys.executable, "-c", reconciler],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if first.stdout.strip() != "api,web":
+        raise SystemExit(f"unexpected first reconciliation: {first.stdout!r}")
+    rendered = compose_path.read_text(encoding="utf-8")
+    required = (
+        'existing.api: "kept"',
+        'traefik.http.routers.coherence-api.rule: "Host(`api.coherencycoin.com`)"',
+        'traefik.http.routers.coherence-api.service: "coherence-api"',
+        'traefik.http.services.coherence-api.loadbalancer.server.port: "8000"',
+        '- "existing.web=kept"',
+        '- "traefik.http.routers.coherence-web-hati.rule=Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`) || Host(`app.hati.earth`)"',
+        '- "traefik.http.services.coherence-web-hati.loadbalancer.server.port=3000"',
+    )
+    missing = [item for item in required if item not in rendered]
+    if missing:
+        raise SystemExit(f"reconciled compose is missing: {missing}")
+    for key in (
+        "traefik.http.routers.coherence-api.rule",
+        "traefik.http.routers.coherence-web-hati.rule",
+    ):
+        if rendered.count(key) != 1:
+            raise SystemExit(f"{key} is duplicated")
+
+    before_second = compose_path.read_bytes()
+    second = subprocess.run(
+        [sys.executable, "-c", reconciler],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if second.stdout.strip() != "unchanged":
+        raise SystemExit(f"second reconciliation was not a no-op: {second.stdout!r}")
+    if compose_path.read_bytes() != before_second:
+        raise SystemExit("second reconciliation rewrote an already healthy compose file")
+
+call = source.index("ensure_public_host_routes || exit 1")
+retire = source.rindex("retire_sibling_kernel_routers")
+if call >= retire:
+    raise SystemExit("public host routes are reconciled only after sibling ingress retires")
+verify = source.rindex("verify_api_public_host_route || exit 1")
+if verify <= retire:
+    raise SystemExit("running API labels are not verified after sibling ingress retires")
+
+aligned_start = source.index(
+    'if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then'
+)
+aligned_end = source.index("\nfi\n", aligned_start)
+aligned = source[aligned_start:aligned_end]
+aligned_retire = aligned.find("retire_sibling_kernel_routers || exit 1")
+aligned_verify = aligned.find("verify_api_public_host_route || exit 1")
+aligned_exit = aligned.rfind("exit 0")
+if min(aligned_retire, aligned_verify, aligned_exit) < 0:
+    raise SystemExit("already-aligned recovery lacks authority retirement, route verification, or success exit")
+if not aligned_retire < aligned_verify < aligned_exit:
+    raise SystemExit("already-aligned recovery can exit before ingress authority is retired and verified")
+PY
+
 # Exercise gitlink-aware routing in isolated local repositories. These fixtures
 # never invoke Docker, deploy, or the network; Docker/log are shell stubs.
 ROUTING_FIXTURE="$(mktemp -d)"

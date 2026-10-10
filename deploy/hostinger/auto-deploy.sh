@@ -117,9 +117,10 @@ require_file "$REPO_DIR/.git"
 require_file "$COMPOSE_ROOT/docker-compose.yml"
 require_file "$COMPOSE_ROOT/.env"
 
+API_PUBLIC_HOST_CHANGED=0
 HATI_WEB_HOSTS_CHANGED=0
 
-ensure_hati_web_hosts() {
+ensure_public_host_routes() {
   local result
   result="$(COMPOSE_FILE="$COMPOSE_ROOT/docker-compose.yml" python3 - <<'PY'
 from __future__ import annotations
@@ -174,40 +175,27 @@ def find_service(name: str) -> tuple[int, int, int]:
     return service_i, service_end, service_indent
 
 
-labels = {
-    "traefik.http.routers.coherence-web-hati.rule": "Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`) || Host(`app.hati.earth`)",
-    "traefik.http.routers.coherence-web-hati.entrypoints": "websecure",
-    "traefik.http.routers.coherence-web-hati.tls.certresolver": "letsencrypt",
-    "traefik.http.routers.coherence-web-hati.service": "coherence-web-hati",
-    "traefik.http.services.coherence-web-hati.loadbalancer.server.port": "3000",
-}
+def reconcile_service_labels(name: str, labels: dict[str, str]) -> bool:
+    service_i, service_end, service_indent = find_service(name)
+    labels_i = -1
+    labels_indent = service_indent + 2
+    for i in range(service_i + 1, service_end):
+        if lines[i].strip() == "labels:":
+            labels_i = i
+            labels_indent = indent_of(lines[i])
+            break
 
-try:
-    _web_i, web_end, web_indent = find_service("web")
-except Exception as exc:
-    print(f"error: {exc}", file=sys.stderr)
-    sys.exit(1)
+    if labels_i < 0:
+        insert = [f"{' ' * (service_indent + 2)}labels:"]
+        insert.extend(
+            f"{' ' * (service_indent + 4)}{key}: \"{value}\""
+            for key, value in labels.items()
+        )
+        lines[service_end:service_end] = insert
+        return True
 
-labels_i = -1
-labels_indent = web_indent + 2
-for i in range(_web_i + 1, web_end):
-    if lines[i].strip() == "labels:":
-        labels_i = i
-        labels_indent = indent_of(lines[i])
-        break
-
-changed = False
-if labels_i < 0:
-    insert = [f"{' ' * (web_indent + 2)}labels:"]
-    insert.extend(
-        f"{' ' * (web_indent + 4)}{key}: \"{value}\""
-        for key, value in labels.items()
-    )
-    lines[web_end:web_end] = insert
-    changed = True
-else:
-    labels_end = web_end
-    for i in range(labels_i + 1, web_end):
+    labels_end = service_end
+    for i in range(labels_i + 1, service_end):
         stripped = lines[i].strip()
         if not stripped:
             continue
@@ -219,7 +207,7 @@ else:
     first_child = next((line.strip() for line in block if line.strip()), "")
     list_style = first_child.startswith("-")
     target_keys = tuple(labels.keys())
-    without_hati = [
+    retained = [
         line for line in block if not any(key in line for key in target_keys)
     ]
     child_indent = labels_indent + 2
@@ -233,34 +221,137 @@ else:
             f"{' ' * child_indent}{key}: \"{value}\""
             for key, value in labels.items()
         ]
-    new_block = without_hati + target
-    if new_block != block:
-        lines[labels_i + 1 : labels_end] = new_block
-        changed = True
+    new_block = retained + target
+    if new_block == block:
+        return False
+    lines[labels_i + 1 : labels_end] = new_block
+    return True
 
-if changed:
+
+targets = {
+    "api": {
+        "traefik.enable": "true",
+        "traefik.http.routers.coherence-api.rule": "Host(`api.coherencycoin.com`)",
+        "traefik.http.routers.coherence-api.entrypoints": "websecure",
+        "traefik.http.routers.coherence-api.tls.certresolver": "letsencrypt",
+        "traefik.http.routers.coherence-api.priority": "100",
+        "traefik.http.routers.coherence-api.service": "coherence-api",
+        "traefik.http.services.coherence-api.loadbalancer.server.port": "8000",
+    },
+    "web": {
+        "traefik.http.routers.coherence-web-hati.rule": "Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`) || Host(`app.hati.earth`)",
+        "traefik.http.routers.coherence-web-hati.entrypoints": "websecure",
+        "traefik.http.routers.coherence-web-hati.tls.certresolver": "letsencrypt",
+        "traefik.http.routers.coherence-web-hati.service": "coherence-web-hati",
+        "traefik.http.services.coherence-web-hati.loadbalancer.server.port": "3000",
+    },
+}
+
+try:
+    changed_services = [
+        name for name, labels in targets.items()
+        if reconcile_service_labels(name, labels)
+    ]
+except Exception as exc:
+    print(f"error: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+if changed_services:
     compose_path.write_text("\n".join(lines) + "\n")
-    print("changed")
+    print(",".join(changed_services))
 else:
     print("unchanged")
 PY
 )"
-  case "$result" in
-    changed)
+  case ",$result," in
+    *,api,*)
+      API_PUBLIC_HOST_CHANGED=1
+      log "API public host: added/normalized Traefik route for api.coherencycoin.com"
+      ;;
+    *)
+      log "API public host: Traefik route already present"
+      ;;
+  esac
+  case ",$result," in
+    *,web,*)
       HATI_WEB_HOSTS_CHANGED=1
       log "Hati web hosts: added/normalized Traefik router labels for hati.earth and sense/suci/app subdomains"
       ;;
-    unchanged)
+    *)
       log "Hati web hosts: Traefik router labels already present"
       ;;
-    *)
-      log "FATAL Hati web hosts: unexpected result '$result'"
-      return 1
-      ;;
   esac
+  if [[ "$result" != "unchanged" && "$API_PUBLIC_HOST_CHANGED" != "1" && "$HATI_WEB_HOSTS_CHANGED" != "1" ]]; then
+    log "FATAL public host routes: unexpected result '$result'"
+    return 1
+  fi
 }
 
-ensure_hati_web_hosts || exit 1
+containers_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
+}
+
+# Rust/Go/TypeScript are proof siblings, never deployed execution authorities.
+# Keep this postcondition available to the already-aligned recovery path as
+# well as the rebuild path: an interrupted rollout can leave an old sibling
+# container holding a higher-priority Traefik route even after api is current.
+retire_sibling_kernel_routers() {
+  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml")
+  if [[ -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
+    compose_args+=(-f "$KERNEL_CANARY_COMPOSE_FILE")
+  fi
+  local services=(kernel-router kernel-router-bml-front-door)
+  log "fkwu authority: retiring sibling kernel-router containers"
+  docker compose "${compose_args[@]}" stop "${services[@]}" >/dev/null 2>&1 || true
+  docker compose "${compose_args[@]}" rm -f "${services[@]}" >/dev/null 2>&1 || true
+  local service remaining
+  for service in "${services[@]}"; do
+    remaining="$(containers_for_service "$service")"
+    if [[ -n "$remaining" ]]; then
+      log "FAIL: sibling runtime container still present for ${service}: $(echo "$remaining" | tr '\n' ' ')"
+      return 1
+    fi
+  done
+  log "fkwu authority: no sibling runtime containers remain"
+}
+
+verify_api_public_host_route() {
+  local container
+  container="$(docker ps --filter label=com.docker.compose.service=api --format '{{.Names}}' | head -n 1)"
+  if [[ -z "$container" ]]; then
+    log "FAIL: API public host route cannot be verified without a running API container"
+    return 1
+  fi
+  if ! docker inspect "$container" --format '{{json .Config.Labels}}' \
+    | python3 -c '
+import json
+import sys
+
+labels = json.load(sys.stdin)
+expected = {
+    "traefik.enable": "true",
+    "traefik.http.routers.coherence-api.rule": "Host(`api.coherencycoin.com`)",
+    "traefik.http.routers.coherence-api.entrypoints": "websecure",
+    "traefik.http.routers.coherence-api.tls.certresolver": "letsencrypt",
+    "traefik.http.routers.coherence-api.service": "coherence-api",
+    "traefik.http.services.coherence-api.loadbalancer.server.port": "8000",
+}
+wrong = {
+    key: {"expected": value, "observed": labels.get(key)}
+    for key, value in expected.items()
+    if labels.get(key) != value
+}
+if wrong:
+    raise SystemExit(f"API public host labels are absent or stale: {wrong}")
+'; then
+    log "FAIL: running API container does not own the api.coherencycoin.com Traefik route"
+    return 1
+  fi
+  log "API public host: running container owns api.coherencycoin.com -> api:8000"
+}
+
+ensure_public_host_routes || exit 1
 
 cd "$REPO_DIR"
 
@@ -361,16 +452,18 @@ RUNNING_SHORT="${RUNNING_SHA:0:12}"
 if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   sync_pinned_submodules
   log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
-  # `ensure_hati_web_hosts` may find the labels already present because a
-  # previous deploy wrote them into docker-compose.yml but did not include
-  # the web service in `compose up`. A plain `up -d web` is idempotent when
-  # the live container is already aligned, and it is the missing step that
-  # lets Traefik ingest label-only host changes.
-  log "Hati web hosts: reconciling web service labels"
-  docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d web 2>&1 | tee -a "$LOG_FILE"
+  # The reconciler may find labels already present because a previous deploy
+  # wrote docker-compose.yml but did not include that service in `compose up`.
+  # This idempotent update makes Traefik ingest both API and Hati host routes.
+  log "Public host routes: reconciling API and Hati web service labels"
+  docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d api web 2>&1 | tee -a "$LOG_FILE"
   # Aligned repo + api is necessary, not sufficient — raise any stopped
   # siblings (web, pulse) before resting, or this exit masks their silence.
   ensure_all_services_up || exit 1
+  # A cancelled rollout can leave proof siblings owning higher-priority
+  # Traefik routes. SHA alignment must never bypass authority retirement.
+  retire_sibling_kernel_routers || exit 1
+  verify_api_public_host_route || exit 1
   # A rerun after a witness/index failure must heal and prove the already-live
   # release; SHA alignment alone is not completion.
   bootstrap_and_verify_local_grounding || exit 1
@@ -792,11 +885,6 @@ wait_for_compose_service_running() {
 recreate_orphans_for_service() {
   local service="$1"
   docker ps -a --format '{{.Names}}' | grep -E "^[0-9a-f]{6,}_coherence-network-${service}-1$" || true
-}
-
-containers_for_service() {
-  local service="$1"
-  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
 }
 
 wait_for_recreate_orphans_gone() {
@@ -1688,29 +1776,6 @@ ensure_kernel_router_canary() {
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
 }
 
-# Rust/Go/TypeScript are proof siblings, never deployed execution authorities.
-# Remove containers left by the retired kernel-router overlay before observing
-# the API. The API image itself carries the sole production runtime: /app/form/fkwu.
-retire_sibling_kernel_routers() {
-  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml")
-  if [[ -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
-    compose_args+=(-f "$KERNEL_CANARY_COMPOSE_FILE")
-  fi
-  local services=(kernel-router kernel-router-bml-front-door)
-  log "fkwu authority: retiring sibling kernel-router containers"
-  docker compose "${compose_args[@]}" stop "${services[@]}" >/dev/null 2>&1 || true
-  docker compose "${compose_args[@]}" rm -f "${services[@]}" >/dev/null 2>&1 || true
-  local service remaining
-  for service in "${services[@]}"; do
-    remaining="$(containers_for_service "$service")"
-    if [[ -n "$remaining" ]]; then
-      log "FAIL: sibling runtime container still present for ${service}: $(echo "$remaining" | tr '\n' ' ')"
-      return 1
-    fi
-  done
-  log "fkwu authority: no sibling runtime containers remain"
-}
-
 # Raise any service a prior cancelled rollout left stopped before the hard
 # checks below — they verify the whole body, not only the rebuilt scope.
 ensure_all_services_up || true
@@ -1729,7 +1794,8 @@ else
   exit 1
 fi
 
-retire_sibling_kernel_routers
+retire_sibling_kernel_routers || exit 1
+verify_api_public_host_route || exit 1
 
 sync_substrate_content
 # Use DIFF_BASE (RUNNING_SHA when known) so substrate ingest catches any
