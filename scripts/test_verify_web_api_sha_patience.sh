@@ -14,6 +14,7 @@ target_sha="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 old_sha="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 api_health_calls_file="$fixture_dir/api_health_calls"
 web_proxy_calls_file="$fixture_dir/web_proxy_calls"
+web_proxy_transient_file="$fixture_dir/web_proxy_transient"
 printf '0\n' > "$api_health_calls_file"
 printf '0\n' > "$web_proxy_calls_file"
 
@@ -21,6 +22,7 @@ curl() {
   local output_file=""
   local write_format=""
   local url=""
+  local http_status="200"
   while (($#)); do
     case "$1" in
       -o)
@@ -68,7 +70,10 @@ curl() {
       calls="$(cat "$web_proxy_calls_file")"
       calls=$((calls + 1))
       printf '%s\n' "$calls" > "$web_proxy_calls_file"
-      if [[ "$calls" -eq 1 ]]; then
+      if [[ -f "$web_proxy_transient_file" && "$calls" -eq 1 ]]; then
+        http_status="503"
+        body='{"detail":"upstream restarting"}'
+      elif [[ "$calls" -eq 1 ]]; then
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
       else
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$target_sha\"}}"
@@ -87,7 +92,7 @@ curl() {
   fi
 
   if [[ "$write_format" == "%{http_code}" ]]; then
-    printf '200'
+    printf '%s' "$http_status"
   fi
 }
 
@@ -155,6 +160,19 @@ web_output="$(
 grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$web_output" >/dev/null
 grep -F "OK: Web runtime SHA parity settled after 2 attempt(s)" <<<"$web_output" >/dev/null
 grep -F "PASS" <<<"$web_output" >/dev/null
+
+printf '0\n' > "$web_proxy_calls_file"
+touch "$web_proxy_transient_file"
+web_rollout_output="$(
+  GATEWAY_PATIENCE_SECONDS=2 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"
+rm -f "$web_proxy_transient_file"
+grep -F "WARN: web health-proxy rollout status 503" <<<"$web_rollout_output" >/dev/null
+grep -F "OK: Web runtime SHA parity settled after 2 attempt(s)" <<<"$web_rollout_output" >/dev/null
+grep -F "PASS" <<<"$web_rollout_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "2" ]]
 
 grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
 if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then

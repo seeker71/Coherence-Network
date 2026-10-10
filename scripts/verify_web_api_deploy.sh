@@ -925,6 +925,7 @@ check_web_runtime_sha() {
   local main_head_body="$TMP_DIR/web_main_head_sha.body.json"
   local proxy_status main_head_status
   local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
+  local gateway_deadline=$(( $(date +%s) + GATEWAY_PATIENCE_SECONDS ))
   local should_wait=0
   local attempt=1
   if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
@@ -944,6 +945,17 @@ check_web_runtime_sha() {
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
       "$main_head_url" || true)"
     echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+    case "${proxy_status:-}" in
+      ""|404|502|503|504)
+        if (( $(date +%s) < gateway_deadline )); then
+          echo "WARN: web health-proxy rollout status ${proxy_status:-request-error}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway to settle..."
+          sleep "$GATEWAY_PATIENCE_INTERVAL"
+          attempt=$((attempt + 1))
+          continue
+        fi
+        ;;
+    esac
 
     if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
       echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
