@@ -928,6 +928,7 @@ check_web_runtime_sha() {
   local gateway_deadline=0
   local gateway_started_at=0
   local now=0
+  local proxy_attempt_started_at=0
   local should_wait=0
   local attempt=1
   if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
@@ -938,6 +939,7 @@ check_web_runtime_sha() {
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
 
   while :; do
+    proxy_attempt_started_at="$(date +%s)"
     proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
       --max-time "$CURL_MAX_TIME" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
@@ -952,7 +954,7 @@ check_web_runtime_sha() {
       ""|404|502|503|504)
         now="$(date +%s)"
         if (( gateway_started_at == 0 )); then
-          gateway_started_at="$now"
+          gateway_started_at="$proxy_attempt_started_at"
         fi
         if (( gateway_deadline == 0 )); then
           gateway_deadline=$(( now + GATEWAY_PATIENCE_SECONDS ))
