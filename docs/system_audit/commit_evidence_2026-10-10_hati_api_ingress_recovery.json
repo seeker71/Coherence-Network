@@ -60,6 +60,7 @@
     "The deploy script previously reconciled Hati web Host labels but assumed an external base API router already existed underneath the retired sibling ingress.",
     "The public-host reconciler now owns both the canonical api.coherencycoin.com route to api:8000 and the Hati web host family before any early-aligned exit or sibling retirement.",
     "The aligned rerun path now updates both api and web services so Traefik receives label-only repairs even when source and running SHA already match.",
+    "The aligned rerun also retires any stale higher-priority proof-sibling routers and verifies the running API Host route before it may return success; the exact-head review finding that exposed this interrupted-rollout gap is covered by an executable path-order assertion.",
     "After sibling retirement, the deploy inspects the running API container and fails immediately unless its canonical Host rule, service binding, entrypoint, certificate resolver, and port are present.",
     "The fixture executes the actual embedded reconciler with mapping-style API labels and list-style web labels, retains unrelated labels, creates each canonical route once, and proves a second run is byte-for-byte unchanged.",
     "No household token, balance, transaction row, Sheet secret, or private URL is present in this evidence."
@@ -77,7 +78,7 @@
       "bash scripts/test_hostinger_deploy_form_paths.sh",
       "git diff --check"
     ],
-    "summary": "Shell syntax, the full Hostinger deploy-path suite, the executable mixed-label Compose fixture, idempotence proof, sibling-retirement ordering, running-container label postcondition, and whitespace checks pass. The full local PR guard reports ready_for_push=true with zero attention items."
+    "summary": "Shell syntax, the full Hostinger deploy-path suite, the executable mixed-label Compose fixture, idempotence proof, rebuild and already-aligned sibling-retirement ordering, running-container label postcondition, and whitespace checks pass. The full local PR guard reports ready_for_push=true with zero attention items."
   },
   "ci_validation": {
     "status": "pending",

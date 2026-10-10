@@ -208,6 +208,19 @@ if call >= retire:
 verify = source.rindex("verify_api_public_host_route || exit 1")
 if verify <= retire:
     raise SystemExit("running API labels are not verified after sibling ingress retires")
+
+aligned_start = source.index(
+    'if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then'
+)
+aligned_end = source.index("\nfi\n", aligned_start)
+aligned = source[aligned_start:aligned_end]
+aligned_retire = aligned.find("retire_sibling_kernel_routers || exit 1")
+aligned_verify = aligned.find("verify_api_public_host_route || exit 1")
+aligned_exit = aligned.rfind("exit 0")
+if min(aligned_retire, aligned_verify, aligned_exit) < 0:
+    raise SystemExit("already-aligned recovery lacks authority retirement, route verification, or success exit")
+if not aligned_retire < aligned_verify < aligned_exit:
+    raise SystemExit("already-aligned recovery can exit before ingress authority is retired and verified")
 PY
 
 # Exercise gitlink-aware routing in isolated local repositories. These fixtures

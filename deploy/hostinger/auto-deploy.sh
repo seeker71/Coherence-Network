@@ -287,6 +287,70 @@ PY
   fi
 }
 
+containers_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
+}
+
+# Rust/Go/TypeScript are proof siblings, never deployed execution authorities.
+# Keep this postcondition available to the already-aligned recovery path as
+# well as the rebuild path: an interrupted rollout can leave an old sibling
+# container holding a higher-priority Traefik route even after api is current.
+retire_sibling_kernel_routers() {
+  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml")
+  if [[ -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
+    compose_args+=(-f "$KERNEL_CANARY_COMPOSE_FILE")
+  fi
+  local services=(kernel-router kernel-router-bml-front-door)
+  log "fkwu authority: retiring sibling kernel-router containers"
+  docker compose "${compose_args[@]}" stop "${services[@]}" >/dev/null 2>&1 || true
+  docker compose "${compose_args[@]}" rm -f "${services[@]}" >/dev/null 2>&1 || true
+  local service remaining
+  for service in "${services[@]}"; do
+    remaining="$(containers_for_service "$service")"
+    if [[ -n "$remaining" ]]; then
+      log "FAIL: sibling runtime container still present for ${service}: $(echo "$remaining" | tr '\n' ' ')"
+      return 1
+    fi
+  done
+  log "fkwu authority: no sibling runtime containers remain"
+}
+
+verify_api_public_host_route() {
+  local container
+  container="$(docker ps --filter label=com.docker.compose.service=api --format '{{.Names}}' | head -n 1)"
+  if [[ -z "$container" ]]; then
+    log "FAIL: API public host route cannot be verified without a running API container"
+    return 1
+  fi
+  if ! docker inspect "$container" --format '{{json .Config.Labels}}' \
+    | python3 -c '
+import json
+import sys
+
+labels = json.load(sys.stdin)
+expected = {
+    "traefik.enable": "true",
+    "traefik.http.routers.coherence-api.rule": "Host(`api.coherencycoin.com`)",
+    "traefik.http.routers.coherence-api.entrypoints": "websecure",
+    "traefik.http.routers.coherence-api.tls.certresolver": "letsencrypt",
+    "traefik.http.routers.coherence-api.service": "coherence-api",
+    "traefik.http.services.coherence-api.loadbalancer.server.port": "8000",
+}
+wrong = {
+    key: {"expected": value, "observed": labels.get(key)}
+    for key, value in expected.items()
+    if labels.get(key) != value
+}
+if wrong:
+    raise SystemExit(f"API public host labels are absent or stale: {wrong}")
+'; then
+    log "FAIL: running API container does not own the api.coherencycoin.com Traefik route"
+    return 1
+  fi
+  log "API public host: running container owns api.coherencycoin.com -> api:8000"
+}
+
 ensure_public_host_routes || exit 1
 
 cd "$REPO_DIR"
@@ -396,6 +460,10 @@ if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   # Aligned repo + api is necessary, not sufficient — raise any stopped
   # siblings (web, pulse) before resting, or this exit masks their silence.
   ensure_all_services_up || exit 1
+  # A cancelled rollout can leave proof siblings owning higher-priority
+  # Traefik routes. SHA alignment must never bypass authority retirement.
+  retire_sibling_kernel_routers || exit 1
+  verify_api_public_host_route || exit 1
   # A rerun after a witness/index failure must heal and prove the already-live
   # release; SHA alignment alone is not completion.
   bootstrap_and_verify_local_grounding || exit 1
@@ -817,11 +885,6 @@ wait_for_compose_service_running() {
 recreate_orphans_for_service() {
   local service="$1"
   docker ps -a --format '{{.Names}}' | grep -E "^[0-9a-f]{6,}_coherence-network-${service}-1$" || true
-}
-
-containers_for_service() {
-  local service="$1"
-  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
 }
 
 wait_for_recreate_orphans_gone() {
@@ -1713,64 +1776,6 @@ ensure_kernel_router_canary() {
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
 }
 
-# Rust/Go/TypeScript are proof siblings, never deployed execution authorities.
-# Remove containers left by the retired kernel-router overlay before observing
-# the API. The API image itself carries the sole production runtime: /app/form/fkwu.
-retire_sibling_kernel_routers() {
-  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml")
-  if [[ -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
-    compose_args+=(-f "$KERNEL_CANARY_COMPOSE_FILE")
-  fi
-  local services=(kernel-router kernel-router-bml-front-door)
-  log "fkwu authority: retiring sibling kernel-router containers"
-  docker compose "${compose_args[@]}" stop "${services[@]}" >/dev/null 2>&1 || true
-  docker compose "${compose_args[@]}" rm -f "${services[@]}" >/dev/null 2>&1 || true
-  local service remaining
-  for service in "${services[@]}"; do
-    remaining="$(containers_for_service "$service")"
-    if [[ -n "$remaining" ]]; then
-      log "FAIL: sibling runtime container still present for ${service}: $(echo "$remaining" | tr '\n' ' ')"
-      return 1
-    fi
-  done
-  log "fkwu authority: no sibling runtime containers remain"
-}
-
-verify_api_public_host_route() {
-  local container
-  container="$(docker ps --filter label=com.docker.compose.service=api --format '{{.Names}}' | head -n 1)"
-  if [[ -z "$container" ]]; then
-    log "FAIL: API public host route cannot be verified without a running API container"
-    return 1
-  fi
-  if ! docker inspect "$container" --format '{{json .Config.Labels}}' \
-    | python3 -c '
-import json
-import sys
-
-labels = json.load(sys.stdin)
-expected = {
-    "traefik.enable": "true",
-    "traefik.http.routers.coherence-api.rule": "Host(`api.coherencycoin.com`)",
-    "traefik.http.routers.coherence-api.entrypoints": "websecure",
-    "traefik.http.routers.coherence-api.tls.certresolver": "letsencrypt",
-    "traefik.http.routers.coherence-api.service": "coherence-api",
-    "traefik.http.services.coherence-api.loadbalancer.server.port": "8000",
-}
-wrong = {
-    key: {"expected": value, "observed": labels.get(key)}
-    for key, value in expected.items()
-    if labels.get(key) != value
-}
-if wrong:
-    raise SystemExit(f"API public host labels are absent or stale: {wrong}")
-'; then
-    log "FAIL: running API container does not own the api.coherencycoin.com Traefik route"
-    return 1
-  fi
-  log "API public host: running container owns api.coherencycoin.com -> api:8000"
-}
-
 # Raise any service a prior cancelled rollout left stopped before the hard
 # checks below — they verify the whole body, not only the rebuilt scope.
 ensure_all_services_up || true
@@ -1789,7 +1794,7 @@ else
   exit 1
 fi
 
-retire_sibling_kernel_routers
+retire_sibling_kernel_routers || exit 1
 verify_api_public_host_route || exit 1
 
 sync_substrate_content
