@@ -248,18 +248,33 @@ def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> Non
     )[1]
 
     assert "HOSTINGER_SSH_KEY: ${{ secrets.hostinger_ssh_key }}" in final_step
-    assert "docker compose -f \"$compose\" run --rm --no-deps -T" in final_step
+    assert (
+        "maintenance_compose=/docker/coherence-network/repo/"
+        "deploy/hostinger/docker-compose.maintenance.yml"
+    ) in final_step
+    assert '[[ -f "$maintenance_compose" ]]' in final_step
+    assert 'docker compose -f "$compose" -f "$maintenance_compose"' in final_step
+    assert "run --rm --no-deps -T" in final_step
     assert "--entrypoint sh api -lc" in final_step
     assert "python3 scripts/refresh_deployment_witness_index.py" in final_step
     assert 'bash scripts/verify_observed_deployment_ask.sh "$1"' in final_step
     assert 'root@187.77.152.42 bash -s -- "$TARGET_SHA"' in final_step
     assert "docker exec \"$serving_container\" curl -fsS" in final_step
+    assert "http://127.0.0.1:8000/api/ping" in final_step
+    assert "http://127.0.0.1:8000/api/health" not in final_step
     assert 'docker exec "$container" sh -lc' not in final_step
     assert "python3 scripts/form_cli_rag.py heal" not in final_step
     assert "/api/substrate/grounded-ask" not in final_step
 
     config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
     assert config["grounding"]["native_ask_timeout_seconds"] == 20
+
+    verifier = (REPO_ROOT / "scripts/verify_observed_deployment_ask.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'ask_rc=$?' in verifier
+    assert 'deployment ask exited non-zero (rc=$ask_rc)' in verifier
+    assert "sed 's/^/  /' \"$err\" >&2" in verifier
 
 
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(
