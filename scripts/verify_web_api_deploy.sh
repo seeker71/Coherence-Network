@@ -12,6 +12,7 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+API_HEALTH_SNAPSHOT_FILE="$TMP_DIR/public_api_health_snapshot.json"
 
 CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
 CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
@@ -123,6 +124,7 @@ check_url() {
   local name="$1"
   local url="$2"
   local required_text="${3:-}"
+  local snapshot_file="${4:-}"
   local slug
   slug="$(echo "$name" | tr "[:upper:]" "[:lower:]" | tr -cs "a-z0-9" "_")"
   local headers_file="$TMP_DIR/${slug}.headers.txt"
@@ -186,6 +188,9 @@ check_url() {
     if [[ -n "$required_text" ]] && ! grep -Fq "$required_text" "$body_file"; then
       echo "FAIL: expected text not found: $required_text"
       return 1
+    fi
+    if [[ -n "$snapshot_file" ]]; then
+      cp "$body_file" "$snapshot_file"
     fi
     echo "PASS"
     return 0
@@ -630,9 +635,14 @@ check_fkwu_native_authority() {
 
   echo
   echo "==> fkwu native execution authority: ${health_url} + ${status_url}"
-  health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS \
-    -o "$health_file" -w "%{http_code}" --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" "$health_url" || true)"
+  if [[ -s "$API_HEALTH_SNAPSHOT_FILE" ]]; then
+    health_file="$API_HEALTH_SNAPSHOT_FILE"
+    health_status="200"
+  else
+    health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS \
+      -o "$health_file" -w "%{http_code}" --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" "$health_url" || true)"
+  fi
   kernel_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS \
     -o "$status_file" -w "%{http_code}" --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" "$status_url" || true)"
@@ -794,7 +804,11 @@ check_api_runtime_sha() {
   local health_url="$1"
   local main_head_url="$2"
   local required="${3:-0}"
+  local health_snapshot="${4:-}"
   local health_body="$TMP_DIR/api_health_sha.body.json"
+  if [[ -n "$health_snapshot" ]]; then
+    health_body="$health_snapshot"
+  fi
   local main_head_body="$TMP_DIR/api_main_head_sha.body.json"
   local health_status main_head_status
   local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
@@ -808,10 +822,14 @@ check_api_runtime_sha() {
   echo "==> API runtime SHA parity: ${health_url} vs ${main_head_url} (required=${required})"
 
   while :; do
-    health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
-      --max-time "$CURL_MAX_TIME" \
-      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-      "$health_url" || true)"
+    if [[ -n "$health_snapshot" && -s "$health_snapshot" ]]; then
+      health_status="200"
+    else
+      health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
+        --max-time "$CURL_MAX_TIME" \
+        --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+        "$health_url" || true)"
+    fi
     main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
       --max-time "$CURL_MAX_TIME" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
@@ -862,6 +880,7 @@ check_api_runtime_sha() {
     if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
       if (( should_wait == 1 && $(date +%s) < deadline )); then
         echo "WARN: API health has no deployed SHA yet; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        health_snapshot=""
         sleep "$SHA_PARITY_PATIENCE_INTERVAL"
         attempt=$((attempt + 1))
         continue
@@ -877,6 +896,7 @@ check_api_runtime_sha() {
     if [[ "$observed_sha" != "$expected_sha" ]]; then
       if (( should_wait == 1 && $(date +%s) < deadline )); then
         echo "WARN: API deployed SHA does not match expected main-head SHA; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        health_snapshot=""
         sleep "$SHA_PARITY_PATIENCE_INTERVAL"
         attempt=$((attempt + 1))
         continue
@@ -904,7 +924,13 @@ check_web_runtime_sha() {
   local proxy_body="$TMP_DIR/web_health_proxy_sha.body.json"
   local main_head_body="$TMP_DIR/web_main_head_sha.body.json"
   local proxy_status main_head_status
-  local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
+  local deadline=0
+  local gateway_deadline=0
+  local gateway_started_at=0
+  local now=0
+  local proxy_attempt_started_at=0
+  local proxy_max_time="$CURL_MAX_TIME"
+  local remaining_gateway=0
   local should_wait=0
   local attempt=1
   if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
@@ -915,19 +941,63 @@ check_web_runtime_sha() {
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
 
   while :; do
-    proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
-      --max-time "$CURL_MAX_TIME" \
+    proxy_max_time="$CURL_MAX_TIME"
+    if (( gateway_deadline > 0 )); then
+      now="$(date +%s)"
+      remaining_gateway=$(( gateway_deadline - now ))
+      if (( remaining_gateway <= 0 )); then
+        echo "FAIL: web health-proxy gateway patience expired"
+        return 1
+      fi
+      if (( proxy_max_time > remaining_gateway )); then
+        proxy_max_time="$remaining_gateway"
+      fi
+    fi
+    proxy_attempt_started_at="$(date +%s)"
+    proxy_status="$(run_with_retries_capture 1 "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
+      --max-time "$proxy_max_time" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
       "$proxy_url" || true)"
+
+    case "${proxy_status:-}" in
+      ""|404|502|503|504)
+        now="$(date +%s)"
+        if (( gateway_started_at == 0 )); then
+          gateway_started_at="$proxy_attempt_started_at"
+        fi
+        if (( gateway_deadline == 0 )); then
+          gateway_deadline=$(( gateway_started_at + GATEWAY_PATIENCE_SECONDS ))
+        fi
+        if (( now < gateway_deadline )); then
+          echo "proxy status: ${proxy_status:-unknown} | main-head status: not-requested"
+          echo "WARN: web health-proxy rollout status ${proxy_status:-request-error}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway to settle..."
+          sleep "$GATEWAY_PATIENCE_INTERVAL"
+          attempt=$((attempt + 1))
+          continue
+        fi
+        ;;
+    esac
+    if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
+      echo "proxy status: ${proxy_status:-unknown} | main-head status: not-requested"
+      echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
+      return 1
+    fi
+
+    now="$(date +%s)"
+    if (( gateway_started_at > 0 && deadline > 0 )); then
+      deadline=$(( deadline + now - gateway_started_at ))
+    fi
+    gateway_started_at=0
+    gateway_deadline=0
+
     main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
       --max-time "$CURL_MAX_TIME" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
       "$main_head_url" || true)"
     echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
 
-    if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
-      echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
-      return 1
+    if (( deadline == 0 )); then
+      deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
     fi
     if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
       if [[ "$required" == "1" ]]; then
@@ -1693,7 +1763,7 @@ if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
 fi
 
 fail=0
-check_url "Public API health" "${API_URL%/}/api/health" || fail=1
+check_url "Public API health" "${API_URL%/}/api/health" "" "$API_HEALTH_SNAPSHOT_FILE" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
   check_url "Public gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
 else
@@ -1703,7 +1773,8 @@ fi
 check_api_runtime_sha \
   "${API_URL%/}/api/health" \
   "${API_URL%/}/api/gates/main-head" \
-  "$VERIFY_REQUIRE_API_HEALTH_SHA" || fail=1
+  "$VERIFY_REQUIRE_API_HEALTH_SHA" \
+  "$API_HEALTH_SNAPSHOT_FILE" || fail=1
 if [[ "$VERIFY_REQUIRE_PERSISTENCE_CHECK" == "1" ]]; then
   check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
 else
@@ -1718,7 +1789,6 @@ check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
 check_web_public_asset "generated vision image" "/visuals/generated/lc-space-0.jpg" "jpeg" || fail=1
 check_url "Public web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Public web API health page" "${WEB_URL%/}/api-health" || fail=1
-check_url "Public web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
 check_url "Hati Urs profile" "https://hati.earth/people/urs" "Urs Muff" || fail=1
 check_url "Hati Urs profile refine doorway" "https://hati.earth/people/urs-muff/edit" "Refine Urs Muff" || fail=1
 check_url "Hati stewardship registry" "https://hati.earth/stewardship/registry" || fail=1
@@ -1728,7 +1798,7 @@ check_web_runtime_sha \
   "${WEB_URL%/}/api/health-proxy" \
   "${API_URL%/}/api/gates/main-head" \
   "$VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA" || fail=1
-check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
+check_cors "${API_URL%/}/api/ping" "${WEB_URL%/}" || fail=1
 check_pulse_witness || fail=1
 if [[ "$VERIFY_REQUIRE_TELEGRAM_ALERTS" == "1" ]]; then
   check_telegram_alert_config "${API_URL%/}/api/agent/telegram/diagnostics" || fail=1
