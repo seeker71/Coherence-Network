@@ -14,13 +14,29 @@ target_sha="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 old_sha="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 api_health_calls_file="$fixture_dir/api_health_calls"
 web_proxy_calls_file="$fixture_dir/web_proxy_calls"
+web_proxy_transient_file="$fixture_dir/web_proxy_transient"
+web_proxy_late_transient_file="$fixture_dir/web_proxy_late_transient"
+web_proxy_over_budget_file="$fixture_dir/web_proxy_over_budget"
+web_proxy_max_times_file="$fixture_dir/web_proxy_max_times"
+fake_clock_file="$fixture_dir/fake_clock"
 printf '0\n' > "$api_health_calls_file"
 printf '0\n' > "$web_proxy_calls_file"
+
+date() {
+  if [[ -f "$fake_clock_file" && "${1:-}" == "+%s" ]]; then
+    cat "$fake_clock_file"
+    return 0
+  fi
+  command date "$@"
+}
 
 curl() {
   local output_file=""
   local write_format=""
   local url=""
+  local http_status="200"
+  local max_time=""
+  local return_status=0
   while (($#)); do
     case "$1" in
       -o)
@@ -31,7 +47,11 @@ curl() {
         write_format="$2"
         shift 2
         ;;
-      --max-time|--connect-timeout)
+      --max-time)
+        max_time="$2"
+        shift 2
+        ;;
+      --connect-timeout)
         shift 2
         ;;
       -*)
@@ -60,12 +80,51 @@ curl() {
     http://api.example/api/gates/main-head)
       body="{\"sha\":\"$target_sha\"}"
       ;;
+    http://api.example/api/utils/kernel_status)
+      body='{"active":"fkwu","available":true,"binary_available":true}'
+      ;;
     http://web.example/api/health-proxy)
+      printf '%s\n' "$max_time" >> "$web_proxy_max_times_file"
       local calls
       calls="$(cat "$web_proxy_calls_file")"
       calls=$((calls + 1))
       printf '%s\n' "$calls" > "$web_proxy_calls_file"
-      if [[ "$calls" -eq 1 ]]; then
+      if [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 1 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '100\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 2 ]]; then
+        http_status=""
+        body=''
+        printf '181\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 3 ]]; then
+        http_status=""
+        body=''
+        printf '262\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 1 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '100\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 2 ]]; then
+        http_status=""
+        body=''
+        printf '181\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 3 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '189\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 4 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '300\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 5 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$target_sha\"}}"
+        printf '350\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_transient_file" && "$calls" -eq 1 ]]; then
+        http_status=""
+        return_status=7
+        body='{"detail":"upstream restarting"}'
+        printf '89\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_transient_file" && "$calls" -eq 2 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '210\n' > "$fake_clock_file"
+      elif [[ "$calls" -eq 1 ]]; then
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
       else
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$target_sha\"}}"
@@ -84,8 +143,9 @@ curl() {
   fi
 
   if [[ "$write_format" == "%{http_code}" ]]; then
-    printf '200'
+    printf '%s' "$http_status"
   fi
+  return "$return_status"
 }
 
 api_output="$(
@@ -97,6 +157,53 @@ grep -F "WARN: API deployed SHA does not match expected main-head SHA; retrying"
 grep -F "OK: API runtime SHA parity settled after 2 attempt(s)" <<<"$api_output" >/dev/null
 grep -F "PASS" <<<"$api_output" >/dev/null
 
+printf '1\n' > "$api_health_calls_file"
+printf '{"deployed_sha":"%s"}\n' "$old_sha" > "$API_HEALTH_SNAPSHOT_FILE"
+stale_cached_api_output="$(
+  SHA_PARITY_PATIENCE_SECONDS=2 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_api_runtime_sha \
+      "http://api.example/api/health" \
+      "http://api.example/api/gates/main-head" \
+      1 \
+      "$API_HEALTH_SNAPSHOT_FILE"
+)"
+grep -F "WARN: API deployed SHA does not match expected main-head SHA; retrying" <<<"$stale_cached_api_output" >/dev/null
+grep -F "OK: API runtime SHA parity settled after 2 attempt(s)" <<<"$stale_cached_api_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "2" ]]
+
+printf '0\n' > "$api_health_calls_file"
+cat > "$API_HEALTH_SNAPSHOT_FILE" <<JSON
+{
+  "deployed_sha": "$target_sha",
+  "kernel_runtime": "fkwu",
+  "native_runtime_observation": {
+    "verified": true,
+    "kernel": {
+      "verified": true,
+      "runtime": "fkwu",
+      "execution_authority": "c-bootstrap-fkwu",
+      "sibling_kernel_role": "differential-reference-only"
+    },
+    "form_cli": {"verified": true}
+  }
+}
+JSON
+
+cached_api_output="$(
+  check_api_runtime_sha \
+    "http://api.example/api/health" \
+    "http://api.example/api/gates/main-head" \
+    1 \
+    "$API_HEALTH_SNAPSHOT_FILE"
+)"
+grep -F "PASS" <<<"$cached_api_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "0" ]]
+
+cached_fkwu_output="$(check_fkwu_native_authority)"
+grep -F "PASS: c-bootstrap fkwu is verified" <<<"$cached_fkwu_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "0" ]]
+
 web_output="$(
   SHA_PARITY_PATIENCE_SECONDS=2 \
   SHA_PARITY_PATIENCE_INTERVAL=0 \
@@ -106,4 +213,69 @@ grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying"
 grep -F "OK: Web runtime SHA parity settled after 2 attempt(s)" <<<"$web_output" >/dev/null
 grep -F "PASS" <<<"$web_output" >/dev/null
 
-echo "PASS: API and web SHA parity wait through rollout mismatch"
+printf '0\n' > "$web_proxy_calls_file"
+printf '0\n' > "$fake_clock_file"
+touch "$web_proxy_transient_file"
+web_rollout_output="$(
+  GATEWAY_PATIENCE_SECONDS=90 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+  SHA_PARITY_PATIENCE_SECONDS=180 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"
+rm -f "$web_proxy_transient_file"
+rm -f "$fake_clock_file"
+grep -F "WARN: web health-proxy rollout status request-error" <<<"$web_rollout_output" >/dev/null
+grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$web_rollout_output" >/dev/null
+grep -F "OK: Web runtime SHA parity settled after 3 attempt(s)" <<<"$web_rollout_output" >/dev/null
+grep -F "PASS" <<<"$web_rollout_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "3" ]]
+
+printf '0\n' > "$web_proxy_calls_file"
+printf '0\n' > "$fake_clock_file"
+touch "$web_proxy_late_transient_file"
+late_rollout_output="$(
+  GATEWAY_PATIENCE_SECONDS=90 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+  SHA_PARITY_PATIENCE_SECONDS=180 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"
+rm -f "$web_proxy_late_transient_file"
+rm -f "$fake_clock_file"
+grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$late_rollout_output" >/dev/null
+grep -F "WARN: web health-proxy rollout status request-error" <<<"$late_rollout_output" >/dev/null
+grep -F "OK: Web runtime SHA parity settled after 5 attempt(s)" <<<"$late_rollout_output" >/dev/null
+grep -F "PASS" <<<"$late_rollout_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "5" ]]
+
+printf '0\n' > "$web_proxy_calls_file"
+printf '0\n' > "$fake_clock_file"
+: > "$web_proxy_max_times_file"
+touch "$web_proxy_over_budget_file"
+if over_budget_output="$(
+  GATEWAY_PATIENCE_SECONDS=90 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+  SHA_PARITY_PATIENCE_SECONDS=180 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"; then
+  echo "over-budget gateway outage unexpectedly passed" >&2
+  exit 1
+fi
+rm -f "$web_proxy_over_budget_file"
+rm -f "$fake_clock_file"
+grep -F "WARN: web health-proxy rollout status request-error" <<<"$over_budget_output" >/dev/null
+grep -F "FAIL: web health-proxy endpoint unavailable for SHA parity check" <<<"$over_budget_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "3" ]]
+[[ "$(tail -n 1 "$web_proxy_max_times_file")" == "9" ]]
+
+grep -F 'proxy_status="$(run_with_retries_capture 1 ' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
+
+grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
+if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then
+  echo "duplicate web health-proxy read remains" >&2
+  exit 1
+fi
+
+echo "PASS: API health snapshot is reused and SHA parity waits through rollout mismatch"
