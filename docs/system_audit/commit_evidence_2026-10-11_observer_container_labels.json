@@ -1,7 +1,7 @@
 {
   "date": "2026-10-11",
   "thread_branch": "codex/observer-container-labels-20261011",
-  "commit_scope": "Keep independent deployment observation stable when a running container's content-addressed image has no separate image-store record.",
+  "commit_scope": "Bind independent deployment observation to exactly one running non-one-off API container and its atomically inspected content-addressed image config.",
   "files_owned": [
     ".github/workflows/public-deployment-observer.yml",
     "api/tests/test_deployment_observer_oidc.py",
@@ -9,7 +9,7 @@
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "task_card": {
-    "goal": "Let the observer verify immutable OCI revision labels from the running container config without depending on a retained Docker image-store record.",
+    "goal": "Exclude disposable Compose sidecars from observer selection and bind immutable OCI revision labels to the canonical serving container's exact content-addressed image ID.",
     "files_allowed": [
       ".github/workflows/public-deployment-observer.yml",
       "api/tests/test_deployment_observer_oidc.py",
@@ -17,7 +17,7 @@
       "docs/system_audit/model_executor_runs.jsonl"
     ],
     "done_when": [
-      "The observer retains the content-addressed image ID but reads both immutable OCI revision labels from the running container config.",
+      "The observer selects exactly one running non-one-off API container and atomically requires its named image ID to equal the container's content-addressed image ID before accepting OCI revision labels.",
       "Focused observer contracts and the full local PR guard pass.",
       "The dormant observer repair lands with clean exact-head CI and review before permanent-SHA activation."
     ],
@@ -25,6 +25,7 @@
       "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "git diff --check"
     ],
     "constraints": [
@@ -55,8 +56,8 @@
   },
   "evidence_refs": [
     "Hostinger deploy run 38069355015 completed successfully at merge ee6930324c0c07e2f9276f8e71eb1ecccc7a6255.",
-    "The independent observer failed because docker image inspect could not find the running container's content-addressed image ID in the image store.",
-    "Direct VPS observation proved the same running container config carries the exact parent and Form revision labels while the separate image-store record is absent.",
+    "The independent observer failed on an image ID that was absent immediately after the disposable maintenance sidecar exited, while the canonical serving API image and tag remained present.",
+    "Direct VPS observation proved exactly one running non-one-off API container, with its named image resolving to the same content-addressed ID and exact parent/Form OCI revision labels in one image-inspect response.",
     "No secret, token, household value, transaction, or private Sheet URL is present in this evidence."
   ],
   "change_files": [
@@ -71,9 +72,11 @@
       "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
       "ruff check api/tests/test_deployment_observer_oidc.py api/tests/test_api_dockerfile_contract.py",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "git diff --check"
     ],
-    "summary": "All 37 focused observer/deploy contracts pass; lint and whitespace checks pass."
+    "summary": "All 37 focused observer/deploy contracts pass; lint, whitespace, full local PR guard, and strict follow-through checks pass."
   },
   "ci_validation": {
     "status": "pending",
@@ -85,7 +88,7 @@
   },
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "The external observer completes direct carrier execution even when Docker retains the running container but no separate image-store record.",
+    "expected_behavior_delta": "The external observer ignores disposable sidecars and accepts revision labels only from an image config whose ID exactly matches the canonical serving container's content-addressed image ID.",
     "public_endpoints": ["GET https://api.coherencycoin.com/api/health"],
     "test_flows": ["Run the pinned observer against the already-deployed merge and require full witness recording/readback."]
   },
@@ -104,12 +107,12 @@
       "frequency_attuned": true,
       "sufficient": false,
       "observed": false,
-      "reason": "OpenAI GPT-5 formed the repair; the failed observer log, live Docker state, tests, review, and rerun verify it."
+      "reason": "OpenAI GPT-5 formed the repair; the failed observer log, canonical container/image binding, tests, review, and rerun verify it."
     }
   },
   "sovereignty_receipt": {
     "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
-    "native_body_share": "The body supplied the failed observer trace and live container/image evidence; it verifies but did not generate the repair.",
+    "native_body_share": "The body supplied the failed observer trace and live canonical container/image binding; it verifies but did not generate the repair.",
     "standard_receipt": "The Form contender was asked first and returned no grounded answer within 30 seconds."
   },
   "phase_gate": {
