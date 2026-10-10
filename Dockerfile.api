@@ -17,21 +17,22 @@
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 
-FROM python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba AS kernel-builder
+FROM docker.io/library/gcc:12.5.0-bookworm@sha256:4adc71d718fb96aeda49f1da3a936e1ea07af2b192493414a8bca1c73b9f2adb AS kernel-builder
 
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 
 WORKDIR /build
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends gcc libc6-dev openssl \
- && rm -rf /var/lib/apt/lists/*
-
+# The compiler and libc arrive in this content-addressed builder image. The
+# independent observer reads this exact pin from the release Dockerfile, so no
+# later package-index movement can change either native build.
 RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
       | grep -Eq '^[0-9a-f]{40}$' \
  && test "$(printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
-      | grep -Ec '^[0-9a-f]{40}$')" = 2
+      | grep -Ec '^[0-9a-f]{40}$')" = 2 \
+ && command -v cc >/dev/null \
+ && command -v openssl >/dev/null
 
 # The public grounded-ask route uses the same c-bootstrapped fkwu form-cli as
 # the local wrapper. Build the committed emitted-C carrier here; no Go/runtime

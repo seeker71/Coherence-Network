@@ -71,6 +71,24 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     assert "form-kernel-rust" not in dockerfile
 
 
+def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    builder = dockerfile.split(" AS kernel-builder\n", 1)[1].split(
+        "# Stage 2 — Python runtime", 1
+    )[0]
+
+    image_pin = re.search(
+        r"^FROM (docker\.io/library/gcc:12\.5\.0-bookworm@sha256:[0-9a-f]{64}) "
+        r"AS kernel-builder$",
+        dockerfile,
+        re.MULTILINE,
+    )
+    assert image_pin is not None
+    assert "apt-get" not in builder
+    assert "command -v cc >/dev/null" in builder
+    assert "command -v openssl >/dev/null" in builder
+
+
 def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
     root = tmp_path / "image"
     scripts = root / "scripts"
