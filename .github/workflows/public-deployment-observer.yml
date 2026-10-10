@@ -174,8 +174,13 @@ jobs:
           [[ "$running" == true ]]
           container_id="$(docker inspect --format '{{.Id}}' "$container")"
           image_id="$(docker inspect --format '{{.Image}}' "$container")"
-          image_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image_id")"
-          image_form_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.coherence-form-revision"}}' "$image_id")"
+          # BuildKit may release the standalone image-store record while the
+          # container continues running from its content-addressed image. The
+          # container config is the immutable image config captured at create
+          # time, so read the OCI labels there instead of requiring a mutable
+          # host image-name/index record to remain present.
+          image_revision="$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$container")"
+          image_form_revision="$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.coherence-form-revision"}}' "$container")"
           [[ "$image_revision" == "$target_sha" ]]
           [[ "$image_form_revision" == "$form_source_commit" ]]
           build_context="$(docker compose -f "$compose" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["build"]["context"])')"
