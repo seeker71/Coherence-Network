@@ -389,6 +389,7 @@ def _default_config() -> dict[str, Any]:
         "server": {
             "environment": "development",
             "enable_hsts": False,
+            "startup_cache_warm_enabled": False,
             "forwarded_allow_ips": ["127.0.0.1", "172.16.0.0/12"],
         },
         "data_retention": {

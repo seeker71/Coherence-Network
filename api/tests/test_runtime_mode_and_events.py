@@ -2,12 +2,53 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from starlette.datastructures import QueryParams
+
 from app.models.runtime import RuntimeEvent, RuntimeEventCreate
 from app.services import runtime_service
 from app.services import idea_service
 from app.services.runtime import cache as runtime_cache
 from app.services.runtime import events as runtime_events
 from app.services.runtime import routes as runtime_routes
+
+
+def test_query_summary_redacts_secret_bearing_values() -> None:
+    from app import main as api_main
+
+    count, samples, heavy = api_main._query_summary(
+        QueryParams(
+            [
+                ("token", "private-household-value"),
+                ("sheet_token", "private-sheet-value"),
+                ("limit", "20"),
+                ("q", "visible-search"),
+            ]
+        )
+    )
+
+    assert count == 4
+    assert samples == [
+        {"k": "token", "v": "[redacted]"},
+        {"k": "sheet_token", "v": "[redacted]"},
+        {"k": "limit", "v": "20"},
+        {"k": "q", "v": "visible-search"},
+    ]
+    assert heavy == {"limit": "20"}
+
+
+def test_startup_cache_warm_is_disabled_by_file_configuration(monkeypatch) -> None:
+    from app import main as api_main
+
+    monkeypatch.setattr(api_main, "get_bool", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(
+        api_main.threading,
+        "Thread",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("disabled cache warm must not start a thread")
+        ),
+    )
+
+    assert api_main._start_startup_cache_warm() is False
 
 
 def test_runtime_cache_meta_key_uses_config_test_context(set_config):

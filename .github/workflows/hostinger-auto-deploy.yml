@@ -13,6 +13,7 @@ on:
       - 'docs/stewardship/**'
       - 'scripts/verify_web_api_deploy.sh'
       - 'scripts/form_cli_rag.py'
+      - 'scripts/refresh_deployment_witness_index.py'
       - 'scripts/ensure_form_cli_native.sh'
       - 'scripts/form_first_offline_setup.sh'
       - 'scripts/prompt_entry_gate.sh'
@@ -159,6 +160,6 @@ jobs:
     permissions:
       contents: none
       id-token: write
-    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@858bef6eb886e1be5b86bac4e52891196c958f57
+    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@60755fe1389c495a9eafbc71c78af1816e9c8530
     secrets:
       hostinger_ssh_key: ${{ secrets.HOSTINGER_SSH_KEY }}
