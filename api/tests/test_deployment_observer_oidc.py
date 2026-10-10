@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.routers import deployment_observer
 from app.services.deployment_observer_oidc import (
     ISSUER,
     ObserverOIDCError,
@@ -45,6 +46,8 @@ from app.services.deployment_observation import (
     verify_deployment_observation,
 )
 from app.services.unified_db import Base
+from scripts import form_cli_rag as rag
+from scripts import refresh_deployment_witness_index as witness_refresh
 
 
 TARGET = "a" * 40
@@ -276,6 +279,24 @@ def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> Non
     assert 'ask_rc=$?' in verifier
     assert 'deployment ask exited non-zero (rc=$ask_rc)' in verifier
     assert "sed 's/^/  /' \"$err\" >&2" in verifier
+
+
+def test_observer_request_publishes_only_the_bounded_witness_indexes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refreshed: list[str] = []
+    monkeypatch.setattr(
+        witness_refresh, "refresh", lambda index: refreshed.append(index)
+    )
+
+    deployment_observer._publish_deployment_witness_indexes()
+
+    assert refreshed == [rag.INDEX]
+    source = (REPO_ROOT / "api/app/routers/deployment_observer.py").read_text(
+        encoding="utf-8"
+    )
+    assert "refresh(INDEX)" in source
+    assert "heal(INDEX" not in source
 
 
 def test_oidc_accepts_only_the_fully_pinned_reusable_workflow_identity(

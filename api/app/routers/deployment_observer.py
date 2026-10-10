@@ -103,6 +103,14 @@ async def _loopback_health(nonce: str) -> bytes:
     return response.content
 
 
+def _publish_deployment_witness_indexes() -> None:
+    """Publish only the newly committed WITNESS into the native read lanes."""
+    from scripts.form_cli_rag import INDEX
+    from scripts.refresh_deployment_witness_index import refresh
+
+    refresh(INDEX)
+
+
 @router.post("/observation", summary="Consume a challenge and persist its WITNESS")
 async def record_observation(
     body: ObservationRequest,
@@ -149,14 +157,15 @@ async def record_observation(
     except (DeploymentObserverError, ValueError) as exc:
         raise _observer_http_error(exc) from exc
 
-    # The WITNESS is committed before index publication.  A heal failure leaves
-    # no false OBSERVED answer; the deploy job remains red and a retry can heal.
+    # The WITNESS is committed before index publication.  Refresh only its two
+    # native retrieval lanes: whole-body reconciliation belongs to the release
+    # path and can outlive the public request/proxy deadline.
     try:
-        from scripts.form_cli_rag import INDEX, heal
-
-        heal(INDEX, verbose=False)
+        _publish_deployment_witness_indexes()
     except Exception as exc:
-        raise HTTPException(status_code=503, detail="observer witness index heal failed") from exc
+        raise HTTPException(
+            status_code=503, detail="observer witness index refresh failed"
+        ) from exc
     return {
         "schema": "authenticated-deployment-observation-v1",
         "challenge_id": body.challenge_id,
