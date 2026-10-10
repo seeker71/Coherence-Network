@@ -105,7 +105,8 @@ jobs:
           source_dir="$(mktemp -d)"
           reproduced_dir="$(mktemp -d)"
           wrapper_source="$(mktemp)"
-          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$reproduced_dir" "$wrapper_source"' EXIT
+          dockerfile_source="$(mktemp)"
+          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$reproduced_dir" "$wrapper_source" "$dockerfile_source"' EXIT
           install -m 700 -d "$ssh_dir"
           printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
           chmod 600 "$ssh_dir/key"
@@ -228,7 +229,6 @@ jobs:
           },sort_keys=True,separators=(",",":")))
           PY
           REMOTE
-          builder='docker.io/library/python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba'
           curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
             --connect-timeout 5 --max-time 60 \
             "https://codeload.github.com/seeker71/coherence-kernel/tar.gz/${form_source_commit}" \
@@ -238,13 +238,29 @@ jobs:
             --connect-timeout 5 --max-time 30 \
             "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/bin/form-cli" \
             -o "$wrapper_source"
+          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
+            --connect-timeout 5 --max-time 30 \
+            "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/Dockerfile.api" \
+            -o "$dockerfile_source"
+          builder="$(python3 - "$dockerfile_source" <<'PY'
+          import re,sys
+          source=open(sys.argv[1],encoding="utf-8").read()
+          matches=re.findall(r"^FROM (\S+) AS kernel-builder$",source,re.MULTILINE)
+          if len(matches)!=1:
+              raise SystemExit("target Dockerfile has no single kernel builder image pin")
+          value=matches[0]
+          if re.fullmatch(r"docker\.io/library/gcc:12\.5\.0-bookworm@sha256:[0-9a-f]{64}",value) is None:
+              raise SystemExit("target Dockerfile kernel builder image is not an immutable approved pin")
+          print(value)
+          PY
+          )"
           docker run --rm --platform linux/amd64 \
             -v "$source_dir:/source:ro" \
             -v "$reproduced_dir:/out" \
             "$builder" bash -lc '
               set -euo pipefail
-              apt-get update
-              apt-get install -y --no-install-recommends gcc libc6-dev openssl
+              command -v cc >/dev/null
+              command -v openssl >/dev/null
               mkdir -p /build /build/form-cli-src
               cp -a /source/runtime /build/runtime
               cp -a /source/form/form-stdlib /build/form-cli-src/form-stdlib

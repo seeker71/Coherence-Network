@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-toolchain-repro-20261010",
+  "commit_scope": "Land dormant observer support for reading a release's immutable compiler image from its target Dockerfile before activating that observer in an atomic follow-through.",
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_toolchain_reproduction.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Prepare the independent observer to reuse a release's exact immutable compiler image without changing the active production builder, recorder, or observer pin.",
+    "files_allowed": [
+      ".github/workflows/public-deployment-observer.yml",
+      "api/tests/test_deployment_observer_oidc.py",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_toolchain_reproduction.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The dormant observer reads the future release builder from the target Dockerfile, admits only the approved content-addressed GCC image shape, and performs no apt resolution.",
+      "The active deploy caller, API recorder, and production Dockerfile remain unchanged until this workflow has a permanent on-main merge SHA.",
+      "The focused observer contract and local PR guard pass."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_toolchain_reproduction.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve the c-bootstrapped fkwu as the sole production Form runtime.",
+      "Keep the independent byte-for-byte reproduction check strict.",
+      "Do not expose household tokens, balances, transaction rows, Sheet secrets, SSH material, or private URLs."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["public-deployment-observer", "fkwu-only-kernel-collapse"],
+  "task_ids": ["task-2026-10-10-hati-toolchain-reproduction"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 38052409889 successfully rolled merge commit f13a25a6e81a533c98b006576d52db855bfba373 to production and the public API reported that exact SHA.",
+    "The authenticated app.hati.earth browser flow recovered from connecting through retrying to a confirmed Sheet-backed balance without showing the private value.",
+    "The same workflow's independent observer reproduced the immutable kernel source successfully, then failed because deployed kernel_binary_sha256 differed from the fresh reproduction.",
+    "Exact-head review correctly rejected source-based cache invalidation because a scheduled observer can revisit the same deployed SHA after Debian packages move.",
+    "This PR leaves the active API builder, recorder expectation, deploy caller, and OIDC policy unchanged, avoiding any production witness gap before activation.",
+    "The dormant observer downloads the exact target Dockerfile, admits only the approved content-addressed GCC pin, and will reproduce both native carriers in that same image without apt resolution after activation.",
+    "A follow-through PR will atomically change the Dockerfile builder, recorder expectation, deploy caller, and OIDC policy to this workflow's permanent on-main merge SHA.",
+    "The focused contract proves the observer's target-bound immutable toolchain behavior without activating it.",
+    "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_toolchain_reproduction.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py",
+      "git diff --check"
+    ],
+    "summary": "The focused deployment-observer contract and whitespace checks pass. The production builder and active recorder/caller remain unchanged in this phase."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "No production behavior changes in this phase; the revised observer is available at a permanent main SHA for atomic activation in the follow-through.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Complete exact-head CI and review for the dormant observer.",
+      "Merge the observer to obtain its permanent on-main SHA.",
+      "Atomically activate build, recorder, and caller in the follow-through before public verification."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within its bounded window, so it supplied no attributable diagnosis."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the immutable-toolchain repair; the exact observer failure, target Dockerfile boundary, contract tests, CI, deploy, and browser supply verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the deploy trace, strict reproduction boundary, Docker carrier, tests, and live browser behavior. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this toolchain-cache mismatch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting full local guard, exact-head CI/review, merge, and the atomic activation follow-through before production proof."
+  }
+}
