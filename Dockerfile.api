@@ -42,7 +42,8 @@ COPY form/form/form-stdlib /build/form-cli-src/form-stdlib
 COPY form/form/scripts /build/form-cli-src/scripts
 COPY form/form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
 RUN cd /build/form-cli-src \
- && CC=cc FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh /build/form-cli \
+ && SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC \
+      CC=cc FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh /build/form-cli \
  && test "$(printf 'ping\n' | /build/form-cli)" = "pong" \
  && mkdir -p /tmp/form-cli-proof/.coherence-network/rag-requests \
  && printf '70726f6f66|6465706c6f7965642070726f6f66206b65726e656c\n' \
@@ -58,7 +59,8 @@ RUN cd /build/form-cli-src \
 # distribution. Direct source is the gate: no flatten table is generated.
 COPY form/runtime /build/runtime
 COPY form/bootstrap /build/bootstrap
-RUN cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c \
+RUN SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC \
+      cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c \
  && test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42 \
  && test "$(cd /build && ./fkwu --src bootstrap/ground-recursive.fk 10 2>/dev/null)" = 55 \
  && test "$(cd /build && ./fkwu --src bootstrap/ground-numeric-list.fk 2>/dev/null)" = '[1, 2.5, [3, 4]]' \

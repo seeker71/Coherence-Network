@@ -73,6 +73,9 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
 
 def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    fkwu_source = (REPO_ROOT / "form" / "runtime" / "fkwu-uni.c").read_text(
+        encoding="utf-8"
+    )
     builder = dockerfile.split(" AS kernel-builder\n", 1)[1].split(
         "# Stage 2 — Python runtime", 1
     )[0]
@@ -87,6 +90,9 @@ def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> No
     assert "apt-get" not in builder
     assert "command -v cc >/dev/null" in builder
     assert "command -v openssl >/dev/null" in builder
+    assert builder.count("SOURCE_DATE_EPOCH=0") == 2
+    assert "__DATE__" in fkwu_source
+    assert "__TIME__" in fkwu_source
 
 
 def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
