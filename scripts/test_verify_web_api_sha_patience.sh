@@ -17,6 +17,7 @@ web_proxy_calls_file="$fixture_dir/web_proxy_calls"
 web_proxy_transient_file="$fixture_dir/web_proxy_transient"
 web_proxy_late_transient_file="$fixture_dir/web_proxy_late_transient"
 web_proxy_over_budget_file="$fixture_dir/web_proxy_over_budget"
+web_proxy_max_times_file="$fixture_dir/web_proxy_max_times"
 fake_clock_file="$fixture_dir/fake_clock"
 printf '0\n' > "$api_health_calls_file"
 printf '0\n' > "$web_proxy_calls_file"
@@ -34,6 +35,7 @@ curl() {
   local write_format=""
   local url=""
   local http_status="200"
+  local max_time=""
   while (($#)); do
     case "$1" in
       -o)
@@ -44,7 +46,11 @@ curl() {
         write_format="$2"
         shift 2
         ;;
-      --max-time|--connect-timeout)
+      --max-time)
+        max_time="$2"
+        shift 2
+        ;;
+      --connect-timeout)
         shift 2
         ;;
       -*)
@@ -77,6 +83,7 @@ curl() {
       body='{"active":"fkwu","available":true,"binary_available":true}'
       ;;
     http://web.example/api/health-proxy)
+      printf '%s\n' "$max_time" >> "$web_proxy_max_times_file"
       local calls
       calls="$(cat "$web_proxy_calls_file")"
       calls=$((calls + 1))
@@ -241,6 +248,7 @@ grep -F "PASS" <<<"$late_rollout_output" >/dev/null
 
 printf '0\n' > "$web_proxy_calls_file"
 printf '0\n' > "$fake_clock_file"
+: > "$web_proxy_max_times_file"
 touch "$web_proxy_over_budget_file"
 if over_budget_output="$(
   GATEWAY_PATIENCE_SECONDS=90 \
@@ -257,6 +265,7 @@ rm -f "$fake_clock_file"
 grep -F "WARN: web health-proxy rollout status request-error" <<<"$over_budget_output" >/dev/null
 grep -F "FAIL: web health-proxy endpoint unavailable for SHA parity check" <<<"$over_budget_output" >/dev/null
 [[ "$(cat "$web_proxy_calls_file")" == "3" ]]
+[[ "$(tail -n 1 "$web_proxy_max_times_file")" == "9" ]]
 
 grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
 if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then

@@ -929,6 +929,9 @@ check_web_runtime_sha() {
   local gateway_started_at=0
   local now=0
   local proxy_attempt_started_at=0
+  local proxy_attempts="$CURL_RETRIES"
+  local proxy_max_time="$CURL_MAX_TIME"
+  local remaining_gateway=0
   local should_wait=0
   local attempt=1
   if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
@@ -939,16 +942,25 @@ check_web_runtime_sha() {
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
 
   while :; do
+    proxy_attempts="$CURL_RETRIES"
+    proxy_max_time="$CURL_MAX_TIME"
+    if (( gateway_deadline > 0 )); then
+      now="$(date +%s)"
+      remaining_gateway=$(( gateway_deadline - now ))
+      if (( remaining_gateway <= 0 )); then
+        echo "FAIL: web health-proxy gateway patience expired"
+        return 1
+      fi
+      proxy_attempts=1
+      if (( proxy_max_time > remaining_gateway )); then
+        proxy_max_time="$remaining_gateway"
+      fi
+    fi
     proxy_attempt_started_at="$(date +%s)"
-    proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
-      --max-time "$CURL_MAX_TIME" \
+    proxy_status="$(run_with_retries_capture "$proxy_attempts" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
+      --max-time "$proxy_max_time" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
       "$proxy_url" || true)"
-    main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
-      --max-time "$CURL_MAX_TIME" \
-      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-      "$main_head_url" || true)"
-    echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
 
     case "${proxy_status:-}" in
       ""|404|502|503|504)
@@ -960,6 +972,7 @@ check_web_runtime_sha() {
           gateway_deadline=$(( gateway_started_at + GATEWAY_PATIENCE_SECONDS ))
         fi
         if (( now < gateway_deadline )); then
+          echo "proxy status: ${proxy_status:-unknown} | main-head status: not-requested"
           echo "WARN: web health-proxy rollout status ${proxy_status:-request-error}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway to settle..."
           sleep "$GATEWAY_PATIENCE_INTERVAL"
           attempt=$((attempt + 1))
@@ -967,6 +980,12 @@ check_web_runtime_sha() {
         fi
         ;;
     esac
+    if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
+      echo "proxy status: ${proxy_status:-unknown} | main-head status: not-requested"
+      echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
+      return 1
+    fi
+
     now="$(date +%s)"
     if (( gateway_started_at > 0 && deadline > 0 )); then
       deadline=$(( deadline + now - gateway_started_at ))
@@ -974,10 +993,12 @@ check_web_runtime_sha() {
     gateway_started_at=0
     gateway_deadline=0
 
-    if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
-      echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
-      return 1
-    fi
+    main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$main_head_url" || true)"
+    echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
     if (( deadline == 0 )); then
       deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
     fi
