@@ -80,6 +80,7 @@
     "Slow-request telemetry retained raw secret-bearing query values, so this repair redacts them before both persistence and logs.",
     "Exact-head review found that /api/ping still synchronously persisted runtime telemetry; the liveness route now bypasses that database dependency while ordinary routes retain telemetry.",
     "A second exact-head review found unsupported resource flags on docker compose run; live Compose v5.0.2 rejected those flags and accepted the checked-in service-level CPU/memory override that now carries all maintenance sidecars.",
+    "Corrected-head review then found that one-off api sidecars could inherit public Traefik labels; the maintenance override disables Traefik discovery so shell-only containers never join the serving pool.",
     "Permanent observer merge 60755fe1389c495a9eafbc71c78af1816e9c8530 isolates final witness verification and refreshes only its dynamic witness.",
     "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
   ],

@@ -5,3 +5,8 @@ services:
     # its hard resource boundary through the service model Compose supports.
     cpus: 1.0
     mem_limit: 2g
+    # The production api service carries public router labels. A one-off shell
+    # sidecar must never inherit public discovery and enter Traefik's backend
+    # pool while it performs maintenance instead of serving HTTP.
+    labels:
+      traefik.enable: "false"

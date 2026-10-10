@@ -211,6 +211,7 @@ def test_deploy_grounding_runs_in_resource_bounded_sidecars() -> None:
     assert "--memory" not in deploy
     assert "cpus: 1.0" in maintenance
     assert "mem_limit: 2g" in maintenance
+    assert 'traefik.enable: "false"' in maintenance
     assert "python3 scripts/coh_substrate.py bootstrap" in deploy
     assert "python3 scripts/form_cli_rag.py heal" in deploy
     lines = deploy.splitlines()
