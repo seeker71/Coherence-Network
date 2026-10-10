@@ -61,16 +61,19 @@ def test_web_proxy_request_records_web_api_runtime_source(monkeypatch, set_confi
 
 def test_ping_liveness_bypasses_persistent_runtime_telemetry(monkeypatch, set_config):
     set_config("runtime", "telemetry_enabled", True)
+    captured: list[RuntimeEventCreate] = []
 
-    def fail_if_recorded(_payload: RuntimeEventCreate):
-        raise AssertionError("liveness must not write persistent runtime telemetry")
+    def capture_if_recorded(payload: RuntimeEventCreate):
+        captured.append(payload)
+        return payload
 
-    monkeypatch.setattr(runtime_service, "record_event", fail_if_recorded)
+    monkeypatch.setattr(runtime_service, "record_event", capture_if_recorded)
 
     response = TestClient(app).get("/api/ping")
 
     assert response.status_code == 200
     assert response.json()["pong"] is True
+    assert captured == []
 
 
 def test_dynamic_idea_route_records_route_template_after_dispatch(monkeypatch, set_config):
