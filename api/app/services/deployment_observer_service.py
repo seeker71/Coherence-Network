@@ -36,7 +36,7 @@ PUBLIC_API_BASE = "https://api.coherencycoin.com"
 # deployed target continue to come from protected main, while GitHub OIDC proves
 # that the external observer job itself executed these exact workflow bytes.
 # Identity pins live in reviewed image code, never the host-mutable config.
-PINNED_OBSERVER_WORKFLOW_SHA = "738811cc376afd4de4d2454fb6af1c4d9726c0ff"
+PINNED_OBSERVER_WORKFLOW_SHA = "b9fd899998a88a1c74a901f3351b37e6d0c58a17"
 PINNED_REPOSITORY = "seeker71/Coherence-Network"
 PINNED_REPOSITORY_ID = "1155981916"
 PINNED_REPOSITORY_OWNER = "seeker71"
@@ -46,8 +46,8 @@ PINNED_ENVIRONMENT = "Production"
 PINNED_CALLER_WORKFLOW = ".github/workflows/hostinger-auto-deploy.yml"
 PINNED_OBSERVER_WORKFLOW = ".github/workflows/public-deployment-observer.yml"
 REPRODUCIBLE_BUILDER_IMAGE = (
-    "docker.io/library/python:3.11-slim-bookworm@"
-    "sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba"
+    "docker.io/library/gcc:12.5.0-bookworm@"
+    "sha256:4adc71d718fb96aeda49f1da3a936e1ea07af2b192493414a8bca1c73b9f2adb"
 )
 _NONCE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _HEX64_RE = re.compile(r"^[0-9a-f]{64}$")

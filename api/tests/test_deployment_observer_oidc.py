@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 from pathlib import Path
+import re
 import time
 
 import pytest
@@ -202,6 +203,17 @@ def test_observer_reuses_the_target_dockerfiles_immutable_toolchain() -> None:
     assert "docker\\.io/library/gcc:12\\.5\\.0-bookworm@sha256:" in reproduction
     assert '"$builder" bash -lc' in reproduction
     assert "apt-get" not in reproduction
+
+    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
+    builder_match = re.search(
+        r"^FROM (docker\.io/library/gcc:12\.5\.0-bookworm@sha256:[0-9a-f]{64}) "
+        r"AS kernel-builder$",
+        dockerfile,
+        re.MULTILINE,
+    )
+    assert builder_match is not None
+    assert builder_match.group(1) == REPRODUCIBLE_BUILDER_IMAGE
+
 
 def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> None:
     workflow = (
