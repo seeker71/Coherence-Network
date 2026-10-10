@@ -299,6 +299,7 @@
 | [real_llama_head0_attention_receipt.py](real_llama_head0_attention_receipt.py) | real_llama_head0_attention_receipt.py — proves real llama3.2:3b GGUF weights flow |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
+| [refresh_deployment_witness_index.py](refresh_deployment_witness_index.py) | Atomically refresh only the dynamic deployment WITNESS after release-time whole-body healing. |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |

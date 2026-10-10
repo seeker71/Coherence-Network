@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-observer-isolation-20261010",
+  "commit_scope": "Move deployment-witness readback out of the serving API container and replace repeated whole-body healing with one bounded dynamic refresh.",
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "scripts/refresh_deployment_witness_index.py",
+    "scripts/INDEX.md",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_observer_sidecar.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Keep independent deployment-witness verification from consuming or terminating the live API service while retaining native direct-carrier proof.",
+    "files_allowed": [
+      ".github/workflows/public-deployment-observer.yml",
+      "scripts/refresh_deployment_witness_index.py",
+      "scripts/INDEX.md",
+      "api/tests/test_deployment_observer_oidc.py",
+      "api/tests/test_form_cli_grounding_runtime.py",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_observer_sidecar.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Observer readback executes in a disposable no-dependency sidecar rather than the serving API container.",
+      "Only the single current deployment WITNESS is embedded and atomically exchanged before native ask verification.",
+      "Focused contracts, local guard, exact-head CI, and review pass before production activation."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_form_cli_grounding_runtime.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_observer_sidecar.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep this observer revision dormant until its permanent main merge SHA can be pinned atomically in caller and OIDC policy.",
+      "Preserve fail-closed witness and native direct-carrier verification.",
+      "Do not expose household or deployment secrets."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-10-hati-observer-sidecar"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38061873786 attempt 1 completed exact Dockerfile byte reproduction and authenticated witness recording before final direct readback exited 137.",
+    "The same run left both API health and the observer challenge returning 404 while the Hati web shell still returned 200, establishing that verification work had crossed the serving boundary.",
+    "The deployment path already owns whole-body RAG healing; the observer adds one dynamic deployment WITNESS after that release work.",
+    "This phase remains dormant until caller and OIDC policy can pin its permanent merge SHA together.",
+    "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "scripts/refresh_deployment_witness_index.py",
+    "scripts/INDEX.md",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_observer_sidecar.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_form_cli_grounding_runtime.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_observer_sidecar.json",
+      "git diff --check"
+    ],
+    "summary": "All 72 focused observer and grounding contracts pass; evidence and whitespace validation are included in the local gate."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Dormant workflow only; production activation follows its permanent merge SHA."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Observer readback cannot terminate the serving API and refreshes only its newly recorded dynamic witness.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Land the dormant observer and bounded witness carrier at a permanent main SHA.",
+      "Atomically activate that SHA in caller and OIDC policy.",
+      "Require a green production observer and authenticated Hati Sheet recovery."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native query produced no grounded answer within 30 seconds; the exact exit-137 trace and live 404 state supplied the diagnosis."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; source contracts, CI, isolated runtime behavior, production, and browser state provide verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact failed observer trace, release-heal ownership, direct-carrier contract, and runtime state. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this observer-isolation question."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting focused validation, exact-head CI/review, merge, and atomic activation from the permanent workflow SHA."
+  }
+}
