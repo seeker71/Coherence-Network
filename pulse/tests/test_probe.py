@@ -31,6 +31,7 @@ HEALTHY_HEALTH = {
     "deployed_sha": "deadbeef",
     "deployed_sha_source": "GIT_COMMIT_SHA",
     "integrity_compromised": False,
+    "integrity_verified": True,
     "schema_ok": True,
     "opencode_enabled": True,
     "smart_reap_available": True,
@@ -175,7 +176,7 @@ def _handler(
                 content=json.dumps(HEALTHY_DB_CONTENTION),
                 headers={"content-type": "application/json"},
             )
-        if path == "/api/health":
+        if path == "/api/health/pulse":
             return httpx.Response(
                 200,
                 content=json.dumps(api_health_body or HEALTHY_HEALTH),
@@ -280,7 +281,7 @@ async def test_docker_local_bases_probe_public_witness_path():
                 content=json.dumps(HEALTHY_DB_CONTENTION),
                 headers={"content-type": "application/json"},
             )
-        if host == "api.coherencycoin.com" and path == "/api/health":
+        if host == "api.coherencycoin.com" and path == "/api/health/pulse":
             return httpx.Response(
                 200,
                 content=json.dumps(HEALTHY_HEALTH),
@@ -351,12 +352,13 @@ async def test_docker_local_bases_probe_public_witness_path():
 
     by = {s.organ: s for s in samples}
     assert all(s.ok for s in samples), {name: s.detail for name, s in by.items()}
-    assert ("api.coherencycoin.com", "/api/health") in seen
+    assert ("api.coherencycoin.com", "/api/health/pulse") in seen
+    assert ("api.coherencycoin.com", "/api/health") not in seen
     assert ("api.coherencycoin.com", "/api/ready") in seen
     assert ("api.coherencycoin.com", "/api/ideas") in seen
     assert ("api.coherencycoin.com", "/api/utils/kernel_status") in seen
     assert ("coherencycoin.com", "/") in seen
-    assert ("api", "/api/health") not in seen
+    assert ("api", "/api/health/pulse") not in seen
     assert ("web", "/") not in seen
     assert by["endpoint_ideas"].detail is None
 
@@ -542,6 +544,15 @@ async def test_integrity_compromised_flags_audit_only():
     assert by["api"].ok is True
     assert by["audit_integrity"].ok is False
     assert "integrity" in (by["audit_integrity"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_integrity_unverified_flags_audit_only():
+    bad = {**HEALTHY_HEALTH, "integrity_verified": False}
+    by = await _run(_handler(api_health_body=bad))
+    assert by["api"].ok is True
+    assert by["audit_integrity"].ok is False
+    assert "integrity_verified" in (by["audit_integrity"].detail or "")
 
 
 @pytest.mark.asyncio
@@ -778,15 +789,15 @@ async def test_endpoint_vitality_missing_diversity_index():
 @pytest.mark.asyncio
 async def test_slow_probe_flags_strained_not_silent(monkeypatch):
     """A successful probe that crossed the threshold is ok=True with a slow detail."""
-    from pulse_app import organs, probe
+    from pulse_app import probe
 
     # Rewrite the test to inject a slow latency by monkey-patching the probe helper.
     original = probe._probe_upstream
 
     async def slow_probe(client, url, kind, method="GET", json_body=None):
         r = await original(client, url, kind, method=method, json_body=json_body)
-        # Replace with a 3-second latency on the api_health upstream
-        if url.endswith("/api/health"):
+        # Replace with a 3-second latency on the bounded pulse-health upstream.
+        if url.endswith("/api/health/pulse"):
             return probe.UpstreamResult(
                 status=r.status, body=r.body, text=r.text,
                 latency_ms=3500, error=None,
