@@ -190,9 +190,42 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
     }
     assert 'CMD ["python", "-m", "app.server"]' in dockerfile
     assert "EXPOSE 8000" in dockerfile
-    assert "http://127.0.0.1:8000/api/health" in dockerfile
+    assert "http://127.0.0.1:8000/api/ping" in dockerfile
+    assert "HEALTHCHECK --interval=30s --timeout=5s" in dockerfile
     assert "FORWARDED_ALLOW_IPS" not in dockerfile
     assert "--forwarded-allow-ips=*" not in dockerfile
+
+
+def test_deploy_grounding_runs_in_resource_bounded_sidecars() -> None:
+    deploy = (REPO_ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
+        encoding="utf-8"
+    )
+    maintenance = (
+        REPO_ROOT / "deploy" / "hostinger" / "docker-compose.maintenance.yml"
+    ).read_text(encoding="utf-8")
+    sidecar = '-f "$MAINTENANCE_COMPOSE_FILE" run'
+
+    assert deploy.count(sidecar) >= 4
+    assert deploy.count("--rm --no-deps -T --entrypoint sh api -lc") >= 4
+    assert "--cpus" not in deploy
+    assert "--memory" not in deploy
+    assert "cpus: 1.0" in maintenance
+    assert "mem_limit: 2g" in maintenance
+    assert 'traefik.enable: "false"' in maintenance
+    assert "python3 scripts/coh_substrate.py bootstrap" in deploy
+    assert "python3 scripts/form_cli_rag.py heal" in deploy
+    lines = deploy.splitlines()
+    for index, line in enumerate(lines):
+        if "python3 scripts/form_cli_rag.py heal" not in line:
+            continue
+        launch_window = "\n".join(lines[max(0, index - 30) : index + 1])
+        assert sidecar in launch_window
+
+
+def test_eager_startup_cache_warm_is_disabled_by_file_configuration() -> None:
+    config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())
+
+    assert config["server"]["startup_cache_warm_enabled"] is False
 
 
 def test_native_form_shell_carriers_are_file_backed_configuration() -> None:

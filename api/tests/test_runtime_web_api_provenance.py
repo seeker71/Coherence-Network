@@ -38,7 +38,7 @@ def test_web_proxy_request_records_web_api_runtime_source(monkeypatch, set_confi
 
     client = TestClient(app)
     response = client.get(
-        "/api/ping",
+        "/api/version",
         headers={
             "X-Coherence-Web-Proxy": "next-api-proxy",
             "X-Page-View-Id": "view-test",
@@ -51,12 +51,29 @@ def test_web_proxy_request_records_web_api_runtime_source(monkeypatch, set_confi
     assert captured, "API middleware should record proxied web API calls"
     event = captured[-1]
     assert event.source == "web_api"
-    assert event.endpoint == "/api/ping"
+    assert event.endpoint == "/api/version"
     assert event.metadata["tracking_kind"] == "api_route_request"
     assert event.metadata["page_view_id"] == "view-test"
     assert event.metadata["page_route"] == "/ideas"
     assert event.metadata["web_route"] == "/ideas"
     assert event.metadata["web_proxy"] == "next-api-proxy"
+
+
+def test_ping_liveness_bypasses_persistent_runtime_telemetry(monkeypatch, set_config):
+    set_config("runtime", "telemetry_enabled", True)
+    captured: list[RuntimeEventCreate] = []
+
+    def capture_if_recorded(payload: RuntimeEventCreate):
+        captured.append(payload)
+        return payload
+
+    monkeypatch.setattr(runtime_service, "record_event", capture_if_recorded)
+
+    response = TestClient(app).get("/api/ping")
+
+    assert response.status_code == 200
+    assert response.json()["pong"] is True
+    assert captured == []
 
 
 def test_dynamic_idea_route_records_route_template_after_dispatch(monkeypatch, set_config):

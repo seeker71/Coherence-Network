@@ -7,6 +7,7 @@ BRANCH="${BRANCH:-main}"
 TARGET_SHA="${1:-}"
 LOG_FILE="${LOG_FILE:-${COMPOSE_ROOT}/deploy.log}"
 KERNEL_CANARY_COMPOSE_FILE="${KERNEL_CANARY_COMPOSE_FILE:-${REPO_DIR}/deploy/kernel-router/docker-compose.kernel-router.yml}"
+MAINTENANCE_COMPOSE_FILE="${MAINTENANCE_COMPOSE_FILE:-${REPO_DIR}/deploy/hostinger/docker-compose.maintenance.yml}"
 
 timestamp() {
   date -u +%Y-%m-%dT%H:%M:%SZ
@@ -72,8 +73,10 @@ run_with_timeout() {
 bootstrap_and_verify_local_grounding() {
   # Deployment owns making the native body operational. Certification belongs
   # to the later GitHub-runner public observation, never to this host-local step.
-  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-      sh -lc '
+  require_file "$MAINTENANCE_COMPOSE_FILE"
+  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
+      -f "$MAINTENANCE_COMPOSE_FILE" run \
+      --rm --no-deps -T --entrypoint sh api -lc '
         set -eu
         cd /app
         for state_dir in rag-index rag-requests attestation api-queries federation-graph; do
@@ -1210,6 +1213,7 @@ run_substrate_ingest() {
   #   - the grounding/bootstrap carriers changed, because their new migration
   #     shape must reconcile the complete source body before RAG heal runs
   local from="$1" to="$2"
+  require_file "$MAINTENANCE_COMPOSE_FILE"
   local started ended elapsed all_changed full_refresh_reason="" old_form_sha new_form_sha
   started="$(date +%s)"
 
@@ -1242,7 +1246,9 @@ run_substrate_ingest() {
     # the complete rebuild a full hour; a timeout must never manufacture a
     # partial "ready" body.
     run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-3600}" \
-      docker compose exec -T api sh -lc \
+      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
+        -f "$MAINTENANCE_COMPOSE_FILE" run \
+        --rm --no-deps -T --entrypoint sh api -lc \
         'cd /app && python3 scripts/coh_substrate.py bootstrap && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
       2>&1 | tee -a "$LOG_FILE"
     local rc=$?
@@ -1290,7 +1296,10 @@ run_substrate_ingest() {
     # default; the 300s ceiling covers a concept's word-cell interning
     # against prod Postgres (120s dropped lc-cognitive-sovereignty).
     run_with_timeout "${SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS:-300}" \
-      docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest-paths '/app/$path'" \
+      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
+        -f "$MAINTENANCE_COMPOSE_FILE" run \
+        --rm --no-deps -T --entrypoint sh api -lc \
+        "cd /app && python3 scripts/coh_substrate.py ingest-paths '/app/$path'" \
       2>&1 | tee -a "$LOG_FILE"
     local file_rc=$?
     if [[ "$file_rc" -ne 0 ]]; then
@@ -1306,7 +1315,9 @@ run_substrate_ingest() {
       '^(specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md|form/form/form-stdlib/.*\.fk)$' \
       <<< "$changed"; then
     run_with_timeout "${SUBSTRATE_RAG_HEAL_TIMEOUT_SECONDS:-300}" \
-      docker compose exec -T api sh -lc \
+      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
+        -f "$MAINTENANCE_COMPOSE_FILE" run \
+        --rm --no-deps -T --entrypoint sh api -lc \
         'cd /app && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
       2>&1 | tee -a "$LOG_FILE"
     rc=$?
@@ -1822,9 +1833,9 @@ run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
   # real cache-noop keeps the old sha and still fails after the budget.
   POST_SHA=""
   POST_REACHED=0
-  for ((verify_attempt = 1; verify_attempt <= 12; verify_attempt++)); do
+  for ((verify_attempt = 1; verify_attempt <= 6; verify_attempt++)); do
     POST_HEALTH="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-        sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
+        sh -lc 'curl -fsS --max-time 30 http://127.0.0.1:8000/api/health 2>/dev/null' \
         2>/dev/null || true)"
     if [[ -n "$POST_HEALTH" ]]; then
       POST_REACHED=1
@@ -1836,12 +1847,12 @@ except Exception:
     pass' 2>/dev/null || true)"
       [[ "$POST_SHA" == "$TARGET_SHA" ]] && break
     fi
-    log "Post-deploy verify: api not ready yet (attempt ${verify_attempt}/12); waiting 5s…"
+    log "Post-deploy verify: api not ready yet (attempt ${verify_attempt}/6); waiting 5s…"
     sleep 5
   done
   if [[ "$POST_SHA" != "$TARGET_SHA" ]]; then
     if [[ "$POST_REACHED" == "0" ]]; then
-      log "FAIL: post-deploy /api/health never answered within the readiness budget (~60s)"
+      log "FAIL: post-deploy /api/health never answered within the readiness budget (~3m)"
       log "      the api container did not become ready — check container startup logs"
     else
       log "FAIL: post-deploy /api/health reports deployed_sha=${POST_SHA:0:12} but target=${TARGET_SHA:0:12}"
