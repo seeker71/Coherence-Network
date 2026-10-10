@@ -15,6 +15,7 @@ old_sha="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 api_health_calls_file="$fixture_dir/api_health_calls"
 web_proxy_calls_file="$fixture_dir/web_proxy_calls"
 web_proxy_transient_file="$fixture_dir/web_proxy_transient"
+web_proxy_late_transient_file="$fixture_dir/web_proxy_late_transient"
 fake_clock_file="$fixture_dir/fake_clock"
 printf '0\n' > "$api_health_calls_file"
 printf '0\n' > "$web_proxy_calls_file"
@@ -79,7 +80,13 @@ curl() {
       calls="$(cat "$web_proxy_calls_file")"
       calls=$((calls + 1))
       printf '%s\n' "$calls" > "$web_proxy_calls_file"
-      if [[ -f "$web_proxy_transient_file" && "$calls" -eq 1 ]]; then
+      if [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 1 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 2 ]]; then
+        http_status="503"
+        body='{"detail":"upstream cutover"}'
+        printf '100\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_transient_file" && "$calls" -eq 1 ]]; then
         http_status="503"
         body='{"detail":"upstream restarting"}'
         printf '89\n' > "$fake_clock_file"
@@ -190,6 +197,24 @@ grep -F "WARN: web health-proxy rollout status 503" <<<"$web_rollout_output" >/d
 grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$web_rollout_output" >/dev/null
 grep -F "OK: Web runtime SHA parity settled after 3 attempt(s)" <<<"$web_rollout_output" >/dev/null
 grep -F "PASS" <<<"$web_rollout_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "3" ]]
+
+printf '0\n' > "$web_proxy_calls_file"
+printf '0\n' > "$fake_clock_file"
+touch "$web_proxy_late_transient_file"
+late_rollout_output="$(
+  GATEWAY_PATIENCE_SECONDS=90 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+  SHA_PARITY_PATIENCE_SECONDS=180 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"
+rm -f "$web_proxy_late_transient_file"
+rm -f "$fake_clock_file"
+grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$late_rollout_output" >/dev/null
+grep -F "WARN: web health-proxy rollout status 503" <<<"$late_rollout_output" >/dev/null
+grep -F "OK: Web runtime SHA parity settled after 3 attempt(s)" <<<"$late_rollout_output" >/dev/null
+grep -F "PASS" <<<"$late_rollout_output" >/dev/null
 [[ "$(cat "$web_proxy_calls_file")" == "3" ]]
 
 grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
