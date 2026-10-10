@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 40
+**Total files**: 41
 
 | File | Purpose |
 |---|---|
@@ -19,6 +19,7 @@
 | [egress.ts](egress.ts) | _no top-of-file purpose_ |
 | [entry-paths.ts](entry-paths.ts) | _no top-of-file purpose_ |
 | [fetch.ts](fetch.ts) | _no top-of-file purpose_ |
+| [hati-grocery-balance.ts](hati-grocery-balance.ts) | Token-silent resilience policy for the private Hati grocery Sheet balance. |
 | [hati-grocery-handoff.ts](hati-grocery-handoff.ts) | _no top-of-file purpose_ |
 | [hati-os-release.ts](hati-os-release.ts) | Single source of truth for the published Hati-OS native release. |
 | [home-presence-traces.ts](home-presence-traces.ts) | _no top-of-file purpose_ |

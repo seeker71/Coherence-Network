@@ -1,0 +1,182 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-sheet-resilient-20261010",
+  "commit_scope": "Keep app.hati.earth honest and usable while its private Sheet balance is loading or recovering from a transient carrier miss.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/form_recipes/endpoint_membership_lookup_status.fk",
+    "api/app/routers/household.py",
+    "api/tests/form/membership_lookup_status_band.fk",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_household_service_board.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "web/app/grocery/page.tsx",
+    "web/lib/INDEX.md",
+    "web/lib/hati-grocery-balance.ts",
+    "web/tests/hati-grocery-balance-resilience.test.ts",
+    "web/tests/hati-grocery-layout.test.ts",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_sheet_resilient_ui.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Stop a normal or slow Sheet read from being presented as an outage and let the grocery balance recover without a manual reload.",
+    "files_allowed": [
+      "MANIFEST.md",
+      "api/app/form_recipes/endpoint_membership_lookup_status.fk",
+      "api/app/routers/household.py",
+      "api/tests/form/membership_lookup_status_band.fk",
+      "api/tests/test_api_dockerfile_contract.py",
+      "api/tests/test_household_service_board.py",
+      "api/tests/test_kernel_submodule_contract.py",
+      "web/app/grocery/page.tsx",
+      "web/lib/INDEX.md",
+      "web/lib/hati-grocery-balance.ts",
+      "web/tests/hati-grocery-balance-resilience.test.ts",
+      "web/tests/hati-grocery-layout.test.ts",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_sheet_resilient_ui.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "A fresh load says connecting rather than unavailable before the first Sheet response.",
+      "Transient or semantic Sheet misses retry and later recover on online, visible-tab, and quiet interval events.",
+      "The production build, full web suite, worktree web/API verifier, CI, deploy, and live browser check pass."
+    ],
+    "commands": [
+      "cd web && npm test -- --run",
+      "cd web && npm run build",
+      "cd api && .venv/bin/pytest -q tests/test_household_service_board.py tests/test_grocery_ledger.py",
+      "cd api && ruff check app/routers/household.py tests/test_household_service_board.py",
+      "cd form/form && ./validate.sh ../../api/app/form_recipes/endpoint_membership_lookup_status.fk ../../api/tests/form/membership_lookup_status_band.fk",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "constraints": [
+      "Do not persist balances or transaction data in browser storage.",
+      "Do not log or expose the household token, balance, transaction rows, Sheet secret, or Apps Script URL.",
+      "Keep the Sheet Restricted and retain fail-closed semantics after bounded recovery is exhausted."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["knowledge-and-resonance"],
+  "spec_ids": ["hati-grocery-ledger"],
+  "task_ids": ["task-2026-10-10-hati-sheet-resilient-ui"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "A fresh production page load visibly rendered Sheet temporarily unavailable before the initial totals request completed; the same page then rendered the confirmed Sheet balance without configuration or data changes.",
+    "The former BalanceCard treated totals=null as an outage, conflating not-yet-read with unavailable.",
+    "The former client accepted a 200 totals response with remaining_source=unavailable without a semantic retry or later recovery event.",
+    "The client now carries loading, retrying, ready, and unavailable as distinct states and reserves unavailable for exhausted bounded attempts.",
+    "A finite balance is accepted only when the API attributes remaining_source to the Sheet.",
+    "A last-confirmed balance remains in memory during a transient miss and is explicitly qualified as reconnecting; no financial value is written to localStorage or sessionStorage.",
+    "Two token-silent attempts each have a 16-second ceiling, leaving the API's 13-second Sheet/DB boundary room to finish without logging the private query string.",
+    "Online, visible-tab, and one-minute visible-page events trigger a fresh Sheet read; ordinary triggers coalesce behind the active read, while a mutation-required fresh read cancels its predecessor before it can consume more Sheet capacity.",
+    "The recovery clock detects a Bali calendar-day boundary and refreshes both today's spend rows and the balance, preventing yesterday's rows from remaining beside a new-day total.",
+    "A failed new-day spend read leaves that day unconfirmed, so every later online, visible-tab, or interval recovery retries the full board until its entries arrive.",
+    "When no totals response arrives, unqualified day/month aggregates clear to an unknown presentation instead of remaining stale; only the explicitly labelled last-confirmed balance is retained.",
+    "Transient shop or Sheet-status read failures retain the last good UI state instead of temporarily hiding available controls.",
+    "Write-forced and new-day refreshes immediately qualify any retained balance as last-confirmed while the fresh Sheet read is in flight; ordinary background reads retain the no-flicker ready state.",
+    "Same-day full-board recovery events coalesce behind one request, while obsolete-day and mutation-superseded board reads are aborted and generation-guarded against late state writes.",
+    "New-day and post-mutation entry lists hide stale rows behind explicit bilingual connecting copy until the matching spend read succeeds.",
+    "Every coalesced full-board request has a 16-second abort deadline, so a hung spend, Sheet-status, or shops read releases the recovery lane for a later attempt.",
+    "A replacement refresh invalidates its same-day confirmation before reading, so failed post-mutation entry reads remain eligible for full-board recovery on every later signal.",
+    "The Bali calendar helper adds UTC+8 directly to the instant, independent of browser timezone, and changes day exactly at Bali midnight in direct boundary tests.",
+    "A shared board timeout preserves every sibling response that did succeed; only a superseding generation discards all results from an older cycle.",
+    "HTTP 401/403 responses are carried separately from Sheet or transport misses: the client aborts private reads, clears stale identity and retained private UI/storage state, and returns to the Hati Suci recovery door.",
+    "The Form membership-lookup recipe owns retryable HTTP 503 versus authoritative HTTP 401: its verdict-15 band covers every readable/found combination on Go, Rust, TypeScript, and the production fkwu carrier, preventing graph outages from deleting queued drafts.",
+    "A healthy background refresh keeps the ready presentation and changes to retrying only after a real miss, avoiding minute-by-minute status flicker.",
+    "No household balance, transaction row, actor token, Sheet secret, or Apps Script URL is recorded in this evidence."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/form_recipes/endpoint_membership_lookup_status.fk",
+    "api/app/routers/household.py",
+    "api/tests/form/membership_lookup_status_band.fk",
+    "api/tests/test_api_dockerfile_contract.py",
+    "api/tests/test_household_service_board.py",
+    "api/tests/test_kernel_submodule_contract.py",
+    "web/app/grocery/page.tsx",
+    "web/lib/INDEX.md",
+    "web/lib/hati-grocery-balance.ts",
+    "web/tests/hati-grocery-balance-resilience.test.ts",
+    "web/tests/hati-grocery-layout.test.ts",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_sheet_resilient_ui.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm test -- --run",
+      "cd web && npm run build",
+      "cd api && .venv/bin/pytest -q tests/test_household_service_board.py tests/test_grocery_ledger.py",
+      "cd api && ruff check app/routers/household.py tests/test_household_service_board.py",
+      "cd form/form && ./validate.sh ../../api/app/form_recipes/endpoint_membership_lookup_status.fk ../../api/tests/form/membership_lookup_status_band.fk",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "summary": "All 185 web tests and 99 household/grocery API tests pass; Ruff passes for the changed API boundary; the Next.js production build and TypeScript check pass; and the isolated worktree web/API contract passes with 86 interface-parity checks and every exercised public surface green. The full local PR guard passes with zero attention items and ready_for_push=true. The focused policy proof distinguishes connecting, retrying, last-confirmed, unavailable, and stale-identity outcomes; accepts only finite Sheet-owned balances; proves bounded totals and full-board request intervals; immediately qualifies retained balances during forced reads; coalesces ordinary totals and full-board reads; cancels superseded mutation and obsolete-day refreshes; preserves successful sibling responses when another board request times out; invalidates failed replacement days for later full-board retry; hides stale rows until the matching entry read succeeds; changes day exactly at Bali midnight; clears unqualified stale aggregates after an exhausted read; returns truly unauthorized devices to the identity recovery door; and verifies retained confirmation and stale-generation rejection. Form now owns the membership lookup outcome: the verdict-15 band agrees across Go, Rust, and TypeScript, and the same band returns 15 on the production fkwu carrier; Python only carries the selected 401 or 503 into HTTP."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A fresh app.hati.earth load says connecting while the Sheet read is in flight, then renders the confirmed balance; transient misses heal without a manual reload.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Reload the authenticated grocery page and confirm it does not claim the Sheet is unavailable during the initial request.",
+      "Confirm the balance reaches ready state without revealing its value.",
+      "Confirm the Sheet remains Restricted."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query returned no grounded answer within its window; no native diagnosis is claimed."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; the live browser, repository source, tests, production build, and local web/API runtime supplied verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the source contract, previous Sheet deadline work, test harnesses, worktree runtime, and live browser observation. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this client lifecycle boundary."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting exact-head CI/review, merge, production roll-forward, and live browser verification."
+  }
+}

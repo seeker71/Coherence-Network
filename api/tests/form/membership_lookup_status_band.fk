@@ -1,0 +1,14 @@
+; membership_lookup_status_band.fk — readable identity truth stays distinct from outage ambiguity.
+; Verdict 15: all four readable/found combinations agree across the sibling kernels and fkwu.
+(do
+  (let readable-found (membership-lookup-status true true))
+  (let readable-missing (membership-lookup-status true false))
+  (let unreadable-found-hint (membership-lookup-status false true))
+  (let unreadable-missing-hint (membership-lookup-status false false))
+  (let found-ok (if (eq readable-found 200) 1 0))
+  (let missing-ok (if (eq readable-missing 401) 2 0))
+  (let unreadable-found-ok (if (eq unreadable-found-hint 503) 4 0))
+  (let unreadable-missing-ok (if (eq unreadable-missing-hint 503) 8 0))
+  (add found-ok
+    (add missing-ok
+      (add unreadable-found-ok unreadable-missing-ok))))

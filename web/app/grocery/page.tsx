@@ -17,6 +17,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  BALANCE_REFRESH_INTERVAL_MS,
+  BALANCE_REQUEST_TIMEOUT_MS,
+  BALANCE_RETRY_DELAYS_MS,
+  type BalanceReadState,
+  baliCalendarDay,
+  balanceCopyKey,
+  isAuthorizationFailure,
+  isConfirmedSheetBalance,
+} from "@/lib/hati-grocery-balance";
 import { hatiSuciRecoveryHref } from "@/lib/hati-grocery-handoff";
 
 type Shop = {
@@ -118,6 +128,7 @@ const T = {
     entries: "entries",
     recent: "Today's entries",
     none: "Nothing recorded yet today.",
+    entriesConnecting: "Connecting to today's entries…",
     queued: "waiting for signal",
     offline: "No signal — held on this phone, will send itself.",
     identify: "Open your Hati Suci link on this phone first.",
@@ -152,6 +163,9 @@ const T = {
     refused: "That amount wasn't accepted — check it and try again.",
     removedMirrored: "Removed and reconciled with the sheet.",
     removeUnavailable: "The sheet could not confirm the change. The entry is still here — try again shortly.",
+    balanceConnecting: "Connecting to the sheet…",
+    balanceRetrying: "The sheet is slow — checking again…",
+    balanceLastConfirmed: "Last confirmed balance · reconnecting…",
     balanceUnavailable: "Sheet temporarily unavailable",
     remove: "Remove",
   },
@@ -170,6 +184,7 @@ const T = {
     entries: "catatan",
     recent: "Catatan hari ini",
     none: "Belum ada catatan hari ini.",
+    entriesConnecting: "Menghubungkan catatan hari ini…",
     queued: "menunggu sinyal",
     offline: "Tidak ada sinyal — disimpan di HP, akan terkirim sendiri.",
     identify: "Buka tautan Hati Suci Anda di HP ini dulu.",
@@ -204,6 +219,9 @@ const T = {
     refused: "Jumlahnya tidak diterima — periksa lalu coba lagi.",
     removedMirrored: "Dihapus dan diselaraskan dengan sheet.",
     removeUnavailable: "Sheet belum dapat mengonfirmasi perubahan. Catatan masih ada — coba lagi sebentar.",
+    balanceConnecting: "Menghubungkan ke sheet…",
+    balanceRetrying: "Sheet lambat — memeriksa lagi…",
+    balanceLastConfirmed: "Saldo terakhir terkonfirmasi · menghubungkan lagi…",
     balanceUnavailable: "Sheet sementara tidak tersedia",
     remove: "Hapus",
   },
@@ -217,12 +235,12 @@ function rupiah(n: number): string {
 function BalanceCard({
   label,
   remaining,
-  unavailable,
+  statusText,
   className = "",
 }: {
   label: string;
   remaining: number | null;
-  unavailable: string;
+  statusText: string | null;
   className?: string;
 }) {
   return (
@@ -231,11 +249,67 @@ function BalanceCard({
       <div className="mt-1 truncate text-2xl font-medium tabular-nums text-amber-300">
         {remaining === null ? "—" : rupiah(remaining)}
       </div>
-      {remaining === null && (
-        <div className="mt-1 text-xs text-amber-200/70">{unavailable}</div>
+      {statusText && (
+        <div className="mt-1 text-xs text-amber-200/70">{statusText}</div>
       )}
     </div>
   );
+}
+
+type TotalsAttempt = {
+  value: Totals | null;
+  retryable: boolean;
+  authorizationFailed: boolean;
+};
+
+type JsonAttempt<T> = { value: T | null; authorizationFailed: boolean };
+
+async function readJsonOnce<T>(url: string, signal: AbortSignal): Promise<JsonAttempt<T>> {
+  try {
+    const response = await fetch(url, { cache: "no-store", signal });
+    if (isAuthorizationFailure(response.status)) {
+      return { value: null, authorizationFailed: true };
+    }
+    if (!response.ok) return { value: null, authorizationFailed: false };
+    return { value: (await response.json()) as T, authorizationFailed: false };
+  } catch {
+    return { value: null, authorizationFailed: false };
+  }
+}
+
+async function readTotalsOnce(url: string, outerSignal: AbortSignal): Promise<TotalsAttempt> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (outerSignal.aborted) abort();
+  else outerSignal.addEventListener("abort", abort, { once: true });
+  const timeout = window.setTimeout(() => controller.abort(), BALANCE_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+    if (isAuthorizationFailure(response.status)) {
+      return { value: null, retryable: false, authorizationFailed: true };
+    }
+    if (!response.ok) {
+      return {
+        value: null,
+        authorizationFailed: false,
+        retryable:
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500,
+      };
+    }
+    const value = (await response.json()) as Totals;
+    return { value, retryable: true, authorizationFailed: false };
+  } catch {
+    return { value: null, retryable: true, authorizationFailed: false };
+  } finally {
+    window.clearTimeout(timeout);
+    outerSignal.removeEventListener("abort", abort);
+  }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 // What the typed thousands mean, mirrored for the live preview only.
@@ -252,10 +326,7 @@ function previewIdr(typed: string): number {
 }
 
 function todayLocal(): string {
-  // Bali is UTC+8, no DST — the same "today" the API files under.
-  const now = new Date();
-  const bali = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000);
-  return bali.toISOString().slice(0, 10);
+  return baliCalendarDay();
 }
 
 export default function GroceryPage() {
@@ -275,7 +346,10 @@ export default function GroceryPage() {
   const [shop, setShop] = useState<Shop | null>(null);
 
   const [spends, setSpends] = useState<Spend[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(true);
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [confirmedRemaining, setConfirmedRemaining] = useState<number | null>(null);
+  const [balanceState, setBalanceState] = useState<BalanceReadState>("loading");
   const [queued, setQueued] = useState<Draft[]>([]);
   const [sheet, setSheet] = useState<SheetStatus | null>(null);
 
@@ -291,6 +365,18 @@ export default function GroceryPage() {
   const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
   const [editPlaceName, setEditPlaceName] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
+  const confirmedRemainingRef = useRef<number | null>(null);
+  const balanceReadGenerationRef = useRef(0);
+  const balanceReadPromiseRef = useRef<Promise<void> | null>(null);
+  const balanceReadAbortRef = useRef<AbortController | null>(null);
+  const boardRefreshGenerationRef = useRef(0);
+  const boardRefreshPromiseRef = useRef<Promise<void> | null>(null);
+  const boardRefreshAbortRef = useRef<AbortController | null>(null);
+  const boardRefreshDayRef = useRef<string | null>(null);
+  // A day is current only after its entry list has actually arrived. Keeping
+  // this unset/stale on failure makes every later recovery event retry the
+  // whole board instead of accepting a totals-only half refresh.
+  const boardDayRef = useRef<string | null>(null);
 
   const idr = useMemo(() => previewIdr(amount), [amount]);
 
@@ -360,21 +446,198 @@ export default function GroceryPage() {
     setQueued(drafts);
   }, []);
 
+  const clearInvalidIdentity = useCallback(() => {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(QUEUE_KEY);
+    } catch {
+      /* in-memory state is still cleared below */
+    }
+    balanceReadAbortRef.current?.abort();
+    boardRefreshAbortRef.current?.abort();
+    balanceReadGenerationRef.current += 1;
+    boardRefreshGenerationRef.current += 1;
+    confirmedRemainingRef.current = null;
+    setAmount("");
+    setCategory(null);
+    setNote("");
+    setCoords(null);
+    setShop(null);
+    setSpends([]);
+    setEntriesLoading(false);
+    setTotals(null);
+    setConfirmedRemaining(null);
+    setBalanceState("loading");
+    setQueued([]);
+    setSheet(null);
+    setShops([]);
+    setFlash(null);
+    setSaved(null);
+    setToken(null);
+  }, []);
+
+  const loadTotals = useCallback((query: string, forceFresh = false): Promise<void> => {
+    const active = balanceReadPromiseRef.current;
+    if (active && !forceFresh) return active;
+    if (active) balanceReadAbortRef.current?.abort();
+
+    const cycleController = new AbortController();
+    const generation = ++balanceReadGenerationRef.current;
+    const run = (async () => {
+      let receivedTotals = false;
+      if (forceFresh) setTotals(null);
+      setBalanceState((current) => {
+        if (forceFresh) {
+          return confirmedRemainingRef.current === null ? "loading" : "retrying";
+        }
+        if (current === "unavailable") return "retrying";
+        return confirmedRemainingRef.current === null ? "loading" : current;
+      });
+
+      for (const delayMs of BALANCE_RETRY_DELAYS_MS) {
+        if (delayMs > 0) await wait(delayMs);
+        if (
+          cycleController.signal.aborted ||
+          generation !== balanceReadGenerationRef.current
+        ) return;
+
+        // Keep the private token out of generic fetch diagnostics: this carrier
+        // intentionally returns only state, never the URL or its query string.
+        const attempt = await readTotalsOnce(
+          `/api/grocery/totals?${query}`,
+          cycleController.signal,
+        );
+        if (
+          cycleController.signal.aborted ||
+          generation !== balanceReadGenerationRef.current
+        ) return;
+        if (attempt.authorizationFailed) {
+          clearInvalidIdentity();
+          return;
+        }
+        if (attempt.value) {
+          receivedTotals = true;
+          setTotals(attempt.value);
+        }
+
+        if (isConfirmedSheetBalance(attempt.value)) {
+          confirmedRemainingRef.current = attempt.value.remaining_idr;
+          setConfirmedRemaining(attempt.value.remaining_idr);
+          setBalanceState("ready");
+          return;
+        }
+        if (!attempt.retryable) break;
+        setBalanceState("retrying");
+      }
+
+      if (
+        !cycleController.signal.aborted &&
+        generation === balanceReadGenerationRef.current
+      ) {
+        // The retained balance is explicitly labelled last-confirmed; the
+        // day/month cards have no such qualification, so never leave their
+        // old aggregates beside a newly refreshed entry list.
+        if (!receivedTotals) setTotals(null);
+        setBalanceState("unavailable");
+      }
+    })();
+
+    balanceReadAbortRef.current = cycleController;
+    balanceReadPromiseRef.current = run;
+    void run.finally(() => {
+      if (balanceReadPromiseRef.current === run) {
+        balanceReadPromiseRef.current = null;
+        balanceReadAbortRef.current = null;
+      }
+    });
+    return run;
+  }, [clearInvalidIdentity]);
+
+  useEffect(() => {
+    return () => {
+      balanceReadAbortRef.current?.abort();
+      balanceReadGenerationRef.current += 1;
+      boardRefreshAbortRef.current?.abort();
+      boardRefreshGenerationRef.current += 1;
+    };
+  }, []);
+
   // ---- the board: categories, today's entries, totals ----------------------
-  const refresh = useCallback(async () => {
-    if (!token) return;
+  const refresh = useCallback((forceBalance = false, replaceBoard = false): Promise<void> => {
+    if (!token) return Promise.resolve();
+    const requestedDay = todayLocal();
+    const activeBoard = boardRefreshPromiseRef.current;
+    if (
+      activeBoard &&
+      !replaceBoard &&
+      boardRefreshDayRef.current === requestedDay
+    ) return activeBoard;
+    if (activeBoard) boardRefreshAbortRef.current?.abort();
+
+    const boardController = new AbortController();
+    const boardTimeout = window.setTimeout(
+      () => boardController.abort(),
+      BALANCE_REQUEST_TIMEOUT_MS,
+    );
+    const generation = ++boardRefreshGenerationRef.current;
     const q = `token=${encodeURIComponent(token)}`;
-    const [s, tot, sh, places] = await Promise.all([
-      fetch(`/api/grocery/spend?${q}&on=${todayLocal()}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      fetch(`/api/grocery/totals?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(`/api/grocery/sheet?${q}`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(`/api/grocery/shops?${q}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
-    ]);
-    setSpends(Array.isArray(s) ? s : []);
-    setTotals(tot);
-    setSheet(sh);
-    setShops(Array.isArray(places) ? places : []);
-  }, [token]);
+    if (replaceBoard || requestedDay !== boardDayRef.current) {
+      // A replacement follows a write that changed today's truth. Until the
+      // matching rows arrive, keep the day unconfirmed so every recovery event
+      // retries the whole board rather than totals alone.
+      if (replaceBoard) boardDayRef.current = null;
+      setSpends([]);
+      setEntriesLoading(true);
+    }
+    const run = (async () => {
+      const totalsRead = loadTotals(q, forceBalance);
+      const [spendAttempt, sheetAttempt, shopsAttempt] = await Promise.all([
+        readJsonOnce<Spend[]>(`/api/grocery/spend?${q}&on=${requestedDay}`, boardController.signal),
+        readJsonOnce<SheetStatus>(`/api/grocery/sheet?${q}`, boardController.signal),
+        readJsonOnce<Shop[]>(`/api/grocery/shops?${q}`, boardController.signal),
+      ]);
+      // A shared timeout may abort only one slow sibling after another has
+      // already returned useful truth. Keep those successful results. A newer
+      // board generation, by contrast, makes every result from this cycle old.
+      if (generation !== boardRefreshGenerationRef.current) {
+        await totalsRead;
+        return;
+      }
+      if (
+        spendAttempt.authorizationFailed ||
+        sheetAttempt.authorizationFailed ||
+        shopsAttempt.authorizationFailed
+      ) {
+        clearInvalidIdentity();
+        await totalsRead;
+        return;
+      }
+      const s = spendAttempt.value;
+      const sh = sheetAttempt.value;
+      const storedPlaces = shopsAttempt.value;
+      if (Array.isArray(s)) {
+        setSpends(s);
+        setEntriesLoading(false);
+        boardDayRef.current = requestedDay;
+      }
+      if (sh !== null) setSheet(sh);
+      if (Array.isArray(storedPlaces)) setShops(storedPlaces);
+      await totalsRead;
+    })();
+
+    boardRefreshAbortRef.current = boardController;
+    boardRefreshDayRef.current = requestedDay;
+    boardRefreshPromiseRef.current = run;
+    void run.finally(() => {
+      window.clearTimeout(boardTimeout);
+      if (boardRefreshPromiseRef.current === run) {
+        boardRefreshPromiseRef.current = null;
+        boardRefreshAbortRef.current = null;
+        boardRefreshDayRef.current = null;
+      }
+    });
+    return run;
+  }, [token, loadTotals, clearInvalidIdentity]);
 
   useEffect(() => {
     fetch("/api/grocery/categories")
@@ -387,6 +650,34 @@ export default function GroceryPage() {
     void refresh();
     setQueued(readQueue());
   }, [refresh, readQueue]);
+
+  // A returned tab, restored connection, or quiet minute gets a fresh Sheet
+  // reading. The generation guard above makes an older slow response harmless.
+  useEffect(() => {
+    if (!token) return;
+    const query = `token=${encodeURIComponent(token)}`;
+    const recover = () => {
+      const today = todayLocal();
+      if (today !== boardDayRef.current) {
+        void refresh(true);
+        return;
+      }
+      void loadTotals(query);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") recover();
+    };
+    window.addEventListener("online", recover);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") recover();
+    }, BALANCE_REFRESH_INTERVAL_MS);
+    return () => {
+      window.removeEventListener("online", recover);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
+  }, [token, loadTotals, refresh]);
 
   // ---- where we are: GPS → nearest stored shop → its description ----------
   useEffect(() => {
@@ -438,7 +729,7 @@ export default function GroceryPage() {
       if (r.kind === "offline") left.push(d);   // a refused draft is dropped, not retried forever
     }
     writeQueue(left);
-    if (left.length < pending.length) void refresh();
+    if (left.length < pending.length) void refresh(true, true);
   }, [readQueue, writeQueue, send, refresh]);
 
   useEffect(() => {
@@ -482,7 +773,7 @@ export default function GroceryPage() {
       // Say it plainly and show the undo, so nobody taps twice wondering.
       setSaved({ amount: result.spend.amount_idr, id: result.spend.id });
       setFlash(null);
-      void refresh();
+      void refresh(true, true);
     }
     setAmount("");
     setNote("");
@@ -511,7 +802,7 @@ export default function GroceryPage() {
         // Reconciliation uses one stable compensating entry; the app only
         // removes the graph row after the private carrier confirms its state.
         setFlash(body.was_mirrored ? t.removedMirrored : null);
-        void refresh();
+        void refresh(true, true);
       } else {
         setFlash(t.removeUnavailable);
       }
@@ -648,6 +939,9 @@ export default function GroceryPage() {
     );
   }
 
+  const balanceKey = balanceCopyKey(balanceState, confirmedRemaining !== null);
+  const balanceStatusText = balanceKey ? t[balanceKey] : null;
+
   return (
     // -mb-16 cancels the layout's bottom-nav reserve: ChromeGate hides that
     // nav on this contained route, and the reserved 4rem would otherwise show
@@ -670,8 +964,8 @@ export default function GroceryPage() {
         {/* A phone opens on the question this ledger exists to answer. */}
         <BalanceCard
           label={t.remaining}
-          remaining={totals?.remaining_idr ?? null}
-          unavailable={t.balanceUnavailable}
+          remaining={confirmedRemaining}
+          statusText={balanceStatusText}
           className="mt-6 lg:hidden"
         />
 
@@ -964,8 +1258,8 @@ export default function GroceryPage() {
           <aside className="min-w-0">
             <BalanceCard
               label={t.remaining}
-              remaining={totals?.remaining_idr ?? null}
-              unavailable={t.balanceUnavailable}
+              remaining={confirmedRemaining}
+              statusText={balanceStatusText}
               className="mb-3 hidden lg:block"
             />
 
@@ -973,19 +1267,19 @@ export default function GroceryPage() {
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-wider text-neutral-500">{t.today}</div>
                 <div className="mt-1 truncate text-lg tabular-nums text-neutral-100">
-                  {rupiah(totals?.day_total_idr ?? 0)}
+                  {totals ? rupiah(totals.day_total_idr) : "—"}
                 </div>
                 <div className="text-xs text-neutral-600">
-                  {totals?.day_count ?? 0} {t.entries}
+                  {totals ? `${totals.day_count} ${t.entries}` : "—"}
                 </div>
               </div>
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-wider text-neutral-500">{t.month}</div>
                 <div className="mt-1 truncate text-lg tabular-nums text-neutral-100">
-                  {rupiah(totals?.month_total_idr ?? 0)}
+                  {totals ? rupiah(totals.month_total_idr) : "—"}
                 </div>
                 <div className="text-xs text-neutral-600">
-                  {totals?.month_count ?? 0} {t.entries}
+                  {totals ? `${totals.month_count} ${t.entries}` : "—"}
                 </div>
               </div>
             </div>
@@ -1001,7 +1295,12 @@ export default function GroceryPage() {
                   <div className="shrink-0 tabular-nums text-neutral-400">{rupiah(previewIdr(d.amount))}</div>
                 </li>
               ))}
-              {spends.length === 0 && queued.length === 0 && (
+              {entriesLoading && (
+                <li className="px-4 py-6 text-center text-sm text-neutral-600">
+                  {t.entriesConnecting}
+                </li>
+              )}
+              {!entriesLoading && spends.length === 0 && queued.length === 0 && (
                 <li className="px-4 py-6 text-center text-sm text-neutral-600">{t.none}</li>
               )}
               {spends.map((s) => (

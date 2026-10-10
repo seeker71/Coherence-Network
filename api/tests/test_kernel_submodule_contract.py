@@ -20,6 +20,7 @@ APP_RECIPES = {
     "endpoint_ical_allday.fk",
     "endpoint_ical_field.fk",
     "endpoint_member_active.fk",
+    "endpoint_membership_lookup_status.fk",
     "endpoint_place_distance.fk",
     "endpoint_placeholder_name.fk",
     "endpoint_reaction_resonance.fk",
