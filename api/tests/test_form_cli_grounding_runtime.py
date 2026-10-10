@@ -59,6 +59,13 @@ witness_refresh = _load_script(
 )
 
 
+def test_source_worktree_reads_its_own_selected_native_carrier_receipt():
+    assert rag.ROOT != "/app"
+    assert rag.NATIVE_CARRIER_RECEIPT == (
+        Path(rag.ROOT) / ".cache" / "form-cli-native" / "selected.json"
+    )
+
+
 def _trust(*, observed: bool = False, grounded: bool = True) -> bytes:
     if not grounded:
         text = (
@@ -296,7 +303,36 @@ def test_deployment_witness_refresh_is_single_entry_and_atomic(monkeypatch):
 
     assert witness_refresh.refresh("index.jsonl") == (1, 1)
     assert embedded == [[current]]
-    assert published == [[ordinary, current]]
+    assert published == [[ordinary, current], [current]]
+    assert Path(witness_refresh.deployment_index_path("/tmp/index.jsonl")) == Path(
+        "/tmp/deployment-witness.jsonl"
+    )
+
+
+def test_bounded_deployment_index_validation_ignores_body_corpus(monkeypatch):
+    witness = {
+        "source_path": "deployment-witness:current",
+        "kind": "deployment-witness",
+        "schema": rag.INDEX_SCHEMA,
+        "embedding_kind": rag.EMBEDDING_KIND,
+    }
+    indexed = {**witness, "vec": [3]}
+    monkeypatch.setattr(rag, "_index_stamp_valid", lambda _path: True)
+    monkeypatch.setattr(rag, "_deployment_witness_entries", lambda: [witness])
+    monkeypatch.setattr(rag, "_load_index", lambda _path: [indexed])
+
+    assert rag._deployment_witness_index_current("deployment-witness.jsonl")
+
+    monkeypatch.setattr(
+        rag,
+        "_load_index",
+        lambda _path: [indexed, {"kind": "spec", "source_path": "body"}],
+    )
+    assert not rag._deployment_witness_index_current("deployment-witness.jsonl")
+
+    monkeypatch.setattr(rag, "_load_index", lambda _path: [indexed])
+    monkeypatch.setattr(rag, "_index_stamp_valid", lambda _path: False)
+    assert not rag._deployment_witness_index_current("deployment-witness.jsonl")
 
 
 def test_deployment_witness_refresh_preserves_valid_index_on_failure(monkeypatch):
@@ -833,6 +869,12 @@ def test_wrapper_manifest_and_fail_closed_native_flow_are_current():
     assert "set -euo pipefail" in source
     assert "validate-current" in source
     assert "ask-request-trace" in source
+    assert 'index_lane="deployment-witness"' in source
+    assert 'index_validator="validate-deployment-current"' in source
+    assert '"$index_validator" --index "$index"' in source
+    assert 'native_request_verb="deployment-ask-request"' in source
+    assert 'native_trace_verb="deployment-ask-request-trace"' in source
+    assert "bounded deployment WITNESS index is unavailable or stale" in source
     assert "native carrier/index identity changed during capture" in source
     assert "native grounding attestation failed" in source
     assert "Observed callers enforce the stronger all-four-axis row" in source
@@ -1221,6 +1263,9 @@ def test_real_native_request_hmac_replay_query_and_expiry_gates(tmp_path):
     (index_dir / "index.jsonl").write_text(
         json.dumps(row, separators=(",", ":")) + "\n", encoding="utf-8"
     )
+    (index_dir / "deployment-witness.jsonl").write_text(
+        json.dumps(row, separators=(",", ":")) + "\n", encoding="utf-8"
+    )
 
     def command(text: str) -> subprocess.CompletedProcess[bytes]:
         return subprocess.run(
@@ -1313,6 +1358,48 @@ def test_real_native_request_hmac_replay_query_and_expiry_gates(tmp_path):
     assert not Path(str(receipt_path) + ".consuming").exists()
     replay = command(f"ask-request-trace {request_id}")
     assert replay.stdout == b"ask-request-trace:error:missing-receipt\n"
+
+    # A production-width whole-body index is outside the observer lane.  Make
+    # it unusable here so either deployment verb would fail if it regressed to
+    # the default index instead of the bounded WITNESS file.
+    (index_dir / "index.jsonl").write_bytes(b"not-a-grounded-row\n" * 450_000)
+
+    deployment_request_id = "trace_deployment"
+    deployment_query_path = request_dir / f"{deployment_request_id}.query"
+    deployment_receipt_path = request_dir / f"{deployment_request_id}.receipt"
+    deployment_query_path.write_bytes(query)
+    deployment_requested = command(
+        f"deployment-ask-request {deployment_request_id}"
+    )
+    assert deployment_requested.returncode == 0
+    assert deployment_requested.stderr == b""
+    assert deployment_requested.stdout.startswith(f"grounded:{node_id}\n".encode())
+    deployment_receipt_path.write_text(
+        receipt(
+            deployment_request_id,
+            query,
+            issued=now,
+            expires=now + 60,
+        )
+        + "\n",
+        encoding="ascii",
+    )
+    deployment_traced = command(
+        f"deployment-ask-request-trace {deployment_request_id}"
+    )
+    assert deployment_traced.returncode == 0
+    assert deployment_traced.stderr == b""
+    deployment_trust, deployment_payload = deployment_traced.stdout.split(
+        b"\n", 1
+    )
+    deployment_parsed = substrate_router._parse_native_grounded_payload(
+        deployment_payload, deployment_trust + b"\n"
+    )
+    assert deployment_parsed[1]["observed"] == "yes"
+    assert deployment_parsed[3].encode() == answer
+    (index_dir / "index.jsonl").write_text(
+        json.dumps(row, separators=(",", ":")) + "\n", encoding="utf-8"
+    )
 
     wrong_id = "trace_wrong_id"
     (request_dir / f"{wrong_id}.query").write_bytes(query)

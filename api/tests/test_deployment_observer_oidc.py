@@ -272,6 +272,7 @@ def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> Non
     verifier = (REPO_ROOT / "scripts/verify_observed_deployment_ask.sh").read_text(
         encoding="utf-8"
     )
+    assert 'deployment-witness-ask "$query"' in verifier
     assert 'ask_rc=$?' in verifier
     assert 'deployment ask exited non-zero (rc=$ask_rc)' in verifier
     assert "sed 's/^/  /' \"$err\" >&2" in verifier

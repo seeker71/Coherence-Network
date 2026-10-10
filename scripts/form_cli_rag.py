@@ -63,7 +63,7 @@ NATIVE_EMBED_TEXT_MAX_BYTES = 600
 _ATTESTATION_DIR = Path.home() / ".coherence-network" / "attestation"
 NATIVE_CARRIER_RECEIPT = (
     _ATTESTATION_DIR / "selected-form-cli-carrier.json"
-    if _ATTESTATION_DIR.is_dir()
+    if ROOT == "/app" and _ATTESTATION_DIR.is_dir()
     else Path(ROOT) / ".cache" / "form-cli-native" / "selected.json"
 )
 
@@ -712,6 +712,23 @@ def _index_files_current(index_path: str) -> bool:
         return False
 
 
+def _deployment_witness_index_current(index_path: str) -> bool:
+    """Validate the bounded WITNESS index without requiring body-corpus rows."""
+    if not _index_stamp_valid(index_path):
+        return False
+    try:
+        rows = _load_index(index_path)
+        expected = _deployment_witness_entries()
+        if len(rows) != 1 or len(expected) != 1:
+            return False
+        row = rows[0]
+        return row.get("kind") == "deployment-witness" and all(
+            row.get(key) == value for key, value in expected[0].items()
+        )
+    except (OSError, RuntimeError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+
+
 def _write_index(index_path: str, entries: list[dict]) -> None:
     directory = os.path.dirname(os.path.abspath(index_path))
     os.makedirs(directory, exist_ok=True)
@@ -1344,6 +1361,8 @@ def main() -> int:
     vi.add_argument("--index", default=INDEX)
     vc = sub.add_parser("validate-current")
     vc.add_argument("--index", default=INDEX)
+    vdc = sub.add_parser("validate-deployment-current")
+    vdc.add_argument("--index", default=INDEX)
     args = ap.parse_args()
 
     if args.cmd == "build":
@@ -1380,6 +1399,8 @@ def main() -> int:
         return 0 if _index_stamp_valid(args.index) else 1
     if args.cmd == "validate-current":
         return 0 if _index_files_current(args.index) else 1
+    if args.cmd == "validate-deployment-current":
+        return 0 if _deployment_witness_index_current(args.index) else 1
     return 2
 
 
