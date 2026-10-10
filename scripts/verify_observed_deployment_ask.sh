@@ -14,7 +14,16 @@ err="$(mktemp)"
 trap 'rm -f "$out" "$err"' EXIT
 
 query="observed deployment witness $SHA native carrier commitment"
+set +e
 "$ROOT/bin/form-cli" ask "$query" >"$out" 2>"$err"
+ask_rc=$?
+set -e
+if [[ "$ask_rc" -ne 0 ]]; then
+  echo "deployment ask exited non-zero (rc=$ask_rc)" >&2
+  sed 's/^/  /' "$err" >&2
+  sed 's/^/  /' "$out" >&2
+  exit "$ask_rc"
+fi
 
 expected_trust='trust  path:native  grounded:yes  freq:yes  freq-source:certified-form  suffic:yes  observed:yes  -> OBSERVED  decision:accept  reason:ok'
 if ! grep -Fqx "$expected_trust" "$err"; then

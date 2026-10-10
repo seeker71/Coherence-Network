@@ -595,10 +595,13 @@ jobs:
           set -euo pipefail
           target_sha="$1"
           compose=/docker/coherence-network/docker-compose.yml
+          maintenance_compose=/docker/coherence-network/repo/deploy/hostinger/docker-compose.maintenance.yml
+          [[ -f "$maintenance_compose" ]]
           serving_container="$(docker compose -f "$compose" ps -q api)"
           [[ -n "$serving_container" ]]
           [[ "$(docker inspect --format '{{.State.Running}}' "$serving_container")" == true ]]
-          docker compose -f "$compose" run --rm --no-deps -T --entrypoint sh api -lc '
+          docker compose -f "$compose" -f "$maintenance_compose" \
+            run --rm --no-deps -T --entrypoint sh api -lc '
             set -eu
             cd /app
             python3 scripts/refresh_deployment_witness_index.py
@@ -606,5 +609,5 @@ jobs:
           ' sh "$target_sha"
           [[ "$(docker inspect --format '{{.State.Running}}' "$serving_container")" == true ]]
           docker exec "$serving_container" curl -fsS --max-time 10 \
-            http://127.0.0.1:8000/api/health >/dev/null
+            http://127.0.0.1:8000/api/ping >/dev/null
           REMOTE

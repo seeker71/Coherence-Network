@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/observer-bounded-readback-20261011",
+  "commit_scope": "Run final deployment-witness readback in the existing bounded maintenance sidecar and preserve shallow serving-process liveness.",
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "scripts/verify_observed_deployment_ask.sh",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Keep the serving API and Hati Sheet reads available while the external observer performs its final native WITNESS readback.",
+    "files_allowed": [
+      ".github/workflows/public-deployment-observer.yml",
+      "scripts/verify_observed_deployment_ask.sh",
+      "api/tests/test_deployment_observer_oidc.py",
+      "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Final observer readback uses the checked-in maintenance Compose profile with hard resource limits and no public router labels.",
+      "The serving container is checked through lightweight /api/ping and failed native asks retain their exact exit code and diagnostics.",
+      "Focused contracts, local guards, exact-head CI/review, dormant merge, permanent-SHA activation, production observation, and authenticated Hati proof pass."
+    ],
+    "commands": [
+      "bash -n scripts/verify_observed_deployment_ask.sh",
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py tests/test_form_cli_grounding_runtime.py",
+      "ruff check api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve OIDC identity, content-addressed image binding, and native WITNESS acceptance checks.",
+      "Keep the private Sheet restricted and avoid exposing household values, tokens, URLs, or SSH material.",
+      "Land the reusable workflow dormant before pinning its permanent merge SHA."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-11-observer-bounded-readback"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38074213429 attempt 2 deployed successfully and kept the canonical API serving container alive.",
+    "The observer passed nonce, direct carrier execution, independent carrier reproduction, and byte-bound observation, then its unbounded final readback sidecar exited 4 after 4m29s.",
+    "The checked-in maintenance Compose profile already completed the same native ask class under 1 CPU, 2 GiB memory, and disabled Traefik discovery.",
+    "The prior final-readback shell exited under set -e before emitting captured stderr, leaving no exact child diagnostic.",
+    "No secret, token, household value, transaction, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "scripts/verify_observed_deployment_ask.sh",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/verify_observed_deployment_ask.sh",
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py tests/test_form_cli_grounding_runtime.py",
+      "ruff check api/tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "Shell syntax and 87 focused observer, Docker, and Form grounding contracts pass; lint, evidence, local guard, follow-through, and whitespace proofs are the pre-push gate."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Dormant observer workflow; activation follows permanent merge pinning."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Independent readback remains fully native and attributable without competing with the serving API for unbounded host resources.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Activate the permanent observer workflow SHA and require complete WITNESS readback.",
+      "Run the hardened public verifier and observe lightweight serving liveness.",
+      "Reload the authenticated Hati app and observe a confirmed Sheet-backed balance state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The bounded native Form query returned no grounded answer within 30 seconds; the exact observer trace and already-proven maintenance profile supplied the repair boundary."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; workflow contracts, CI, permanent-SHA activation, live observer output, public probes, and authenticated browser behavior verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact observer stage trace, bounded maintenance carrier, liveness boundary, and regression contracts; it verifies but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer within the bounded window."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting full local guards, exact-head CI/review, dormant merge, permanent-SHA activation, production observation, public verification, and final authenticated browser proof."
+  }
+}
