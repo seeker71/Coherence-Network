@@ -15,7 +15,7 @@ trap 'rm -f "$out" "$err"' EXIT
 
 query="observed deployment witness $SHA native carrier commitment"
 set +e
-"$ROOT/bin/form-cli" ask "$query" >"$out" 2>"$err"
+"$ROOT/bin/form-cli" deployment-witness-ask "$query" >"$out" 2>"$err"
 ask_rc=$?
 set -e
 if [[ "$ask_rc" -ne 0 ]]; then

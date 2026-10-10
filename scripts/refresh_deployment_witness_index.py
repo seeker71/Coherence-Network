@@ -19,8 +19,13 @@ if str(SCRIPT_ROOT) not in sys.path:
 import form_cli_rag as rag  # noqa: E402
 
 
+def deployment_index_path(index_path: str) -> str:
+    """Return the bounded native readback index beside the whole-body index."""
+    return str(Path(index_path).with_name("deployment-witness.jsonl"))
+
+
 def refresh(index_path: str) -> tuple[int, int]:
-    """Atomically replace stale deployment witnesses with the current one."""
+    """Atomically publish the current WITNESS to both native retrieval lanes."""
     if not rag._index_stamp_valid(index_path):
         raise RuntimeError(
             "deployment WITNESS refresh requires the release-healed base index"
@@ -41,6 +46,10 @@ def refresh(index_path: str) -> tuple[int, int]:
     ]
     removed = len(existing) - len(retained)
     rag._write_index(index_path, retained + witnesses)
+    # Independent release verification never needs to rank the complete body.
+    # Its own stamped, one-row index retains the exact same typed binding,
+    # semantic vector, native ranker, HMAC receipt, and frequency certificate.
+    rag._write_index(deployment_index_path(index_path), witnesses)
     return len(witnesses), removed
 
 

@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-native-readback-crash-20261011",
+  "commit_scope": "Keep independent deployment WITNESS readback native and fully observed while bounding retrieval to its single dynamic evidence row.",
+  "files_owned": [
+    "form",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "scripts/refresh_deployment_witness_index.py",
+    "scripts/form_cli_rag.py",
+    "scripts/verify_observed_deployment_ask.sh",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_native_witness_readback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Make Hati deployment observation resilient by removing whole-body index growth from the native WITNESS readback path without weakening its trust proof.",
+    "files_allowed": [
+      "form",
+      "bin/form-cli",
+      "bin/form-cli.sha256",
+      "scripts/refresh_deployment_witness_index.py",
+      "scripts/form_cli_rag.py",
+      "scripts/verify_observed_deployment_ask.sh",
+      "api/tests/test_form_cli_grounding_runtime.py",
+      "api/tests/test_deployment_observer_oidc.py",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_native_witness_readback.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The deployment observer reads a stamped one-row index through the native semantic ranker and one-use HMAC trace.",
+      "A production-width unusable body index cannot affect deployment WITNESS request or trace results.",
+      "Four-way Form proof, native integration, parent guards, exact-head CI/review, rollout, observer, public endpoints, and authenticated Hati checks pass."
+    ],
+    "commands": [
+      "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-bp.fk form-stdlib/line-grammar.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/hex.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/form-freq-check.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk form-stdlib/form-cli-staged-trace.fk form-stdlib/form-cli-request.fk form-stdlib/tests/form-cli-request-band.fk",
+      "api/.venv/bin/pytest -q api/tests/test_form_cli_grounding_runtime.py api/tests/test_deployment_observer_oidc.py",
+      "bash -n bin/form-cli scripts/verify_observed_deployment_ask.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_bounded_native_witness_readback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve the native ranker, request-bound HMAC, current persisted binding, frequency certificate, sufficiency gate, and observed trust row.",
+      "Do not retry a deterministic native crash or shift deployment proof onto the serving API.",
+      "Keep Sheet, household, balance, token, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience", "native-witness-readback"],
+  "spec_ids": ["public-deployment-observer", "form-first-reasoning"],
+  "task_ids": ["task-2026-10-11-hati-bounded-native-witness-readback"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38089199258 passed exact-SHA deployment, public API, persistence, Hati profile, Hati edit route, web proxy, CORS, and pulse verification before only the final native ask-request process segfaulted.",
+    "Preserved diagnostics localized the fault to the c-bootstrapped native carrier while reading the refreshed whole-body RAG index; serving API and Hati remained live.",
+    "AddressSanitizer reproduced stack overflow in repeated native walker frames over the production-width body index.",
+    "Kernel PR 593 merged the bounded native request and one-use trace verbs at c8e0f2ed0a9038ef27d3dc74f647f25acb903a54.",
+    "The real native integration passed with the default index replaced by an unusable 8.6 MB decoy, proving deployment request and trace depend only on the stamped one-row WITNESS index.",
+    "Exact-head review exposed and the repair removed a remaining validator dependency on whole-body corpus rows; the bounded validator now accepts only the stamped current one-row deployment WITNESS index.",
+    "No secret, token, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "form",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "scripts/refresh_deployment_witness_index.py",
+    "scripts/form_cli_rag.py",
+    "scripts/verify_observed_deployment_ask.sh",
+    "api/tests/test_form_cli_grounding_runtime.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_native_witness_readback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Form request band across Go, Rust, TypeScript, and fkwu",
+      "75 grounding-runtime and observer tests",
+      "native carrier ping canary and standard bootstrap identity",
+      "shell syntax and whitespace validation"
+    ],
+    "summary": "Four-way verdict 8388607, the grounding and observer suites, the real native production-width isolation regression, the dedicated fail-closed bounded validator, source-worktree receipt selection, carrier regeneration, ping canary, and standard-lane identity pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Independent deployment proof remains fully native and OBSERVED regardless of whole-body index size, while the Hati Sheet-serving organ remains isolated and responsive.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health/pulse",
+      "GET https://app.hati.earth/",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Observe exact-head Hostinger rollout and a successful bounded native deployment observer readback.",
+      "Run the hardened public deployment verifier.",
+      "Reload the authenticated Hati app and observe a confirmed Sheet-backed balance state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_runtime_evidence",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "The exact production process signal and preserved stderr identify the native ask-request carrier as the only failed step after all public and Hati checks passed."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query timed out after 20 seconds; OpenAI GPT-5 selected the bounded index boundary and the Form body verifies it four-way and through the real native carrier."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the production crash trace, Form grammar, carrier regeneration, four-way proof, HMAC integration, and deployment contracts; it verifies but did not generate the edit.",
+    "standard_receipt": "The live failure is grounded and observed; the repair choice remains rented reasoning after a native Form timeout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting evidence validation, parent guards, exact-head CI/review, merge, rollout, bounded observer proof, public verification, and authenticated Hati proof."
+  }
+}
