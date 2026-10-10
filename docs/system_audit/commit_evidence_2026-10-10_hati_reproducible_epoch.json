@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-reproducible-epoch-20261010",
+  "commit_scope": "Fix the native carrier's timestamp-bearing compiler identity and activate the one-authority observer from its permanent main SHA.",
+  "files_owned": [
+    "Dockerfile.api",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_reproducible_epoch.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Make fkwu and form-cli native build bytes independent of wall-clock compilation time and activate exact-Dockerfile observation.",
+    "files_allowed": [
+      "Dockerfile.api",
+      ".github/workflows/hostinger-auto-deploy.yml",
+      "api/app/services/deployment_observer_service.py",
+      "api/tests/test_api_dockerfile_contract.py",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_reproducible_epoch.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Both native build invocations use SOURCE_DATE_EPOCH=0 under a fixed locale and timezone.",
+      "The deploy caller and OIDC policy atomically pin permanent observer merge 858bef6eb886e1be5b86bac4e52891196c958f57.",
+      "Focused contracts, local guard, exact-head CI/review, production rollout, strict observation, and authenticated Hati Sheet recovery pass."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_api_dockerfile_contract.py tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_reproducible_epoch.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve the content-addressed GCC builder and c-bootstrapped fkwu authority.",
+      "Keep the observer fail-closed and byte-for-byte strict.",
+      "Do not expose household or deployment secrets."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["public-deployment-observer", "fkwu-only-kernel-collapse"],
+  "task_ids": ["task-2026-10-10-hati-reproducible-epoch"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "The live strict observer proved the content-addressed compiler image matched but fkwu bytes still differed across builds.",
+    "form/runtime/fkwu-uni.c defines its builder identity with __DATE__ and __TIME__, making wall-clock build time part of the binary without a fixed source-date epoch.",
+    "Permanent observer merge 858bef6eb886e1be5b86bac4e52891196c958f57 reproduces the target Dockerfile's exact kernel-builder stage rather than parallel compiler commands.",
+    "The Dockerfile now fixes SOURCE_DATE_EPOCH, locale, and timezone for both native build invocations, and caller plus OIDC policy activate the permanent observer together.",
+    "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    "Dockerfile.api",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_reproducible_epoch.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_api_dockerfile_contract.py tests/test_deployment_observer_oidc.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_reproducible_epoch.json",
+      "git diff --check"
+    ],
+    "summary": "All 34 focused Dockerfile and observer contracts pass, evidence validation passes, and whitespace checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The exact release Dockerfile yields the same native bytes when independently rebuilt later, while app.hati.earth retains confirmed private-Sheet state.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Complete exact-head rollout and independent native-byte observation.",
+      "Confirm public API exact SHA and app HTTP 200.",
+      "Reload the authenticated app and observe confirmed Sheet-backed state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native query returned no answer within 30 seconds; the source macro and live failed byte comparison supplied the diagnosis."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; source, tests, CI, production, strict observation, and browser behavior provide verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the live mismatch, timestamp-bearing source, exact Dockerfile path, tests, native carriers, and public behavior. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this deterministic-build mismatch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting focused validation, exact-head CI/review, merge, production rollout, strict observation, and final browser proof."
+  }
+}
