@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/activate-observer-bounded-readback-20261011",
+  "commit_scope": "Activate the immutable resource-bounded deployment observer by pinning its permanent merge SHA in the deploy caller and API OIDC policy.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback_activation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Authorize and execute the permanently landed bounded observer workflow for production deployment evidence.",
+    "files_allowed": [
+      ".github/workflows/hostinger-auto-deploy.yml",
+      "api/app/services/deployment_observer_service.py",
+      "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback_activation.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The reusable workflow caller and API OIDC policy both pin d17b1453525899e089ebb70d762dcdbe7fa37fae.",
+      "Focused observer identity contracts, lint, evidence, and local guards pass.",
+      "Exact-head CI/review, merge, Hostinger rollout, independent observation, public verifier, and authenticated Hati Sheet proof pass."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
+      "ruff check api/app/services/deployment_observer_service.py api/tests/test_deployment_observer_oidc.py api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback_activation.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep the workflow caller and API OIDC identity policy on the same exact immutable SHA.",
+      "Preserve all observer authentication, image identity, and WITNESS acceptance checks.",
+      "Keep Sheet, household, token, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-11-observer-bounded-readback-activation"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Reusable observer repair PR 4059 merged at permanent revision d17b1453525899e089ebb70d762dcdbe7fa37fae after exact-head Windows, thread-process, security, and Codex review proof.",
+    "The permanent workflow runs final WITNESS readback under the checked-in 1-CPU/2-GiB maintenance profile, disables Traefik discovery, and checks serving liveness through /api/ping.",
+    "Caller and API policy must move atomically to preserve GitHub OIDC job_workflow_sha equality.",
+    "No secret, token, household value, transaction, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "api/app/services/deployment_observer_service.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback_activation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
+      "ruff check api/app/services/deployment_observer_service.py api/tests/test_deployment_observer_oidc.py api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_bounded_readback_activation.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "Focused observer identity and caller contracts, lint, evidence, local guard, strict follow-through, and whitespace checks are the activation proof."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Production deployment invokes the bounded observer revision and completes native WITNESS readback without starving the serving API or Hati Sheet path.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Observe Hostinger rollout and complete every independent observer stage.",
+      "Run the hardened public deployment verifier.",
+      "Reload the authenticated Hati app and observe a confirmed Sheet-backed balance state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "activation_identity": {
+      "path": "native_body_binding",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "The permanent merge SHA is machine-observed and both caller and API policy bind the same immutable workflow identity."
+    },
+    "implementation": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 applied the two-pin activation; exact-head tests, CI/review, rollout, observer evidence, public probes, and browser behavior verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the immutable merge identity, workflow policy contract, tests, and live rollout evidence; it verifies but did not generate the activation edit.",
+    "standard_receipt": "The activation identity is a grounded body binding; the prose and edit choice remain rented reasoning."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting focused validation, exact-head CI/review, merge, Hostinger rollout, independent observation, public verification, and final authenticated browser proof."
+  }
+}
