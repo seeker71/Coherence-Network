@@ -16,6 +16,7 @@ api_health_calls_file="$fixture_dir/api_health_calls"
 web_proxy_calls_file="$fixture_dir/web_proxy_calls"
 web_proxy_transient_file="$fixture_dir/web_proxy_transient"
 web_proxy_late_transient_file="$fixture_dir/web_proxy_late_transient"
+web_proxy_over_budget_file="$fixture_dir/web_proxy_over_budget"
 fake_clock_file="$fixture_dir/fake_clock"
 printf '0\n' > "$api_health_calls_file"
 printf '0\n' > "$web_proxy_calls_file"
@@ -80,7 +81,18 @@ curl() {
       calls="$(cat "$web_proxy_calls_file")"
       calls=$((calls + 1))
       printf '%s\n' "$calls" > "$web_proxy_calls_file"
-      if [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 1 ]]; then
+      if [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 1 ]]; then
+        body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
+        printf '100\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 2 ]]; then
+        http_status=""
+        body=''
+        printf '181\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_over_budget_file" && "$calls" -eq 3 ]]; then
+        http_status=""
+        body=''
+        printf '262\n' > "$fake_clock_file"
+      elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 1 ]]; then
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$old_sha\"}}"
         printf '100\n' > "$fake_clock_file"
       elif [[ -f "$web_proxy_late_transient_file" && "$calls" -eq 2 ]]; then
@@ -226,6 +238,25 @@ grep -F "WARN: web health-proxy rollout status request-error" <<<"$late_rollout_
 grep -F "OK: Web runtime SHA parity settled after 5 attempt(s)" <<<"$late_rollout_output" >/dev/null
 grep -F "PASS" <<<"$late_rollout_output" >/dev/null
 [[ "$(cat "$web_proxy_calls_file")" == "5" ]]
+
+printf '0\n' > "$web_proxy_calls_file"
+printf '0\n' > "$fake_clock_file"
+touch "$web_proxy_over_budget_file"
+if over_budget_output="$(
+  GATEWAY_PATIENCE_SECONDS=90 \
+  GATEWAY_PATIENCE_INTERVAL=0 \
+  SHA_PARITY_PATIENCE_SECONDS=180 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_web_runtime_sha "http://web.example/api/health-proxy" "http://api.example/api/gates/main-head" 1
+)"; then
+  echo "over-budget gateway outage unexpectedly passed" >&2
+  exit 1
+fi
+rm -f "$web_proxy_over_budget_file"
+rm -f "$fake_clock_file"
+grep -F "WARN: web health-proxy rollout status request-error" <<<"$over_budget_output" >/dev/null
+grep -F "FAIL: web health-proxy endpoint unavailable for SHA parity check" <<<"$over_budget_output" >/dev/null
+[[ "$(cat "$web_proxy_calls_file")" == "3" ]]
 
 grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
 if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then

@@ -68,6 +68,7 @@
     "A third exact-head review found the reverse ordering: a stale SHA could outlive a gateway clock that had never seen an outage. Gateway patience now starts on the first transient response, and the regression proves stale-SHA-then-503 recovery independently.",
     "A fourth exact-head review found gateway downtime still consumed the active SHA deadline. The verifier now extends SHA patience by the measured outage interval, and the regression proves stale SHA at t=0, outage from t=100 to t=189, stale SHA at recovery, and target SHA at t=260.",
     "A fifth exact-head review found curl retry time before a transport failure was returned remained unmeasured. Proxy attempt timing now starts before the request, and the regression proves an 81-second request gap, stale recovery, a later stale check past the former deadline, and eventual target parity.",
+    "A sixth exact-head review found the gateway deadline still began after the first retry batch. It is now anchored to the failed attempt start, and an over-budget regression proves two 81-second transport gaps stop instead of receiving a second 90-second window.",
     "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
   ],
   "change_files": [
@@ -89,7 +90,7 @@
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "git diff --check"
     ],
-    "summary": "Snapshot reuse, request-start outage accounting, healthy-time SHA patience, first-failure gateway patience in both rollout orderings, pulse, CSS, Hostinger path, shell syntax, and whitespace proofs pass. Evidence validation and full local guards are part of the pre-commit gate."
+    "summary": "Snapshot reuse, request-start outage accounting, bounded gateway timing, healthy-time SHA patience, both rollout orderings, pulse, CSS, Hostinger path, shell syntax, and whitespace proofs pass. Evidence validation and full local guards are part of the pre-commit gate."
   },
   "ci_validation": {
     "status": "pending",

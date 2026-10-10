@@ -957,7 +957,7 @@ check_web_runtime_sha() {
           gateway_started_at="$proxy_attempt_started_at"
         fi
         if (( gateway_deadline == 0 )); then
-          gateway_deadline=$(( now + GATEWAY_PATIENCE_SECONDS ))
+          gateway_deadline=$(( gateway_started_at + GATEWAY_PATIENCE_SECONDS ))
         fi
         if (( now < gateway_deadline )); then
           echo "WARN: web health-proxy rollout status ${proxy_status:-request-error}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway to settle..."
