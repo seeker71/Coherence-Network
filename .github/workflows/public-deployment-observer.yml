@@ -168,14 +168,35 @@ jobs:
           (( ${#fkwu_expression_hex} % 2 == 0 ))
           fkwu_expression="$(python3 -c 'import sys; print(bytes.fromhex(sys.argv[1]).decode("ascii"))' "$fkwu_expression_hex")"
           compose=/docker/coherence-network/docker-compose.yml
-          container="$(docker compose -f "$compose" ps -q api)"
-          [[ -n "$container" ]]
+          mapfile -t candidates < <(docker compose -f "$compose" ps --status running -q api)
+          serving=()
+          for candidate in "${candidates[@]}"; do
+            oneoff="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$candidate")"
+            [[ "$oneoff" == true || "$oneoff" == True ]] && continue
+            serving+=("$candidate")
+          done
+          [[ "${#serving[@]}" == 1 ]]
+          container="${serving[0]}"
           running="$(docker inspect --format '{{.State.Running}}' "$container")"
           [[ "$running" == true ]]
           container_id="$(docker inspect --format '{{.Id}}' "$container")"
           image_id="$(docker inspect --format '{{.Image}}' "$container")"
-          image_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image_id")"
-          image_form_revision="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.coherence-form-revision"}}' "$image_id")"
+          image_ref="$(docker inspect --format '{{.Config.Image}}' "$container")"
+          mapfile -t image_metadata < <(docker image inspect "$image_ref" | python3 -c '
+          import json,sys
+          rows=json.load(sys.stdin)
+          if len(rows)!=1:
+              raise SystemExit("serving image lookup is not unique")
+          row=rows[0]
+          labels=(row.get("Config") or {}).get("Labels") or {}
+          print(row.get("Id") or "")
+          print(labels.get("org.opencontainers.image.revision") or "")
+          print(labels.get("org.opencontainers.image.coherence-form-revision") or "")
+          ')
+          [[ "${#image_metadata[@]}" == 3 ]]
+          [[ "${image_metadata[0]}" == "$image_id" ]]
+          image_revision="${image_metadata[1]}"
+          image_form_revision="${image_metadata[2]}"
           [[ "$image_revision" == "$target_sha" ]]
           [[ "$image_form_revision" == "$form_source_commit" ]]
           build_context="$(docker compose -f "$compose" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["build"]["context"])')"

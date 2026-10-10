@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/observer-container-labels-20261011",
+  "commit_scope": "Bind independent deployment observation to exactly one running non-one-off API container and its atomically inspected content-addressed image config.",
+  "files_owned": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Exclude disposable Compose sidecars from observer selection and bind immutable OCI revision labels to the canonical serving container's exact content-addressed image ID.",
+    "files_allowed": [
+      ".github/workflows/public-deployment-observer.yml",
+      "api/tests/test_deployment_observer_oidc.py",
+      "docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The observer selects exactly one running non-one-off API container and atomically requires its named image ID to equal the container's content-addressed image ID before accepting OCI revision labels.",
+      "Focused observer contracts and the full local PR guard pass.",
+      "The dormant observer repair lands with clean exact-head CI and review before permanent-SHA activation."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Do not weaken content-addressed image identity or OIDC policy.",
+      "Do not mutate the healthy production service while repairing observer code.",
+      "Keep secrets and household data out of evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "process_only",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-11-observer-container-labels"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger deploy run 38069355015 completed successfully at merge ee6930324c0c07e2f9276f8e71eb1ecccc7a6255.",
+    "The independent observer failed on an image ID that was absent immediately after the disposable maintenance sidecar exited, while the canonical serving API image and tag remained present.",
+    "Direct VPS observation proved exactly one running non-one-off API container, with its named image resolving to the same content-addressed ID and exact parent/Form OCI revision labels in one image-inspect response.",
+    "No secret, token, household value, transaction, or private Sheet URL is present in this evidence."
+  ],
+  "change_files": [
+    ".github/workflows/public-deployment-observer.yml",
+    "api/tests/test_deployment_observer_oidc.py",
+    "docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_deployment_observer_oidc.py tests/test_api_dockerfile_contract.py",
+      "ruff check api/tests/test_deployment_observer_oidc.py api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_observer_container_labels.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "summary": "All 37 focused observer/deploy contracts pass; lint, whitespace, full local PR guard, and strict follow-through checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Dormant observer workflow; activation follows permanent merge pinning."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The external observer ignores disposable sidecars and accepts revision labels only from an image config whose ID exactly matches the canonical serving container's content-addressed image ID.",
+    "public_endpoints": ["GET https://api.coherencycoin.com/api/health"],
+    "test_flows": ["Run the pinned observer against the already-deployed merge and require full witness recording/readback."]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native query produced no answer within 30 seconds; direct Docker state supplied the boundary evidence."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; the failed observer log, canonical container/image binding, tests, review, and rerun verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the failed observer trace and live canonical container/image binding; it verifies but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer within 30 seconds."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting focused validation, exact-head CI/review, merge, permanent-SHA activation, observer rerun, and final browser proof."
+  }
+}
