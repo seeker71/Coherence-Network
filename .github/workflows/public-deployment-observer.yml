@@ -103,10 +103,11 @@ jobs:
           direct_body="$(mktemp)"
           source_archive="$(mktemp)"
           source_dir="$(mktemp -d)"
+          context_dir="$(mktemp -d)"
           reproduced_dir="$(mktemp -d)"
           wrapper_source="$(mktemp)"
           dockerfile_source="$(mktemp)"
-          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$reproduced_dir" "$wrapper_source" "$dockerfile_source"' EXIT
+          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$context_dir" "$reproduced_dir" "$wrapper_source" "$dockerfile_source"' EXIT
           install -m 700 -d "$ssh_dir"
           printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
           chmod 600 "$ssh_dir/key"
@@ -254,25 +255,24 @@ jobs:
           print(value)
           PY
           )"
-          docker run --rm --platform linux/amd64 \
-            -v "$source_dir:/source:ro" \
-            -v "$reproduced_dir:/out" \
-            "$builder" bash -lc '
-              set -euo pipefail
-              command -v cc >/dev/null
-              command -v openssl >/dev/null
-              mkdir -p /build /build/form-cli-src
-              cp -a /source/runtime /build/runtime
-              cp -a /source/form/form-stdlib /build/form-cli-src/form-stdlib
-              cp -a /source/form/scripts /build/form-cli-src/scripts
-              cp /source/form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
-              cd /build/form-cli-src
-              CC=cc FORM_CLI_FORCE_LINK=1 /build/form-cli-src/build-form-cli.sh /out/form-cli
-              bash /build/form-cli-src/scripts/form_cli_bootstrap_proof.sh /out/form-cli
-              cc -O2 -o /out/fkwu /build/runtime/fkwu-uni.c
-              cp /source/bootstrap/ground.fk /build/ground.fk
-              test "$(/out/fkwu --src /build/ground.fk 2>/dev/null)" = 42
-            '
+          cp "$dockerfile_source" "$context_dir/Dockerfile.api"
+          mkdir -p "$context_dir/form"
+          cp -a "$source_dir/." "$context_dir/form/"
+          reproduced_image="coherence-observer-kernel-builder:${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker build --platform linux/amd64 \
+            --target kernel-builder \
+            --build-arg "COHERENCE_SOURCE_SHA=$TARGET_SHA" \
+            --build-arg "COHERENCE_FORM_SHA=$form_source_commit" \
+            -f "$context_dir/Dockerfile.api" \
+            -t "$reproduced_image" \
+            "$context_dir"
+          docker run --rm --platform linux/amd64 "$reproduced_image" \
+            bash -lc 'test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42'
+          reproduced_container="$(docker create --platform linux/amd64 "$reproduced_image")"
+          docker cp "$reproduced_container:/build/fkwu" "$reproduced_dir/fkwu"
+          docker cp "$reproduced_container:/build/form-cli" "$reproduced_dir/form-cli"
+          docker rm "$reproduced_container"
+          docker image rm "$reproduced_image"
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
           source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
