@@ -896,6 +896,7 @@ check_api_runtime_sha() {
     if [[ "$observed_sha" != "$expected_sha" ]]; then
       if (( should_wait == 1 && $(date +%s) < deadline )); then
         echo "WARN: API deployed SHA does not match expected main-head SHA; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        health_snapshot=""
         sleep "$SHA_PARITY_PATIENCE_INTERVAL"
         attempt=$((attempt + 1))
         continue

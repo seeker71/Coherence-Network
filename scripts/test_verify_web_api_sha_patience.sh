@@ -100,6 +100,21 @@ grep -F "WARN: API deployed SHA does not match expected main-head SHA; retrying"
 grep -F "OK: API runtime SHA parity settled after 2 attempt(s)" <<<"$api_output" >/dev/null
 grep -F "PASS" <<<"$api_output" >/dev/null
 
+printf '1\n' > "$api_health_calls_file"
+printf '{"deployed_sha":"%s"}\n' "$old_sha" > "$API_HEALTH_SNAPSHOT_FILE"
+stale_cached_api_output="$(
+  SHA_PARITY_PATIENCE_SECONDS=2 \
+  SHA_PARITY_PATIENCE_INTERVAL=0 \
+    check_api_runtime_sha \
+      "http://api.example/api/health" \
+      "http://api.example/api/gates/main-head" \
+      1 \
+      "$API_HEALTH_SNAPSHOT_FILE"
+)"
+grep -F "WARN: API deployed SHA does not match expected main-head SHA; retrying" <<<"$stale_cached_api_output" >/dev/null
+grep -F "OK: API runtime SHA parity settled after 2 attempt(s)" <<<"$stale_cached_api_output" >/dev/null
+[[ "$(cat "$api_health_calls_file")" == "2" ]]
+
 printf '0\n' > "$api_health_calls_file"
 cat > "$API_HEALTH_SNAPSHOT_FILE" <<JSON
 {

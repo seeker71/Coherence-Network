@@ -50,7 +50,7 @@
       "roles": ["diagnosis", "implementation", "verification"]
     }
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "process_only",
   "idea_ids": ["deploy-reliability", "hati-sheet-resilience"],
   "spec_ids": ["public-deployment-observer"],
   "task_ids": ["task-2026-10-11-hati-lightweight-public-verify"],
