@@ -929,7 +929,6 @@ check_web_runtime_sha() {
   local gateway_started_at=0
   local now=0
   local proxy_attempt_started_at=0
-  local proxy_attempts="$CURL_RETRIES"
   local proxy_max_time="$CURL_MAX_TIME"
   local remaining_gateway=0
   local should_wait=0
@@ -942,7 +941,6 @@ check_web_runtime_sha() {
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
 
   while :; do
-    proxy_attempts="$CURL_RETRIES"
     proxy_max_time="$CURL_MAX_TIME"
     if (( gateway_deadline > 0 )); then
       now="$(date +%s)"
@@ -951,13 +949,12 @@ check_web_runtime_sha() {
         echo "FAIL: web health-proxy gateway patience expired"
         return 1
       fi
-      proxy_attempts=1
       if (( proxy_max_time > remaining_gateway )); then
         proxy_max_time="$remaining_gateway"
       fi
     fi
     proxy_attempt_started_at="$(date +%s)"
-    proxy_status="$(run_with_retries_capture "$proxy_attempts" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
+    proxy_status="$(run_with_retries_capture 1 "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
       --max-time "$proxy_max_time" \
       --connect-timeout "$CURL_CONNECT_TIMEOUT" \
       "$proxy_url" || true)"

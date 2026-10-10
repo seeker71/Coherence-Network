@@ -36,6 +36,7 @@ curl() {
   local url=""
   local http_status="200"
   local max_time=""
+  local return_status=0
   while (($#)); do
     case "$1" in
       -o)
@@ -116,7 +117,8 @@ curl() {
         body="{\"api\":{\"status\":\"ok\"},\"web\":{\"deployed_sha\":\"$target_sha\"}}"
         printf '350\n' > "$fake_clock_file"
       elif [[ -f "$web_proxy_transient_file" && "$calls" -eq 1 ]]; then
-        http_status="503"
+        http_status=""
+        return_status=7
         body='{"detail":"upstream restarting"}'
         printf '89\n' > "$fake_clock_file"
       elif [[ -f "$web_proxy_transient_file" && "$calls" -eq 2 ]]; then
@@ -143,6 +145,7 @@ curl() {
   if [[ "$write_format" == "%{http_code}" ]]; then
     printf '%s' "$http_status"
   fi
+  return "$return_status"
 }
 
 api_output="$(
@@ -222,7 +225,7 @@ web_rollout_output="$(
 )"
 rm -f "$web_proxy_transient_file"
 rm -f "$fake_clock_file"
-grep -F "WARN: web health-proxy rollout status 503" <<<"$web_rollout_output" >/dev/null
+grep -F "WARN: web health-proxy rollout status request-error" <<<"$web_rollout_output" >/dev/null
 grep -F "WARN: web deployed SHA does not match expected main-head SHA; retrying" <<<"$web_rollout_output" >/dev/null
 grep -F "OK: Web runtime SHA parity settled after 3 attempt(s)" <<<"$web_rollout_output" >/dev/null
 grep -F "PASS" <<<"$web_rollout_output" >/dev/null
@@ -266,6 +269,8 @@ grep -F "WARN: web health-proxy rollout status request-error" <<<"$over_budget_o
 grep -F "FAIL: web health-proxy endpoint unavailable for SHA parity check" <<<"$over_budget_output" >/dev/null
 [[ "$(cat "$web_proxy_calls_file")" == "3" ]]
 [[ "$(tail -n 1 "$web_proxy_max_times_file")" == "9" ]]
+
+grep -F 'proxy_status="$(run_with_retries_capture 1 ' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
 
 grep -F 'check_cors "${API_URL%/}/api/ping"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh" >/dev/null
 if grep -Fq 'check_url "Public web API health proxy"' "$ROOT_DIR/scripts/verify_web_api_deploy.sh"; then
