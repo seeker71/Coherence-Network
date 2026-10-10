@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-10",
+  "thread_branch": "codex/hati-api-route-recovery-20261010",
+  "commit_scope": "Restore the canonical api.coherencycoin.com Traefik route on the fkwu-owning API container before retired sibling routers are removed.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_api_ingress_recovery.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Keep app.hati.earth connected to its deployed API after the fkwu authority retires sibling kernel-router containers.",
+    "files_allowed": [
+      "deploy/hostinger/auto-deploy.sh",
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "docs/system_audit/commit_evidence_2026-10-10_hati_api_ingress_recovery.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The deploy reconciles api.coherencycoin.com directly onto api:8000 before sibling ingress is retired.",
+      "The running API container proves it owns the canonical Host route after sibling retirement.",
+      "An exact-head Hostinger rollout and live app.hati.earth Sheet recovery flow pass."
+    ],
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-10_hati_api_ingress_recovery.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep the c-bootstrapped fkwu inside the API image as the sole production Form execution authority.",
+      "Do not restore Rust, Go, or TypeScript sibling kernels as production services.",
+      "Do not expose household tokens, balances, transaction rows, Sheet secrets, or private URLs."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["observation", "direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "coherence-substrate"],
+  "spec_ids": ["hostinger-deploy-target-fetch", "fkwu-only-kernel-collapse"],
+  "task_ids": ["task-2026-10-10-hati-api-ingress-recovery"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 38049369680 built and started healthy API and web containers at merge commit 3674a17f72bf5c3b9b5b4309f5de99bf6553f11c.",
+    "The same run retired the kernel-router and kernel-router-bml-front-door sibling containers, after which every public API check returned Traefik HTTP 404 while the API container remained healthy.",
+    "The deploy script previously reconciled Hati web Host labels but assumed an external base API router already existed underneath the retired sibling ingress.",
+    "The public-host reconciler now owns both the canonical api.coherencycoin.com route to api:8000 and the Hati web host family before any early-aligned exit or sibling retirement.",
+    "The aligned rerun path now updates both api and web services so Traefik receives label-only repairs even when source and running SHA already match.",
+    "The aligned rerun also retires any stale higher-priority proof-sibling routers and verifies the running API Host route before it may return success; the exact-head review finding that exposed this interrupted-rollout gap is covered by an executable path-order assertion.",
+    "After sibling retirement, the deploy inspects the running API container and fails immediately unless its canonical Host rule, service binding, entrypoint, certificate resolver, and port are present.",
+    "The fixture executes the actual embedded reconciler with mapping-style API labels and list-style web labels, retains unrelated labels, creates each canonical route once, and proves a second run is byte-for-byte unchanged.",
+    "No household token, balance, transaction row, Sheet secret, or private URL is present in this evidence."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-10_hati_api_ingress_recovery.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check"
+    ],
+    "summary": "Shell syntax, the full Hostinger deploy-path suite, the executable mixed-label Compose fixture, idempotence proof, rebuild and already-aligned sibling-retirement ordering, running-container label postcondition, and whitespace checks pass. The full local PR guard reports ready_for_push=true with zero attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Retiring proof-sibling routers leaves api.coherencycoin.com routed directly to the healthy fkwu-owning API, so app.hati.earth can recover its Sheet balance.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Complete the exact-head Hostinger rollout with public API SHA parity.",
+      "Load the authenticated app and observe connecting followed by a confirmed Sheet-backed balance without exposing its value.",
+      "Confirm the private Sheet remains Restricted."
+    ]
+  },
+  "trust_matrix": {
+    "form_cli_query": {
+      "path": "native_attempt_then_rented",
+      "grounded": false,
+      "frequency_attuned": false,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The native Form query produced no result within its bounded window, so it supplied no attributable diagnosis."
+    },
+    "runtime_diagnosis": {
+      "path": "rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "OpenAI GPT-5 formed the repair; the exact deploy log, Compose carrier, executable fixture, and release tests supplied verification."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the deploy trace, carrier contracts, and executable fixture. It verified but did not generate the repair.",
+    "standard_receipt": "The Form contender was asked first and returned no grounded answer for this deployment ingress failure."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting exact-head CI/review, merge, Hostinger roll-forward, and live browser verification."
+  }
+}
