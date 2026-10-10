@@ -227,9 +227,14 @@ def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> Non
     )[1]
 
     assert "HOSTINGER_SSH_KEY: ${{ secrets.hostinger_ssh_key }}" in final_step
-    assert 'python3 scripts/form_cli_rag.py heal' in final_step
+    assert "docker compose -f \"$compose\" run --rm --no-deps -T" in final_step
+    assert "--entrypoint sh api -lc" in final_step
+    assert "python3 scripts/refresh_deployment_witness_index.py" in final_step
     assert 'bash scripts/verify_observed_deployment_ask.sh "$1"' in final_step
     assert 'root@187.77.152.42 bash -s -- "$TARGET_SHA"' in final_step
+    assert "docker exec \"$serving_container\" curl -fsS" in final_step
+    assert 'docker exec "$container" sh -lc' not in final_step
+    assert "python3 scripts/form_cli_rag.py heal" not in final_step
     assert "/api/substrate/grounded-ask" not in final_step
 
     config = json.loads((REPO_ROOT / "api" / "config" / "api.json").read_text())

@@ -53,6 +53,10 @@ def _load_script(name: str, relative: str):
 
 rag = _load_script("form_cli_rag_grounding_test", "scripts/form_cli_rag.py")
 coh = _load_script("coh_substrate_grounding_test", "scripts/coh_substrate.py")
+witness_refresh = _load_script(
+    "deployment_witness_refresh_test",
+    "scripts/refresh_deployment_witness_index.py",
+)
 
 
 def _trust(*, observed: bool = False, grounded: bool = True) -> bytes:
@@ -254,6 +258,60 @@ def test_failed_native_batch_never_publishes_a_partial_index(tmp_path, monkeypat
     with pytest.raises(RuntimeError, match="native crash"):
         rag.build(str(tmp_path / "index.jsonl"))
     assert published == []
+
+
+def test_deployment_witness_refresh_is_single_entry_and_atomic(monkeypatch):
+    ordinary = {"source_path": "specs/stable.md", "kind": "spec", "vec": [1]}
+    stale = {
+        "source_path": "deployment-witness:old",
+        "kind": "deployment-witness",
+        "vec": [2],
+    }
+    current = {
+        "source_path": "deployment-witness:current",
+        "kind": "deployment-witness",
+    }
+    embedded: list[list[dict]] = []
+    published: list[list[dict]] = []
+
+    monkeypatch.setattr(witness_refresh.rag, "_index_stamp_valid", lambda _path: True)
+    monkeypatch.setattr(
+        witness_refresh.rag, "_deployment_witness_entries", lambda: [current]
+    )
+    monkeypatch.setattr(
+        witness_refresh.rag, "_load_index", lambda _path: [ordinary, stale]
+    )
+
+    def attach(entries):
+        embedded.append(entries.copy())
+        entries[0]["vec"] = [3]
+        return entries
+
+    monkeypatch.setattr(witness_refresh.rag, "_attach_native_embeddings", attach)
+    monkeypatch.setattr(
+        witness_refresh.rag,
+        "_write_index",
+        lambda _path, entries: published.append(entries.copy()),
+    )
+
+    assert witness_refresh.refresh("index.jsonl") == (1, 1)
+    assert embedded == [[current]]
+    assert published == [[ordinary, current]]
+
+
+def test_deployment_witness_refresh_preserves_valid_index_on_failure(monkeypatch):
+    monkeypatch.setattr(witness_refresh.rag, "_index_stamp_valid", lambda _path: True)
+    monkeypatch.setattr(
+        witness_refresh.rag, "_deployment_witness_entries", lambda: []
+    )
+    monkeypatch.setattr(
+        witness_refresh.rag,
+        "_write_index",
+        lambda *_args: pytest.fail("invalid refresh must not publish"),
+    )
+
+    with pytest.raises(RuntimeError, match="exactly one persisted witness"):
+        witness_refresh.refresh("index.jsonl")
 
 
 def test_exact_artifact_binding_rejects_edits_until_reingested(tmp_path, monkeypatch):

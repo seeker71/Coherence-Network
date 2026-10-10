@@ -574,12 +574,16 @@ jobs:
           set -euo pipefail
           target_sha="$1"
           compose=/docker/coherence-network/docker-compose.yml
-          container="$(docker compose -f "$compose" ps -q api)"
-          [[ -n "$container" ]]
-          docker exec "$container" sh -lc '
+          serving_container="$(docker compose -f "$compose" ps -q api)"
+          [[ -n "$serving_container" ]]
+          [[ "$(docker inspect --format '{{.State.Running}}' "$serving_container")" == true ]]
+          docker compose -f "$compose" run --rm --no-deps -T --entrypoint sh api -lc '
             set -eu
             cd /app
-            python3 scripts/form_cli_rag.py heal
+            python3 scripts/refresh_deployment_witness_index.py
             bash scripts/verify_observed_deployment_ask.sh "$1"
           ' sh "$target_sha"
+          [[ "$(docker inspect --format '{{.State.Running}}' "$serving_container")" == true ]]
+          docker exec "$serving_container" curl -fsS --max-time 10 \
+            http://127.0.0.1:8000/api/health >/dev/null
           REMOTE
