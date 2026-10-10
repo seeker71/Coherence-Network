@@ -1104,7 +1104,11 @@ async def capture_runtime_metrics(request: Request, call_next):
     query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
     route_label = route_name or "unknown"
     response = None
-    excluded_paths = {"/api/runtime/change-token"}
+    # Liveness must be independent of persistence. Docker and Traefik call
+    # /api/ping specifically to learn whether the event loop can answer; a
+    # synchronous runtime-event write here would reintroduce PostgreSQL as a
+    # hidden liveness dependency.
+    excluded_paths = {"/api/ping", "/api/runtime/change-token"}
     should_capture = request_path.startswith("/api") or request_path.startswith("/v1") or raw_path.startswith("/api") or raw_path.startswith("/v1")
     if request_path in excluded_paths or raw_path in excluded_paths:
         should_capture = False
