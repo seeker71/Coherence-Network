@@ -1,0 +1,7 @@
+services:
+  api:
+    # `docker compose run` does not accept Docker's `--cpus`/`--memory`
+    # flags. Keep deployment grounding outside the serving container and apply
+    # its hard resource boundary through the service model Compose supports.
+    cpus: 1.0
+    mem_limit: 2g

@@ -200,9 +200,17 @@ def test_deploy_grounding_runs_in_resource_bounded_sidecars() -> None:
     deploy = (REPO_ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
         encoding="utf-8"
     )
-    sidecar = "--rm --no-deps -T --cpus 1 --memory 2g --entrypoint sh api -lc"
+    maintenance = (
+        REPO_ROOT / "deploy" / "hostinger" / "docker-compose.maintenance.yml"
+    ).read_text(encoding="utf-8")
+    sidecar = '-f "$MAINTENANCE_COMPOSE_FILE" run'
 
     assert deploy.count(sidecar) >= 4
+    assert deploy.count("--rm --no-deps -T --entrypoint sh api -lc") >= 4
+    assert "--cpus" not in deploy
+    assert "--memory" not in deploy
+    assert "cpus: 1.0" in maintenance
+    assert "mem_limit: 2g" in maintenance
     assert "python3 scripts/coh_substrate.py bootstrap" in deploy
     assert "python3 scripts/form_cli_rag.py heal" in deploy
     lines = deploy.splitlines()
