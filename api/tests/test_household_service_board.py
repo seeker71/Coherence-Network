@@ -8,15 +8,61 @@ grants it, and an invite can only come from a resident.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.routers import household
+from app.services.form_kernel_bridge import run_kernel
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+def test_member_store_failure_is_retryable_not_unauthorized(monkeypatch):
+    def unavailable(**_kwargs):
+        raise RuntimeError("temporary member-store failure")
+
+    monkeypatch.setattr(household.graph_service, "list_nodes", unavailable)
+
+    with pytest.raises(HTTPException) as exc_info:
+        household._require_member("still-potentially-valid")
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "household membership is temporarily unavailable"
+
+
+def test_completed_member_lookup_reserves_401_for_invalid_token(monkeypatch):
+    monkeypatch.setattr(
+        household.graph_service,
+        "list_nodes",
+        lambda **_kwargs: {"items": []},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        household._require_member("authoritatively-missing")
+
+    assert exc_info.value.status_code == 401
+
+
+def test_membership_lookup_status_band_runs_on_production_fkwu():
+    api_root = Path(__file__).resolve().parents[1]
+    recipe = (
+        api_root / "app" / "form_recipes" / "endpoint_membership_lookup_status.fk"
+    ).read_text(encoding="utf-8")
+    band = (
+        api_root / "tests" / "form" / "membership_lookup_status_band.fk"
+    ).read_text(encoding="utf-8")
+
+    verdict, runtime = run_kernel(f"{recipe}\n{band}", parse=int)
+
+    assert verdict == 15
+    assert runtime == "fkwu"
 
 
 def test_invite_carries_role_and_write_flows_through(client):

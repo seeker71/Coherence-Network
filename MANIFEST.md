@@ -45,7 +45,7 @@
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 255 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 58 | API models — Pydantic + ORM shapes |
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 248 | API tests — flow-centric |
-| [web/lib/INDEX.md](web/lib/INDEX.md) | 40 | Web library — shared client/server helpers |
+| [web/lib/INDEX.md](web/lib/INDEX.md) | 41 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 54 | Web components — shared React surfaces |
 | [web/app/INDEX.md](web/app/INDEX.md) | 169 | Web routes — every visible page in the app |
 | [scripts/INDEX.md](scripts/INDEX.md) | 407 | Scripts — operational tools, generators, syncers |
