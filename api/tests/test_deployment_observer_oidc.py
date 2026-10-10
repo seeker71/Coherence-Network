@@ -189,6 +189,20 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
     assert "$source_dir/form-stdlib" not in workflow
 
 
+def test_observer_reuses_the_target_dockerfiles_immutable_toolchain() -> None:
+    workflow = (
+        REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
+    ).read_text(encoding="utf-8")
+    reproduction = workflow.split(
+        "- name: Execute carriers directly in the deployed container", 1
+    )[1].split("- name: Observe and independently verify both native carriers", 1)[0]
+
+    assert "/${TARGET_SHA}/Dockerfile.api" in reproduction
+    assert "FROM (\\S+) AS kernel-builder" in reproduction
+    assert "docker\\.io/library/gcc:12\\.5\\.0-bookworm@sha256:" in reproduction
+    assert '"$builder" bash -lc' in reproduction
+    assert "apt-get" not in reproduction
+
 def test_observer_reads_the_recorded_witness_through_its_direct_carrier() -> None:
     workflow = (
         REPO_ROOT / ".github" / "workflows" / "public-deployment-observer.yml"
