@@ -8,8 +8,9 @@ response text — whatever the organ needs.
 
 Two tiers:
 
-  - Infrastructure organs probe /api/health, /api/ready, and / for status
-    and structural health. They answer "is the plumbing up?".
+  - Infrastructure organs probe the bounded /api/health/pulse projection,
+    /api/ready, and / for status and structural health. They answer "is the
+    plumbing up?" without continuously invoking the deep runtime-proof route.
 
   - Outcome organs probe specific pages and API endpoints with assertions
     on the rendered content or response shape. They answer "does this
@@ -76,7 +77,7 @@ class Organ:
 
 # --- upstream labels ------------------------------------------------------
 
-UPSTREAM_API_HEALTH = "api_health"     # {API_BASE}/api/health
+UPSTREAM_API_PULSE_HEALTH = "api_pulse_health"  # {API_BASE}/api/health/pulse
 UPSTREAM_API_READY = "api_ready"       # {API_BASE}/api/ready
 UPSTREAM_API_DB_CONTENTION = "api_db_contention"  # GET {API_BASE}/api/health/db-contention
 UPSTREAM_API_IDEAS = "api_ideas"       # {API_BASE}/api/ideas?limit=1
@@ -129,7 +130,7 @@ def _require_text(result: "UpstreamResult") -> str | None:
 # ==========================================================================
 
 def extract_api(r: "UpstreamResult") -> OrganVerdict:
-    """API organ: /api/health status ok + no 5xx in real user traffic.
+    """API organ: /api/health/pulse status ok + no 5xx in real user traffic.
 
     The api container exposes `recent_outcomes` in the health response via
     RequestOutcomesMiddleware. It's a rolling 1-and-5 minute snapshot of
@@ -175,7 +176,7 @@ def extract_api(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_schema(r: "UpstreamResult") -> OrganVerdict:
-    """Schema organ: /api/health body.schema_ok == true."""
+    """Schema organ: /api/health/pulse body.schema_ok == true."""
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
@@ -187,12 +188,14 @@ def extract_schema(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_audit(r: "UpstreamResult") -> OrganVerdict:
-    """Audit-integrity organ: /api/health body.integrity_compromised == false."""
+    """Audit-integrity organ: the bounded pulse projection verifies the chain."""
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
+    if body.get("integrity_verified") is not True:
+        return OrganVerdict(False, "integrity_verified=false")
     if body.get("integrity_compromised"):
         return OrganVerdict(False, "integrity_compromised=true")
     return OrganVerdict(True)
@@ -466,7 +469,7 @@ ORGANS: list[Organ] = [
         name="api",
         label="API",
         description="The central nervous system — FastAPI, the place where thoughts become actions.",
-        upstream=UPSTREAM_API_HEALTH,
+        upstream=UPSTREAM_API_PULSE_HEALTH,
         extractor=extract_api,
     ),
     Organ(
@@ -507,14 +510,14 @@ ORGANS: list[Organ] = [
         name="schema",
         label="Schema",
         description="Structural integrity — core tables present and sound.",
-        upstream=UPSTREAM_API_HEALTH,
+        upstream=UPSTREAM_API_PULSE_HEALTH,
         extractor=extract_schema,
     ),
     Organ(
         name="audit_integrity",
         label="Audit Integrity",
         description="Conscience — the audit ledger's hash chain is unbroken.",
-        upstream=UPSTREAM_API_HEALTH,
+        upstream=UPSTREAM_API_PULSE_HEALTH,
         extractor=extract_audit,
     ),
     # --- outcome organs: rendered pages (SSR is slower than a JSON response) ---

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -25,7 +25,6 @@ import httpx
 from pulse_app.organs import (
     ORGANS,
     Organ,
-    organs_for_upstream,
     upstreams_in_use,
 )
 from pulse_app.storage import Sample, iso_utc
@@ -220,7 +219,7 @@ def _build_url(
     api = _public_api_base(api_base).rstrip("/")
     web = _public_web_base(web_base).rstrip("/")
     mapping: dict[str, tuple[str, str, str, dict[str, Any] | None]] = {
-        "api_health": (f"{api}/api/health", "json", "GET", None),
+        "api_pulse_health": (f"{api}/api/health/pulse", "json", "GET", None),
         "api_ready": (f"{api}/api/ready", "json", "GET", None),
         # Leading indicator of write-lane lock contention — reports unhealthy
         # BEFORE a wedge, not after (2026-07-02 wedge prevention).

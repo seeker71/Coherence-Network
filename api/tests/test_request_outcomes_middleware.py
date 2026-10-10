@@ -36,6 +36,10 @@ def _build_probe_app() -> FastAPI:
         # would be the biggest caller.
         return {"status": "ok"}
 
+    @app.get("/api/health/pulse")
+    async def pulse_health():
+        return {"status": "ok"}
+
     return app
 
 
@@ -87,12 +91,13 @@ async def test_4xx_counted():
 
 
 @pytest.mark.asyncio
-async def test_health_excluded_from_counter():
+@pytest.mark.parametrize("path", ["/api/health", "/api/health/pulse"])
+async def test_health_probes_excluded_from_counter(path):
     """The witness's own probe path must not pollute the real-user traffic counter."""
     _reset_for_tests()
     async with await _client() as c:
         for _ in range(10):
-            await c.get("/api/health")
+            await c.get(path)
     snap = recent_outcomes_snapshot()
     assert snap["last_1m"]["total"] == 0
     assert snap["last_1m"]["2xx"] == 0
