@@ -924,7 +924,7 @@ check_web_runtime_sha() {
   local proxy_body="$TMP_DIR/web_health_proxy_sha.body.json"
   local main_head_body="$TMP_DIR/web_main_head_sha.body.json"
   local proxy_status main_head_status
-  local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
+  local deadline=0
   local gateway_deadline=$(( $(date +%s) + GATEWAY_PATIENCE_SECONDS ))
   local should_wait=0
   local attempt=1
@@ -960,6 +960,9 @@ check_web_runtime_sha() {
     if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
       echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
       return 1
+    fi
+    if (( deadline == 0 )); then
+      deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
     fi
     if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
       if [[ "$required" == "1" ]]; then

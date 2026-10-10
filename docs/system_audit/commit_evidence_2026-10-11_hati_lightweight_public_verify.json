@@ -64,6 +64,7 @@
     "A same-SHA recovery rerun restored lightweight ping before this repair was authored.",
     "The focused regression proves SHA and fkwu checks reuse the captured health snapshot without another direct API health request.",
     "Fresh exact-head review found that deduplicating the web health-proxy read had removed rollout-status patience; the focused regression now proves a transient 503 settles without restoring the duplicate request.",
+    "A second exact-head review found that concurrent gateway and SHA deadlines shortened the effective settling window; the regression now advances a fake clock through 89 seconds of gateway recovery and a stale SHA at 210 seconds, proving SHA patience starts after proxy recovery.",
     "No household token, balance, transaction row, Sheet secret, SSH material, or private URL is present in this evidence."
   ],
   "change_files": [
@@ -85,7 +86,7 @@
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "git diff --check"
     ],
-    "summary": "Snapshot reuse, SHA patience, transient web-proxy rollout recovery, pulse, CSS, Hostinger path, shell syntax, and whitespace proofs pass. Evidence validation and full local guards are part of the pre-commit gate."
+    "summary": "Snapshot reuse, post-recovery SHA patience, transient web-proxy rollout recovery, pulse, CSS, Hostinger path, shell syntax, and whitespace proofs pass. Evidence validation and full local guards are part of the pre-commit gate."
   },
   "ci_validation": {
     "status": "pending",
