@@ -1,12 +1,12 @@
 """Rolling request-outcome counters for the pulse witness to read.
 
-The witness probes `/api/health` every 30 seconds. That tells it whether
+The witness probes `/api/health/pulse` every 30 seconds. That tells it whether
 the synthetic call succeeded, but it says nothing about the hundreds of
 other requests that might be failing for real users between probe rounds.
 
 This middleware keeps a tiny in-memory bucket of per-minute outcomes,
 grouped by status-code class (2xx / 3xx / 4xx / 5xx), and exposes them
-via `recent_outcomes_snapshot()`. The health endpoint includes the
+via `recent_outcomes_snapshot()`. The bounded pulse-health endpoint includes the
 snapshot in its response body, so pulse's api organ sees real traffic
 shape without needing any new probe targets.
 
@@ -19,15 +19,15 @@ Design notes:
   Path-level slicing would be valuable but also noisy and private; if a
   specific path needs monitoring, add a synthetic outcome organ for it
   (see pulse_app/organs.py).
-- Health endpoint probes are excluded from the counter. Pulse itself
-  hits /api/health every 30s, and we don't want the witness to be its
-  own biggest caller in the counter.
+- Health endpoint probes are excluded from the counter. Pulse itself hits
+  /api/health/pulse every 30s, and we don't want the witness to be its own
+  biggest caller in the counter. The deliberate deep-health path remains
+  excluded too.
 """
 
 from __future__ import annotations
 
 import time
-from collections import defaultdict
 from threading import Lock
 from typing import Any
 
@@ -40,6 +40,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 _EXCLUDED_PATHS = frozenset(
     [
         "/api/health",
+        "/api/health/pulse",
         "/api/ready",
         "/api/ping",
         "/api/version",

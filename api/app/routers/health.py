@@ -177,6 +177,37 @@ class HealthResponse(_BaseHealthResponse):
     ] = False
 
 
+class PulseHealthResponse(BaseModel):
+    """Bounded health projection for the continuous public pulse witness.
+
+    ``/api/health`` deliberately performs native-runtime and deployment-witness
+    proof.  Those checks belong on explicit verification paths, not on the
+    witness's 30-second liveness cadence.  This compatibility bridge preserves
+    the API, schema, audit, and recent-traffic signals the pulse needs without
+    running either heavyweight proof lane.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    status: Annotated[str, Field(description="Service status")]
+    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
+    schema_ok: Annotated[
+        bool,
+        Field(description="True if core tables (contributions, contributors, assets) exist"),
+    ]
+    integrity_compromised: Annotated[
+        bool,
+        Field(description="True if audit ledger hash chain verification fails"),
+    ]
+    integrity_verified: Annotated[
+        bool,
+        Field(description="True only when audit-ledger verification completed"),
+    ]
+    recent_outcomes: Annotated[
+        dict[str, Any] | None,
+        Field(description="In-memory rolling HTTP outcome counts"),
+    ] = None
+
+
 class ReadyResponse(_BaseHealthResponse):
     """GET /api/ready response."""
     db_connected: Annotated[bool, Field(description="Whether the database is reachable")] = False
@@ -284,6 +315,38 @@ def _check_schema() -> bool:
     except Exception:
         logger.warning("Schema check: one or more core tables missing", exc_info=True)
         return False
+
+
+@router.get(
+    "/health/pulse",
+    response_model=PulseHealthResponse,
+    summary="Return the bounded health projection used by the public pulse witness",
+)
+async def pulse_health():
+    """Sense API/schema/audit health without running deep runtime proof."""
+    now = datetime.now(timezone.utc)
+    integrity_compromised = False
+    integrity_verified = False
+    try:
+        result = audit_ledger_service.verify_chain()
+        integrity_verified = True
+        integrity_compromised = not result.verified
+    except Exception:
+        logger.warning("Pulse integrity check failed", exc_info=True)
+
+    try:
+        recent_outcomes = recent_outcomes_snapshot()
+    except Exception:
+        recent_outcomes = None
+
+    return PulseHealthResponse(
+        status="ok",
+        timestamp=_iso_utc(now),
+        schema_ok=_check_schema(),
+        integrity_compromised=integrity_compromised,
+        integrity_verified=integrity_verified,
+        recent_outcomes=recent_outcomes,
+    )
 
 
 @router.get("/health", response_model=HealthResponse, summary="Return API health status")

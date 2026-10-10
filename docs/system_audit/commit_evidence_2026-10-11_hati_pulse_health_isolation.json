@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-pulse-resilience-20261011",
+  "commit_scope": "Keep the continuous pulse witness off the heavyweight deep-health proof path so monitoring cannot periodically starve Hati Sheet reads.",
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/app/middleware/request_outcomes.py",
+    "api/tests/test_pulse_health_projection.py",
+    "api/tests/test_request_outcomes_middleware.py",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_probe.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_pulse_health_isolation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Make Hati Sheet tracking resilient by isolating continuous liveness sensing from heavyweight API runtime proof.",
+    "files_allowed": [
+      "api/app/routers/health.py",
+      "api/app/middleware/request_outcomes.py",
+      "api/tests/test_pulse_health_projection.py",
+      "api/tests/test_request_outcomes_middleware.py",
+      "pulse/pulse_app/organs.py",
+      "pulse/pulse_app/probe.py",
+      "pulse/tests/test_probe.py",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_pulse_health_isolation.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Pulse obtains API, schema, audit-integrity, and recent-traffic evidence without calling /api/health.",
+      "The bounded pulse projection never invokes native-runtime or deployment-witness proof.",
+      "Focused API, pulse, verifier, lint, repository, deployment, and authenticated Hati checks pass."
+    ],
+    "commands": [
+      "api/.venv/bin/pytest -q api/tests/test_pulse_health_projection.py api/tests/test_developer_quick_start.py api/tests/test_flow_core_api.py api/tests/test_request_outcomes_middleware.py",
+      "cd pulse && ../api/.venv/bin/pytest -q tests",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "ruff check api/app/routers/health.py api/tests/test_pulse_health_projection.py pulse/pulse_app/organs.py pulse/pulse_app/probe.py pulse/tests/test_probe.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_pulse_health_isolation.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Preserve deep /api/health as the deliberate deployment-proof surface.",
+      "Preserve independent schema, audit-integrity, and real-traffic outcome signals.",
+      "Keep Sheet, household, balance, token, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience", "pulse-witness"],
+  "spec_ids": ["public-deployment-observer"],
+  "task_ids": ["task-2026-10-11-hati-pulse-health-isolation"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38085379664 deployed exact revision 851183c4df489956aa7cc838723d42c02d12d83b and passed API SHA, persistence, Hati profile, Hati edit route, web proxy SHA, and CORS checks before failing only on pulse ongoing silences.",
+    "The live pulse witness measured the shared deep-health upstream at 9220 ms for api, schema, and audit_integrity while ordinary web, database, substrate, and Hati routes were reachable.",
+    "The bounded /api/health/pulse projection retains schema, audit verification, and recent HTTP outcomes but omits native-runtime and deployment-witness proof.",
+    "Exact-head Codex review identified that the monitor route must not count itself as user traffic; /api/health/pulse is excluded and covered beside /api/health.",
+    "No secret, token, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/middleware/request_outcomes.py",
+    "api/tests/test_pulse_health_projection.py",
+    "api/tests/test_request_outcomes_middleware.py",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_probe.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_pulse_health_isolation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "api/.venv/bin/pytest -q api/tests/test_pulse_health_projection.py api/tests/test_developer_quick_start.py api/tests/test_flow_core_api.py api/tests/test_request_outcomes_middleware.py",
+      "cd pulse && ../api/.venv/bin/pytest -q tests",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "ruff check api/app/routers/health.py api/tests/test_pulse_health_projection.py pulse/pulse_app/organs.py pulse/pulse_app/probe.py pulse/tests/test_probe.py",
+      "git diff --check"
+    ],
+    "summary": "24 focused API tests, all 89 pulse tests, the shell pulse-witness regression, touched-file lint, and whitespace validation pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Pulse continuously observes bounded health while Hati Sheet reads remain responsive and deep runtime proof runs only on deliberate verification paths.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health/pulse",
+      "GET https://app.hati.earth/",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Observe exact-head Hostinger rollout and the bounded independent deployment observer.",
+      "Run the hardened public deployment verifier.",
+      "Reload the authenticated Hati app and observe a confirmed Sheet-backed balance state without exposing its value."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_runtime_evidence",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "Exact deployment logs and the public pulse response identify the deep-health latency and the three shared organs it strained."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_body_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query returned no answer within 20 seconds; OpenAI GPT-5 selected the boundary and the repository tests plus live rollout verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied deployment logs, pulse timings, route contracts, tests, and live verification; it verifies but did not generate the edit.",
+    "standard_receipt": "The live failure is grounded and observed; the repair choice remains rented reasoning after a native Form miss."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting evidence validation, local guards, exact-head CI/review, merge, rollout, observer proof, public verification, and authenticated Hati proof."
+  }
+}
