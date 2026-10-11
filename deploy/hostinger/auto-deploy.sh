@@ -354,6 +354,77 @@ if wrong:
   log "API public host: running container owns api.coherencycoin.com -> api:8000"
 }
 
+api_serving_window() {
+  local container initial_restarts current_container current_restarts
+  local deadline consecutive=0
+  container="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps -q api 2>/dev/null)"
+  if [[ -z "$container" ]]; then
+    log "API stability: no serving container is registered"
+    return 1
+  fi
+  initial_restarts="$(docker inspect "$container" --format '{{.RestartCount}}' 2>/dev/null || true)"
+  if [[ -z "$initial_restarts" ]]; then
+    log "API stability: serving container state is unreadable"
+    return 1
+  fi
+
+  # Require three consecutive local + public successes. The local probe proves
+  # uvicorn can answer; the public probe proves Traefik still owns the Host
+  # route. Keeping the same container id and restart count across the window
+  # catches a restart loop that can otherwise look healthy for one request.
+  deadline=$(( $(date +%s) + 75 ))
+  while (( $(date +%s) < deadline )); do
+    current_container="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps -q api 2>/dev/null)"
+    current_restarts="$(docker inspect "$container" --format '{{.RestartCount}}' 2>/dev/null || true)"
+    if [[ "$current_container" != "$container" || "$current_restarts" != "$initial_restarts" ]]; then
+      log "API stability: serving container changed or restarted during the observation window"
+      return 1
+    fi
+    if docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+        sh -lc 'curl -fsS --max-time 10 http://127.0.0.1:8000/api/ping >/dev/null' \
+        >/dev/null 2>&1 \
+      && curl -fsS --max-time 15 https://api.coherencycoin.com/api/ping >/dev/null 2>&1; then
+      consecutive=$((consecutive + 1))
+      if [[ "$consecutive" -ge 3 ]]; then
+        return 0
+      fi
+    else
+      consecutive=0
+    fi
+    sleep 5
+  done
+  log "API stability: did not observe three consecutive local + public responses"
+  return 1
+}
+
+stabilize_api_after_maintenance() {
+  local attempt
+  for attempt in 1 2; do
+    ensure_all_services_up || return 1
+    retire_sibling_kernel_routers || return 1
+    verify_api_public_host_route || return 1
+    if api_serving_window; then
+      log "API stability: local process and public Traefik route stayed ready ✓"
+      return 0
+    fi
+    if [[ "$attempt" -eq 1 ]]; then
+      log "API stability: re-registering the serving container once after maintenance"
+      if docker compose up --help 2>/dev/null | grep -q -- '--wait'; then
+        if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d \
+            --wait --wait-timeout 180 --force-recreate api 2>&1 | tee -a "$LOG_FILE"; then
+          log "API stability: waited recreate did not become healthy; observing the same container within the bounded window"
+        fi
+      else
+        log "API stability: Compose has no --wait support; recreating once and polling readiness"
+        docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d \
+          --force-recreate api 2>&1 | tee -a "$LOG_FILE" || return 1
+      fi
+    fi
+  done
+  log "FAIL: API did not remain locally and publicly stable after one bounded repair"
+  return 1
+}
+
 ensure_public_host_routes || exit 1
 
 cd "$REPO_DIR"
@@ -470,6 +541,7 @@ if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   # A rerun after a witness/index failure must heal and prove the already-live
   # release; SHA alignment alone is not completion.
   bootstrap_and_verify_local_grounding || exit 1
+  stabilize_api_after_maintenance || exit 1
   exit 0
 fi
 
@@ -1878,6 +1950,7 @@ except Exception:
   log "Post-deploy verify: api container at ${POST_SHA:0:12} ✓"
 
   bootstrap_and_verify_local_grounding || exit 1
+  stabilize_api_after_maintenance || exit 1
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 
