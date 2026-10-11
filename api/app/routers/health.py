@@ -177,37 +177,6 @@ class HealthResponse(_BaseHealthResponse):
     ] = False
 
 
-class PulseHealthResponse(BaseModel):
-    """Bounded health projection for the continuous public pulse witness.
-
-    ``/api/health`` deliberately performs native-runtime and deployment-witness
-    proof.  Those checks belong on explicit verification paths, not on the
-    witness's 30-second liveness cadence.  This compatibility bridge preserves
-    the API, schema, audit, and recent-traffic signals the pulse needs without
-    running either heavyweight proof lane.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-    status: Annotated[str, Field(description="Service status")]
-    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
-    schema_ok: Annotated[
-        bool,
-        Field(description="True if core tables (contributions, contributors, assets) exist"),
-    ]
-    integrity_compromised: Annotated[
-        bool,
-        Field(description="True if audit ledger hash chain verification fails"),
-    ]
-    integrity_verified: Annotated[
-        bool,
-        Field(description="True only when audit-ledger verification completed"),
-    ]
-    recent_outcomes: Annotated[
-        dict[str, Any] | None,
-        Field(description="In-memory rolling HTTP outcome counts"),
-    ] = None
-
-
 class ReadyResponse(_BaseHealthResponse):
     """GET /api/ready response."""
     db_connected: Annotated[bool, Field(description="Whether the database is reachable")] = False
@@ -317,35 +286,55 @@ def _check_schema() -> bool:
         return False
 
 
+def _smart_reap_status() -> tuple[bool, str | None]:
+    """Return the compatibility carrier's smart-reap import status."""
+    try:
+        import importlib
+
+        importlib.import_module("app.services.smart_reaper_service")
+    except ImportError as exc:
+        return False, str(exc)
+    return True, None
+
+
 @router.get(
     "/health/pulse",
-    response_model=PulseHealthResponse,
-    summary="Return the bounded health projection used by the public pulse witness",
+    response_model=HealthResponse,
+    summary="Return full-shape bounded health without deep runtime proof",
 )
 async def pulse_health():
-    """Sense API/schema/audit health without running deep runtime proof."""
-    now = datetime.now(timezone.utc)
-    integrity_compromised = False
-    integrity_verified = False
-    try:
-        result = audit_ledger_service.verify_chain()
-        integrity_verified = True
-        integrity_compromised = not result.verified
-    except Exception:
-        logger.warning("Pulse integrity check failed", exc_info=True)
+    """Carry the Form bounded-health projection through the Python bridge.
 
+    The native recipe is ``bounded-health-projection.fk``.  This compatibility
+    carrier preserves the public ``HealthResponse`` shape while deliberately
+    leaving native-runtime and deployment-witness proof on ``/api/health``.
+    """
+    now = datetime.now(timezone.utc)
+    up = _uptime_seconds(now)
+    deployed_sha, deployed_sha_source = _deployed_sha()
     try:
         recent_outcomes = recent_outcomes_snapshot()
     except Exception:
         recent_outcomes = None
+    smart_reap_available, smart_reap_import_error = _smart_reap_status()
 
-    return PulseHealthResponse(
+    return HealthResponse(
         status="ok",
+        version=HEALTH_VERSION,
         timestamp=_iso_utc(now),
-        schema_ok=_check_schema(),
-        integrity_compromised=integrity_compromised,
-        integrity_verified=integrity_verified,
+        started_at=_iso_utc(SERVICE_STARTED_AT),
+        uptime_seconds=up,
+        uptime_human=_uptime_human(up),
+        deployed_sha=deployed_sha,
+        deployed_sha_source=deployed_sha_source,
+        schema_ok=False,
+        integrity_compromised=False,
+        integrity_verified=False,
+        opencode_enabled=True,
+        smart_reap_available=smart_reap_available,
+        smart_reap_import_error=smart_reap_import_error,
         recent_outcomes=recent_outcomes,
+        kernel_runtime="unavailable",
     )
 
 
@@ -374,14 +363,7 @@ async def health(
     schema_ok = _check_schema()
 
     # Gap 1: Check if smart_reap_service is importable
-    smart_reap_available = True
-    smart_reap_import_error = None
-    try:
-        import importlib
-        importlib.import_module("app.services.smart_reaper_service")
-    except ImportError as _e:
-        smart_reap_available = False
-        smart_reap_import_error = str(_e)
+    smart_reap_available, smart_reap_import_error = _smart_reap_status()
 
     # Real-user traffic outcome snapshot. If the middleware isn't wired
     # (e.g. during a test client run without the full stack), this fails

@@ -24,6 +24,7 @@ from pulse_app import __version__
 from pulse_app.analysis import (
     duration_seconds_until_now,
     latency_percentiles,
+    observed_sample_count,
     overall_status_with_open_silences,
     reconcile_all_silences,
     rollup_daily,
@@ -211,12 +212,12 @@ async def pulse_history(days: int = Query(90, ge=1, le=180)) -> PulseHistory:
     since = since_iso(days, now)
 
     organ_histories: list[OrganHistory] = []
+    observed_histories: list[OrganHistory] = []
     for organ in ORGANS:
         samples = store.samples_for_organ_since(organ.name, since)
         buckets = rollup_daily(samples, days=days, now=now)
         p50, p95 = latency_percentiles(samples)
-        organ_histories.append(
-            OrganHistory(
+        history = OrganHistory(
                 name=organ.name,
                 label=organ.label,
                 description=organ.description,
@@ -235,14 +236,16 @@ async def pulse_history(days: int = Query(90, ge=1, le=180)) -> PulseHistory:
                     for b in buckets
                 ],
             )
-        )
+        organ_histories.append(history)
+        if observed_sample_count(samples) > 0:
+            observed_histories.append(history)
 
     # Cross-organ rollup for the banner.
-    if organ_histories:
+    if observed_histories:
         avg_uptime = round(
-            sum(o.uptime_pct for o in organ_histories) / len(organ_histories), 2
+            sum(o.uptime_pct for o in observed_histories) / len(observed_histories), 2
         )
-        worst = min(organ_histories, key=lambda o: o.uptime_pct)
+        worst = min(observed_histories, key=lambda o: o.uptime_pct)
         overall = PulseHistoryOverall(
             uptime_pct=avg_uptime,
             worst_uptime_pct=worst.uptime_pct,

@@ -10,7 +10,10 @@ const UPSTREAM_TIMEOUT_MS = 15000;
 const HEALTH_PROXY_FAILURE_THRESHOLD = Math.max(1, WEB_CONFIG.healthProxy.failureThreshold || 2);
 const HEALTH_PROXY_COOLDOWN_MS = Math.max(1000, WEB_CONFIG.healthProxy.cooldownMs || 30000);
 const HEALTH_PROXY_ENDPOINT = "/api/health-proxy";
-const HEALTH_UPSTREAM_ENDPOINT = "/api/health";
+// Keep the continuously-polled web surface on the full-shape bounded lane.
+// /api/health intentionally runs native carrier and deployment-witness proof;
+// /api/health/pulse preserves its response schema without repeating that work.
+const HEALTH_UPSTREAM_ENDPOINT = "/api/health/pulse";
 
 let healthProxyConsecutiveFailures = 0;
 let healthProxyCooldownUntilMs = 0;
@@ -85,6 +88,9 @@ function emitHealthProxyRuntimeEvent(
   runtimeMs: number,
   metadata: Record<string, string | number | boolean> = {},
 ) {
+  // A failing upstream is already the signal. Do not amplify that failure by
+  // opening another request against the same strained API worker.
+  if (statusCode >= 500) return;
   void fetch(`${API_URL}/api/runtime/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

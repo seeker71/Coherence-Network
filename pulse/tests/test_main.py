@@ -41,7 +41,7 @@ if "apscheduler.schedulers.asyncio" not in sys.modules:
     sys.modules.setdefault("apscheduler.triggers", triggers)
     sys.modules.setdefault("apscheduler.triggers.interval", interval)
 
-from pulse_app.main import app, pulse_now
+from pulse_app.main import app, pulse_history, pulse_now
 from pulse_app.storage import Sample, Store, iso_utc
 
 
@@ -118,3 +118,31 @@ async def test_pulse_now_exposes_successful_strain_detail(tmp_path):
     assert response.overall == "strained"
     assert web.status == "strained"
     assert web.detail == detail
+
+
+@pytest.mark.asyncio
+async def test_pulse_history_omits_unobserved_only_organs_from_overall(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    now = datetime.now(timezone.utc)
+    timestamp = iso_utc(now)
+    store.insert_sample(
+        Sample(ts=timestamp, organ="api", ok=True, latency_ms=10, detail=None)
+    )
+    for organ in ("schema", "audit_integrity"):
+        store.insert_sample(
+            Sample(
+                ts=timestamp,
+                organ=organ,
+                ok=True,
+                latency_ms=10,
+                detail="unobserved: bounded proof omitted",
+            )
+        )
+
+    app.state.store = store
+
+    response = await pulse_history(days=1)
+
+    assert response.overall.uptime_pct == 100.0
+    assert response.overall.worst_uptime_pct == 100.0
+    assert response.overall.worst_organ is None

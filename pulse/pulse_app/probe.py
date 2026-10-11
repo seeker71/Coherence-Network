@@ -25,6 +25,7 @@ import httpx
 from pulse_app.organs import (
     ORGANS,
     Organ,
+    UNOBSERVED_DETAIL_PREFIX,
     upstreams_in_use,
 )
 from pulse_app.storage import Sample, iso_utc
@@ -187,7 +188,9 @@ def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
     # fallback takes precedence over slowness: a native route served by the
     # Python fan-out is the more significant signal (and is usually slower
     # anyway).
-    if verdict.ok:
+    if verdict.ok and not (
+        detail and detail.startswith(UNOBSERVED_DETAIL_PREFIX)
+    ):
         fallback = _router_fallback_detail(organ, result)
         if fallback is not None:
             detail = fallback

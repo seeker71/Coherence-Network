@@ -50,6 +50,21 @@ def test_uptime_percent_empty():
     assert uptime_percent([]) == 0.0
 
 
+def test_uptime_percent_excludes_unobserved_samples():
+    samples = [
+        Sample(ts=iso_utc(), organ="schema", ok=True, latency_ms=10, detail=None),
+        Sample(ts=iso_utc(), organ="schema", ok=False, latency_ms=10, detail="failed"),
+        Sample(
+            ts=iso_utc(),
+            organ="schema",
+            ok=True,
+            latency_ms=10,
+            detail="unobserved: schema proof omitted by bounded pulse",
+        ),
+    ]
+    assert uptime_percent(samples) == 50.0
+
+
 # --- status_from_last_sample ---------------------------------------------
 
 def test_status_last_sample_none_is_unknown():
@@ -86,6 +101,17 @@ def test_status_last_sample_fell_back_is_strained():
         detail="fell back: expected native-kernel, got fanout-python",
     )
     assert status_from_last_sample(fell_back) == "strained"
+
+
+def test_status_last_sample_unobserved_is_unknown():
+    unobserved = Sample(
+        ts=iso_utc(),
+        organ="schema",
+        ok=True,
+        latency_ms=100,
+        detail="unobserved: schema proof omitted by bounded pulse",
+    )
+    assert status_from_last_sample(unobserved) == "unknown"
 
 
 def test_status_last_sample_detail_other_than_slow_is_still_breathing():
@@ -324,6 +350,30 @@ def test_reconcile_closes_silence_after_three_successes(tmp_path):
         store.insert_sample(_s("api", True, m))
     reconcile_silences(store, "api")
     assert store.ongoing_silence_for_organ("api") is None
+
+
+def test_reconcile_unobserved_samples_do_not_close_silence(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    store.open_silence("schema", "2026-04-15T12:00:00Z", "silent")
+    for ts in (
+        "2026-04-15T12:05:00Z",
+        "2026-04-15T12:05:30Z",
+        "2026-04-15T12:06:00Z",
+    ):
+        store.insert_sample(
+            Sample(
+                ts=ts,
+                organ="schema",
+                ok=True,
+                latency_ms=10,
+                detail="unobserved: schema proof omitted by bounded pulse",
+            )
+        )
+
+    receipt = reconcile_silences(store, "schema")
+
+    assert receipt is None
+    assert store.ongoing_silence_for_organ("schema") is not None
 
 
 def test_reconcile_closes_with_boundary_repair_receipt(tmp_path):

@@ -751,6 +751,10 @@ run_validations() {
   fi
   check_url "Web contribute" "${WEB_BASE}/contribute"
   check_url "Web API health page" "${WEB_BASE}/api-health"
+  check_url \
+    "Web bounded health proxy" \
+    "${WEB_BASE}/api/health-proxy" \
+    '"native_runtime_observation":null'
 }
 
 parse_args "$@"

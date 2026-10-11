@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Literal
 
+from pulse_app.organs import UNOBSERVED_DETAIL_PREFIX
 from pulse_app.storage import Sample, SilenceRow, Store, iso_utc
 
 
@@ -37,6 +38,16 @@ DAILY_BREATHING_SUCCESS_PCT = 99.5
 Severity = Literal["strained", "silent"]
 
 BOUNDARY_REPAIR_PROTOCOL = "boundary_repair_protocol"
+
+
+def _sample_is_observed(sample: Sample) -> bool:
+    """Return false when a bounded probe explicitly skipped this proof."""
+    return not (sample.detail and sample.detail.startswith(UNOBSERVED_DETAIL_PREFIX))
+
+
+def observed_sample_count(samples: list[Sample]) -> int:
+    """Count samples that carry actual proof rather than non-observation."""
+    return sum(1 for sample in samples if _sample_is_observed(sample))
 
 
 def severity_for_duration(seconds: int) -> Severity:
@@ -75,7 +86,11 @@ def reconcile_silences(store: Store, organ: str) -> BoundaryRepairReceipt | None
     tail of recent samples (enough to see a run), so it's cheap.
     """
     window = max(SILENCE_OPEN_FAILURES, SILENCE_CLOSE_SUCCESSES) + 2
-    recent = store.recent_samples_for_organ(organ, limit=window)
+    recent = [
+        sample
+        for sample in store.recent_samples_for_organ(organ, limit=window * 4)
+        if _sample_is_observed(sample)
+    ][-window:]
     if not recent:
         return None
 
@@ -206,6 +221,8 @@ def rollup_daily(samples: list[Sample], days: int, now: datetime | None = None) 
         buckets[d] = _Accum()
 
     for s in samples:
+        if not _sample_is_observed(s):
+            continue
         d = _parse_iso(s.ts).date()
         acc = buckets.get(d)
         if acc is None:
@@ -234,17 +251,20 @@ def rollup_daily(samples: list[Sample], days: int, now: datetime | None = None) 
 
 
 def uptime_percent(samples: list[Sample]) -> float:
-    """Percentage of samples that were ok, rounded to 2 decimals."""
-    if not samples:
+    """Percentage of observed samples that were ok, rounded to 2 decimals."""
+    observed = [sample for sample in samples if _sample_is_observed(sample)]
+    if not observed:
         return 0.0
-    ok = sum(1 for s in samples if s.ok)
-    return round(100.0 * ok / len(samples), 2)
+    ok = sum(1 for sample in observed if sample.ok)
+    return round(100.0 * ok / len(observed), 2)
 
 
 def latency_percentiles(samples: list[Sample]) -> tuple[int | None, int | None]:
     """Return (p50_ms, p95_ms) across the successful samples, or (None, None)."""
     ok_latencies = sorted(
-        int(s.latency_ms) for s in samples if s.ok and s.latency_ms is not None
+        int(s.latency_ms)
+        for s in samples
+        if _sample_is_observed(s) and s.ok and s.latency_ms is not None
     )
     return _percentile(ok_latencies, 50), _percentile(ok_latencies, 95)
 
@@ -263,6 +283,8 @@ STRAIN_DETAIL_PREFIXES = ("slow: ", "fell back: ")
 
 def status_from_last_sample(sample: Sample | None) -> str:
     if sample is None:
+        return "unknown"
+    if sample.detail and sample.detail.startswith(UNOBSERVED_DETAIL_PREFIX):
         return "unknown"
     if not sample.ok:
         return "silent"

@@ -1,0 +1,193 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-health-proxy-isolation-20261011",
+  "commit_scope": "Keep app.hati.earth Sheet tracking available by moving continuously polled web health off the deep native-proof API route and onto the Form-native, full-schema bounded health projection.",
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/tests/test_flow_core_api.py",
+    "api/tests/test_pulse_health_projection.py",
+    "form",
+    "pulse/pulse_app/analysis.py",
+    "pulse/pulse_app/main.py",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_analysis.py",
+    "pulse/tests/test_main.py",
+    "pulse/tests/test_probe.py",
+    "scripts/verify_worktree_local_web.sh",
+    "web/app/api/health-proxy/route.ts",
+    "web/tests/health-proxy-route-goal.test.ts",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_health_proxy_isolation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Stop the web health proxy from duplicating deep native-runtime proof and starving the API worker that carries Hati Sheet reads.",
+    "files_allowed": [
+      "api/app/routers/health.py",
+      "api/tests/test_flow_core_api.py",
+      "api/tests/test_pulse_health_projection.py",
+      "form",
+      "pulse/pulse_app/analysis.py",
+      "pulse/pulse_app/main.py",
+      "pulse/pulse_app/organs.py",
+      "pulse/pulse_app/probe.py",
+      "pulse/tests/test_analysis.py",
+      "pulse/tests/test_main.py",
+      "pulse/tests/test_probe.py",
+      "scripts/verify_worktree_local_web.sh",
+      "web/app/api/health-proxy/route.ts",
+      "web/tests/health-proxy-route-goal.test.ts",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_health_proxy_isolation.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "The web health proxy calls bounded /api/health/pulse and never calls deep /api/health.",
+      "The bounded projection preserves the full HealthResponse payload, including cached file-backed deployed SHA, without running native-carrier or deployment-witness proof.",
+      "A failed proxy read does not amplify API strain with a second runtime-telemetry request to the same worker.",
+      "The projection is authored in Form, returns verdict 4095 across Go/Rust/TypeScript/fkwu, and is exposed by the native API catalog while Python remains a named compatibility carrier.",
+      "The pulse witness preserves intentionally omitted schema and audit proofs as unknown through latency decoration, excludes them from uptime, repair evidence, and cross-organ rollups, and still fails observed compromise or malformed fields.",
+      "Focused tests, production web build, local API/web validation, exact-head CI/review, rollout, public verification, and authenticated Hati Sheet-state proof pass."
+    ],
+    "commands": [
+      "cd web && npm test -- --run tests/health-proxy-route-goal.test.ts",
+      "cd api && .venv/bin/pytest -q tests/test_flow_core_api.py -k health_and_meta_endpoints",
+      "cd api && .venv/bin/pytest -q tests/test_pulse_health_projection.py",
+      "cd pulse && ../api/.venv/bin/pytest -q tests/test_probe.py tests/test_analysis.py",
+      "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/bounded-health-projection.fk form-stdlib/tests/bounded-health-projection-band.fk",
+      "cd form/form/form-kernel-go && go test . -run TestHealthRouteNativeOperationalShape -count=1",
+      "cd form/form/form-kernel-rust && cargo fmt --check && cargo check",
+      "cd form/form/form-kernel-rust && cargo test source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+      "cd web && npm run build",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_health_proxy_isolation.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep deep native and deployment-witness proof available on explicit /api/health verification paths.",
+      "Keep the continuous proxy response backward-compatible for current consumers and the release verifier.",
+      "Keep Sheet, household, balance, token, nonce, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["hati-sheet-resilience", "bounded-health", "public-api-stability"],
+  "spec_ids": ["public-deployment-observer", "form-first-reasoning"],
+  "task_ids": ["task-2026-10-11-hati-health-proxy-isolation"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38099504289 repeatedly proved exact deployed SHA, persistence, native authority, and Hati pages before the web health-proxy phase caused long deep-health stalls followed by public API timeouts and 404 responses.",
+    "The bounded route re-registration repair completed successfully before the deeper failure, proving that proxy-induced deep-health pressure was distinct from service registration.",
+    "Exact-head review found that the first raw-ping draft narrowed the declared HealthProxyResponse and kept new projection meaning in Python; that draft was replaced rather than defended.",
+    "The Form-native bounded-health-projection recipe preserves all HealthResponse fields while setting native carrier and deployment witness outputs to their explicit unobserved values.",
+    "The projection returns verdict 4095 across Go, Rust, TypeScript, and fkwu, and the native Coherence Network API catalog serves the same /api/health/pulse route.",
+    "Exact-head kernel review moved all database connections off the native liveness route and excluded pulse traffic from its own recent-outcome accounting; Go execution and Rust native route selection pass.",
+    "Merged kernel PR #594 at immutable merge commit 7484d12b4f105a25e916517d6ba50078bf0cdbbf refreshes the minute-level recent-outcome cache through /api/ready's existing database connection, so normal readiness traffic can populate pulse output without returning database work to liveness.",
+    "The Python compatibility carrier mirrors the Form recipe with explicit unverified schema/audit fields, in-memory recent outcomes, uptime, and revision fields; tests fail if pulse invokes schema, ledger, native-runtime, or deployment-witness proof.",
+    "Exact-head parent review found that the existing pulse witness treated intentionally unobserved schema/audit proof as failure; the witness now records those bounded observations as unknown without opening a false silence, while observed compromise still fails.",
+    "A second exact-head review proved that display-level unknown was insufficient because ok=True still counted toward uptime and repair receipts; one observed-sample boundary now excludes the unobserved prefix from reconciliation, rollups, uptime, and latency evidence.",
+    "Final exact-head review found two downstream erasures of non-observation: slow-response decoration overwrote the marker, and all-organ uptime averaged its zero sentinel. The shared prefix now survives decoration and unobserved-only organs are omitted from the banner rollup.",
+    "The web proxy suppresses its secondary runtime-event POST on 5xx responses so failure observation cannot add another request to the already strained API.",
+    "No secret, token, nonce, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/tests/test_flow_core_api.py",
+    "api/tests/test_pulse_health_projection.py",
+    "form",
+    "pulse/pulse_app/analysis.py",
+    "pulse/pulse_app/main.py",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_analysis.py",
+    "pulse/tests/test_main.py",
+    "pulse/tests/test_probe.py",
+    "scripts/verify_worktree_local_web.sh",
+    "web/app/api/health-proxy/route.ts",
+    "web/tests/health-proxy-route-goal.test.ts",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_health_proxy_isolation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "focused web proxy contract",
+      "focused full-shape bounded API health contract",
+      "Form bounded-health projection verdict 4095 across four kernels",
+      "native Go health and pulse route contract",
+      "Rust format and compile validation",
+      "pulse witness bounded-observation, latency-decoration, silence-state, recovery-evidence, and overall-rollup contract",
+      "Next production build and TypeScript validation",
+      "full local worktree API/web validation",
+      "local bounded health-proxy full-shape response check",
+      "whitespace validation"
+    ],
+    "summary": "The proxy uses the full-shape bounded health projection, exact revision and operational fields remain present, deep proof and database connections stay off the polling path, readiness refreshes the minute-level outcome cache, intentionally unobserved proof stays unknown through latency decoration and cannot close incidents, improve uptime, or degrade the overall banner, and the full local API/web surface passes after one documented start-mode recovery."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Continuous web health polling no longer repeats deep native proof, so the API worker remains responsive and app.hati.earth can keep reading its available Sheet.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://coherencycoin.com/api/health-proxy",
+      "GET https://app.hati.earth/",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Observe exact web/API SHA parity through the shallow proxy after an exact-head Hostinger rollout.",
+      "Observe authenticated deployment recording and native recorded-answer readback.",
+      "Reload authenticated Hati and confirm the balance label is present without unavailable, retrying, connecting, or fallback state."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_release_trace",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "The exact production chronology isolates the repeated deep-health proxy read between successful Hati/API proof and API disappearance."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_repository_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query returned an empty grounded miss; OpenAI GPT-5 selected the isolation boundary, then the body verified its Form recipe at four-way verdict 4095 and through the native API route."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact release trace, existing bounded pulse carrier, consumer contracts, native API catalog, four-way recipe runtime, and local verification; it verifies but did not generate the edit.",
+    "standard_receipt": "The failure chronology and four-way projection behavior are observed; the isolation design remains rented reasoning after an empty native Form result."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting exact-head CI/review, merge, rollout, observer proof, public verification, and authenticated Hati proof."
+  }
+}
