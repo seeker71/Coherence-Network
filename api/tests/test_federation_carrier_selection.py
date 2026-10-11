@@ -15,6 +15,7 @@ import pytest
 
 from app.services import form_kernel_bridge
 from app.services import native_federation_graph_service as carrier
+from app.services import process_tree_reaper
 
 
 def _append_from_process(store: str, message_id: str, ready, start) -> None:
@@ -121,9 +122,11 @@ def test_form_bridge_stages_large_source_outside_the_process_arguments(
                 kwargs=kwargs,
             )
 
-        def communicate(self, *, timeout):
+        def wait(self, *, timeout):
             observed["timeout"] = timeout
-            return "1\n", ""
+            observed["kwargs"]["stdout"].write("1\n")
+            observed["kwargs"]["stdout"].flush()
+            return 0
 
     monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
     monkeypatch.setattr(form_kernel_bridge, "_source_runner_path", lambda: runner)
@@ -147,7 +150,7 @@ def test_form_timeout_is_normalized_and_reaps_the_carrier_tree(tmp_path, monkeyp
         def __init__(self, command, **kwargs):
             observed.update(command=command, kwargs=kwargs)
 
-        def communicate(self, *, timeout):
+        def wait(self, *, timeout):
             raise subprocess.TimeoutExpired(observed["command"], timeout)
 
     monkeypatch.setattr(form_kernel_bridge, "kernel_available", lambda: True)
@@ -197,13 +200,13 @@ def test_posix_form_timeout_kills_and_reaps_the_process_group(monkeypatch):
     class Process:
         pid = 4242
 
-        def communicate(self, *, timeout):
-            observed.append(("communicate", timeout))
-            return "", ""
+        def wait(self, *, timeout):
+            observed.append(("wait", timeout))
+            return 0
 
-    monkeypatch.setattr(form_kernel_bridge.sys, "platform", "darwin")
+    monkeypatch.setattr(process_tree_reaper.sys, "platform", "darwin")
     monkeypatch.setattr(
-        form_kernel_bridge.os,
+        process_tree_reaper.os,
         "killpg",
         lambda pid, sig: observed.append(("killpg", pid, sig)),
     )
@@ -212,7 +215,7 @@ def test_posix_form_timeout_kills_and_reaps_the_process_group(monkeypatch):
 
     assert observed == [
         ("killpg", 4242, signal.SIGKILL),
-        ("communicate", 5),
+        ("wait", process_tree_reaper._STEP_TIMEOUT_SECONDS),
     ]
 
 
@@ -222,9 +225,9 @@ def test_windows_form_timeout_terminates_the_process_tree(monkeypatch):
     class Process:
         pid = 31337
 
-        def communicate(self, *, timeout):
-            observed.append(("communicate", timeout))
-            return "", ""
+        def wait(self, *, timeout):
+            observed.append(("wait", timeout))
+            return 0
 
         def kill(self):
             observed.append(("kill",))
@@ -233,8 +236,8 @@ def test_windows_form_timeout_terminates_the_process_tree(monkeypatch):
         observed.append(("taskkill", command, kwargs))
         return SimpleNamespace(returncode=0)
 
-    monkeypatch.setattr(form_kernel_bridge.sys, "platform", "win32")
-    monkeypatch.setattr(form_kernel_bridge.subprocess, "run", taskkill)
+    monkeypatch.setattr(process_tree_reaper.sys, "platform", "win32")
+    monkeypatch.setattr(process_tree_reaper.subprocess, "run", taskkill)
 
     form_kernel_bridge._reap_process_tree(Process())
 
@@ -242,7 +245,98 @@ def test_windows_form_timeout_terminates_the_process_tree(monkeypatch):
         "taskkill",
         ["taskkill", "/PID", "31337", "/T", "/F"],
     )
-    assert observed[1] == ("communicate", 5)
+    assert observed[1] == ("wait", process_tree_reaper._STEP_TIMEOUT_SECONDS)
+
+
+def test_windows_form_timeout_retries_tree_kill_before_root_fallback(monkeypatch):
+    observed = []
+
+    class Process:
+        pid = 31337
+
+        def wait(self, *, timeout):
+            observed.append(("wait", timeout))
+
+        def kill(self):
+            observed.append(("kill",))
+
+    attempts = iter((subprocess.TimeoutExpired("taskkill", 2), SimpleNamespace(returncode=0)))
+
+    def taskkill(*_args, **_kwargs):
+        result = next(attempts)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(process_tree_reaper.sys, "platform", "win32")
+    monkeypatch.setattr(process_tree_reaper.subprocess, "run", taskkill)
+
+    form_kernel_bridge._reap_process_tree(Process())
+
+    assert observed == [("wait", process_tree_reaper._STEP_TIMEOUT_SECONDS)]
+
+
+def test_windows_form_timeout_fails_closed_when_tree_kill_is_unconfirmed(monkeypatch):
+    observed = []
+
+    class Process:
+        pid = 31337
+
+        def wait(self, *, timeout):
+            observed.append(("wait", timeout))
+
+        def kill(self):
+            observed.append(("kill",))
+
+    monkeypatch.setattr(process_tree_reaper.sys, "platform", "win32")
+    monkeypatch.setattr(
+        process_tree_reaper.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=1),
+    )
+
+    with pytest.raises(RuntimeError, match="tree termination was not confirmed"):
+        form_kernel_bridge._reap_process_tree(Process())
+
+    assert observed == [
+        ("kill",),
+        ("wait", process_tree_reaper._STEP_TIMEOUT_SECONDS),
+    ]
+
+
+def test_form_reaper_final_wait_is_finite(monkeypatch):
+    observed = []
+
+    class Process:
+        pid = 5252
+
+        def wait(self, *, timeout):
+            observed.append(("wait", timeout))
+            raise subprocess.TimeoutExpired("fkwu", timeout)
+
+        def kill(self):
+            observed.append(("kill",))
+
+    monkeypatch.setattr(process_tree_reaper.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        process_tree_reaper.os,
+        "killpg",
+        lambda pid, sig: observed.append(("killpg", pid, sig)),
+    )
+
+    with pytest.raises(
+        process_tree_reaper.ProcessTreeReapError,
+        match="tree termination was not confirmed",
+    ):
+        form_kernel_bridge._reap_process_tree(Process())
+
+    assert observed == [
+        ("killpg", 5252, signal.SIGKILL),
+        ("wait", process_tree_reaper._STEP_TIMEOUT_SECONDS),
+        ("kill",),
+        ("wait", process_tree_reaper._FINAL_WAIT_SECONDS),
+    ]
+    assert form_kernel_bridge.PROCESS_TREE_REAP_BUDGET_SECONDS == 6.25
 
 
 def test_form_bridge_resolves_configured_git_bash_off_windows_path(

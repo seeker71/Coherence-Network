@@ -19,6 +19,11 @@ Spec: specs/universal-node-edge-layer.md
 
 from __future__ import annotations
 
+import time
+
+import pytest
+from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
+
 from app.services import graph_service
 
 
@@ -156,6 +161,19 @@ def test_list_nodes_by_type_snapshot_returns_one_complete_stable_order():
     rows = graph_service.list_nodes_by_type_snapshot("grocery_spend")
     ids = [row["id"] for row in rows if row["id"].startswith("snapshot-row:")]
     assert ids == ["snapshot-row:a", "snapshot-row:b", "snapshot-row:c"]
+
+
+def test_graph_list_reads_reject_an_exhausted_absolute_deadline():
+    expired = time.monotonic() - 1
+
+    with pytest.raises(SQLAlchemyTimeoutError):
+        graph_service.list_nodes(type="contributor", _deadline=expired)
+
+    with pytest.raises(SQLAlchemyTimeoutError):
+        graph_service.list_nodes_by_type_snapshot(
+            "grocery_spend",
+            _deadline=expired,
+        )
 
 
 def test_list_nodes_excludes_anonymous_meeting_traces():
