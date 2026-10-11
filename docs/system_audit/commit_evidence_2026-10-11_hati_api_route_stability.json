@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-api-route-stability-20261011",
+  "commit_scope": "Keep the public API and Hati Sheet carrier stable after deployment maintenance by proving a consecutive local-and-public readiness window and performing at most one route re-registration repair.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_api_route_stability.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Restore app.hati.earth Sheet tracking and make the API public route resilient to post-maintenance disappearance or restart oscillation.",
+    "files_allowed": [
+      "deploy/hostinger/auto-deploy.sh",
+      "deploy/hostinger/deploy-and-verify.sh",
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_api_route_stability.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Both aligned and rebuilt deployment paths require three consecutive local and public API responses without a container restart after maintenance.",
+      "A lost public API route receives one bounded container re-registration during deployment and one bounded repair during public verification.",
+      "Exact-head CI/review, merge, production rollout, public API/Hati checks, deployment observation, and authenticated Hati Sheet-state checks pass."
+    ],
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash -n deploy/hostinger/deploy-and-verify.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_api_route_stability.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep every repair bounded; do not create a restart loop.",
+      "Require both localhost process proof and the public Traefik door before declaring the release stable.",
+      "Keep Sheet, household, balance, token, nonce, and SSH material out of repository evidence."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["deploy-reliability", "hati-sheet-resilience", "public-route-stability"],
+  "spec_ids": ["public-deployment-observer", "form-first-reasoning"],
+  "task_ids": ["task-2026-10-11-hati-api-route-stability"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Hostinger run 38096585594 deployed exact main SHA 64e5ef20a3e52df93c8b909d874ff1f532cae58a and passed container-local health and grounding before the public API door alternated among 200, 404, 502, and timeout responses.",
+    "Direct-origin and Cloudflare probes both returned the same Traefik 404 while app.hati.earth and hati.earth/people/urs remained HTTP 200, locating the failure at API service discovery rather than the private Sheet.",
+    "The prior verifier retried the same external checks without repairing the disappeared route; the new carrier performs one bounded API recreate before retrying.",
+    "The post-maintenance gate now observes the same container identity and restart count across three consecutive localhost and public ping successes.",
+    "Exact-head review required Compose capability detection and bounded readiness polling so a health timeout cannot trigger a second recreate and a no-wait start cannot fail on one premature ping.",
+    "No secret, token, nonce, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_api_route_stability.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "shell syntax for both deployment carriers",
+      "Hostinger deployment path contract",
+      "local PR guard and strict PR follow-through",
+      "whitespace validation"
+    ],
+    "summary": "The deployment cannot finish on a single localhost success: it now proves a restart-free local and public window and turns the first public-verifier failure into one active route repair."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The API remains publicly routable after deployment grounding, allowing app.hati.earth to read its available Sheet without presenting the unavailable state.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/ping",
+      "GET https://api.coherencycoin.com/api/health",
+      "GET https://coherencycoin.com/api/health-proxy",
+      "GET https://app.hati.earth/",
+      "GET https://hati.earth/people/urs"
+    ],
+    "test_flows": [
+      "Observe an exact-head Hostinger rollout remain stable through the post-maintenance public window.",
+      "Observe authenticated deployment recording and native recorded-answer readback.",
+      "Reload authenticated Hati and confirm the balance label is present without any unavailable, retrying, connecting, or fallback state."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_http_and_origin_runtime_evidence",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "The exact release trace and matching direct-origin/public responses locate the failure at the public API router after local health passed."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_repository_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form query returned no answer in 30 seconds; OpenAI GPT-5 selected the bounded stability and repair shape, and repository contracts verify it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied the exact rollout trace, container-local proof, public-origin behavior, existing service reconciler, and deployment contracts; it verifies but did not generate the edit.",
+    "standard_receipt": "The route failure is grounded and observed; the resilience choice remains rented reasoning after a native Form timeout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting exact-head CI/review, merge, rollout, observer proof, public verification, and authenticated Hati proof."
+  }
+}
