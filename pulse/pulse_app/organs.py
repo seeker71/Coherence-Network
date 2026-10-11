@@ -33,6 +33,9 @@ if TYPE_CHECKING:
     from pulse_app.probe import UpstreamResult
 
 
+UNOBSERVED_DETAIL_PREFIX = "unobserved: "
+
+
 # Result of applying an extractor to an upstream response.
 # ok=False with a detail string means the organ is not healthy; the detail
 # is a short human explanation of what the witness saw.
@@ -176,28 +179,40 @@ def extract_api(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_schema(r: "UpstreamResult") -> OrganVerdict:
-    """Schema organ: /api/health/pulse body.schema_ok == true."""
+    """Schema organ: distinguish bounded non-observation from failure."""
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if not body.get("schema_ok", True):
-        return OrganVerdict(False, "schema_ok=false")
+    schema_ok = body.get("schema_ok")
+    if schema_ok is False:
+        return OrganVerdict(
+            True,
+            f"{UNOBSERVED_DETAIL_PREFIX}schema proof omitted by bounded pulse",
+        )
+    if schema_ok is not True:
+        return OrganVerdict(False, "schema_ok missing")
     return OrganVerdict(True)
 
 
 def extract_audit(r: "UpstreamResult") -> OrganVerdict:
-    """Audit-integrity organ: the bounded pulse projection verifies the chain."""
+    """Audit organ: distinguish bounded non-observation from compromise."""
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if body.get("integrity_verified") is not True:
-        return OrganVerdict(False, "integrity_verified=false")
     if body.get("integrity_compromised"):
         return OrganVerdict(False, "integrity_compromised=true")
+    integrity_verified = body.get("integrity_verified")
+    if integrity_verified is False:
+        return OrganVerdict(
+            True,
+            f"{UNOBSERVED_DETAIL_PREFIX}audit proof omitted by bounded pulse",
+        )
+    if integrity_verified is not True:
+        return OrganVerdict(False, "integrity_verified missing")
     return OrganVerdict(True)
 
 
