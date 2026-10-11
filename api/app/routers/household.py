@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -34,7 +35,11 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services import graph_service
-from app.services.form_kernel_bridge import serve_via_kernel
+from app.services.form_kernel_bridge import (
+    PROCESS_TREE_REAP_BUDGET_SECONDS,
+    serve_via_kernel,
+)
+from app.services.process_tree_reaper import ProcessTreeReapError
 
 router = APIRouter()
 
@@ -50,6 +55,10 @@ _REQUEST_TYPE = "service_request"
 # Roles that carry write access by construction. A plain "member" is
 # see-only until a resident vouches them.
 _WRITE_ROLES = {"resident", "staff"}
+# Reserve the native runner's full cross-platform reap budget inside the
+# request deadline. Windows may use one five-second step for taskkill and one
+# for communicate; a response must not invite a retry while either is active.
+_MEMBERSHIP_POLICY_CLEANUP_GRACE = PROCESS_TREE_REAP_BUDGET_SECONDS
 
 
 def _now() -> str:
@@ -125,22 +134,48 @@ def _member_private(node: dict) -> MemberPrivate:
     return MemberPrivate(**pub, token=node.get("token", ""), phone=(node.get("phone") or None))
 
 
-def _membership_lookup_status(*, store_readable: bool, member_found: bool) -> int:
+def _membership_lookup_status(
+    *,
+    store_readable: bool,
+    member_found: bool,
+    _deadline: float | None = None,
+) -> int:
     """Resolve identity lookup truth through the Form-owned outage membrane."""
-    status, _runtime = serve_via_kernel(
-        "endpoint_membership_lookup_status.fk",
-        bindings={
-            "store_readable": store_readable,
-            "member_found": member_found,
-        },
-        parse=int,
-    )
+    timeout = 10.0
+    if _deadline is not None:
+        remaining = _deadline - time.monotonic()
+        if remaining <= _MEMBERSHIP_POLICY_CLEANUP_GRACE:
+            return 503
+        timeout = remaining - _MEMBERSHIP_POLICY_CLEANUP_GRACE
+    try:
+        status, _runtime = serve_via_kernel(
+            "endpoint_membership_lookup_status.fk",
+            bindings={
+                "store_readable": store_readable,
+                "member_found": member_found,
+            },
+            parse=int,
+            timeout=timeout,
+        )
+    except ProcessTreeReapError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Native policy cleanup is unconfirmed; automatic retry paused",
+        ) from exc
+    except RuntimeError:
+        if _deadline is not None:
+            return 503
+        raise
     return status
 
 
-def _all_members() -> list[dict]:
+def _all_members(*, _deadline: float | None = None) -> list[dict]:
     try:
-        response = graph_service.list_nodes(type=_MEMBER_TYPE, limit=1000)
+        response = graph_service.list_nodes(
+            type=_MEMBER_TYPE,
+            limit=1000,
+            _deadline=_deadline,
+        )
         nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
     except Exception as exc:
         # Form keeps 401 reserved for a completed readable miss. The Python
@@ -149,6 +184,7 @@ def _all_members() -> list[dict]:
             status_code=_membership_lookup_status(
                 store_readable=False,
                 member_found=False,
+                _deadline=_deadline,
             ),
             detail="household membership is temporarily unavailable",
         ) from exc
@@ -159,10 +195,14 @@ def _resident_exists() -> bool:
     return any(m.get("role") == "resident" for m in _all_members())
 
 
-def _member_by_token(token: str | None) -> dict | None:
+def _member_by_token(
+    token: str | None,
+    *,
+    _deadline: float | None = None,
+) -> dict | None:
     if not token:
         return None
-    for m in _all_members():
+    for m in _all_members(_deadline=_deadline):
         if m.get("token") and m.get("token") == token:
             return m
     return None
@@ -310,17 +350,22 @@ async def list_members(
     return [_member_public(m) for m in members]
 
 
-def _require_member(token: str | None) -> dict:
+def _require_member(
+    token: str | None,
+    *,
+    _deadline: float | None = None,
+) -> dict:
     """The see-lock — `see open-to active-member` (household-membrane.form). Any
     registered cell sees the board, even a see-only watcher; the unregistered
     public does not. The board carries who asked, where it goes, and what it
     cost — the field's own tissue, witnessed by its cells, not the open internet."""
-    member = _member_by_token(token)
+    member = _member_by_token(token, _deadline=_deadline)
     if not member:
         raise HTTPException(
             status_code=_membership_lookup_status(
                 store_readable=True,
                 member_found=False,
+                _deadline=_deadline,
             ),
             detail="register or open your invite link to see the board",
         )

@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import os
 import re
-import signal
 import subprocess
 import sys
 import tempfile
@@ -39,6 +38,10 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from app.config_loader import get_str
+from app.services.process_tree_reaper import (
+    PROCESS_TREE_REAP_BUDGET_SECONDS as PROCESS_TREE_REAP_BUDGET_SECONDS,
+    reap_process_tree as _reap_process_tree,
+)
 
 def preload_available() -> bool:
     """Compatibility readout: sibling-kernel preload is not an execution path."""
@@ -117,31 +120,6 @@ def _process_group_kwargs() -> dict[str, Any]:
     return {"start_new_session": True}
 
 
-def _reap_process_tree(process: subprocess.Popen[str]) -> None:
-    """Force a timed-out source runner and all native descendants to exit."""
-    if sys.platform == "win32":
-        try:
-            subprocess.run(
-                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=5,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            process.kill()
-    else:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    try:
-        process.communicate(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.communicate()
-
-
 def kernel_bin_path() -> Path:
     """Return the direct-source fkwu binary used by recipe execution."""
     image = _IMAGE_ROOT / "form" / "fkwu"
@@ -195,22 +173,30 @@ def _run_staged_source(fk_source: str, timeout: float, cwd: Path | None = None) 
             staged.write(fk_source)
             staged.write("\n")
             source_path = Path(staged.name)
-        try:
-            proc = subprocess.Popen(
-                [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                cwd=str(cwd) if cwd is not None else None,
-                **_process_group_kwargs(),
-            )
-        except OSError as exc:
-            raise RuntimeError("native Form source runner could not start") from exc
-        try:
-            stdout, stderr = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired as exc:
-            _reap_process_tree(proc)
-            raise RuntimeError(f"fkwu timed out after {timeout:g} seconds") from exc
+        with (
+            tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stdout_file,
+            tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stderr_file,
+        ):
+            try:
+                proc = subprocess.Popen(
+                    [_bash_path(), str(_source_runner_path()), "--src", str(source_path)],
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    text=True,
+                    cwd=str(cwd) if cwd is not None else None,
+                    **_process_group_kwargs(),
+                )
+            except OSError as exc:
+                raise RuntimeError("native Form source runner could not start") from exc
+            try:
+                proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired as exc:
+                _reap_process_tree(proc)
+                raise RuntimeError(f"fkwu timed out after {timeout:g} seconds") from exc
+            stdout_file.seek(0)
+            stderr_file.seek(0)
+            stdout = stdout_file.read()
+            stderr = stderr_file.read()
     finally:
         if source_path is not None:
             source_path.unlink(missing_ok=True)
