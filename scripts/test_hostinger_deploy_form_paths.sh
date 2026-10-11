@@ -405,6 +405,36 @@ grep -Fq 'bash "$DEPLOY_PATH/auto-deploy.sh" "$TARGET_SHA"' "$DEPLOY_AND_VERIFY"
   || fail "locked Hostinger carrier does not run auto-deploy"
 grep -Fq './scripts/verify_web_api_deploy.sh "$PUBLIC_API_BASE" "$PUBLIC_WEB_BASE"' "$DEPLOY_AND_VERIFY" \
   || fail "locked Hostinger carrier releases before public verification"
+grep -Fq 'stabilize_api_after_maintenance || exit 1' "$DEPLOY_SCRIPT" \
+  || fail "Hostinger deploy does not prove API stability after maintenance"
+if [[ "$(grep -Fc 'stabilize_api_after_maintenance || exit 1' "$DEPLOY_SCRIPT")" -ne 2 ]]; then
+  fail "both aligned and rebuilt deploy paths must prove API stability after maintenance"
+fi
+grep -Fq 'curl -fsS --max-time 15 https://api.coherencycoin.com/api/ping' "$DEPLOY_SCRIPT" \
+  || fail "post-maintenance stability window does not prove the public Traefik route"
+grep -Fq "current_restarts" "$DEPLOY_SCRIPT" \
+  || fail "post-maintenance stability window does not detect API restart loops"
+grep -Fq 'repair_public_api_route' "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier retry remains passive after the API route disappears"
+if [[ "$(grep -Fc 'repair_public_api_route' "$DEPLOY_AND_VERIFY")" -ne 2 ]]; then
+  fail "public verifier repair must be defined once and invoked once"
+fi
+grep -Fq -- '--wait --wait-timeout 180 --force-recreate api' "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier repair does not re-register the API container with Traefik"
+grep -Fq 'repair_used=1' "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier repair is not bounded to one recreate"
+grep -Fq '! curl -fsS --max-time 15 "$PUBLIC_API_BASE/api/ping"' "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier recreates the API without first observing its public route"
+grep -Fq "docker compose up --help" "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier repair does not distinguish unsupported --wait from a health timeout"
+grep -Fq "wait_for_api_readiness" "$DEPLOY_AND_VERIFY" \
+  || fail "public verifier repair does not poll readiness after a no-wait start"
+if [[ "$(grep -Fc -- '--force-recreate api' "$DEPLOY_AND_VERIFY")" -ne 2 ]]; then
+  fail "public verifier repair can recreate the API more than once per capability path"
+fi
+if grep -Fq 'waited API route repair failed; retrying without --wait' "$DEPLOY_AND_VERIFY"; then
+  fail "public verifier repair recreates the API again after a health wait timeout"
+fi
 if grep -Fq -- '- name: Verify public deployment' "$WORKFLOW"; then
   fail "public verification still runs after the shared deployment lock releases"
 fi
