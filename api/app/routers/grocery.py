@@ -64,7 +64,11 @@ from app.routers.household import (
 )
 from app import config_loader
 from app.services import config_service, graph_service
-from app.services.form_kernel_bridge import serve_via_kernel
+from app.services.form_kernel_bridge import (
+    PROCESS_TREE_REAP_BUDGET_SECONDS,
+    serve_via_kernel,
+)
+from app.services.process_tree_reaper import ProcessTreeReapError
 
 router = APIRouter()
 
@@ -84,11 +88,37 @@ _SHEET_WRITE_TOTAL_TIMEOUT = 6.5
 _SHEET_RECEIPT_MIN_TIMEOUT = 2.5
 _SHEET_RESYNC_TOTAL_TIMEOUT = 13.0
 _GROCERY_REQUEST_TOTAL_TIMEOUT = 13.0
+# The database carrier owns the absolute 13-second cancellation. Keep a small
+# in-process grace for its worker to surface that cancellation and close the
+# one-use connection before the HTTP response invites a retry. The whole path
+# still rests comfortably inside the web proxy's 15-second boundary.
+_GROCERY_HANDLER_CLEANUP_GRACE = 0.25
 _SHEET_APPEND_RETRY_DELAY_SECONDS = 30
 
 
 def _monotonic() -> float:
     return time.monotonic()
+
+
+def _native_policy_timeout(deadline: float, *, maximum: float = 10.0) -> float | None:
+    """Return execution time that leaves the full native reap budget unused."""
+    available = deadline - _monotonic() - PROCESS_TREE_REAP_BUDGET_SECONDS
+    if available <= 0:
+        return None
+    return min(maximum, available)
+
+
+def _native_policy_timed_out(exc: RuntimeError, deadline: float) -> bool:
+    if isinstance(exc, ProcessTreeReapError):
+        return False
+    return "timed out" in str(exc).lower() or deadline <= _monotonic()
+
+
+def _native_cleanup_conflict() -> HTTPException:
+    return HTTPException(
+        status_code=409,
+        detail="Native policy cleanup is unconfirmed; automatic retry paused",
+    )
 
 
 def _current_sheet_attempt_fits(deadline: float) -> bool:
@@ -216,7 +246,7 @@ def _all_shops() -> list[dict]:
     response_model=list[ShopResponse],
     summary="Every stored shop, with the description it fills in",
 )
-async def list_shops(token: str | None = Query(default=None)) -> list[ShopResponse]:
+def list_shops(token: str | None = Query(default=None)) -> list[ShopResponse]:
     _require_member(token)
     shops = sorted(_all_shops(), key=lambda n: (n.get("name", "") or ""))
     return [_node_to_shop(n) for n in shops]
@@ -324,7 +354,7 @@ async def forget_shop(
     response_model=ShopResponse | None,
     summary="The shop the manager is standing at, or null when none is near",
 )
-async def nearest_shop(
+def nearest_shop(
     lat: int = Query(...),
     lon: int = Query(...),
     token: str | None = Query(default=None),
@@ -413,10 +443,13 @@ def _node_to_spend(node: dict) -> SpendResponse:
     )
 
 
-def _all_spends() -> list[dict]:
+def _all_spends(*, deadline: float | None = None) -> list[dict]:
     return [
         node
-        for node in graph_service.list_nodes_by_type_snapshot(_SPEND_TYPE)
+        for node in graph_service.list_nodes_by_type_snapshot(
+            _SPEND_TYPE,
+            _deadline=deadline,
+        )
         if not node.get("sheet_cancelled")
     ]
 
@@ -495,7 +528,12 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
             raise HTTPException(status_code=404, detail=f"place {body.place_id!r} not found")
         shop = node
     elif body.lat is not None and body.lon is not None:
-        near = await nearest_shop(lat=body.lat, lon=body.lon, token=body.actor_token)
+        near = await asyncio.to_thread(
+            nearest_shop,
+            lat=body.lat,
+            lon=body.lon,
+            token=body.actor_token,
+        )
         if near is not None:
             shop = graph_service.get_node(near.id)
 
@@ -554,7 +592,7 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
     response_model=list[SpendResponse],
     summary="The ledger — newest first, optionally a single day",
 )
-async def list_spends(
+def list_spends(
     token: str | None = Query(default=None),
     on: str | None = Query(default=None, description="ISO date; a single day"),
     limit: int = Query(default=100, ge=1, le=1000),
@@ -726,10 +764,10 @@ def _remaining_balance(
     """Choose and reconcile the balance on the Form kernel."""
     kernel_timeout = 10.0
     if deadline is not None:
-        kernel_timeout = deadline - _monotonic()
-        if kernel_timeout <= 0:
+        remaining_timeout = _native_policy_timeout(deadline)
+        if remaining_timeout is None:
             return None
-        kernel_timeout = min(10.0, kernel_timeout)
+        kernel_timeout = remaining_timeout
     try:
         value, _runtime = serve_via_kernel(
             "endpoint_grocery_remaining.fk",
@@ -741,8 +779,8 @@ def _remaining_balance(
             parse=json.loads,
             timeout=kernel_timeout,
         )
-    except RuntimeError:
-        if deadline is not None and deadline <= _monotonic():
+    except RuntimeError as exc:
+        if deadline is not None and _native_policy_timed_out(exc, deadline):
             return None
         raise
     if (
@@ -813,10 +851,10 @@ def _legacy_reconciliation_batch(
     )
     kernel_timeout = 10.0
     if deadline is not None:
-        kernel_timeout = deadline - _monotonic()
-        if kernel_timeout <= 0:
+        remaining_timeout = _native_policy_timeout(deadline)
+        if remaining_timeout is None:
             raise asyncio.TimeoutError
-        kernel_timeout = min(10.0, kernel_timeout)
+        kernel_timeout = remaining_timeout
     try:
         selected_positions, _runtime = serve_via_kernel(
             "endpoint_grocery_reconcile_selection.fk",
@@ -829,7 +867,7 @@ def _legacy_reconciliation_batch(
             timeout=kernel_timeout,
         )
     except RuntimeError as exc:
-        if deadline is not None and deadline <= _monotonic():
+        if deadline is not None and _native_policy_timed_out(exc, deadline):
             raise asyncio.TimeoutError from exc
         raise
     if (
@@ -948,8 +986,8 @@ def _current_sheet_retry_batch(
     entries_wire = ";".join(
         "|".join(str(value) for value in row) for row in policy_rows
     )
-    kernel_timeout = deadline - _monotonic()
-    if kernel_timeout <= 0:
+    kernel_timeout = _native_policy_timeout(deadline)
+    if kernel_timeout is None:
         raise asyncio.TimeoutError
     try:
         selected_positions, _runtime = serve_via_kernel(
@@ -960,10 +998,10 @@ def _current_sheet_retry_batch(
                 "now": now,
             },
             parse=json.loads,
-            timeout=min(10.0, kernel_timeout),
+            timeout=kernel_timeout,
         )
     except RuntimeError as exc:
-        if deadline <= _monotonic():
+        if _native_policy_timed_out(exc, deadline):
             raise asyncio.TimeoutError from exc
         raise
     if (
@@ -1114,20 +1152,22 @@ async def _reconciled_sheet_snapshot(
         return None
 
 
-@router.get(
-    "/grocery/totals",
-    response_model=TotalsResponse,
-    summary="What today and this month have cost so far",
-)
-async def totals(
-    token: str | None = Query(default=None),
-    on: str | None = Query(default=None),
+async def _totals_within_deadline(
+    token: str | None,
+    on: str | None,
+    *,
+    deadline: float,
 ) -> TotalsResponse:
-    _require_member(token)
-    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
+    # The graph carrier is synchronous. Running it directly in this async route
+    # used to hold the one event loop while the grocery page opened four sibling
+    # reads. Each sibling then appeared slow, the web proxy abandoned totals,
+    # and its retry created another still-running Sheet read. Keep blocking
+    # graph and native-kernel carriers in the worker pool so one cold read
+    # cannot manufacture a household-wide outage.
+    await asyncio.to_thread(_require_member, token, _deadline=deadline)
     day = (on or "").strip() or _today_local()
     month = day[:7]
-    rows = _all_spends()
+    rows = await asyncio.to_thread(_all_spends, deadline=deadline)
     buys = [n for n in rows if (_s(n.get("kind")) or _KIND_BUY) != _KIND_TOPUP]
     day_rows = [n for n in buys if _s(n.get("spent_on")) == day]
     month_rows = [n for n in buys if (_s(n.get("spent_on")) or "").startswith(month)]
@@ -1164,7 +1204,8 @@ async def totals(
             and spend.id not in balance_snapshot.cancelled_ids
         )
     ]
-    remaining = _remaining_balance(
+    remaining = await asyncio.to_thread(
+        _remaining_balance,
         sheet_remaining=(
             balance_snapshot.remaining_idr if balance_snapshot is not None else None
         ),
@@ -1183,6 +1224,41 @@ async def totals(
         remaining_idr=remaining,
         remaining_source=remaining_source,
     )
+
+
+@router.get(
+    "/grocery/totals",
+    response_model=TotalsResponse,
+    summary="What today and this month have cost so far",
+)
+async def totals(
+    token: str | None = Query(default=None),
+    on: str | None = Query(default=None),
+) -> TotalsResponse:
+    # Start the wall clock before identity and graph reads. The earlier bound
+    # covered only Sheet I/O, so synchronous prework could already outlive the
+    # 15-second same-origin proxy before the supposedly bounded section began.
+    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
+    try:
+        return await asyncio.wait_for(
+            _totals_within_deadline(token, on, deadline=deadline),
+            timeout=(
+                _GROCERY_REQUEST_TOTAL_TIMEOUT
+                + _GROCERY_HANDLER_CLEANUP_GRACE
+            ),
+        )
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The grocery balance is still reconnecting; retry is safe",
+        ) from exc
+    except ProcessTreeReapError as exc:
+        raise _native_cleanup_conflict() from exc
+    except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The grocery balance is still reconnecting; retry is safe",
+        ) from exc
 
 
 # --------------------------------------------------------------------------
@@ -1400,7 +1476,7 @@ class SheetStatus(BaseModel):
     response_model=SheetStatus,
     summary="Where the mirror lands, and whether anything is waiting",
 )
-async def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
+def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
     _require_member(token)
     sheet_id = _sheet_id()
     webhook_url, secret = _sheet_webhook()
@@ -1638,6 +1714,8 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
             now,
             deadline=deadline,
         )
+    except ProcessTreeReapError as exc:
+        raise _native_cleanup_conflict() from exc
     except (asyncio.TimeoutError, RuntimeError):
         return ResyncResponse(
             attempted=0,
@@ -1649,13 +1727,16 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
         not pending or not _current_sheet_attempt_fits(deadline)
     )
     if configured and legacy_turn:
-        await _reconciled_sheet_snapshot(
-            all_pending,
-            [_node_to_spend(n) for n in all_pending],
-            all_nodes=rows,
-            all_entries=[_node_to_spend(n) for n in rows],
-            deadline=deadline,
-        )
+        try:
+            await _reconciled_sheet_snapshot(
+                all_pending,
+                [_node_to_spend(n) for n in all_pending],
+                all_nodes=rows,
+                all_entries=[_node_to_spend(n) for n in rows],
+                deadline=deadline,
+            )
+        except ProcessTreeReapError as exc:
+            raise _native_cleanup_conflict() from exc
         # Keep the request within the same-origin proxy deadline: a legacy
         # summary can consume nearly all of its thirteen-second budget, so
         # current-protocol appends belong to the next idempotent resync call.

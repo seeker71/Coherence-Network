@@ -12,15 +12,18 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 from pathlib import Path
 import sqlite3
 import threading
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
 
 from app.main import app
-from app.routers import grocery
+from app.routers import grocery, household
 from app.services import unified_db
 from app.services.form_kernel_bridge import run_kernel
 
@@ -65,7 +68,7 @@ def _configure_receipt_reserve_test(monkeypatch, legacy, current, reconciled):
         legacy.update(sheet_synced=True, sheet_protocol=grocery._SHEET_PROTOCOL)
         return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
 
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy, current])
     monkeypatch.setattr(grocery, "_joined_current_sheet_retry_batch", select_current)
     monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", reconcile)
     monkeypatch.setattr(
@@ -200,8 +203,9 @@ def test_every_grocery_row_comes_from_one_stable_snapshot(monkeypatch):
     ]
     calls: list[str] = []
 
-    def snapshot(node_type):
+    def snapshot(node_type, *, _deadline=None):
         calls.append(node_type)
+        assert _deadline is None
         return rows
 
     monkeypatch.setattr(grocery.graph_service, "list_nodes_by_type_snapshot", snapshot)
@@ -619,7 +623,7 @@ def test_sheet_read_has_one_wall_clock_deadline(monkeypatch):
 
 def test_totals_share_one_deadline_with_sheet_and_form(monkeypatch):
     observed_timeouts: list[float] = []
-    ticks = iter([100.0, 100.0, 112.25])
+    ticks = iter([100.0, 100.0, 102.0])
 
     async def snapshot(_pending_ids):
         return grocery._SheetSnapshot(2_000_000, frozenset(), frozenset())
@@ -628,8 +632,12 @@ def test_totals_share_one_deadline_with_sheet_and_form(monkeypatch):
         observed_timeouts.append(timeout)
         return [1, bindings["sheet_remaining"]], "fkwu"
 
-    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [])
+    monkeypatch.setattr(
+        grocery,
+        "_require_member",
+        lambda _token, *, _deadline=None: {"id": "m1"},
+    )
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [])
     monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot)
     monkeypatch.setattr(grocery, "_monotonic", lambda: next(ticks))
     monkeypatch.setattr(grocery, "serve_via_kernel", kernel)
@@ -637,7 +645,13 @@ def test_totals_share_one_deadline_with_sheet_and_form(monkeypatch):
     result = asyncio.run(grocery.totals(token="member-token", on=None))
 
     assert result.remaining_source == "sheet"
-    assert observed_timeouts == [pytest.approx(0.75)]
+    assert observed_timeouts == [
+        pytest.approx(
+            grocery._GROCERY_REQUEST_TOTAL_TIMEOUT
+            - 2
+            - grocery.PROCESS_TREE_REAP_BUDGET_SECONDS
+        )
+    ]
 
 
 def test_totals_do_not_start_form_after_the_shared_deadline(monkeypatch):
@@ -649,8 +663,12 @@ def test_totals_do_not_start_form_after_the_shared_deadline(monkeypatch):
     def kernel(*_args, **_kwargs):
         raise AssertionError("an expired totals request must not start Form")
 
-    monkeypatch.setattr(grocery, "_require_member", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [])
+    monkeypatch.setattr(
+        grocery,
+        "_require_member",
+        lambda _token, *, _deadline=None: {"id": "m1"},
+    )
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [])
     monkeypatch.setattr(grocery, "_read_sheet_snapshot", snapshot)
     monkeypatch.setattr(grocery, "_monotonic", lambda: next(ticks))
     monkeypatch.setattr(grocery, "serve_via_kernel", kernel)
@@ -659,6 +677,219 @@ def test_totals_do_not_start_form_after_the_shared_deadline(monkeypatch):
 
     assert result.remaining_idr is None
     assert result.remaining_source == "unavailable"
+
+
+def test_grocery_board_graph_reads_use_fastapi_worker_pool():
+    # The page opens these together. A synchronous FastAPI handler is run in
+    # its worker pool; declaring it async while calling the synchronous graph
+    # carrier would serialize every sibling on the one event loop.
+    assert not inspect.iscoroutinefunction(grocery.list_spends)
+    assert not inspect.iscoroutinefunction(grocery.list_shops)
+    assert not inspect.iscoroutinefunction(grocery.sheet_status)
+    assert not inspect.iscoroutinefunction(grocery.nearest_shop)
+
+
+def test_totals_graph_prework_does_not_hold_the_event_loop(monkeypatch):
+    order: list[str] = []
+    observed_deadlines: list[float] = []
+
+    def member(_token, *, _deadline=None):
+        observed_deadlines.append(_deadline)
+        order.append("member-start")
+        threading.Event().wait(0.04)
+        order.append("member-end")
+        return {"id": "m1"}
+
+    def spends(*, deadline=None):
+        observed_deadlines.append(deadline)
+        return []
+
+    monkeypatch.setattr(grocery, "_require_member", member)
+    monkeypatch.setattr(grocery, "_all_spends", spends)
+    monkeypatch.setattr(grocery, "_remaining_balance", lambda **_kwargs: None)
+
+    async def run():
+        async def witness_event_loop():
+            await asyncio.sleep(0.005)
+            order.append("event-loop-breathed")
+
+        result, _ = await asyncio.gather(
+            grocery.totals(token="member-token", on=None),
+            witness_event_loop(),
+        )
+        return result
+
+    result = asyncio.run(run())
+
+    assert result.remaining_source == "unavailable"
+    assert order.index("event-loop-breathed") < order.index("member-end")
+    assert len(observed_deadlines) == 2
+    assert observed_deadlines[0] == observed_deadlines[1]
+    assert observed_deadlines[0] is not None
+
+
+def test_totals_wall_clock_starts_before_membership_lookup(monkeypatch):
+    worker_finished = threading.Event()
+
+    def slow_member(_token, *, _deadline=None):
+        assert _deadline is not None
+        remaining = max(0.0, _deadline - grocery.time.monotonic())
+        threading.Event().wait(remaining)
+        worker_finished.set()
+        raise SQLAlchemyTimeoutError("bounded member lookup ended")
+
+    monkeypatch.setattr(grocery, "_require_member", slow_member)
+    monkeypatch.setattr(grocery, "_GROCERY_REQUEST_TOTAL_TIMEOUT", 0.02)
+
+    async def run():
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        with pytest.raises(HTTPException) as caught:
+            await grocery.totals(token="member-token", on=None)
+        return loop.time() - started, caught.value
+
+    elapsed, error = asyncio.run(run())
+
+    assert error.status_code == 503
+    assert elapsed < 0.1
+    assert worker_finished.is_set()
+
+
+def test_totals_exhausted_membership_skips_policy_before_retryable_response(monkeypatch):
+    worker_finished = threading.Event()
+
+    def slow_members(**kwargs):
+        deadline = kwargs["_deadline"]
+        threading.Event().wait(
+            max(0.0, deadline - grocery.time.monotonic()) + 0.001
+        )
+        worker_finished.set()
+        return {"items": []}
+
+    def policy(*_args, **_kwargs):
+        pytest.fail("the shared deadline must stop the post-database Form call")
+
+    monkeypatch.setattr(household.graph_service, "list_nodes", slow_members)
+    monkeypatch.setattr(household, "serve_via_kernel", policy)
+    monkeypatch.setattr(grocery, "_GROCERY_REQUEST_TOTAL_TIMEOUT", 0.02)
+
+    async def run():
+        with pytest.raises(HTTPException) as caught:
+            await grocery.totals(token="member-token", on=None)
+        return caught.value
+
+    error = asyncio.run(run())
+
+    assert error.status_code == 503
+    assert worker_finished.is_set()
+
+
+def test_totals_started_membership_policy_reaps_before_retryable_response(monkeypatch):
+    policy_started = threading.Event()
+    worker_finished = threading.Event()
+    observed_timeout: list[float] = []
+
+    monkeypatch.setattr(
+        household.graph_service,
+        "list_nodes",
+        lambda **_kwargs: {"items": []},
+    )
+    monkeypatch.setattr(household, "_MEMBERSHIP_POLICY_CLEANUP_GRACE", 0.02)
+
+    def slow_policy(*_args, **kwargs):
+        timeout = kwargs["timeout"]
+        observed_timeout.append(timeout)
+        policy_started.set()
+        # Model the native process using its execution allowance and most of
+        # the separately reserved reap allowance before surfacing timeout.
+        threading.Event().wait(timeout + 0.015)
+        worker_finished.set()
+        raise RuntimeError("bounded Form policy timeout and reap")
+
+    monkeypatch.setattr(household, "serve_via_kernel", slow_policy)
+    monkeypatch.setattr(grocery, "_GROCERY_REQUEST_TOTAL_TIMEOUT", 0.05)
+
+    async def run():
+        with pytest.raises(HTTPException) as caught:
+            await grocery.totals(token="member-token", on=None)
+        return caught.value
+
+    error = asyncio.run(run())
+
+    assert error.status_code == 503
+    assert policy_started.is_set()
+    assert worker_finished.is_set()
+    assert len(observed_timeout) == 1
+    assert 0 < observed_timeout[0] < 0.04
+
+
+def test_totals_started_balance_policy_reaps_before_response(monkeypatch):
+    policy_started = threading.Event()
+    worker_finished = threading.Event()
+    observed_timeout: list[float] = []
+
+    monkeypatch.setattr(
+        grocery,
+        "_require_member",
+        lambda _token, *, _deadline=None: {"id": "m1"},
+    )
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [])
+
+    async def sheet_snapshot(_pending_ids):
+        return grocery._SheetSnapshot(
+            remaining_idr=1,
+            acknowledged_ids=frozenset(),
+            cancelled_ids=frozenset(),
+        )
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_snapshot)
+    monkeypatch.setattr(grocery, "PROCESS_TREE_REAP_BUDGET_SECONDS", 0.02)
+
+    def slow_policy(*_args, **kwargs):
+        timeout = kwargs["timeout"]
+        observed_timeout.append(timeout)
+        policy_started.set()
+        threading.Event().wait(timeout + 0.015)
+        worker_finished.set()
+        raise RuntimeError("fkwu timed out and native child was reaped")
+
+    monkeypatch.setattr(grocery, "serve_via_kernel", slow_policy)
+    monkeypatch.setattr(grocery, "_GROCERY_REQUEST_TOTAL_TIMEOUT", 0.05)
+
+    result = asyncio.run(grocery.totals(token="member-token", on=None))
+
+    assert result.remaining_source == "unavailable"
+    assert policy_started.is_set()
+    assert worker_finished.is_set()
+    assert len(observed_timeout) == 1
+    assert 0 < observed_timeout[0] < 0.04
+
+
+def test_totals_unconfirmed_balance_cleanup_pauses_automatic_retry(monkeypatch):
+    monkeypatch.setattr(
+        grocery,
+        "_require_member",
+        lambda _token, *, _deadline=None: {"id": "m1"},
+    )
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [])
+
+    async def sheet_snapshot(_pending_ids):
+        return grocery._SheetSnapshot(1, frozenset(), frozenset())
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_snapshot)
+    monkeypatch.setattr(
+        grocery,
+        "serve_via_kernel",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            grocery.ProcessTreeReapError("descendant state is unconfirmed")
+        ),
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(grocery.totals(token="member-token", on=None))
+
+    assert caught.value.status_code == 409
+    assert "automatic retry paused" in caught.value.detail
 
 
 def test_sheet_read_fails_closed_without_the_shared_secret(monkeypatch):
@@ -966,7 +1197,7 @@ def test_legacy_unsynced_entry_is_reconciled_before_balance(monkeypatch):
         # No sheet_protocol: a predecessor append may have landed without an ID.
     }
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -984,7 +1215,7 @@ def test_legacy_unsynced_entry_is_reconciled_before_balance(monkeypatch):
     monkeypatch.setattr(
         grocery,
         "_require_member",
-        lambda _token: {"id": "watcher", "write_access": False},
+        lambda _token, *, _deadline=None: {"id": "watcher", "write_access": False},
     )
     monkeypatch.setattr(
         grocery,
@@ -1065,7 +1296,7 @@ def test_unavailable_sheet_does_not_persist_reconciliation_rotation(monkeypatch)
         return None
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1081,6 +1312,37 @@ def test_unavailable_sheet_does_not_persist_reconciliation_rotation(monkeypatch)
     )
     assert result.blocked_legacy == 1
     assert "sheet_reconcile_attempted_at" not in legacy
+
+
+def test_legacy_resync_unconfirmed_cleanup_pauses_automatic_retry(monkeypatch):
+    legacy = {
+        "id": "spend-legacy-unconfirmed-cleanup",
+        "sheet_synced": False,
+    }
+
+    monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy])
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(
+        grocery,
+        "_current_sheet_retry_batch",
+        lambda *_args, **_kwargs: [],
+    )
+
+    async def unconfirmed_cleanup(*_args, **_kwargs):
+        raise grocery.ProcessTreeReapError("descendant state is unconfirmed")
+
+    monkeypatch.setattr(grocery, "_reconciled_sheet_snapshot", unconfirmed_cleanup)
+
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(
+            grocery.resync_sheet(grocery.ResyncBody(actor_token="resident-token"))
+        )
+
+    assert caught.value.status_code == 409
+    assert "automatic retry paused" in caught.value.detail
 
 
 def test_legacy_resync_has_one_wall_clock_deadline(monkeypatch):
@@ -1109,7 +1371,7 @@ def test_legacy_resync_has_one_wall_clock_deadline(monkeypatch):
         pytest.fail("the resync deadline must expire before Sheet I/O starts")
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1158,7 +1420,11 @@ def test_legacy_selection_passes_its_remaining_deadline_to_form(monkeypatch):
         return [0], "fkwu"
 
     monkeypatch.setattr(grocery, "serve_via_kernel", form_selection)
-    deadline = grocery.time.monotonic() + 0.5
+    deadline = (
+        grocery.time.monotonic()
+        + grocery.PROCESS_TREE_REAP_BUDGET_SECONDS
+        + 0.5
+    )
     batch = grocery._legacy_reconciliation_batch(
         [node],
         [spend],
@@ -1217,7 +1483,11 @@ def test_current_retry_selection_runs_on_form_policy():
     selected = grocery._current_sheet_retry_batch(
         rows,
         "2026-10-07T01:00:00Z",
-        deadline=grocery.time.monotonic() + 10,
+        deadline=(
+            grocery.time.monotonic()
+            + grocery.PROCESS_TREE_REAP_BUDGET_SECONDS
+            + 10
+        ),
     )
 
     assert [row["id"] for row in selected] == ["ready", "elapsed"]
@@ -1225,7 +1495,11 @@ def test_current_retry_selection_runs_on_form_policy():
     selected_after_legacy = grocery._current_sheet_retry_batch(
         [rows[-1]],
         "2026-10-07T01:00:00Z",
-        deadline=grocery.time.monotonic() + 10,
+        deadline=(
+            grocery.time.monotonic()
+            + grocery.PROCESS_TREE_REAP_BUDGET_SECONDS
+            + 10
+        ),
     )
 
     assert [row["id"] for row in selected_after_legacy] == ["yielding"]
@@ -1419,7 +1693,7 @@ def test_legacy_resync_waits_for_receipt_transaction_after_deadline(monkeypatch)
         return set(updates)
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1709,7 +1983,7 @@ def test_current_protocol_resync_skips_the_legacy_summary_preflight(monkeypatch)
         return "synced"
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [current])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1743,7 +2017,7 @@ def test_unconfigured_resync_returns_without_starting_form(monkeypatch):
         pytest.fail("an unconfigured Sheet must return before Form selection")
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [current, legacy])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [current, legacy])
     monkeypatch.setattr(grocery, "_sheet_webhook", lambda: ("", ""))
     monkeypatch.setattr(grocery, "_joined_current_sheet_retry_batch", must_not_select)
 
@@ -1791,7 +2065,11 @@ def test_current_retry_selection_excludes_synced_history(monkeypatch):
         return "synced"
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [*synced_history, current])
+    monkeypatch.setattr(
+        grocery,
+        "_all_spends",
+        lambda *, deadline=None: [*synced_history, current],
+    )
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1838,7 +2116,7 @@ def test_current_resync_stops_before_the_proxy_budget_is_exhausted(monkeypatch):
         return "synced"
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: rows)
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: rows)
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1926,7 +2204,7 @@ def test_current_resync_bounds_and_joins_receipt_write(monkeypatch):
         return set(updates)
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [current])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -1995,7 +2273,7 @@ def test_mixed_resync_advances_current_before_legacy(monkeypatch):
         return "synced"
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy, current])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -2061,7 +2339,7 @@ def test_cancelled_current_row_does_not_starve_legacy_reconciliation(monkeypatch
         return set(updates)
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy, current])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -2128,7 +2406,7 @@ def test_unavailable_current_row_defers_to_legacy_reconciliation(monkeypatch):
         return set(updates)
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: [legacy, current])
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: [legacy, current])
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )
@@ -2198,7 +2476,7 @@ def test_legacy_reconciliation_advances_in_bounded_batches(monkeypatch):
         )
 
     monkeypatch.setattr(grocery, "_require_writer", lambda _token: {"id": "m1"})
-    monkeypatch.setattr(grocery, "_all_spends", lambda: legacy)
+    monkeypatch.setattr(grocery, "_all_spends", lambda *, deadline=None: legacy)
     monkeypatch.setattr(
         grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
     )

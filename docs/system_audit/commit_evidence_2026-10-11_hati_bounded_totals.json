@@ -1,0 +1,163 @@
+{
+  "date": "2026-10-11",
+  "thread_branch": "codex/hati-bounded-totals-20261011",
+  "commit_scope": "Keep app.hati.earth Sheet balance reads inside the same-origin proxy budget by moving blocking grocery graph reads off the async event loop and bounding the complete totals handler.",
+  "files_owned": [
+    "api/app/routers/grocery.py",
+    "api/app/routers/household.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/process_tree_reaper.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_graph_layer.py",
+    "api/tests/test_household_service_board.py",
+    "api/tests/test_federation_carrier_selection.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_totals.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "task_card": {
+    "goal": "Stop slow authenticated grocery totals reads from outliving the Hati proxy and amplifying into overlapping Sheet requests.",
+    "files_allowed": [
+      "api/app/routers/grocery.py",
+      "api/app/routers/household.py",
+      "api/app/services/form_kernel_bridge.py",
+      "api/app/services/graph_service.py",
+      "api/app/services/process_tree_reaper.py",
+      "api/tests/test_grocery_ledger.py",
+      "api/tests/test_graph_layer.py",
+      "api/tests/test_household_service_board.py",
+      "api/tests/test_federation_carrier_selection.py",
+      "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_totals.json",
+      "docs/system_audit/model_executor_runs.jsonl"
+    ],
+    "done_when": [
+      "Grocery board graph reads cannot block the async event loop.",
+      "The totals wall clock starts before membership and graph reads; database, membership, balance, and reconciliation policy operations own the same absolute cancellation deadline; and the full native cross-platform reaper budget completes inside the 15-second web proxy budget.",
+      "Focused tests, local API/web verification, exact-head CI/review, rollout, public verification, and authenticated Hati balance proof pass."
+    ],
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_grocery_ledger.py tests/test_graph_layer.py tests/test_household_service_board.py tests/test_form_kernel_bridge_structure_access.py tests/test_federation_carrier_selection.py",
+      "cd api && ruff check app/routers/grocery.py app/routers/household.py app/services/form_kernel_bridge.py app/services/graph_service.py app/services/process_tree_reaper.py tests/test_grocery_ledger.py tests/test_graph_layer.py tests/test_household_service_board.py tests/test_form_kernel_bridge_structure_access.py tests/test_federation_carrier_selection.py",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-11_hati_bounded_totals.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "constraints": [
+      "Keep member authorization ahead of every private grocery response.",
+      "Keep Sheet, household, balance, token, nonce, and SSH material out of repository evidence.",
+      "Return retryable unavailability when the whole request budget is exhausted; pause automatic retry when native descendant cleanup is unconfirmed; never invent a zero balance."
+    ]
+  },
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "openai-codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": ["diagnosis", "implementation", "verification"]
+    }
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["hati-sheet-resilience", "bounded-grocery-read", "public-api-stability"],
+  "spec_ids": ["form-first-reasoning"],
+  "task_ids": ["task-2026-10-11-hati-bounded-totals"],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Production runtime events observed authenticated /api/grocery/totals responses at 24-31 seconds while the same-origin web proxy permits 15 seconds and the client permits 16 seconds.",
+    "The Hati page opened spend, sheet, shops, categories, and totals together; synchronous graph reads inside async handlers serialized those siblings on the event loop.",
+    "Abandoned totals requests continued after the proxy timeout and overlapped with client retries, amplifying the cold Sheet read instead of healing it.",
+    "After production pressure subsided, the existing second retry recovered the balance, proving Sheet availability and isolating scheduling/deadline composition as the failure.",
+    "Exact-head review found that canceling a to_thread awaiter alone leaves its database worker alive; membership and private-spend reads now carry the same absolute deadline into deadline_session, which cancels the active driver operation before the response invites retry.",
+    "Renewed exact-head review found that membership miss/error handling could start a separate ten-second Form policy call after the database deadline; the policy now receives only the remaining shared budget, reserves native child cleanup time, and is skipped as retryable after exhaustion.",
+    "A third exact-head review found the initial 0.25-second policy cleanup reserve was smaller than Windows taskkill plus communicate bounds; the membership lane now imports and reserves the native bridge's full two-step reaper budget, and a regression starts and reaps the policy before response.",
+    "A fourth exact-head review found the final balance policy still consumed the entire remaining request budget; one grocery policy-timeout helper now reserves the full native reaper budget for balance and reconciliation policies, with a started-policy endpoint regression.",
+    "A fifth exact-head review found the reaper's final communicate fallback was unbounded when descendants held pipes open; Form output now uses temporary files and every tree-termination wait is finite and included in the exported reserve.",
+    "A sixth exact-head review found that a direct Windows root kill did not prove the separately launched fkwu child had exited; the bounded reaper now retries tree-aware taskkill while ancestry is intact and fails closed when descendant termination cannot be confirmed.",
+    "A seventh exact-head review found generic policy handlers could erase the fail-closed cleanup signal and invite another request; a distinct cleanup exception now reaches HTTP 409 in membership, totals, and resync paths, which the Hati client treats as non-retryable.",
+    "An eighth exact-head review found two remaining erasure edges: final root-wait expiration now raises the same cleanup exception, and legacy reconciliation maps it to HTTP 409 outside the initial resync selection block.",
+    "No secret, token, nonce, household value, balance, private Sheet URL, or SSH material is present in this evidence."
+  ],
+  "change_files": [
+    "api/app/routers/grocery.py",
+    "api/app/routers/household.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/graph_service.py",
+    "api/app/services/process_tree_reaper.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_graph_layer.py",
+    "api/tests/test_household_service_board.py",
+    "api/tests/test_federation_carrier_selection.py",
+    "docs/system_audit/commit_evidence_2026-10-11_hati_bounded_totals.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "169 focused grocery, graph, household, kernel-bridge, and reaper tests",
+      "410 non-holdout API tests",
+      "Ruff on changed Python files",
+      "Next production build and TypeScript validation",
+      "full local worktree API/web validation",
+      "evidence schema validation",
+      "whitespace validation"
+    ],
+    "summary": "Blocking membership, graph, and kernel work is isolated from the event loop; the complete totals request is bounded before authorization begins; database reads plus membership, balance, and reconciliation policies own the same absolute deadline; native output uses temporary files; every failed tree or final root termination raises one cleanup exception, and membership, totals, current resync, and legacy resync carry it to non-retryable HTTP 409; all focused and non-holdout API proof plus production-style local API/web validation pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The first authenticated Hati totals cycle remains within the proxy boundary without starving sibling reads or leaving overlapping Sheet work behind.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/grocery/totals",
+      "GET https://app.hati.earth/api/grocery/totals",
+      "GET https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "Reload authenticated Hati and confirm the balance is visible without unavailable, retrying, connecting, or fallback state.",
+      "Observe sanitized grocery runtime events and confirm totals stays inside the same-origin proxy budget.",
+      "Run the public API/web deployment contract at the exact merged SHA."
+    ]
+  },
+  "trust_matrix": {
+    "live_failure": {
+      "path": "native_runtime_trace",
+      "grounded": true,
+      "frequency_attuned": true,
+      "sufficient": true,
+      "observed": true,
+      "reason": "Sanitized production runtime events and authenticated browser state jointly proved successful but over-budget totals reads and overlapping retries."
+    },
+    "implementation": {
+      "path": "native_attempt_then_rented_plus_repository_verification",
+      "grounded": false,
+      "frequency_attuned": true,
+      "sufficient": false,
+      "observed": false,
+      "reason": "The Form router did not return a grounded answer; OpenAI GPT-5 selected the scheduling and deadline boundary, then repository tests verified it."
+    }
+  },
+  "sovereignty_receipt": {
+    "generation": "Approximately 100% rented OpenAI GPT-5 reasoning; exact token counts are unavailable.",
+    "native_body_share": "The body supplied production runtime events, Hati UI state, route contracts, proxy budgets, and deterministic tests; it verifies but did not generate the edit.",
+    "standard_receipt": "The latency and retry amplification are observed; the worker-pool and whole-handler deadline repair remains rented reasoning with native verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting repository guards, exact-head CI/review, merge, rollout, public verification, and authenticated Hati proof."
+  }
+}

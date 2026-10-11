@@ -9,6 +9,8 @@ grants it, and an invite can only come from a resident.
 from __future__ import annotations
 
 from pathlib import Path
+import threading
+import time
 
 import pytest
 from fastapi import HTTPException
@@ -17,6 +19,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.routers import household
 from app.services.form_kernel_bridge import run_kernel
+from app.services.process_tree_reaper import ProcessTreeReapError
 
 
 @pytest.fixture
@@ -37,6 +40,30 @@ def test_member_store_failure_is_retryable_not_unauthorized(monkeypatch):
     assert exc_info.value.detail == "household membership is temporarily unavailable"
 
 
+def test_membership_cleanup_failure_pauses_automatic_retry(monkeypatch):
+    monkeypatch.setattr(
+        household.graph_service,
+        "list_nodes",
+        lambda **_kwargs: {"items": []},
+    )
+    monkeypatch.setattr(
+        household,
+        "serve_via_kernel",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ProcessTreeReapError("descendant state is unconfirmed")
+        ),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        household._require_member(
+            "still-potentially-valid",
+            _deadline=time.monotonic() + 10,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert "automatic retry paused" in exc_info.value.detail
+
+
 def test_completed_member_lookup_reserves_401_for_invalid_token(monkeypatch):
     monkeypatch.setattr(
         household.graph_service,
@@ -48,6 +75,54 @@ def test_completed_member_lookup_reserves_401_for_invalid_token(monkeypatch):
         household._require_member("authoritatively-missing")
 
     assert exc_info.value.status_code == 401
+
+
+def test_member_lookup_carries_its_absolute_database_deadline(monkeypatch):
+    observed: list[float | None] = []
+
+    def members(**kwargs):
+        observed.append(kwargs.get("_deadline"))
+        return {
+            "items": [
+                {
+                    "id": "member:bounded",
+                    "type": "household_member",
+                    "token": "bounded-token",
+                }
+            ]
+        }
+
+    monkeypatch.setattr(household.graph_service, "list_nodes", members)
+
+    member = household._require_member("bounded-token", _deadline=123.5)
+
+    assert member["id"] == "member:bounded"
+    assert observed == [123.5]
+
+
+def test_member_lookup_does_not_start_policy_after_database_deadline(monkeypatch):
+    worker_finished = threading.Event()
+
+    def members(**kwargs):
+        deadline = kwargs["_deadline"]
+        threading.Event().wait(max(0.0, deadline - time.monotonic()) + 0.001)
+        worker_finished.set()
+        return {"items": []}
+
+    def policy(*_args, **_kwargs):
+        pytest.fail("an exhausted database deadline must not start a Form worker")
+
+    monkeypatch.setattr(household.graph_service, "list_nodes", members)
+    monkeypatch.setattr(household, "serve_via_kernel", policy)
+
+    with pytest.raises(HTTPException) as exc_info:
+        household._require_member(
+            "bounded-token",
+            _deadline=time.monotonic() + 0.02,
+        )
+
+    assert exc_info.value.status_code == 503
+    assert worker_finished.is_set()
 
 
 def test_membership_lookup_status_band_runs_on_production_fkwu():

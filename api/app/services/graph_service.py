@@ -607,6 +607,8 @@ def list_nodes(
     limit: int = 50,
     offset: int = 0,
     exclude_types: frozenset[str] | None = DEDICATED_PRIVATE_NODE_TYPES,
+    *,
+    _deadline: float | None = None,
 ) -> dict[str, Any]:
     """List nodes with optional filtering.
 
@@ -620,7 +622,8 @@ def list_nodes(
     traces; this list endpoint serves the directory and presence
     surfaces, where they don't belong.
     """
-    with session() as s:
+    session_scope = deadline_session(_deadline) if _deadline is not None else session()
+    with session_scope as s:
         q = s.query(Node)
         if exclude_types:
             q = q.filter(~Node.type.in_(exclude_types))
@@ -651,7 +654,11 @@ def list_nodes(
         }
 
 
-def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
+def list_nodes_by_type_snapshot(
+    node_type: str,
+    *,
+    _deadline: float | None = None,
+) -> list[dict[str, Any]]:
     """Read every node of one type through a single database statement.
 
     Internal reconciliation callers need a stable membership view. OFFSET
@@ -659,7 +666,8 @@ def list_nodes_by_type_snapshot(node_type: str) -> list[dict[str, Any]]:
     concurrent update changes page order; one ordered SELECT receives one
     database snapshot and avoids that seam.
     """
-    with session() as s:
+    session_scope = deadline_session(_deadline) if _deadline is not None else session()
+    with session_scope as s:
         nodes = (
             s.query(Node)
             .filter(Node.type == node_type)
