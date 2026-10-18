@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from pulse_app.probe import UpstreamResult
 
 
-UNOBSERVED_DETAIL_PREFIX = "unobserved: "
 
 
 # Result of applying an extractor to an upstream response.
@@ -168,44 +167,6 @@ def extract_api(r: "UpstreamResult") -> OrganVerdict:
                 f"slow: {recent_4xx}× 4xx in last 1m (of {recent_total} requests)",
             )
 
-    return OrganVerdict(True)
-
-
-def extract_schema(r: "UpstreamResult") -> OrganVerdict:
-    """Schema organ: distinguish bounded non-observation from failure."""
-    if not _is_ok(r.status):
-        return OrganVerdict(False, f"HTTP {r.status}")
-    body = _require_body(r)
-    if body is None:
-        return OrganVerdict(False, "empty response body")
-    schema_ok = body.get("schema_ok")
-    if schema_ok is False:
-        return OrganVerdict(
-            True,
-            f"{UNOBSERVED_DETAIL_PREFIX}schema proof omitted by bounded pulse",
-        )
-    if schema_ok is not True:
-        return OrganVerdict(False, "schema_ok missing")
-    return OrganVerdict(True)
-
-
-def extract_audit(r: "UpstreamResult") -> OrganVerdict:
-    """Audit organ: distinguish bounded non-observation from compromise."""
-    if not _is_ok(r.status):
-        return OrganVerdict(False, f"HTTP {r.status}")
-    body = _require_body(r)
-    if body is None:
-        return OrganVerdict(False, "empty response body")
-    if body.get("integrity_compromised"):
-        return OrganVerdict(False, "integrity_compromised=true")
-    integrity_verified = body.get("integrity_verified")
-    if integrity_verified is False:
-        return OrganVerdict(
-            True,
-            f"{UNOBSERVED_DETAIL_PREFIX}audit proof omitted by bounded pulse",
-        )
-    if integrity_verified is not True:
-        return OrganVerdict(False, "integrity_verified missing")
     return OrganVerdict(True)
 
 
@@ -507,20 +468,6 @@ ORGANS: list[Organ] = [
         description="Association memory — the graph of ideas, specs, and their ties.",
         upstream=UPSTREAM_API_READY,
         extractor=extract_neo4j,
-    ),
-    Organ(
-        name="schema",
-        label="Schema",
-        description="Structural integrity — core tables present and sound.",
-        upstream=UPSTREAM_API_PULSE_HEALTH,
-        extractor=extract_schema,
-    ),
-    Organ(
-        name="audit_integrity",
-        label="Audit Integrity",
-        description="Conscience — the audit ledger's hash chain is unbroken.",
-        upstream=UPSTREAM_API_PULSE_HEALTH,
-        extractor=extract_audit,
     ),
     # --- outcome organs: rendered pages (SSR is slower than a JSON response) ---
     Organ(

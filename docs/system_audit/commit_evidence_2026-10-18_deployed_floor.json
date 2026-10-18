@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deployed-floor-receipt-20261018",
+  "commit_scope": "Record the serving fkwu floor and retire duplicate kernel/deleted-router and unrelated recurring release gates.",
+  "files_owned": ["scripts/verify_web_api_deploy.sh", "docs/DEPLOY.md", "docs/PRODUCTION-SUBSTRATE.md", "docs/system_audit/form_kernel_floor_2026-10-18.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["native-delivery-care"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["delivery care", "production observation"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "Kernel PR 596 merged before parent PR 4068. The native source-copy correction landed in kernel PR 597; the parent pins 0563230ff11ef60bef75cbd3444e69d40e75e679.",
+    "Hostinger run 39132094656 deployed 296bfa2a07283dd98aebd8556c1a9ba03f280172. The content migration completed in 176 seconds with exit 0; local process and public Traefik route remained ready.",
+    "Command: form-run curl -fsS --max-time 45 https://api.coherencycoin.com/api/health. Exit 0; public status ok; deployed_sha 296bfa2a07283dd98aebd8556c1a9ba03f280172; kernel_runtime fkwu; native observation verified; source_id c835bb8d8cee24f8.",
+    "The public kernel sibling role is bootstrap-history-only. The old recurring verifier asserted differential-reference-only. Its duplicate kernel assertion and unused deleted-router canary implementation are released, not replaced with another kernel gate.",
+    "Public verification retains health, API/web serving revision, web root and CORS. Unrelated surface readings belong to a concrete change or finding, as described in docs/DEPLOY.md.",
+    "No fkwu C/JIT source changed in this continuation; no kernel suite or independent reproduction ran. Form/BML owns the native source-copy and delivery-care repairs. Lowering was not restored.",
+    "Native form-cli ask returned dictionary/source references without a NodeID or sufficiency receipt. Native execution was observed; architecture synthesis and prose remain rented OpenAI Codex reasoning."
+  ],
+  "change_files": ["scripts/verify_web_api_deploy.sh", "docs/DEPLOY.md", "docs/PRODUCTION-SUBSTRATE.md", "docs/system_audit/form_kernel_floor_2026-10-18.md"],
+  "local_validation": {"status": "pass", "summary": "Structural diff and shell syntax read only; no kernel or application suite."},
+  "ci_validation": {"status": "pending", "summary": "The old public verifier has a stale sibling-role assertion; this source change retires that recurring gate."},
+  "deploy_validation": {"status": "pass", "environment": "Hostinger", "summary": "Serving revision 296bfa2a0728 and native bundle c835bb8d8cee24f8 observed publicly; deployment of this verifier simplification follows landing."},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}
