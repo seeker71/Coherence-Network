@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deploy-native-memory-care-20261018",
+  "commit_scope": "Provision the native Form image build's shared-memory surface and retire duplicate Docker runtime probes.",
+  "files_owned": ["Dockerfile.api", "docs/DEPLOY.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["native-shared-memory-capacity"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["deployment repair"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/39130139264: Dockerfile.api native build exited 135, SIGBUS, cell form/form-stdlib/bml-floor-compile.fk, resident_bytes=87109632.",
+    "Exact native build entry: cc -O2 -o fkwu runtime/fkwu-uni.c; stdin {out:/build/form-cli,force_link:1,cc:cc} to ./fkwu gate/form-cli-build-run.bml.",
+    "The pinned GCC container reports /dev/shm=64M; the VPS host reports /dev/shm=7.9G and 11Gi available memory.",
+    "runtime/fkwu-uni.c fk_store_take/fk_prog_take map POSIX shared memory; the runtime and JIT source are unchanged."
+  ],
+  "change_files": ["Dockerfile.api", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Read the exact fatal trace and shared-memory allocation source; observed host/container capacity; inspected the Dockerfile configuration diff."},
+  "ci_validation": {"status": "pending", "summary": "The repaired production image build is the focused observation; no routine kernel suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Authorized production rollout observes the repaired resource boundary."}
+}
