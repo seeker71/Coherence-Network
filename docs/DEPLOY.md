@@ -66,6 +66,12 @@ caching follows the pinned Form source, while the final API image carries the
 application revision. Git metadata and a parent-only revision change do not
 invalidate an unchanged native bundle.
 
+Publish retiring host carrier files by same-directory rename. Transfer to an
+`.incoming` name, set its mode, then rename it into place. A running Bash
+process keeps its open inode while a later release receives the new file.
+Overwriting that open file caused a parse error after a successful native build
+when a second runner synced the carrier at 13:23:51 UTC on 2026-10-18.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:

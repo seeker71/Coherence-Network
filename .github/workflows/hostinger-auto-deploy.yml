@@ -122,10 +122,10 @@ jobs:
             done
           }
           ssh_opts=(-i ~/.ssh/id_hostinger -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=2)
-          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
-          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/deploy-and-verify.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh"
-          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
-          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming"
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/deploy-and-verify.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming"
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming"
+          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming && mv ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh && mv ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh && mv ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
 
       - name: Roll forward VPS
         timeout-minutes: 40
