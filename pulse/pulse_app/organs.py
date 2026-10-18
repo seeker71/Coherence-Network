@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from pulse_app.probe import UpstreamResult
 
 
+UNOBSERVED_DETAIL_PREFIX = "unobserved: "
 
 
 # Result of applying an extractor to an upstream response.
