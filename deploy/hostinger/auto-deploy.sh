@@ -456,26 +456,10 @@ if ! git cat-file -e "${TARGET_SHA}^{commit}" 2>/dev/null; then
 fi
 git cat-file -e "${TARGET_SHA}^{commit}"
 
-# Sense whether the RUNNING API is already at the target SHA. The previous
-# guard only compared the repo's git HEAD to the target and skipped deploy
-# when they matched — but that answered the wrong question. What the field
-# needs to know is whether the CONTAINERS are serving the target code, not
-# whether the filesystem mirrors it. When a manual `git pull` on the VPS
-# advances the repo without rebuilding, subsequent deploys saw "no changes"
-# and never rebuilt, so the running API stayed on the old SHA while the
-# verification step kept failing. This query asks the living container.
-RUNNING_SHA=""
-HEALTH_JSON="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-    sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
-    2>/dev/null || true)"
-if [[ -n "$HEALTH_JSON" ]]; then
-  RUNNING_SHA="$(printf '%s' "$HEALTH_JSON" \
-    | python3 -c 'import sys, json
-try:
-    print((json.loads(sys.stdin.read()).get("deployed_sha") or "").strip())
-except Exception:
-    pass' 2>/dev/null || true)"
-fi
+# The container's immutable source label is the release identity. Reading it
+# does not execute deep health or native proof work to choose a build scope.
+RUNNING_SHA="$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
+  "$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps --status running -q api)" 2>/dev/null || true)"
 RUNNING_SHORT="${RUNNING_SHA:0:12}"
 [[ -z "$RUNNING_SHORT" ]] && RUNNING_SHORT="unknown"
 

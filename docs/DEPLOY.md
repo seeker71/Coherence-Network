@@ -54,6 +54,12 @@ observation. Independent reproducibility and authenticated witness work remain
 separate claims: their identity checks stay intact, and no automatic second
 kernel build or stale observer workflow pin is imposed on every deployment.
 
+The native build enumerates its private source copy with Form's
+`source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
+reads the serving container's immutable revision label. A failed build may
+advance the VPS checkout without advancing the running image, so the checkout
+alone does not establish the deployed comparison base.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:

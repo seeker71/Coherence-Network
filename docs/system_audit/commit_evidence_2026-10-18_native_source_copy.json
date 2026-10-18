@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deploy-native-source-copy-20261018",
+  "commit_scope": "Pin the landed native source-copy repair and read deployed image identity directly at the existing Docker carrier.",
+  "files_owned": ["form", "deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["native-source-copy", "observed-deployment-identity"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["native build repair", "deployment"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "Kernel #597 merged at 0d3333a713a6e227f566d231633bf0a5274ae8ce; gitlink 0563230ff11ef60bef75cbd3444e69d40e75e679 is included.",
+    "The tmpfs repair passed the prior SIGBUS point. The next exact failure was: fatal: not a git repository: /build/form/../../../177737/fs/modules/form; gate/form-cli-build-run.bml source missing in the private copy.",
+    "The native source-tree/copy observation returned [native source copy, 2228, gate and runtime present, private copy released].",
+    "VPS image inspection returned 0b99ef36884043565cd45a0df85872f931e8f2c3 with RestartCount=0 while its repo had advanced to a0413e758; the previous deep-health query returned no revision. Docker's immutable label now supplies that comparison base.",
+    "GitHub run 39130377977 exhausted eight SSH port-22 connection timeouts. The same tracked deployment organ is continued through the working local SSH carrier; no native build path is bypassed."
+  ],
+  "change_files": ["form", "deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Focused native copy observed once; read the actual image label; inspect changed shell syntax and source diff."},
+  "ci_validation": {"status": "pending", "summary": "The production native build supplies the integration observation; no kernel suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The native build runs from a source snapshot and release scope starts from the image actually serving requests.", "public_endpoints": ["https://api.coherencycoin.com/api/ping", "https://coherencycoin.com/api/health-proxy"], "test_flows": ["Build the pinned native image, deploy it, and read the public API/web revision."]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The authorized production build observes the repaired operation."}
+}
