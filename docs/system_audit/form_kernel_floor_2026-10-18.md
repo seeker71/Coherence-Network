@@ -1,9 +1,8 @@
 # fkwu/Form floor — 2026-10-18
 
 This reading follows the current parent `origin/main` and coherence-kernel
-`cd1f4377b`. It treats fkwu as the only kernel. Earlier Go, Rust, and TypeScript
-kernels are bootstrap history, not runtime choices, fallbacks, or recurring
-validation targets.
+`1e82aeb14`. It treats fkwu as the only kernel. Retired carriers are bootstrap
+history, not runtime choices, fallbacks, or recurring validation targets.
 
 ## Executable floor
 
