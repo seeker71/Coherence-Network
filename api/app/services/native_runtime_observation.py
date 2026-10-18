@@ -11,7 +11,6 @@ import re
 import secrets
 import subprocess
 import threading
-import time
 from typing import Any
 
 
@@ -23,10 +22,8 @@ FORM_CLI_BUILD_ID = "coherence-kernel-fkwu-native-v2"
 FORM_CLI_CHALLENGE_PROTOCOL = "carrier-challenge-v2"
 _HEX16 = re.compile(r"^[0-9a-f]{16}$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
-_CACHE_SECONDS = 15.0
 _CACHE_LOCK = threading.Lock()
 _CACHE: dict[str, Any] | None = None
-_CACHE_AT = 0.0
 _CACHE_FINGERPRINT = ""
 
 
@@ -379,17 +376,15 @@ def _observe_uncached(root: Path) -> dict[str, Any]:
 
 
 def observe_native_runtime(*, force: bool = False) -> dict[str, Any]:
-    """Run or return a short-lived, digest-invalidated native challenge."""
-    global _CACHE, _CACHE_AT, _CACHE_FINGERPRINT
+    """Reuse native evidence while carrier bytes hold; explicit care can refresh."""
+    global _CACHE, _CACHE_FINGERPRINT
     root = _root()
     fingerprint = _artifact_fingerprint(root)
-    now = time.monotonic()
     with _CACHE_LOCK:
         if (
             not force
             and _CACHE is not None
             and fingerprint == _CACHE_FINGERPRINT
-            and now - _CACHE_AT <= _CACHE_SECONDS
         ):
             return json.loads(json.dumps(_CACHE))
         try:
@@ -405,7 +400,6 @@ def observe_native_runtime(*, force: bool = False) -> dict[str, Any]:
                 "error": f"{type(exc).__name__}:{exc}",
             }
         _CACHE = result
-        _CACHE_AT = now
         _CACHE_FINGERPRINT = fingerprint
         return json.loads(json.dumps(result))
 
@@ -427,8 +421,7 @@ def observe_native_runtime_challenge(challenge_input: str) -> dict[str, Any]:
 
 def reset_native_runtime_observation_cache() -> None:
     """Test/deploy hook: discard the cached challenge immediately."""
-    global _CACHE, _CACHE_AT, _CACHE_FINGERPRINT
+    global _CACHE, _CACHE_FINGERPRINT
     with _CACHE_LOCK:
         _CACHE = None
-        _CACHE_AT = 0.0
         _CACHE_FINGERPRINT = ""

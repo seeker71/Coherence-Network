@@ -62,6 +62,14 @@ Pulse's schema/audit proof registrations have retired for the same reason:
 bounded health does not observe those claims. Native `pulse_proof_care.bml`
 preserves the store and archives the two stale silences as retired proof work,
 not as successful observations.
+The compatibility health carrier reuses its native observation while artifact
+bytes hold. A fifteen-second challenge-expiry timer has retired; changed carrier
+bytes or explicit care give the observation work, not elapsed time alone.
+Retirement includes persisted deployment configuration as well as containers.
+The native `deployment_compose_care.bml` action removes released router service
+owners from the host's Compose model, preserving a private source backup and
+publishing atomically. The shared unobserved-sample marker remains available to
+pulse history analysis after the recurring proof probes retire.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
