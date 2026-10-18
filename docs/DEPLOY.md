@@ -39,6 +39,21 @@ arenas grow with the Form compilation; Docker's default 64 MiB mount caused
 on that shared-memory surface. Image assembly verifies artifact integrity;
 runtime observations belong to the changed claim and release receipt.
 
+The VPS's former five-minute redeploy cron is retired too. The Form/BML
+`deployment_schedule_care.bml` action preserves the prior crontab on the host
+and removes only the recurring deploy entry. Other schedules stay with their
+owners.
+
+Retrieval/index maintenance follows changed sources. The former post-rollout
+Python bootstrap and text-format grounding gate have retired: they duplicated
+the content migration and asserted the released host CLI's output contract.
+Keep retrieval findings as native Form work with their source and owner.
+
+Public deployment completes with the serving revision and API/web route
+observation. Independent reproducibility and authenticated witness work remain
+separate claims: their identity checks stay intact, and no automatic second
+kernel build or stale observer workflow pin is imposed on every deployment.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:

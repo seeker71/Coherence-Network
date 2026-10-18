@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deploy-care-continuation-20261018",
+  "commit_scope": "Carry recurring deployment and retrieval policies as guides and native care; retain the release's serving revision and public route observation.",
+  "files_owned": ["api/app/form_recipes/deployment_schedule_care.bml", "deploy/hostinger/auto-deploy.sh", ".github/workflows/hostinger-auto-deploy.yml", "docs/DEPLOY.md"],
+  "change_intent": "runtime_feature",
+  "idea_ids": ["delivery-care-at-source"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["native care", "deployment"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "The VPS root crontab contained a five-minute auto-deploy under /tmp/coh-deploy.lock; the native BML action retired that entry, retained other schedules, and preserved a private host backup.",
+    "cd form; stdin host/key/backup object to ./fkwu ../api/app/form_recipes/deployment_schedule_care.bml returned: Recurring deploy retired; other schedules retained; prior crontab preserved on host.",
+    "The removed bootstrap_and_verify_local_grounding function repeated complete Python substrate/RAG bootstrap after the source migration and required old host CLI trust/grounded text lines.",
+    "The removed automatic observer call pinned d17b1453525899e089ebb70d762dcdbe7fa37fae; independent observation retains its original identity checks and becomes separate guided work.",
+    "fkwu runtime and JIT source are unchanged."
+  ],
+  "change_files": ["api/app/form_recipes/deployment_schedule_care.bml", "deploy/hostinger/auto-deploy.sh", ".github/workflows/hostinger-auto-deploy.yml", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Observed the native Form/BML care effect once; retained host-child input/output privately; inspected the retiring host-code diff and shell syntax."},
+  "ci_validation": {"status": "pending", "summary": "Production rollout is the changed release observation; no broad suite or kernel validation."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "Each requested release deploys once; useful retrieval and independent witness work stays with its owner as guidance.", "public_endpoints": ["https://api.coherencycoin.com/api/ping", "https://coherencycoin.com/api/health-proxy"], "test_flows": ["Observe serving revision and public API/web routes after rollout."]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Authorized rollout is in progress; this field records progress rather than gating delivery."}
+}

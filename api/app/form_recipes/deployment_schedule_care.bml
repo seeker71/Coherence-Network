@@ -1,0 +1,29 @@
+// Retire only the recurring deploy line; preserve other host schedules and
+// retain the complete prior crontab privately on the deployment host.
+// stdin: {"host":"root@host","key":"/local/key/path","backup":"/host/backup/path"}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+section [form.bml] {
+ class DeploymentScheduleCare {
+  def dsc-get(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
+  def dsc-argv(doc, args) = append(["ssh", "-i", dsc-get(doc, "key"), "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", dsc-get(doc, "host")], args);
+  def dsc-run(doc, step, args, input) {
+   let result = hch-run(step, dsc-argv(doc, args), input, hch-by(30000));
+   (Comparable) result[0] == 0 ? result[1] : form_error("deployment schedule care: " ++ step ++ " failed; retained host-child trace");
+  }
+  def dsc-deploy?(line) = str_find(line, "/tmp/coh-deploy.lock", 0) >= 0 && str_find(line, "auto-deploy.sh", 0) >= 0;
+  def dsc-apply(doc, before, lines) {
+   let retained = filter(line => !dsc-deploy?(line), lines);
+   let backup = dsc-run(doc, "deployment-cron-backup", ["tee", dsc-get(doc, "backup")], before);
+   let written = dsc-run(doc, "deployment-cron-retire", ["crontab", "-"], str-spans(map(line => line ++ "\n", retained)));
+   let after = dsc-run(doc, "deployment-cron-read-after", ["crontab", "-l"], "");
+   any?(line => dsc-deploy?(line), split-on(after, "\n")) ? form_error("deployment schedule care: recurring deploy still present") : "Recurring deploy retired; other schedules retained; prior crontab preserved on host.";
+  }
+  def dsc-care(doc) {
+   let before = dsc-run(doc, "deployment-cron-read", ["crontab", "-l"], "");
+   let lines = filter(line => len(line) > 0, split-on(before, "\n"));
+   any?(line => dsc-deploy?(line), lines) ? dsc-apply(doc, before, lines) : "Recurring deploy already retired; other schedules retained.";
+  }
+ }
+ let doc = parse-json("deployment-schedule-care", stdin-text());
+ len(dsc-get(doc, "host")) > 0 && len(dsc-get(doc, "key")) > 0 && len(dsc-get(doc, "backup")) > 0 ? dsc-care(doc) : form_error("deployment schedule care: host, key and backup are required");
+}
