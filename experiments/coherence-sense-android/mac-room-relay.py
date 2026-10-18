@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # mac-room-relay.py — the persistent room-ear relay (Track B). The phone's fixed door: it POSTs a clip
 # of room audio to /hear, the relay turns it into WORDS (whisper.cpp) and an ANSWER on the body-first
-# path (scripts/form_cli_ask.sh — grounds in the body, escalates to the oracle only when local is not
+# path (bin/form-cli ask+ — grounds in the body, escalates to the oracle only when local is not
 # enough), and returns both. Thin CARRIER: the engines are the proven body, this only relays.
 #
 #   phone audio -> POST /hear -> whisper (audio->text) -> form_cli_ask (text->answer) -> {transcript, answer}
@@ -10,7 +10,14 @@
 # Test: curl --data-binary @clip.wav http://localhost:8910/hear
 # Local only by default (binds 0.0.0.0 so the phone on the LAN can reach it); nothing leaves the Mac
 # except the question the body-first agent already answers locally.
-import json, os, subprocess, sys, tempfile
+import base64
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.environ.get("COHERENCE_ROOT") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -26,7 +33,7 @@ def _best_model():
     return _en
 MODEL = os.environ.get("ROOM_EAR_MODEL", _best_model())
 WHISPER = os.environ.get("ROOM_EAR_WHISPER", "whisper-cli")
-ASK = os.path.join(ROOT, "scripts", "form_cli_ask.sh")
+ASK = os.path.join(ROOT, "bin", "form-cli")
 PORT = int(os.environ.get("ROOM_RELAY_PORT", "8910"))
 DEFAULT_LANG = os.environ.get("ROOM_EAR_LANG", "auto")  # auto-detect; or force e.g. "pt" for Brazilian
 
@@ -40,23 +47,26 @@ def _is_noise(t):
     if t[0] in "[(" or "BLANK_AUDIO" in t.upper():
         return True
     toks = t.split()
-    if len(toks) >= 4 and len(set(w.strip(".,%/ ").lower() for w in toks)) <= 2:
+    if len(toks) >= 4 and len({w.strip(".,%/ ").lower() for w in toks}) <= 2:
         return True
     alpha = sum(c.isalpha() for c in t)
-    if alpha < max(3, int(len(t) * 0.4)):
-        return True
-    return False
+    return alpha < max(3, int(len(t) * 0.4))
 
 
 def transcribe(wav_path, lang="auto"):
     # -ng = CPU (no GPU): whisper's Metal init HANGS under launchd's minimal env; CPU is ~8s/pass, reliable.
     # -l auto detects the spoken language (English, Portuguese, ...); a forced lang sharpens accuracy.
     try:
-        out = subprocess.run([WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-l", lang or "auto"],
-                             capture_output=True, text=True, timeout=90).stdout
+        out = subprocess.run(
+            [WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-l", lang or "auto"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        ).stdout
         text = " ".join(out.split()).strip()
         return "" if _is_noise(text) else text
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError):
         return ""
 
 
@@ -64,23 +74,28 @@ def translate(wav_path):
     # whisper --translate renders any spoken language into English, so a non-English room is understandable.
     # Returns "" for English/near-silence (the source transcript already serves); a real translation else.
     try:
-        out = subprocess.run([WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-tr"],
-                             capture_output=True, text=True, timeout=90).stdout
+        out = subprocess.run(
+            [WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-tr"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        ).stdout
         text = " ".join(out.split()).strip()
         return "" if _is_noise(text) else text
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return ""
 
 
 def _openrouter_key():
-    import json as _j
     try:
-        k = _j.load(open(os.path.expanduser("~/.coherence-network/keys.json")))
+        with open(os.path.expanduser("~/.coherence-network/keys.json"), encoding="utf-8") as handle:
+            k = json.load(handle)
         o = k.get("openrouter")
         if isinstance(o, dict):
             o = o.get("api_key")
         return o or os.environ.get("OPENROUTER_API_KEY", "")
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return os.environ.get("OPENROUTER_API_KEY", "")
 
 
@@ -104,36 +119,34 @@ def _parse_scene(msg):
 
 def see_local(jpeg_bytes):
     # LOCAL sovereign vision — ollama VLM on the Mac (no key, no cost, no egress). Tried first.
-    import base64, json as _j, urllib.request
     b64 = base64.b64encode(jpeg_bytes).decode()
-    body = _j.dumps({"model": EYE_LOCAL, "prompt": EYE_PROMPT, "images": [b64], "stream": False}).encode()
+    body = json.dumps({"model": EYE_LOCAL, "prompt": EYE_PROMPT, "images": [b64], "stream": False}).encode()
     req = urllib.request.Request(OLLAMA + "/api/generate", data=body,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as r:
-        out = _j.load(r)
+        out = json.load(r)
     scene, objects = _parse_scene(out.get("response", ""))
     return {"scene": scene, "objects": objects, "model": EYE_LOCAL, "where": "local"}
 
 
 def see_remote(jpeg_bytes):
     # REMOTE oracle fallback — OpenRouter VLM (needs a key/credit; free tiers are throttled).
-    import base64, json as _j, urllib.request
     key = _openrouter_key()
     if not key:
         return {"scene": "", "objects": [], "error": "no local vision + no openrouter key"}
     b64 = base64.b64encode(jpeg_bytes).decode()
-    body = _j.dumps({"model": EYE_MODEL, "max_tokens": 200, "messages": [{"role": "user", "content": [
+    body = json.dumps({"model": EYE_MODEL, "max_tokens": 200, "messages": [{"role": "user", "content": [
         {"type": "text", "text": EYE_PROMPT},
         {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}]}]}).encode()
     req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=body,
                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=40) as r:
-            out = _j.load(r)
+            out = json.load(r)
         scene, objects = _parse_scene(out["choices"][0]["message"]["content"])
         return {"scene": scene, "objects": objects, "model": EYE_MODEL, "where": "remote"}
-    except Exception as e:
-        return {"scene": "", "objects": [], "error": str(e)[:120]}
+    except (KeyError, OSError, TypeError, json.JSONDecodeError, urllib.error.URLError) as exc:
+        return {"scene": "", "objects": [], "error": str(exc)[:120]}
 
 
 def see(jpeg_bytes):
@@ -145,8 +158,8 @@ def see(jpeg_bytes):
         r = see_local(jpeg_bytes)
         if r.get("scene"):
             return r
-    except Exception:
-        pass
+    except (OSError, TimeoutError, json.JSONDecodeError, urllib.error.URLError):
+        return see_remote(jpeg_bytes)
     return see_remote(jpeg_bytes)
 
 
@@ -154,12 +167,18 @@ def answer(text):
     if not text:
         return ""
     try:
-        out = subprocess.run(["bash", ASK, text], capture_output=True, text=True, timeout=12).stdout
-        # form_cli_ask prints a trust header line first; keep the body after it
+        out = subprocess.run(
+            [ASK, "ask+", "--timeout", "12", text],
+            capture_output=True,
+            text=True,
+            timeout=12,
+            check=False,
+        ).stdout
+        # Trust rows stay on stderr; stdout is the answer payload.
         lines = [l for l in out.splitlines() if l.strip()]
         body = [l for l in lines if not l.startswith("trust ") and l.strip() != "?"]
         return "\n".join(body).strip()
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError):
         return ""
 
 
@@ -197,10 +216,10 @@ class Relay(BaseHTTPRequestHandler):
         data = self.rfile.read(n) if n else b""
         if not data:
             return self._send(400, {"error": "empty body"})
-        wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as wav_file:
+            wav_file.write(data)
+            wav = wav_file.name
         try:
-            with open(wav, "wb") as f:
-                f.write(data)
             text = transcribe(wav, lang)
             # translation: English rendering when the speech wasn't English; "" when it matches (English/silence)
             trans = translate(wav) if (text and not text.isascii()) else ""  # skip for English
@@ -209,8 +228,10 @@ class Relay(BaseHTTPRequestHandler):
             ans = answer(text) if os.environ.get("ROOM_EAR_ANSWER", "0") == "1" else ""  # perception-fast default; Sema's reply is empty under cold launchd + speak-turn-gated anyway
             return self._send(200, {"transcript": text, "translation": trans, "answer": ans, "lang": lang})
         finally:
-            try: os.remove(wav)
-            except Exception: pass
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
 
     def log_message(self, *a):
         pass

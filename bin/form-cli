@@ -68,14 +68,12 @@ form-cli — the one door (local-first, Form-native)
   form-cli deployment-witness-ask "<question>"
         bounded release-observer lane: the same native ranker and trust gate over
         the current one-row deployment WITNESS index
-  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate] [--timeout N]
+  form-cli ask+ [--remote "claude -p"] [--timeout N] "<question>"
         explicit escalating ask: local-first, then the four-way-proven sufficiency gate
-        (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
-        subscription oracle when local is not enough. Sovereignty-first by default
-        (a usable local answer stands; a local failure escalates); --judge-gate adds
-        the judge model as the content scorer — claude-code quality at its latency.
-        Prints a live trust row per query to stderr (path / grounded / freq / suffic —
-        native vs rented); pipe the answer with 2>/dev/null to drop the row
+        (form-cli-sufficiency.fk via the canonical staged native trace) authorizes a
+        subscription-oracle crossing only when the local body is not enough.
+        Prints the kernel-authored native trust row and, on a real crossing, a
+        separate rented-step row whose body-only signals remain zero.
   form-cli stats
         dashboard: learning · models · tools · tool->native · local/remote oracle
         (counts read from the body's records; stats by form-cli-stats.fk, four-way)
@@ -363,7 +361,154 @@ ask_native_local() {
     exit 5
   fi
   printf '%s\n' "$trust_line" >&2
+  ask_log="$home/.coherence-network/form-cli-asks.jsonl"
+  trust_path="${trust_line#*path:}"; trust_path="${trust_path%% *}"
+  trust_grounded="${trust_line#*grounded:}"; trust_grounded="${trust_grounded%% *}"
+  trust_freq="${trust_line#*freq:}"; trust_freq="${trust_freq%% *}"
+  trust_suffic="${trust_line#*suffic:}"; trust_suffic="${trust_suffic%% *}"
+  trust_observed="${trust_line#*observed:}"; trust_observed="${trust_observed%% *}"
+  trust_decision="${trust_line#*decision:}"; trust_decision="${trust_decision%% *}"
+  trust_reason="${trust_line#*reason:}"; trust_reason="${trust_reason%% *}"
+  trust_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if ! printf '{"event":"trust","at":"%s","query_key":"%s","path":"%s","grounded":"%s","freq":"%s","suffic":"%s","observed":"%s","decision":"%s","reason":"%s"}\n' \
+      "$trust_at" "$query_key" "$trust_path" "$trust_grounded" "$trust_freq" \
+      "$trust_suffic" "$trust_observed" "$trust_decision" "$trust_reason" >>"$ask_log"; then
+    echo "form-cli ask: could not append the native trust observation" >&2
+  else
+    chmod 600 "$ask_log" 2>/dev/null || true
+  fi
   tail -n +2 "$trace_out"
+}
+
+run_remote_with_timeout() {
+  timeout="$1"
+  remote_command="$2"
+  prompt_file="$3"
+  py="$(python_bridge)"
+  "$py" - "$timeout" "$remote_command" "$prompt_file" <<'PY'
+import subprocess
+import sys
+
+timeout = float(sys.argv[1])
+command = sys.argv[2]
+prompt_path = sys.argv[3]
+with open(prompt_path, "rb") as prompt:
+    try:
+        proc = subprocess.run(
+            ["env", "-u", "ANTHROPIC_API_KEY", "bash", "-lc", command],
+            stdin=prompt,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"form-cli ask+: remote timeout after {timeout:g}s", file=sys.stderr)
+        raise SystemExit(124)
+raise SystemExit(proc.returncode)
+PY
+}
+
+record_remote_crossing() {
+  status="$1"
+  query_key="$2"
+  reason="$3"
+  home="${HOME:-$ROOT}"
+  ask_log="$home/.coherence-network/form-cli-asks.jsonl"
+  crossing_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if ! printf '{"event":"remote","at":"%s","query_key":"%s","path":"rented","grounded":"no","freq":"unknown","suffic":"no","observed":"no","status":"%s","reason":"%s"}\n' \
+      "$crossing_at" "$query_key" "$status" "$reason" >>"$ask_log"; then
+    echo "form-cli ask+: could not append the remote crossing observation" >&2
+  else
+    chmod 600 "$ask_log" 2>/dev/null || true
+  fi
+}
+
+ask_native_escalating() {
+  remote="claude -p"
+  ask_timeout="30"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --remote)
+        [ "$#" -ge 2 ] || { echo "form-cli ask+: --remote needs a command" >&2; return 2; }
+        remote="$2"; shift 2 ;;
+      --timeout)
+        [ "$#" -ge 2 ] || { echo "form-cli ask+: --timeout needs seconds" >&2; return 2; }
+        ask_timeout="$2"; shift 2 ;;
+      --) shift; break ;;
+      -m|--model|-j|--judge|--trust|--retries|--judge-gate)
+        echo "form-cli ask+: local model/judge controls are retired; the native sufficiency gate owns escalation" >&2
+        return 2 ;;
+      -*)
+        echo "form-cli ask+: unknown option: $1" >&2
+        return 2 ;;
+      *) break ;;
+    esac
+  done
+  case "$ask_timeout" in
+    ''|*[!0-9.]*)
+      echo "form-cli ask+: --timeout must be numeric seconds" >&2
+      return 2 ;;
+  esac
+  q="$*"
+  [ -n "$q" ] || { echo "usage: form-cli ask+ [--remote CMD] [--timeout N] \"question\"" >&2; return 2; }
+
+  work="$(mktemp -d)" || return 3
+  local_out="$work/local.out"
+  local_err="$work/local.err"
+  remote_prompt="$work/remote.prompt"
+  remote_out="$work/remote.out"
+  remote_err="$work/remote.err"
+  query_file="$work/query"
+  printf '%s' "$q" >"$query_file"
+  py="$(python_bridge)"
+  query_key="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$query_file")"
+
+  if (ask_native_local "$q") >"$local_out" 2>"$local_err"; then
+    :
+  else
+    rc="$?"
+    cat "$local_err" >&2
+    rm -rf "$work"
+    return "$rc"
+  fi
+  cat "$local_err" >&2
+  trust_line=""
+  while IFS= read -r line; do
+    case "$line" in trust\ \ *) trust_line="$line" ;; esac
+  done <"$local_err"
+  if [ -z "$trust_line" ]; then
+    echo "form-cli ask+: canonical native ask returned no trust row" >&2
+    rm -rf "$work"
+    return 5
+  fi
+  case "$trust_line" in
+    *"decision:escalate"*) ;;
+    *)
+      cat "$local_out"
+      rm -rf "$work"
+      return 0 ;;
+  esac
+
+  trust_reason="${trust_line#*reason:}"; trust_reason="${trust_reason%% *}"
+  {
+    printf 'Question:\n%s\n\nNative body trust row:\n%s\n\nNative body result:\n' "$q" "$trust_line"
+    cat "$local_out"
+    printf '\nAnswer the question. Treat the native result as attributed repository evidence, preserve its uncertainty, and do not claim native grounding for your own synthesis.\n'
+  } >"$remote_prompt"
+
+  if run_remote_with_timeout "$ask_timeout" "$remote" "$remote_prompt" >"$remote_out" 2>"$remote_err"; then
+    cat "$remote_err" >&2
+    record_remote_crossing "served" "$query_key" "$trust_reason"
+    echo "trust  path:rented  grounded:no  freq:unknown  freq-source:unmeasured  suffic:no  observed:no  -> rented  decision:served  reason:native-escalation" >&2
+    cat "$remote_out"
+    rm -rf "$work"
+    return 0
+  else
+    rc="$?"
+  fi
+  cat "$remote_err" >&2
+  record_remote_crossing "failed" "$query_key" "$trust_reason"
+  echo "trust  path:rented  grounded:no  freq:unknown  freq-source:unmeasured  suffic:no  observed:no  -> rented  decision:failed  reason:remote-error" >&2
+  rm -rf "$work"
+  return "$rc"
 }
 
 cmd="${1:-}"; shift 2>/dev/null || true
@@ -372,12 +517,12 @@ case "$cmd" in
   help|-h|--help) usage ;;
   repl)      b="$(ensure_native_cli)" || exit "$?"; cd "${HOME:-$ROOT}" && exec "$b" ;;
   -p|--print) ask_native_local "$@" ;;  # one-shot print mode uses the local fkwu staged ask carrier
-  -*)        exec bash "$ROOT/scripts/form_cli_ask.sh" "$cmd" "$@" ;; # ask flags (-m/-j/--remote/...) -> Form-native ask carrier
+  -*)        ask_native_escalating "$cmd" "$@" ;;
   ask)       ask_native_local "$@" ;;  # default ask is local fkwu staged RAG only
   ask-file)  ask_native_local --query-file "${1:-}" ;;
   deployment-witness-ask) ask_native_local --deployment-witness "$@" ;;
   ask-staged-model-call) exec bash "$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$@" ;;
-  ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
+  ask+)      ask_native_escalating "$@" ;;
   grounded)  run_native_cli "grounded $*" ;;
   rag-status) run_native_cli "rag-status" ;;
   synthesis-status|model-status) model_status ;;

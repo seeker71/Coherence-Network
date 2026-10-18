@@ -12,7 +12,7 @@
 #
 # Usage: bash experiments/coherence-sense-android/install-room-relay-launchd.sh [COHERENCE_ROOT]
 set -euo pipefail
-ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"   # repo root (for scripts/form_cli_ask.sh)
+ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"   # repo root (for bin/form-cli)
 PRES="$HOME/.coherence-presence"; mkdir -p "$PRES"
 PY="$(command -v python3 || echo /opt/homebrew/bin/python3)"
 PATH_LINE="$(dirname "$PY"):/usr/bin:/bin:/usr/sbin:/sbin"

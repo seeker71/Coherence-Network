@@ -339,7 +339,7 @@ async def pulse_health():
 
 
 @router.get("/health", response_model=HealthResponse, summary="Return API health status")
-async def health(
+def health(
     observation_nonce: Annotated[
         str | None,
         Query(pattern=r"^[A-Za-z0-9_-]{43}$"),
@@ -444,20 +444,12 @@ async def health(
     witness = None
     witness_fresh = False
     try:
-        from app.services.deployment_observation import (
-            latest_deployment_observation,
-            verify_deployment_observation,
-        )
+        from app.services.deployment_observation import latest_deployment_observation
+
         with unified_db.session() as sess:
             witness = latest_deployment_observation(sess, now=now, allow_expired=True)
             if witness is not None:
-                verify_deployment_observation(
-                    sess,
-                    witness["node_id"],
-                    expected_answer_key=witness["answer_key"],
-                    now=now,
-                )
-                witness_fresh = True
+                witness_fresh = int(witness["expires_epoch"]) >= int(now.timestamp())
     except Exception:
         witness_fresh = False
 

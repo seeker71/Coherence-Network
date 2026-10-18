@@ -7,11 +7,15 @@ exclusively in the pinned ``form/`` submodule.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
+from sqlalchemy import tuple_
 from sqlalchemy.orm import Session
 
 from app.services.substrate.kernel import NamedCell, NodeID, lookup_node
+from app.services.substrate.orm import SubstrateNodeORM
+from app.services.substrate.substrate_strings import SubstrateStringORM
 
 
 def parse_node_id(value: str) -> NodeID:
@@ -63,7 +67,10 @@ def ctor_field_lookup(session: Session, ctor: Any, field: str) -> Any:
         return None
     for binding in node_children(session, ctor):
         binding_category = node_category(session, binding)
-        if binding_category.type_ != RBasic.BLOCK.value or binding_category.instance != 3:
+        if (
+            binding_category.type_ != RBasic.BLOCK.value
+            or binding_category.instance != 3
+        ):
             continue
         children = node_children(session, binding)
         if len(children) != 2:
@@ -79,6 +86,134 @@ def ctor_field_lookup(session: Session, ctor: Any, field: str) -> Any:
         except (ValueError, AttributeError):
             return children[1]
     return None
+
+
+def _node_coordinates(node: NodeID) -> tuple[int, int, int, int]:
+    return node.package, node.level, node.type_, node.instance
+
+
+def _binding_rows(
+    session: Session,
+    binding_ids: list[NodeID],
+) -> dict[tuple[int, int, int, int], SubstrateNodeORM]:
+    coordinates = [_node_coordinates(node) for node in binding_ids]
+    rows = (
+        session.query(SubstrateNodeORM)
+        .filter(
+            tuple_(
+                SubstrateNodeORM.package,
+                SubstrateNodeORM.level,
+                SubstrateNodeORM.type_,
+                SubstrateNodeORM.instance,
+            ).in_(coordinates)
+        )
+        .all()
+    )
+    return {_node_coordinates(NodeID(row.package, row.level, row.type_, row.instance)): row for row in rows}
+
+
+def _structured_bindings(
+    binding_ids: list[NodeID],
+    rows_by_node: dict[tuple[int, int, int, int], SubstrateNodeORM],
+) -> list[tuple[NodeID, NodeID]]:
+    from app.services.substrate.category import RBasic
+
+    bindings: list[tuple[NodeID, NodeID]] = []
+    for binding in binding_ids:
+        row = rows_by_node.get(_node_coordinates(binding))
+        if row is None or not row.serialized:
+            continue
+        parts = row.serialized.split("+")
+        category = parse_node_id(parts[0])
+        if category.type_ != RBasic.BLOCK.value or category.instance != 3:
+            continue
+        if len(parts) == 3:
+            bindings.append((parse_node_id(parts[1]), parse_node_id(parts[2])))
+    return bindings
+
+
+def _binding_strings(
+    session: Session,
+    bindings: list[tuple[NodeID, NodeID]],
+) -> dict[int, str]:
+    from app.services.substrate.category import Level, RType
+
+    instances = {
+        node.instance
+        for binding in bindings
+        for node in binding
+        if node.level == Level.TRIVIAL and node.type_ in (RType.STRING, RType.SLUG)
+    }
+    if not instances:
+        return {}
+    return {
+        row.instance: row.value
+        for row in session.query(SubstrateStringORM)
+        .filter(SubstrateStringORM.instance.in_(instances))
+        .all()
+    }
+
+
+def _project_batched_trivial(node: NodeID, strings: dict[int, str]) -> Any:
+    from app.services.substrate.category import Level, RType
+
+    if node.level != Level.TRIVIAL:
+        raise ValueError
+    if node.type_ == RType.NULL:
+        return None
+    if node.type_ == RType.BOOL:
+        return node.instance == 1
+    if node.type_ == RType.INTEGER:
+        return node.instance - 1 if node.instance > 0 else 0
+    if node.type_ in (RType.STRING, RType.SLUG):
+        return strings.get(node.instance, "")
+    raise ValueError
+
+
+def ctor_fields(
+    session: Session,
+    ctor: Any,
+    fields: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Project a structured CTOR in a constant number of database reads.
+
+    ``ctor_field_lookup`` is the convenient single-field lens. Calling it for
+    every field in a record repeatedly walks the complete binding tree and
+    turns an N-field projection into O(N²) node lookups. Runtime records such
+    as deployment witnesses are whole values, so read their CTOR, bindings,
+    and string leaves as three set-based queries instead.
+    """
+    from app.services.substrate.category import RBasic
+
+    if ctor is None or not isinstance(ctor, NodeID):
+        return {}
+    ctor_row = lookup_node(session, ctor)
+    if ctor_row is None or not ctor_row.serialized:
+        return {}
+    ctor_parts = ctor_row.serialized.split("+")
+    category = parse_node_id(ctor_parts[0])
+    if category.type_ != RBasic.BLOCK.value:
+        return {}
+
+    binding_ids = [parse_node_id(part) for part in ctor_parts[1:]]
+    if not binding_ids:
+        return {}
+    bindings = _structured_bindings(binding_ids, _binding_rows(session, binding_ids))
+    strings = _binding_strings(session, bindings)
+    requested = set(fields) if fields is not None else None
+    projected: dict[str, Any] = {}
+    for key_node, value_node in bindings:
+        try:
+            key = _project_batched_trivial(key_node, strings)
+        except ValueError:
+            continue
+        if not isinstance(key, str) or (requested is not None and key not in requested):
+            continue
+        try:
+            projected[key] = _project_batched_trivial(value_node, strings)
+        except ValueError:
+            projected[key] = value_node
+    return projected
 
 
 def resolve_access(session: Session, target: Any, field: str) -> Any:

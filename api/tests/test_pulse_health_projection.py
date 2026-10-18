@@ -1,11 +1,18 @@
 """The continuous pulse witness uses bounded health, not deep runtime proof."""
 
+import inspect
+
 import httpx
 import pytest
 
 from app.main import app
 from app.routers import health as health_router
 from app.services import native_runtime_observation
+
+
+def test_deep_health_runs_in_fastapi_threadpool_while_ping_stays_on_event_loop():
+    assert not inspect.iscoroutinefunction(health_router.health)
+    assert inspect.iscoroutinefunction(health_router.ping)
 
 
 @pytest.mark.asyncio

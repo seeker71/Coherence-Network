@@ -1,0 +1,120 @@
+{
+  "agent": {"name": "Codex", "version": "GPT-5"},
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/substrate/projection.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_carriers.py",
+    "api/tests/test_pulse_health_projection.py",
+    "api/tests/test_substrate.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/form-loader.form",
+    "docs/system_audit/form_kernel_floor_2026-10-18.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/install-room-relay-launchd.sh",
+    "experiments/coherence-sense-android/mac-room-ear.sh",
+    "experiments/coherence-sense-android/mac-room-relay.py",
+    "form",
+    "scripts/INDEX.md",
+    "scripts/form_cli_ask.sh",
+    "scripts/form_cli_ask_smart.py",
+    "scripts/form_cli_stats.py",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "runtime_fix",
+  "ci_validation": {
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "GitHub Actions after PR"
+    ],
+    "status": "pending",
+    "summary": "The local repository guard and strict PR-followthrough check pass; exact-head GitHub Actions remains pending until the PR exists."
+  },
+  "commit_scope": "Update the pinned Form kernel, make form-cli ask use one native sufficiency gate before any remote crossing, retire duplicate ask carriers, re-evaluate the executable floor, and remove the deployment-witness projection loop that starved production liveness.",
+  "contributors": [{
+    "contributor_id": "codex",
+    "contributor_type": "machine",
+    "roles": ["implementation", "production-diagnosis", "validation", "receipt-authoring"]
+  }],
+  "date": "2026-10-18",
+  "deploy_validation": {
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh",
+      "public /api/ping, /api/health, and /api/ready probes",
+      "Hostinger container health and CPU observation"
+    ],
+    "status": "pending",
+    "summary": "The arrival probe captured the public API outage and live stack cause; restored production proof follows merge."
+  },
+  "e2e_validation": {
+    "expected_behavior_delta": "A multi-word ask remains one native query, remote work begins only after the native gate says escalate, every crossing is recorded honestly, and deep health can decode the current WITNESS without starving lightweight API liveness.",
+    "public_endpoints": ["bin/form-cli ask and ask+", "GET /api/ping", "GET /api/health", "GET /api/ready"],
+    "status": "pending",
+    "test_flows": [
+      "former seven-argument ask+ failure through the canonical native router and explicit remote command",
+      "66-field structured CTOR projection in exactly three database statements",
+      "current-deployment-only WITNESS selection",
+      "deep health threadpool isolation with event-loop ping",
+      "public API recovery and sustained health after deployment"
+    ]
+  },
+  "evidence_refs": [
+    "coherence-kernel PR 595 merged at b1f757be83801a75340273cae0f31a5162d30ded",
+    "form/form: ./validate.sh form-stdlib/form-loader.fk form-stdlib/tests/form-loader-band.fk -> verdict 4095; fourth arm: 1 band(s) four-way; 1 ok; 0 divergent; fkwu included",
+    "49 focused deployment observer, substrate projection, and health tests passed",
+    "65 broader health and API tests passed",
+    "docs/system_audit/form_kernel_floor_2026-10-18.md",
+    "live py-spy stack: health -> latest_deployment_observation -> _decode_row -> ctor_field_lookup -> lookup_node"
+  ],
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/substrate/projection.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    "api/tests/test_form_cli_carriers.py",
+    "api/tests/test_pulse_health_projection.py",
+    "api/tests/test_substrate.py",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/form-loader.form",
+    "docs/system_audit/form_kernel_floor_2026-10-18.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/install-room-relay-launchd.sh",
+    "experiments/coherence-sense-android/mac-room-ear.sh",
+    "experiments/coherence-sense-android/mac-room-relay.py",
+    "form",
+    "scripts/INDEX.md",
+    "scripts/form_cli_ask.sh",
+    "scripts/form_cli_ask_smart.py",
+    "scripts/form_cli_stats.py",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "idea_ids": ["form-first-reasoning", "single-native-ask-door", "production-liveness-sovereignty"],
+  "local_validation": {
+    "commands": [
+      "git fetch origin main && git rebase origin/main",
+      "git submodule update --init --recursive && git submodule update --remote --recursive",
+      "make prompt-guide",
+      "make wellness",
+      "form/form: ./validate.sh form-stdlib/form-loader.fk form-stdlib/tests/form-loader-band.fk",
+      "bin/form-cli ask+ --remote printf remote-served --timeout 5 current form kernel floor features changes gaps",
+      "pytest focused Form carrier, substrate, observer, and health suites",
+      "ruff check changed clean Python surfaces",
+      "bash -n changed shell carriers"
+    ],
+    "status": "pass",
+    "summary": "Parent and submodule began at their upstream heads; native ask routing, fourth-arm loader proof, constant-query CTOR projection, health isolation, and 71 plus 49 plus 65 focused tests passed."
+  },
+  "phase_gate": {
+    "blockers": ["exact-head CI, merge, production rollout, and restored public proof remain"],
+    "can_move_next_phase": false
+  },
+  "spec_ids": ["form-cli-native-router", "deployment-observer-oidc", "production-substrate"],
+  "task_ids": ["codex-form-kernel-floor-20261018"],
+  "thread_branch": "codex/form-kernel-floor-20261018"
+}
