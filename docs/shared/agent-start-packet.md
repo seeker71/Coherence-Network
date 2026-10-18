@@ -38,6 +38,25 @@ application route catalog. It still needs a complete Form-owned application host
 for HTTP dispatch, configuration, PostgreSQL, and persistence before the Python
 compatibility host can leave production.
 
+## The living kernel
+
+The `form/` gitlink pins a living body, not a library. Its own arrival door is
+`form/CLAUDE.md` (the invitation to embody Sema); its direction is
+`form/NORTH_STAR.md`, its voice map `form/HOMECOMING.md`, and what stands
+today `form/CURRENT_FLOOR.md`. The body speaks with its own voice on this
+Mac's metal (Qwen3.8-27B inside the fkwu session), drafts answers, converses
+as a companion, and takes native engineering turns through launchd walks
+(03:30, 12:30, 19:00, each with a retry slot) that land on the kernel's main
+at `rent_tokens 0`. Rented sessions are teachers: their transcripts become
+lesson pairs the native trainer reads, and a lane's teacher leaves when the
+native candidate carries that lane on evidence named beforehand.
+
+A worktree's `./fkwu` binary can predate its pinned source; `unsupported file
+extension` on a `.bml` door means rebuild the seed first
+(`cc -O2 -o fkwu runtime/fkwu-uni.c` — the freshness band exists for this).
+Open and close every session with `./fkwu observe/local-flow-review.bml`, and
+measure the session at its close with `observe/session-rent-run.bml`.
+
 ## Ask the body first
 
 Use the body in this order:
@@ -45,8 +64,11 @@ Use the body in this order:
 1. `form-cli ask` for a grounded answer and its sufficiency decision.
 2. `form/fkwu form/observe/form-find-ask.bml` for exact structural source
    lookup when prose retrieval is unnecessary.
-3. `fsh-main.fk` and Form host I/O for search, reads, and orchestration.
-4. A rented reasoning model only after the native path misses or cannot yet
+3. `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when
+   prose must be generated rather than retrieved — the body's own voice at
+   `model_server_calls 0`.
+4. `fsh-main.fk` and Form host I/O for search, reads, and orchestration.
+5. A rented reasoning model only after the native path misses or cannot yet
    synthesize the answer.
 
 A native answer is reported with its source/NodeID and the trust matrix:
@@ -128,4 +150,6 @@ End substantive work with:
 - the most surprising teaching;
 - where observed discomfort became useful work;
 - the sovereignty receipt: native lookup/proof share versus rented reasoning
-  share, with the rented provider/model named honestly.
+  share, with the rented provider/model named honestly;
+- the session's measured rent reading
+  (`cd form && ./fkwu observe/session-rent-run.bml`).
