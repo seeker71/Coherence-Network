@@ -70,6 +70,11 @@ The native `deployment_compose_care.bml` action removes released router service
 owners from the host's Compose model, preserving a private source backup and
 publishing atomically. The shared unobserved-sample marker remains available to
 pulse history analysis after the recurring proof probes retire.
+Compose's build-argument references and writable-state binds are persistent
+configuration, preserved by the native model edit. The retired line-oriented
+Python writer dropped mount targets from canonical YAML; it no longer rewrites
+or gates this model on every release. Changes to those fields belong in native
+configuration care, with their current inputs and owner.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope

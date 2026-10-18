@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/native-compose-authority-20261018",
+  "commit_scope": "Retire the duplicate line-oriented Compose writer after native configuration publication exposed its mount-target deletion.",
+  "files_owned": ["deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["native-delivery-care"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["native configuration care"]}],
+  "agent": {"name": "OpenAI Codex", "version": "exact-runtime-model-id-not-exposed"},
+  "evidence_refs": [
+    "Hostinger run 39134073639 exited 1 before image construction: service volume services.api.volumes.[2] is missing a mount target; the following empty JSON read raised JSONDecodeError.",
+    "Native Compose care had published a valid canonical YAML model. The old Python writer filtered matching target lines without their surrounding long-form volume records, manufacturing an invalid mount. Its duplicate build-argument/volume writer and recurring policy assertions are released at their source.",
+    "Restored the known configuration from the private backup, then resumed deployment_compose_care.bml on the changed state. The Form model edit preserves existing build-argument references and exact writable mounts while retiring the released router service owner.",
+    "The deployment continues to bind the target/kernel source into the image and runtime configuration. Native care owns changes to the persistent model; the retiring host carrier no longer has a competing configuration writer.",
+    "No fkwu C/JIT or new host business implementation was added; no kernel or application suite ran. Native care and structural shell/diff reads only."
+  ],
+  "change_files": ["deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Native configuration care and structural shell/diff reads."},
+  "ci_validation": {"status": "pending", "summary": "The corrected deployment observes configuration consumption directly."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}
