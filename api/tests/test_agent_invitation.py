@@ -112,8 +112,8 @@ async def test_agent_invitation_api_shape() -> None:
     assert any("coherence_agent_invitation" in step for step in start_packet["auth_and_write_paths"])
     assert any("COHERENCE_API_KEY" in step for step in start_packet["auth_and_write_paths"])
     assert "Blueprint = what IS" in start_packet["form"]["one_breath"]
-    assert "api/substrate/form" in "\n".join(start_packet["form"]["doors"])
-    assert "curl -s https://api.coherencycoin.com/api/substrate/form" in start_packet["form"]["smoke_check"]
+    assert "form-cli ask" in "\n".join(start_packet["form"]["doors"])
+    assert "curl -s https://api.coherencycoin.com/api/substrate/lattice/stats" in start_packet["form"]["smoke_check"]
     assert "not HTML" in start_packet["form"]["smoke_check"]
     assert "coh_substrate.py ingest" in start_packet["form"]["authoring"]
     assert "not substrate HTTP POST" in start_packet["form"]["authoring"]

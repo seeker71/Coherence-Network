@@ -253,14 +253,13 @@ class RBasic(IntEnum):
     TRY = 30
     # CHOICE_MATCH — pattern-match arm with totality checking. Distinct from
     # `CHOICE = 20` (BML angelic-nondeterminism: choose/fail/stop). Slot 35
-    # matches the TS kernel's `RBasic.CHOICE = 35` (pattern-match) for
-    # cross-kernel NodeID agreement on algebraic-datatype pattern matches.
+    # is the structural identity for algebraic-datatype pattern matches.
     # Shape: `CHOICE_MATCH[scrutinee, arm0-ctor-name, arm0-body, arm1-..., ...]`.
-    # The walker (see `inductive.py`) verifies every constructor declared on
+    # The Form runtime verifies every constructor declared on
     # the scrutinee's INDUCTIVE recipe appears among the arm names — non-total
     # matches raise. Named CHOICE_MATCH in Python to disambiguate from the
     # already-existing BML CHOICE slot 20; the structural slot (35) is what
-    # carries cross-kernel agreement.
+    # carries the identity.
     CHOICE_MATCH = 35
     # QUOTIENT — canonicalization under equivalence relations. A recipe with
     # category QUOTIENT has shape `QUOTIENT[carrier-recipe, equivalence-recipe]`.
@@ -269,20 +268,17 @@ class RBasic(IntEnum):
     # receive the SAME NodeID — content-addressing IS the quotient. The
     # foundation arm of Form's higher-mathematics surface (PROOF, INDUCTIVE,
     # symmetry-aware canonicalization all build on top of QUOTIENT).
-    # See `api/app/services/substrate/quotient.py` and
-    # `docs/coherence-substrate/higher-math-surface.md`. Slot 70 matches the
-    # TS kernel for cross-kernel NodeID agreement.
+    # See `docs/coherence-substrate/higher-math-surface.md`.
     QUOTIENT = 70
-    # INDUCTIVE — algebraic datatype definition. Slot 71 matches TS.
+    # INDUCTIVE — algebraic datatype definition.
     # Shape: `INDUCTIVE[type-name-trivial, type-params-list, ctor0, ctor1, ...]`
     # where each ctor is a CONSTRUCTOR recipe declared inside the inductive
     # (those CONSTRUCTOR recipes carry the *type-definition* shape with the
     # parent inductive referenced by its type-name trivial as a self-ref
-    # sentinel). Built-in inductives: Nat, Bool, Option, Result, List. See
-    # `api/app/services/substrate/inductive.py`.
+    # sentinel). Built-in inductives: Nat, Bool, Option, Result, List.
     INDUCTIVE = 71
     # CONSTRUCTOR — constructor application (value-shape) or type-definition
-    # constructor declaration. Slot 72 matches TS.
+    # constructor declaration.
     # Value-shape: `CONSTRUCTOR[inductive-ref, ctor-name, ctor-index, arg0, arg1, ...]`
     # Type-definition shape (nested inside INDUCTIVE): same slots but the
     # `inductive-ref` is the self-ref sentinel (the inductive's type-name
@@ -352,8 +348,7 @@ class Triv(IntEnum):
     UNDEFINED = 0
     QUOTIENT_LEAF = 14
     # CONSTRUCTOR_TAG — small-int tag used by the walker for ctor values.
-    # Slot 15 matches the TS kernel. Reserved here so the slot doesn't
-    # collide with future trivial-leaf additions; see `inductive.py`.
+    # Reserved here so the slot doesn't collide with future trivial leaves.
     CONSTRUCTOR_TAG = 15
 
 

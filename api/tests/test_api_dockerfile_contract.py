@@ -13,29 +13,6 @@ from app import server
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# The transmuted-endpoint recipes the live API loads at request time
-# (api/app/routers/kernel_*.py → serve_via_kernel). They are the deployable
-# artifact the prod kernel reads; if they are missing from the image,
-# load_recipe raises FileNotFoundError and the endpoint fails loudly rather
-# than executing Python. These tests are the regression guard against an image
-# that drops the recipes.
-_ENDPOINT_RECIPES = (
-    "endpoint_coherence_weight_demo.fk",
-    "endpoint_nodeid_distance_demo.fk",
-    "endpoint_nodeid_compatibility_demo.fk",
-    "endpoint_weighted_average_demo.fk",
-    "endpoint_simpson_diversity_demo.fk",
-    "endpoint_idea_score_demo.fk",
-    "endpoint_marginal_cc_return_demo.fk",
-    "endpoint_breath_balance_demo.fk",
-    "endpoint_softmax_weights_demo.fk",
-)
-_RECIPE_DIR_IN_KERNEL = "form/form-kernel-ts/seedbank/python-adapter/examples"
-_RECIPE_DIR_REL = f"form/{_RECIPE_DIR_IN_KERNEL}"
-# The image COPY destination stays flat (matches Dockerfile.api's own
-# convention: nested source, flat /app path) — independent of where the
-# kernel submodule nests its source tree.
-_RECIPE_DIR_DEST_REL = "form/form-kernel-ts/seedbank/python-adapter/examples"
 _APP_RECIPE_DIR_REL = "api/app/form_recipes"
 _APP_ENDPOINT_RECIPES = (
     "endpoint_gathering_head_value.fk",
@@ -63,9 +40,10 @@ def _dependency_name(value: str) -> str:
 def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
 
-    assert "COPY form/runtime /build/runtime" in dockerfile
-    assert "cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c" in dockerfile
-    assert "COPY --from=kernel-builder /build/fkwu /app/form/fkwu" in dockerfile
+    assert "COPY form/ /build/form/" in dockerfile
+    assert "cc -O2 -o fkwu runtime/fkwu-uni.c" in dockerfile
+    assert "COPY --from=kernel-builder /build/form/fkwu /app/form/fkwu" in dockerfile
+    assert "gate/form-cli-build-run.bml" in dockerfile
     assert "COPY form/runtime /app/form/runtime" in dockerfile
     assert "cargo build" not in dockerfile
     assert "form-kernel-rust" not in dockerfile
@@ -244,33 +222,6 @@ def test_api_runtime_carries_the_process_inspector_used_by_dialogue_reaping() ->
     assert re.search(r"^\s+procps \\$", dockerfile, re.MULTILINE) is not None
 
 
-def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
-    """Shared endpoint .fk files live in the populated kernel gitlink.
-
-    Submodule contents are not entries in the superproject index, so trackedness
-    must be read from coherence-kernel's own index. If a recipe drops out there,
-    it never reaches the image and the endpoint fails at request time.
-    """
-    recipe_dir = REPO_ROOT / _RECIPE_DIR_REL
-    tracked = set(
-        subprocess.run(
-            ["git", "ls-files", _RECIPE_DIR_IN_KERNEL],
-            cwd=REPO_ROOT / "form",
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.splitlines()
-    )
-    for name in _ENDPOINT_RECIPES:
-        on_disk = recipe_dir / name
-        assert on_disk.is_file(), f"recipe missing on disk: {name}"
-        kernel_rel = f"{_RECIPE_DIR_IN_KERNEL}/{name}"
-        assert kernel_rel in tracked, (
-            f"recipe not git-tracked in coherence-kernel: {kernel_rel} — it must be committed so the "
-            "deploy image carries it and the endpoint serves kernel-side"
-        )
-
-
 def test_app_endpoint_recipes_are_git_tracked() -> None:
     """Network-owned live recipes remain versioned with their API callers."""
     recipe_dir = REPO_ROOT / _APP_RECIPE_DIR_REL
@@ -297,21 +248,3 @@ def test_dockerfile_copies_app_endpoint_recipes_with_api_tree() -> None:
     assert re.search(r"^COPY api/ \./$", dockerfile, re.MULTILINE) is not None
     for name in _APP_ENDPOINT_RECIPES:
         assert (REPO_ROOT / _APP_RECIPE_DIR_REL / name).is_file()
-
-
-def test_dockerfile_copies_endpoint_recipes_to_file_backed_recipe_dir() -> None:
-    """The image carries every direct-source recipe at the bridge's fixed path."""
-    dockerfile = (REPO_ROOT / "Dockerfile.api").read_text(encoding="utf-8")
-
-    assert "FORM_RECIPE_DIR" not in dockerfile
-
-    # Every endpoint recipe is named as a COPY source.
-    for name in _ENDPOINT_RECIPES:
-        assert f"{_RECIPE_DIR_REL}/{name}" in dockerfile, (
-            f"Dockerfile.api must COPY {name} into the image"
-        )
-
-    # The COPY destination is the explicit file-backed image path used by the bridge.
-    assert f"./{_RECIPE_DIR_DEST_REL}/" in dockerfile, (
-        "Dockerfile.api COPY destination must be the recipe dir under /app"
-    )

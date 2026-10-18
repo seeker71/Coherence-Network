@@ -4,7 +4,7 @@ The bootstrap host-native execution of io-match.fk's `iom-capture`. These tests
 prove the carrier stays faithful to the canonical Form recipe — sha256 (FIPS
 180-4) content-addressing, identical inputs sharing a sig — and that the tool
 telemetry carries the io-match fields the learning loop reads. The learning logic
-itself lives in Form (io-match.fk / tool-embodiment.fk), proven four-way there.
+itself lives in Form (io-match.fk / tool-embodiment.fk) and executes on fkwu.
 """
 from __future__ import annotations
 

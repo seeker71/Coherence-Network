@@ -64,7 +64,6 @@ const LAYER_SUBNAV: Array<{
       { href: "/nodes", labelKey: "nav.sub.nodes" },
       { href: "/vitality", labelKey: "nav.vitality" },
       { href: "/pulse", labelKey: "nav.pulse" },
-      { href: "/substrate/form", labelKey: "nav.sub.formPlayground" },
     ],
   },
 ];

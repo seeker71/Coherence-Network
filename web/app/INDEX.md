@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 169
+**Total files**: 165
 
 | Route | File | Purpose |
 |---|---|---|
@@ -69,7 +69,6 @@
 | `/graph/zoom/[nodeId]` | [page.tsx](graph/zoom/[nodeId]/page.tsx) | _no top-of-file purpose_ |
 | `/graphs` | [page.tsx](graphs/page.tsx) | _no top-of-file purpose_ |
 | `/grocery` | [page.tsx](grocery/page.tsx) | app.hati.earth — the grocery ledger. One number, one tap. |
-| `/hati-os` | [page.tsx](hati-os/page.tsx) | _no top-of-file purpose_ |
 | `/hati-suci` | [page.tsx](hati-suci/page.tsx) | Hati Suci — the resident-service nervous system (first Light Hub membrane). |
 | `/here` | [page.tsx](here/page.tsx) | _no top-of-file purpose_ |
 | `/ideas/[idea_id]/edit` | [page.tsx](ideas/[idea_id]/edit/page.tsx) | Idea edit surface — mirrors the asymmetry-closing for /vision/{id}/edit. |
@@ -128,7 +127,6 @@
 | `/runtime` | [page.tsx](runtime/page.tsx) | _no top-of-file purpose_ |
 | `/search` | [page.tsx](search/page.tsx) | _no top-of-file purpose_ |
 | `/sense` | [page.tsx](sense/page.tsx) | sense.hati.earth — the download door for Coherence Sense. Detects the visitor's |
-| `/sense/surface` | [page.tsx](sense/surface/page.tsx) | /sense/surface — the node's live world-perception surface. Shows what the node |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |
@@ -145,8 +143,6 @@
 | `/specs` | [page.tsx](specs/page.tsx) | _no top-of-file purpose_ |
 | `/stewardship/[[...path]]` | [page.tsx](stewardship/[[...path]]/page.tsx) | Public, source-attributed stewardship documents inside the shared Hati shell. |
 | `/substrate/[domain]/[name]` | [page.tsx](substrate/[domain]/[name]/page.tsx) | _no top-of-file purpose_ |
-| `/substrate/form` | [page.tsx](substrate/form/page.tsx) | Form-language playground — ask the substrate structural questions |
-| `/substrate/form/space` | [page.tsx](substrate/form/space/page.tsx) | Kernel Space — a walkable 3D rendering of the Form kernel's recipe tree. |
 | `/substrate/ingest` | [page.tsx](substrate/ingest/page.tsx) | Substrate ingest — let a visiting body place markdown content into |
 | `/substrate` | [page.tsx](substrate/page.tsx) | _no top-of-file purpose_ |
 | `/suci` | [page.tsx](suci/page.tsx) | suci.hati.earth — the door to Hati Suci, the resident-service nervous system |

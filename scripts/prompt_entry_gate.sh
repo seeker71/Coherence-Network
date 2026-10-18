@@ -81,10 +81,7 @@ if [[ "$form_index_mode" == "160000" ]]; then
     if [[ "$form_status_code" == "??" ]] && {
       [[ "$form_status_path" == ".cache" || "$form_status_path" == .cache/* ]] ||
       [[ "$form_status_path" == ".pytest_cache" || "$form_status_path" == .pytest_cache/* ]] ||
-      [[ "$form_status_path" == ".ruff_cache" || "$form_status_path" == .ruff_cache/* ]] ||
-      [[ "$form_status_path" == "form-kernel-rust/target" || "$form_status_path" == form-kernel-rust/target/* ]] ||
-      [[ "$form_status_path" == "form-kernel-ts/dist" || "$form_status_path" == form-kernel-ts/dist/* ]] ||
-      [[ "$form_status_path" == "form-kernel-ts/node_modules" || "$form_status_path" == form-kernel-ts/node_modules/* ]];
+      [[ "$form_status_path" == ".ruff_cache" || "$form_status_path" == .ruff_cache/* ]];
     }; then
       continue
     fi

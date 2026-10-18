@@ -147,19 +147,13 @@ export default async function SubstratePage() {
         </p>
         <p className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <Link
-            href="/substrate/form"
-            className="inline-flex items-center gap-2 rounded border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-amber-300/90 hover:bg-amber-500/20 transition-colors"
-          >
-            Form playground →
-          </Link>
-          <Link
             href="/substrate/ingest"
             className="inline-flex items-center gap-2 rounded border border-stone-800/40 px-3 py-1.5 text-stone-300 hover:border-amber-500/30 hover:text-amber-300/90 transition-colors"
           >
             Ingest content →
           </Link>
           <span className="text-muted-foreground">
-            Ask the lattice structural questions, or place new content into it.
+            Read the lattice, or place new content into it.
           </span>
         </p>
         {/* Doors for both kinds of visitor — the human curious about how

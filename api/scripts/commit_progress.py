@@ -22,9 +22,6 @@ _DISPOSABLE_SUBMODULE_PATH_PREFIXES = (
     ".cache/",
     ".pytest_cache/",
     ".ruff_cache/",
-    "form-kernel-rust/target/",
-    "form-kernel-ts/dist/",
-    "form-kernel-ts/node_modules/",
 )
 
 

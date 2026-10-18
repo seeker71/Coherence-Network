@@ -105,9 +105,8 @@ jobs:
           source_dir="$(mktemp -d)"
           context_dir="$(mktemp -d)"
           reproduced_dir="$(mktemp -d)"
-          wrapper_source="$(mktemp)"
           dockerfile_source="$(mktemp)"
-          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$context_dir" "$reproduced_dir" "$wrapper_source" "$dockerfile_source"' EXIT
+          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$context_dir" "$reproduced_dir" "$dockerfile_source"' EXIT
           install -m 700 -d "$ssh_dir"
           printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
           chmod 600 "$ssh_dir/key"
@@ -258,10 +257,6 @@ jobs:
           tar -xzf "$source_archive" --strip-components=1 -C "$source_dir"
           curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
             --connect-timeout 5 --max-time 30 \
-            "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/bin/form-cli" \
-            -o "$wrapper_source"
-          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
-            --connect-timeout 5 --max-time 30 \
             "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/Dockerfile.api" \
             -o "$dockerfile_source"
           builder="$(python3 - "$dockerfile_source" <<'PY'
@@ -287,8 +282,6 @@ jobs:
             -f "$context_dir/Dockerfile.api" \
             -t "$reproduced_image" \
             "$context_dir"
-          docker run --rm --platform linux/amd64 "$reproduced_image" \
-            bash -lc 'test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42'
           reproduced_container="$(docker create --platform linux/amd64 "$reproduced_image")"
           docker cp "$reproduced_container:/build/fkwu" "$reproduced_dir/fkwu"
           docker cp "$reproduced_container:/build/form-cli" "$reproduced_dir/form-cli"
@@ -296,18 +289,17 @@ jobs:
           docker image rm "$reproduced_image"
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
-          source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
           source_digest="$(tr -d '\r\n' < "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256")"
           source_table_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
           source_stamp_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp" | cut -d' ' -f1)"
           python3 - \
             "$direct_body" "$TARGET_SHA" "$form_source_commit" "$builder" \
-            "$reproduced_kernel_sha" "$reproduced_form_sha" "$source_wrapper_sha" \
+            "$reproduced_kernel_sha" "$reproduced_form_sha" \
             "$source_digest" "$source_table_sha" "$source_stamp_sha" <<'PY'
           import json,re,sys
           (
               path,target,form_commit,builder,reproduced_kernel,reproduced_form,
-              source_wrapper,source_digest,source_table,source_stamp,
+              source_digest,source_table,source_stamp,
           )=sys.argv[1:]
           body=json.load(open(path,encoding="utf-8"))
           if body.get("target_sha")!=target or body.get("form_source_commit")!=form_commit:
@@ -320,7 +312,7 @@ jobs:
           expected={
               "kernel_binary_sha256":reproduced_kernel,
               "form_cli_binary_sha256":reproduced_form,
-              "form_cli_wrapper_sha256":source_wrapper,
+              "form_cli_wrapper_sha256":reproduced_form,
               "form_cli_source_sha256":source_digest,
               "form_cli_table_sha256":source_table,
               "form_cli_stamp_sha256":source_stamp,
@@ -332,7 +324,7 @@ jobs:
               "reproducible_builder_image":builder,
               "reproduced_kernel_binary_sha256":reproduced_kernel,
               "reproduced_form_cli_binary_sha256":reproduced_form,
-              "source_wrapper_sha256":source_wrapper,
+              "source_wrapper_sha256":reproduced_form,
               "source_form_cli_source_sha256":source_digest,
               "source_form_cli_table_sha256":source_table,
               "source_form_cli_stamp_sha256":source_stamp,

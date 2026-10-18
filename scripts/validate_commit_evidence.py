@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -21,9 +20,6 @@ RUNTIME_PATH_PREFIXES = (
     "form/",
     "experiments/coherence-sense-android/",
     "deploy/hostinger/",
-    "deploy/front-door/",
-    "deploy/kernel-router/",
-    "Dockerfile.kernel-router",
     "pulse/",
 )
 REQUIRED_TOP_LEVEL = {
@@ -46,41 +42,6 @@ REQUIRED_TOP_LEVEL = {
 }
 EVIDENCE_PREFIX = "docs/system_audit/commit_evidence_"
 EVIDENCE_SUFFIX = ".json"
-ALL_KERNEL_CLAIM_RE = re.compile(
-    r"\b("
-    r"all\s+(?:four|4)\s+kernels?"
-    r"|all\s+kernels?"
-    r"|validated\s+on\s+(?:all\s+)?(?:four|4)\s+kernels?"
-    r"|four[- ]way"
-    r"|4[- ]way"
-    r")\b",
-    re.IGNORECASE,
-)
-FOURTH_ARM_PROOF_RE = re.compile(
-    r"\b("
-    r"fourth\s+arm:\s*\d+\s+band\(s\)\s+four[- ]way"
-    r"|fkwu"
-    r"|fourth_kernel_audit\.sh"
-    r"|ok\s+fourth"
-    r")\b",
-    re.IGNORECASE,
-)
-THREE_KERNEL_GAP_RE = re.compile(
-    r"\b("
-    r"3[- ]kernel only"
-    r"|three[- ]kernel only"
-    r"|go/rust/ts only"
-    r"|three[- ]way only"
-    r"|not fourth[- ]covered"
-    r"|fourth[- ]arm gap"
-    r"|fourth[- ]arm blocker"
-    r"|fourth[- ]arm unsupported"
-    r")\b",
-    re.IGNORECASE,
-)
-FORM_VALIDATE_RE = re.compile(r"\b(?:form/)?(?:\./)?validate\.sh\b", re.IGNORECASE)
-
-
 def _load_json(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as f:
         return json.load(f)
@@ -120,50 +81,8 @@ def _declared_change_files(data: dict[str, Any]) -> set[str]:
     }
 
 
-def _record_text(data: dict[str, Any]) -> str:
-    return json.dumps(data, sort_keys=True, ensure_ascii=False)
-
-
-def _is_form_path(path: str) -> bool:
-    return path == "form" or path.startswith("form/")
-
-
 def _is_runtime_path(path: str) -> bool:
     return path == "form" or path.startswith(RUNTIME_PATH_PREFIXES)
-
-
-def _declared_or_changed_files(data: dict[str, Any], changed_files: list[str] | None) -> set[str]:
-    files = _declared_change_files(data)
-    if changed_files is not None:
-        files.update(_expected_non_evidence_files(changed_files))
-    return files
-
-
-def _validate_four_kernel_evidence(
-    data: dict[str, Any],
-    *,
-    changed_files: list[str] | None = None,
-) -> list[str]:
-    errors: list[str] = []
-    text = _record_text(data)
-    has_fourth_proof = bool(FOURTH_ARM_PROOF_RE.search(text))
-    has_three_kernel_gap = bool(THREE_KERNEL_GAP_RE.search(text))
-
-    if ALL_KERNEL_CLAIM_RE.search(text) and not has_fourth_proof:
-        errors.append(
-            "all-kernel/four-way evidence claims require fourth-arm proof "
-            "(for example validate.sh output containing 'fourth arm: ... four-way' or fkwu audit evidence)"
-        )
-
-    files = _declared_or_changed_files(data, changed_files)
-    touches_form = any(_is_form_path(path) for path in files)
-    if touches_form and FORM_VALIDATE_RE.search(text) and not (has_fourth_proof or has_three_kernel_gap):
-        errors.append(
-            "Form validate.sh evidence must include fourth-arm proof or explicitly record "
-            "'3-kernel only' with the fourth-arm gap"
-        )
-
-    return errors
 
 
 def _expected_non_evidence_files(changed_files: list[str]) -> set[str]:
@@ -245,8 +164,6 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
     change_intent = str(data.get("change_intent") or "").strip().lower()
     if change_intent not in VALID_CHANGE_INTENTS:
         errors.append(f"change_intent must be one of {sorted(VALID_CHANGE_INTENTS)}")
-
-    errors.extend(_validate_four_kernel_evidence(data, changed_files=changed_files))
 
     contributors = data.get("contributors")
     if not isinstance(contributors, list) or not contributors:

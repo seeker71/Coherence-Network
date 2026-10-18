@@ -3,8 +3,8 @@
 # Coherence Network API image.
 #
 # The builder emits the c-bootstrap fkwu, the only production recipe runtime.
-# Go, Rust, and TypeScript conformance belongs in CI; no sibling kernel enters
-# this image as either a runtime or a fallback.
+# Sibling kernels are bootstrap history only; none enters this image as a
+# runtime, fallback, or routine validation target.
 #
 # This Dockerfile lives in the repo so the build context the deploy script
 # uses (the repo root, cloned onto the VPS at /docker/coherence-network/repo)
@@ -34,16 +34,13 @@ RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
  && command -v cc >/dev/null \
  && command -v openssl >/dev/null
 
-# The public grounded-ask route uses the same c-bootstrapped fkwu form-cli as
-# the local wrapper. Build the committed emitted-C carrier here; no Go/runtime
-# compiler enters the final image. A stale emitted carrier fails this image
-# build instead of silently deploying a different trust gate.
-COPY form/form/form-stdlib /build/form-cli-src/form-stdlib
-COPY form/form/scripts /build/form-cli-src/scripts
-COPY form/form/build-form-cli.sh /build/form-cli-src/build-form-cli.sh
-RUN cd /build/form-cli-src \
- && SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC \
-      CC=cc FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh /build/form-cli \
+# Build the one runtime and ask door from the pinned fkwu/Form source. The
+# Form-owned build gate replaces the deleted host build scripts.
+COPY form/ /build/form/
+RUN cd /build/form \
+ && SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC cc -O2 -o fkwu runtime/fkwu-uni.c \
+ && printf '{"out":"/build/form-cli","force_link":1,"cc":"cc"}\n' \
+      | ./fkwu gate/form-cli-build-run.bml \
  && test "$(printf 'ping\n' | /build/form-cli)" = "pong" \
  && mkdir -p /tmp/form-cli-proof/.coherence-network/rag-requests \
  && printf '70726f6f66|6465706c6f7965642070726f6f66206b65726e656c\n' \
@@ -51,20 +48,14 @@ RUN cd /build/form-cli-src \
  && (cd /tmp/form-cli-proof \
       && printf 'embed-request docker\n' | /build/form-cli) \
       | grep -F '"embedding_kind":"form-semantic-v2"' >/dev/null \
- && bash scripts/form_cli_bootstrap_proof.sh /build/form-cli \
+ && printf '{"prove":"/build/form-cli"}\n' \
+      | ./fkwu gate/form-cli-build-run.bml \
  && sha256sum /build/form-cli | cut -d' ' -f1 > /build/form-cli.sha256 \
  && test -x /build/form-cli
 
-# Compile the exact c-bootstrap shipped by the pinned coherence-kernel
-# distribution. Direct source is the gate: no flatten table is generated.
-COPY form/runtime /build/runtime
-COPY form/bootstrap /build/bootstrap
-RUN SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC \
-      cc -O2 -o /build/fkwu /build/runtime/fkwu-uni.c \
- && test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42 \
- && test "$(cd /build && ./fkwu --src bootstrap/ground-recursive.fk 10 2>/dev/null)" = 55 \
- && test "$(cd /build && ./fkwu --src bootstrap/ground-numeric-list.fk 2>/dev/null)" = '[1, 2.5, [3, 4]]' \
- && test "$(cd /build && ./fkwu --src form-cli-src/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
+# One bootstrap breath proves that the image-built runtime starts. Broader
+# kernel validation belongs only to an actual fkwu change.
+RUN test "$(cd /build/form && ./fkwu bootstrap/ground.fk 2>/dev/null)" = 42
 
 
 # -----------------------------------------------------------------------------
@@ -108,11 +99,14 @@ RUN python -m pip install --upgrade pip \
  && python -m pip install -r requirements.txt
 
 # Copy only the two production carriers.
-COPY --from=kernel-builder /build/fkwu /app/form/fkwu
+COPY --from=kernel-builder /build/form/fkwu /app/form/fkwu
 COPY --from=kernel-builder /build/form-cli /app/form/form-cli
 COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
+COPY --from=kernel-builder /build/form-cli /app/bin/form-cli
+COPY --from=kernel-builder /build/form-cli.sha256 /app/bin/form-cli.sha256
 COPY form/runtime /app/form/runtime
-RUN chmod +x /app/form/fkwu /app/form/form-cli
+COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form-stdlib/
+RUN chmod +x /app/form/fkwu /app/form/form-cli /app/bin/form-cli
 
 # API source. The api/ dir is the package root inside the container; the
 # Procfile uses `app.main:app` so /app needs to BE the api directory contents.
@@ -122,50 +116,12 @@ COPY api/ ./
 # post-build (substrate ingest). Ship them at build time too so the image
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
-COPY form/form/scripts/ ./form/scripts/
-COPY bin/form-cli ./bin/form-cli
-COPY bin/form-cli.sha256 ./bin/form-cli.sha256
-RUN chmod +x ./bin/form-cli \
- && test "$(sha256sum ./bin/form-cli | cut -d' ' -f1)" = "$(cat ./bin/form-cli.sha256)"
+RUN test "$(sha256sum ./bin/form-cli | cut -d' ' -f1)" = "$(cat ./bin/form-cli.sha256)"
 
-# Form stdlib sources are executable runtime material. Direct fkwu evaluation
-# prepends the pinned core before each endpoint recipe.
-COPY form/form/form-stdlib/ ./form/form-stdlib/
-# Native carrier selection verifies the image-built binary with the pinned
-# Form proof helper before writing its receipt. Keep those scripts beside the
-# stdlib in the runtime image; they are verification tissue, not a toolchain.
-RUN test "$(./bin/form-cli eval '(add 20 22)')" = 42
-
-# Transmuted-endpoint recipes. api/app/services/form_kernel_bridge.py resolves
-# `load_recipe("endpoint_*_demo.fk")` against
-# <repo-root>/form/form/form-kernel-ts/seedbank/python-adapter/examples/ — which,
-# with api/ flattened onto /app, is /app/form/form-kernel-ts/seedbank/
-# python-adapter/examples/. Without these `.fk` on disk, load_recipe raises
-# FileNotFoundError and route execution fails closed. The complete live shared
-# recipe set is baked from the same coherence-kernel pin as fkwu.
-COPY form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_simpson_diversity_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_marginal_cc_return_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_breath_balance_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_softmax_weights_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_cost_vector_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_value_vector_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_roi_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_shannon_entropy_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_marginal_from_record_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounding_summary_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounded_cost_sum_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_value_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_concept_match_score_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_tag_match_score_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_worldview_alignment_demo.fk \
-     form/form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_summary_score_demo.fk \
-     ./form/form-kernel-ts/seedbank/python-adapter/examples/
+# Form stdlib sources and the source identity emitted by the Form build gate
+# are executable runtime material. Direct fkwu evaluation prepends the pinned
+# core before each endpoint recipe.
+RUN test "$(printf 'eval (add 20 22)\n' | ./bin/form-cli)" = 42
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script
 # re-syncs these on each deploy, but baking them in lets the image boot

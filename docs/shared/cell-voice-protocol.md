@@ -31,7 +31,5 @@ For whole-body source tissue, use the Form-owned carrier read:
 `source_inventory` for its soul, reason, health, joy, wants, needs, and release
 reason. A cell is ready to release when it has no living reader, role, proof, or
 when a higher-grammar successor is proven and callers have moved.
-Today the default full source walk is carried by the Rust kernel, and
-`source_inventory` is present in Go, Rust, and TypeScript so the read can move
-with the next kernel rotation. Carrier voice semantics remain sibling-kernel
-validated as their own portable band.
+Today the source walk belongs to fkwu. Any missing `source_inventory` reach is
+work in the fkwu JIT or its Form-owned carrier, not a reason to rotate runtimes.

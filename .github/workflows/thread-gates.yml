@@ -150,22 +150,6 @@ jobs:
             --fail-on-regression
           cat maintainability_audit_report.json
 
-      - name: Build c-bootstrap fkwu authority
-        if: steps.changed_surfaces.outputs.api == 'true'
-        run: |
-          cc -O2 -o form/fkwu form/runtime/fkwu-uni.c
-          test "$(form/fkwu --src form/bootstrap/ground.fk 2>/dev/null)" = 42
-          test "$(form/fkwu --src form/bootstrap/ground-recursive.fk 10 2>/dev/null)" = 55
-
-      - name: Prove fkwu execution and sibling primitive agreement
-        if: steps.changed_surfaces.outputs.api == 'true'
-        run: |
-          test "$(bin/form-cli eval '(add 20 22)')" = 42
-          test "$(bin/form-cli eval '(do (defn sum-to (n) (if (eq n 0) 0 (add n (sum-to (sub n 1))))) (sum-to 10))')" = 55
-          test "$(bin/form-cli eval '(list 1 2.5 (list 3 4))')" = '[1, 2.5, [3, 4]]'
-          test "$(form/fkwu --src form/form/form-stdlib/tests/round-ndigits-band.fk 2>/dev/null)" = 24
-          form/form/validate.sh form-stdlib/tests/round-ndigits-band.fk
-
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |

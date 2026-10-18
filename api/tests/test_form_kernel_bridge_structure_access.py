@@ -2,18 +2,15 @@
 
 Structure access: a transmuted recipe receives structured data (a Python dict
 or a model via ``model_dump()``) as a single binding and reads named fields out
-of it, rather than receiving the inputs pre-flattened into separate scalars.
-This is the capability the kernels/API_KERNEL_READINESS.md doc names as the
-gate behind the bulk of remaining transmutation candidates.
+of it. This is the capability the fkwu application route uses for records.
 
 The marshalling seam is ``_fk_literal``: it renders a Python dict as the direct
 first-order Form value ``(list "__dict__" "k" v ...)`` consumed by fkwu. There
 is no alternate inline/Preloader representation in the production path.
 
 The recipe reads each field via the ``_get`` native (the python-bmf SUBSCRIPT
-lowering), which now reads Record fields. The route is
-``/api/utils/idea_marginal_from_record``; the recipe body's three-way parity is
-the parity_suite gate, and the bridge marshalling is what these tests cover.
+source realization), which reads Record fields. The route is
+``/api/utils/idea_marginal_from_record``; these tests cover bridge marshalling.
 """
 from __future__ import annotations
 

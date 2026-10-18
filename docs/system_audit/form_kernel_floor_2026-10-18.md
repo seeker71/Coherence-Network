@@ -1,101 +1,77 @@
-# Form kernel floor — 2026-10-18
+# fkwu/Form floor — 2026-10-18
 
-This reading is anchored to parent commit `2f2dbcf400e28d1b91413c8ba3531b1e3e66698b`
-and coherence-kernel `b1f757be83801a75340273cae0f31a5162d30ded`. The parent was
-already aligned with `origin/main`; the submodule was updated from the previous pin
-through coherence-kernel PR 595.
+This reading follows the current parent `origin/main` and coherence-kernel
+`cd1f4377b`. It treats fkwu as the only kernel. Earlier Go, Rust, and TypeScript
+kernels are bootstrap history, not runtime choices, fallbacks, or recurring
+validation targets.
 
 ## Executable floor
 
-- The production recipe authority is the C-bootstrapped `fkwu`. Go, Rust, and
-  TypeScript remain proof siblings; they are not additional production authorities.
-- Grammar → recipes/cells → realization → reads is executable. BML/source compilation,
-  native file/HTTP/persistence carriers, the native form-cli router, grounded RAG, and
-  the sufficiency gate are present.
-- `form-cli ask` is the single native lookup door. `ask+` now preserves the same staged
-  native decision and crosses to a named remote command only after
-  `decision:escalate`. Native and rented trust rows remain separate, and the canonical
-  ask ledger records both crossings. The native stage is deadline-bound as well as the
-  remote stage: the default allows 180 seconds for grounding and 30 seconds for the
-  oracle, while an explicit `--timeout` constrains both.
-- The loader band passes at verdict 4095 with one fourth-arm band, one passing band,
-  and zero divergence.
-- The model lane has tokenization, tensor mapping, sampling, Metal and autoregressive
-  building blocks. Full answer generation from real hidden-state logits over complete
-  model tensors remains unobserved. `ll-heap`, arbitrary recipe compilation through
-  grammar-as-recipe, and a self-hosted form-cli remain open floor work.
+- `runtime/fkwu-uni.c` bootstraps the `fkwu` executable.
+- Form source runs directly through fkwu. Hot compatible recipes use the page
+  JIT (`jit_fn_bind` / `jit_cpu_run`); a missing JIT shape is implementation
+  work in that path, never a reason to restore lowering.
+- The native `form-cli` build and proof are Form/BML flows entered through
+  `gate/form-cli-build-run.bml`. The remaining shell wrapper only selects an
+  image-built carrier or invokes that gate once for a local carrier.
+- fkwu already carries native cells, sockets, HTTP client operations, crypto,
+  and host I/O. The Form stdlib carries JSON and kernel HTTP composition.
+- The current Coherence Network application catalog is
+  `form/apps/coherence-network/api.bml`. It names native route handlers and the
+  readiness contract, but it is not yet a complete public application host.
 
-## Repository body reading
+Two previously observed, still-relevant focused readings are retained: the
+bootstrap ground recipe returned `42`, and the page-JIT band returned `63`.
+No sibling comparison or full-kernel suite is part of this floor reading.
 
-The arrival wellness reading observed:
+## Effect on this repository
 
-- 1,753 of 1,753 sources grounded into 8,235 cells.
-- 7,485 structured cells, 32 flat cells, and 718 cells without a CTOR.
-- 189 specs, 18 ideas, and 196 concepts indexed.
-- 121 of 172 non-draft specs connected through the graph chain (70%).
-- 217 native primitives: 184 in-band, 33 carrier-declared, 18 sibling gaps, and
-  138 primitive names represented in bands.
-- Seven bootstrap files / 3,471 lines remain; three of those files / 1,614 lines are
-  Python-dependent. The wider compatibility substrate under `api/app/services/substrate`
-  is 16 modules / 9,040 lines, while all four catalogued static-to-dynamic successors
-  are live.
-- The API catalog has 852 routes. Twenty-two are kernel-served (2.6%), 105 have a
-  native-capable handler, and 830 remain on the Python compatibility carrier. At the
-  reading boundary no public route was owned kernel-first, so shipped native capability
-  is materially ahead of public native authority.
+- Twenty-two utility recipes that remain called by the compatibility API now
+  live as application-owned `.fk` source under `api/app/form_recipes/`. They
+  execute through fkwu without the deleted TypeScript seedbank or generated
+  lowering tree.
+- The old Rust kernel router, its Python harnesses, route manifests, canary
+  probes, and Docker service have been released.
+- The browser-side TypeScript kernel and its `/substrate/form` playground have
+  been released. The public Python evaluator already returns HTTP 410; keeping
+  a second browser kernel implied authority that the deployed body did not
+  have.
+- Routine four-way, sibling-kernel, metal-lowering, and Windows comparison
+  workflows have been released. Validation is now claimed only by the changed
+  surface; fkwu validation is required when fkwu changes.
+- The production API remains a Python compatibility host around routes that
+  have not yet moved behind the native Form application host. This is current
+  location, not destination authority.
 
-## Effects of recent features
+## Work exposed by the resnapshot
 
-- The bounded pulse projection keeps continuous web and monitor reads away from deep
-  health proof.
-- Deployment observation binds public, loopback, container, image, source, and native
-  carrier evidence into persisted WITNESS cells.
-- Hati grocery totals now carry one deadline through membership, database, graph, and
-  native policy work, with finite process-tree cleanup.
-- Retiring sibling kernel-router containers simplified production authority to one
-  `fkwu`-carrying API service. It also made the compatibility API event loop a public
-  availability boundary until more traffic moves to native route ownership.
+The next work is direct and belongs in Form/BML:
 
-## Observed tightness and repair
+1. Give the native HTTP server template-parameter dispatch so routes such as
+   `/ideas/{id}` bind parameters without a host router.
+2. Bring file-backed application configuration, PostgreSQL access, persistence,
+   and startup ownership into the fkwu/Form host.
+3. Move route families from the Python compatibility host to
+   `api.bml`, preserving their observed effects and removing each Python owner
+   once its native replacement is live.
+4. Return a native browser door only after the fkwu application host serves it;
+   do not recreate a TypeScript kernel in the client.
+5. Close every newly observed hot-shape gap in the page JIT itself. Lowering is
+   not an accepted continuation path.
 
-At arrival, the public web answered while all public API paths returned 404. The API
-container was alive but unhealthy at approximately one full CPU core. A live Python
-stack sample placed the active frame in `latest_deployment_observation`:
+## Validation boundary
 
-`health → latest_deployment_observation → _decode_row → ctor_field_lookup → lookup_node`
-
-The deep health path decoded every witness field by walking the complete CTOR again.
-That produced O(fields²) synchronous database reads on the sole event loop. Even
-`/api/ping` then missed its five-second liveness window, and Traefik withdrew the
-unhealthy service.
-
-The repair makes whole-CTOR projection set-based: one CTOR read, one binding read, and
-one string-leaf read regardless of field count. Current-deployment witness lookup now
-filters before decoding and streams candidates. Health derives freshness from the
-already verified payload instead of verifying the same WITNESS twice. Deep health is a
-FastAPI worker endpoint, leaving the event loop free for `/api/ping` and other async
-traffic. The documented worktree guard also enters the repository's prepared API
-runtime when the host Python is bare, so the gate itself remains directly runnable.
-
-## Remaining named work
-
-- Close the 13 missing source paths across six specs and 20 unresolved symbols across
-  five specs; add proof for four specs and reconcile five done/inactive specs whose
-  claimed tests are absent.
-- Close the 32 surfaced Form gaps: 18 ideas without a Form spec, six specs without
-  validation, and eight capability gaps. Thirty-one are locally closable; the remote
-  model lane needs its staging boundary.
-- Promote observed high-traffic API families from native-capable handlers to public
-  kernel-first ownership, preserving the deployment observer control plane on the API.
-- Complete `ll-heap`, general grammar-as-recipe compilation, form-cli self-hosting, and
-  full real-model hidden-state-to-answer generation.
-- Re-run wellness after production release proof so deployment and CI circulation are
-  measured from the restored public body.
+This resnapshot deliberately avoids the old broad suite. The only kernel
+observations carried forward are the focused fkwu bootstrap and page-JIT
+readings above. Repository edits receive structural checks; a future fkwu
+change receives the smallest focused runtime observation that proves its new
+claim.
 
 ## Trust trace
 
-The structural floor query was native and grounded at `@1.1.9.104`, sourced from
-`docs/coherence-substrate/fourth-kernel-wall-groups.form`, but the sufficiency gate
-returned `decision:escalate`. The counts above come from repository-native wellness,
-roadmap, synthesis, gap, test, Git, and runtime probes. Diagnosis and synthesis beyond
-those receipts used the rented OpenAI GPT-5 reasoning lane.
+Exact source locations and runtime surfaces were read through the native fkwu
+Form lookup path. `form-cli ask` did not return within its bounded attempt, so
+it supplied no grounded answer and was not retried unchanged. Architecture
+synthesis and this prose used the rented OpenAI Codex reasoning lane and are
+grounded here in the cited live source paths rather than reported as native
+generation.

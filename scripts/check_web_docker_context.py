@@ -25,7 +25,7 @@ import re
 import sys
 from pathlib import Path
 
-# Imports like:  import { x } from "../../../experiments/form-kernel-ts/src/kernel.ts"
+# Imports that escape the copied web source tree are not available in the image.
 # Also catches:  from "../../something-outside-web"
 IMPORT_RE = re.compile(
     r"""(?:^|\s)(?:import|from|require\s*\()\s*\(?\s*['"]([^'"]+)['"]""",

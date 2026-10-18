@@ -1,6 +1,6 @@
 ; endpoint_vedic_chat.fk — a question about a birth-moment, answered by the native jyotisha cell.
 ;
-; The body is form-stdlib/vedic-chat.fk (four-way, tests/vedic-chat-band.fk). This recipe
+; The body is form-stdlib/vedic-chat.fk on fkwu. This recipe
 ; only carries the route's inputs to it: the trailing (let ...) bindings are rewritten by
 ; the API bridge (inject_bindings) and the answer is PRINTED so the carrier reads every
 ; line, not only the first. The defaults are the attested ground the door opens on —

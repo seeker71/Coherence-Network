@@ -5,7 +5,7 @@
 //
 // The visitor lands at /vision/lc-pulse for the felt meaning. From
 // here they can step sideways into /substrate/concept/lc-pulse for
-// the cell's full structural identity, or into /substrate/form pre-
+// the cell's full structural identity, or into local fkwu/Form pre-
 // loaded with this cell, to ask the lattice questions directly.
 //
 // Edge wiring: this component is the door the page-comment in
@@ -82,7 +82,6 @@ export async function SubstratePosition({
   // load-bearing.
   if (!cell) return null;
 
-  const cellRef = `@concept(${conceptId})`;
   const nodeIdStr = formatNodeId(cell.blueprint);
   const equivalentCount = equivalents?.cells.length ?? 0;
 
@@ -118,12 +117,6 @@ export async function SubstratePosition({
           className="text-amber-400/90 hover:text-amber-300 transition-colors"
         >
           → Full cell page
-        </Link>
-        <Link
-          href={`/substrate/form?cell=${encodeURIComponent(cellRef)}`}
-          className="text-amber-400/90 hover:text-amber-300 transition-colors"
-        >
-          → Ask the lattice (Form playground)
         </Link>
         <Link
           href="/substrate"

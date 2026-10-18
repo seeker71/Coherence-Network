@@ -748,24 +748,3 @@ def test_retired_unauthenticated_writer_cannot_mint_a_witness() -> None:
             host_health={},
             recorder_health={},
         )
-
-
-def test_traefik_routes_public_nonce_health_and_observer_writes_to_api() -> None:
-    compose = (
-        Path(__file__).resolve().parents[2]
-        / "deploy/kernel-router/docker-compose.kernel-router.yml"
-    ).read_text(encoding="utf-8")
-    native_rule = next(
-        line
-        for line in compose.splitlines()
-        if "coherence-api-kernel-native-first.rule:" in line
-    )
-    bml_health_rule = next(
-        line
-        for line in compose.splitlines()
-        if "coherence-api-bml-read-core-batch.rule:" in line
-    )
-    exclusion = "!QueryRegexp(`observation_nonce`,`^[A-Za-z0-9_-]{43}$`)"
-    assert exclusion in native_rule
-    assert "!PathPrefix(`/api/deployment-observer/`)" in native_rule
-    assert f"(Path(`/api/health`) && {exclusion})" in bml_health_rule

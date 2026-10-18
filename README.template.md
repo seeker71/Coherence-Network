@@ -24,7 +24,7 @@ Useful doors:
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`
 - MCP: `npx coherence-mcp-server`, then call `coherence_agent_invitation`
-- Form: `POST https://api.coherencycoin.com/api/substrate/form`
+- Form: `form-cli ask` in a checkout, realized on fkwu
 
 ## Walk the living surface
 
@@ -194,7 +194,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 
 ## Tech stack
 
-- **Form-native runtime**: BML/domain grammars, Form recipes/cells, and sibling Rust/Go/TypeScript kernels — `form/`, `kernels/`
+- **Form-native runtime**: BML/domain grammars, Form recipes/cells, and the fkwu page JIT — `form/`
 - **API/front door**: native kernel routes where promoted; `api/` is the compatibility bridge and current upstream for the tail
 - **Web**: Next.js 16 + shadcn/ui — `web/` — live at [coherencycoin.com](https://coherencycoin.com)
 - **Graph**: Neo4j

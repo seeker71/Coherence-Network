@@ -107,8 +107,8 @@ class GroundedCostResponse(BaseModel):
         "visible next native work, while the kernel already runs the numeric "
         "reduction. The bridge marshals each reconstructed record list to "
         "a kernel list-of-records and the recipe folds via the head/tail fold "
-        "with float accumulators and a min2/max2 clamp. Kernel-only via "
-        "serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate."
+        "with float accumulators and a min2/max2 clamp. fkwu executes the "
+        "application Form recipe through serve_via_kernel."
     ),
 )
 async def grounded_cost(
@@ -229,8 +229,7 @@ async def grounded_cost(
 # fully certain, never zero. usage_revenue = runtime_event_count *
 # _REVENUE_PER_REQUEST (0.001) is resolved before dispatch; the kernel receives
 # it as a scalar. The residual work is booleans-over-records and filtering. They
-# are named so they can move native next, not so they stay outside. Kernel-only
-# via serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate.
+# are named so they can move native next, not so they stay outside.
 # ---------------------------------------------------------------------------
 
 class GroundedValueResponse(BaseModel):
@@ -289,8 +288,7 @@ class GroundedValueResponse(BaseModel):
         "boolean-presence levels has_specs_with_data / has_lineage / has_friction "
         "(any(...)-over-records / len>0 ladders) and collection filtering are "
         "currently resolved before dispatch; they are visible next native work. "
-        "Kernel-only via serve_via_kernel; three-way "
-        "(CPython/TS/Rust) value-parity is the gate."
+        "fkwu executes the application Form recipe through serve_via_kernel."
     ),
 )
 async def grounded_value(

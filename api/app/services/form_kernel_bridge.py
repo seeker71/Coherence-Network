@@ -1,15 +1,8 @@
 """Form execution bridge — run recipes on the c-bootstrapped fkwu kernel.
 
 The compatibility API still hosts HTTP, but every transmuted endpoint body is
-a Form recipe executed directly by c-bootstrapped fkwu. Go,
-Rust, and TypeScript are differential oracles for primitives and native
-assumptions; none is selectable as a production execution carrier.
-
-Shared kernel recipes remain beside their Python twins under
-form/form/form-kernel-ts/seedbank/python-adapter/examples/ and are verified by
-parity_suite.sh. Coherence Network-owned endpoint recipes live with the API
-under api/app/form_recipes/. A bare recipe name resolves to the app home first,
-then to the shared coherence-kernel seedbank.
+an application-owned Form recipe executed directly by c-bootstrapped fkwu.
+fkwu is the sole production runtime for these recipes.
 
 The habit form. Three layers, each shorter to reach for than the last:
 
@@ -23,9 +16,7 @@ The habit form. Three layers, each shorter to reach for than the last:
 
 A new transmuted endpoint should need ~5 lines: load recipe path, build
 bindings dict, call serve_via_kernel, return the response model. Network-owned
-endpoint recipes live under api/app/form_recipes/. Reusable recipes with a
-cross-runtime Python twin belong upstream in coherence-kernel's seedbank, where
-they remain differential-tested across the sibling reference walkers and fkwu.
+endpoint recipes live under api/app/form_recipes/ as the source authority.
 """
 from __future__ import annotations
 
@@ -49,15 +40,14 @@ def preload_available() -> bool:
 
 
 def inline_available() -> bool:
-    """Compatibility readout: the retired Rust inline runtime is disabled."""
+    """Compatibility readout: the retired inline runtime is disabled."""
     return False
 
 
 def active_runtime() -> str:
     """Name the kernel path that would serve the next transmuted endpoint.
 
-    Reads as ``fkwu`` or ``unavailable``. Sibling walkers never appear here:
-    they are cross-check witnesses, not runtime candidates.
+    Reads as ``fkwu`` or ``unavailable``.
     """
     if _kernel_binary_available_lazy():
         return "fkwu"
@@ -154,7 +144,7 @@ def _run_staged_source(fk_source: str, timeout: float, cwd: Path | None = None) 
 
     The single subprocess seam every recipe lane shares: staging, process group,
     timeout reaping, cleanup, and the exit-code discipline. ``cwd`` is the
-    directory fkwu resolves ``; preludes:`` and BML lowering from; ``None``
+    directory fkwu resolves ``; preludes:`` and BML source composition from; ``None``
     keeps the caller's working directory.
     """
     bin_path = kernel_bin_path()
@@ -212,7 +202,7 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
     fk_source is the textual .fk content — a top-level (do ...) form whose
     final expression's value is the kernel's printed result.
 
-    Go, Rust, and TypeScript do not enter this path.
+    fkwu is the only runtime on this path.
     """
     out = _run_staged_source(fk_source, timeout).rstrip("\n").splitlines()
     if not out:
@@ -221,7 +211,7 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
 
 
 def _form_source_parent() -> Path:
-    """The directory fkwu must run in for `; preludes:` and BML lowering to resolve.
+    """The directory fkwu must run in for `; preludes:` and BML source composition.
 
     fkwu reads `form/form-stdlib/...` relative to its working directory when a
     staged /tmp source names a prelude; the image lays the kernel flat under
@@ -267,8 +257,8 @@ def serve_text_via_kernel(
 
 
 def run_inline(fk_source: str) -> Any:
-    """The sibling Rust inline carrier is intentionally unavailable."""
-    raise RuntimeError("sibling kernels are differential witnesses, not runtimes")
+    """The retired inline carrier is intentionally unavailable."""
+    raise RuntimeError("fkwu is the sole Form runtime")
 
 
 def run_kernel(
@@ -289,52 +279,14 @@ def run_kernel(
 # ---------------------------------------------------------------------------
 # Higher-level helpers — make transmutation easy enough to be a habit.
 #
-# Shared recipe templates live as .fk files alongside their Python twins under
-# form/form/form-kernel-ts/seedbank/python-adapter/examples/. Network-owned endpoint
-# recipes live under api/app/form_recipes/. The shape is always a top-level
+# Application recipe templates live under api/app/form_recipes/. The shape is always a top-level
 # (do ...) form whose trailing (let NAME ...) bindings carry the inputs,
 # followed by the final expression that produces the result. We inject inputs
 # by rewriting those trailing bindings — the recipe body itself never changes.
 # ---------------------------------------------------------------------------
 
 
-# Repo-root-relative path to the seedbank examples directory.
-#
-# In a source checkout, api/app/services/form_kernel_bridge.py sits four levels
-# below the repo root, so four `.parent` hops land on the root and the seedbank
-# tree resolves directly. In the deploy image, Dockerfile.api flattens `api/`
-# onto /app (COPY api/ ./), so the bridge lives at /app/app/services/... and the
-# same four hops reach `/` — a DIFFERENT place than the source layout. The image
-# path is therefore an explicit file-backed candidate, not environment config.
-_SEEDBANK_EXAMPLES_DEFAULT = (
-    Path(__file__).resolve().parent.parent.parent.parent
-    / "form"
-    / "form"
-    / "form-kernel-ts"
-    / "seedbank"
-    / "python-adapter"
-    / "examples"
-)
 _APP_RECIPES_DIR = Path(__file__).resolve().parent.parent / "form_recipes"
-
-
-def seedbank_examples_dir() -> Path:
-    """Return the absolute path to the python-adapter examples directory.
-
-    Selects the baked-in image directory when present, otherwise the source
-    checkout directory. Both are pinned files from the same submodule commit.
-    """
-    image = (
-        _IMAGE_ROOT
-        / "form"
-        / "form-kernel-ts"
-        / "seedbank"
-        / "python-adapter"
-        / "examples"
-    )
-    if image.is_dir():
-        return image
-    return _SEEDBANK_EXAMPLES_DEFAULT
 
 
 def app_recipes_dir() -> Path:
@@ -343,26 +295,18 @@ def app_recipes_dir() -> Path:
 
 
 def resolve_recipe_path(recipe_path: str | Path) -> Path:
-    """Resolve an absolute path or a bare recipe name through its two homes.
-
-    Coherence Network-owned recipes take precedence under ``api/app``. A name
-    not present there falls through to the shared coherence-kernel seedbank,
-    preserving the same pinned source identity in checkout and deploy image.
-    """
+    """Resolve an absolute path or an application-owned recipe name."""
     p = Path(recipe_path)
     if p.is_absolute():
         return p
-    app_path = app_recipes_dir() / p
-    if app_path.is_file():
-        return app_path
-    return seedbank_examples_dir() / p
+    return app_recipes_dir() / p
 
 
 def load_recipe(recipe_path: str | Path) -> str:
     """Load a .fk recipe source.
 
-    A bare filename resolves against the API-owned recipe directory first,
-    then the shared python-adapter seedbank. Absolute paths are honored as-is.
+    A bare filename resolves against the API-owned recipe directory.
+    Absolute paths are honored as-is.
     """
     p = resolve_recipe_path(recipe_path)
     return p.read_text(encoding="utf-8")
@@ -503,7 +447,7 @@ def inject_bindings(recipe_source: str, bindings: Mapping[str, Any]) -> str:
     NAME matches a key in `bindings`, and rewrites the whole form to
     `(let NAME <fk-literal>)`. Paren-balanced replacement — the value
     expression can be arbitrarily nested. Recipes generated by the
-    python-adapter end with input bindings followed by the result
+    application recipe ends with input bindings followed by the result
     expression; this is the contract.
 
     Any binding key that doesn't appear in the recipe raises KeyError

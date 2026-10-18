@@ -8,7 +8,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FORM_CLI = ROOT / "bin" / "form-cli"
-STATS = ROOT / "scripts" / "form_cli_stats.py"
 
 
 def test_ask_plus_reuses_the_canonical_native_trace() -> None:
@@ -66,12 +65,3 @@ def test_ask_plus_timeout_bounds_the_native_stage(tmp_path: Path) -> None:
     assert "native timeout after 0.001s" in result.stderr
     assert "should-not-run" not in result.stdout
     assert not (tmp_path / ".coherence-network" / "form-cli-asks.jsonl").exists()
-
-
-def test_stats_reads_the_canonical_observation_ledger() -> None:
-    source = STATS.read_text(encoding="utf-8")
-
-    assert 'ASKS = CN / "form-cli-asks.jsonl"' in source
-    assert 'row.get("grounded") == "yes"' in source
-    assert "form-cli-escalations.jsonl" not in source
-    assert "form-cli-trust.json" not in source
