@@ -38,14 +38,16 @@ from app.services.deployment_observer_service import (
     fkwu_challenge_expected,
     stable_health_projection,
 )
-from app.services import deployment_observer_service
+from app.services import deployment_observation, deployment_observer_service
 from app.services.deployment_observation import (
     DeploymentObservationError,
+    latest_deployment_observation,
     record_authenticated_deployment_observation,
     record_deployment_observation,
     verify_deployment_observation,
 )
 from app.services.unified_db import Base
+from app.services.substrate.orm import SubstrateNamedCellORM
 from scripts import form_cli_rag as rag
 from scripts import refresh_deployment_witness_index as witness_refresh
 
@@ -515,6 +517,71 @@ def sqlite_engine():
         yield engine
     finally:
         engine.dispose()
+
+
+def test_latest_witness_reads_only_the_current_deployment(
+    monkeypatch: pytest.MonkeyPatch,
+    sqlite_engine,
+) -> None:
+    SubstrateNamedCellORM.__table__.create(sqlite_engine)
+    current_name = f"deployment-observation-{TARGET[:12]}-2-current"
+    old_name = f"deployment-observation-{'f' * 12}-1-old"
+    decoded: list[str] = []
+
+    monkeypatch.setattr(
+        "app.services.deployment_observer_service.current_deployed_sha",
+        lambda: TARGET,
+    )
+
+    def decode(_session, row):
+        decoded.append(row.name)
+        return {"name": row.name}
+
+    monkeypatch.setattr(deployment_observation, "_decode_row", decode)
+    monkeypatch.setattr(
+        deployment_observation,
+        "_verified_payload",
+        lambda _session, payload, **_kwargs: payload,
+    )
+
+    with Session(sqlite_engine) as session:
+        session.add_all(
+            [
+                SubstrateNamedCellORM(
+                    name=old_name,
+                    domain="witness",
+                    blueprint_node_id=1,
+                ),
+                SubstrateNamedCellORM(
+                    name=current_name,
+                    domain="witness",
+                    blueprint_node_id=1,
+                ),
+            ]
+        )
+        session.commit()
+        latest = latest_deployment_observation(session)
+
+    assert latest == {"name": current_name}
+    assert decoded == [current_name]
+
+
+def test_latest_witness_is_empty_outside_a_deployed_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+    sqlite_engine,
+) -> None:
+    SubstrateNamedCellORM.__table__.create(sqlite_engine)
+
+    def unavailable():
+        raise DeploymentObserverError("current-deployed-sha-unavailable")
+
+    monkeypatch.setattr(
+        "app.services.deployment_observer_service.current_deployed_sha",
+        unavailable,
+    )
+
+    with Session(sqlite_engine) as session:
+        assert latest_deployment_observation(session) is None
 
 
 def test_challenge_consumption_is_dual_vantage_and_one_time(
