@@ -53,6 +53,11 @@ Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
 separate claims: their identity checks stay intact, and no automatic second
 kernel build or stale observer workflow pin is imposed on every deployment.
+The release read reuses public health, API/web revision parity, the web root,
+and CORS. Kernel status assertions, deleted-router canaries, unrelated profile
+pages, assets, provider readiness, persistence, Telegram and pulse readings are
+not recurring release gates. When one of those surfaces changes or signals an
+issue, follow that finding at its source with the smallest relevant observation.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
