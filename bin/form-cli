@@ -406,6 +406,29 @@ raise SystemExit(proc.returncode)
 PY
 }
 
+run_native_ask_with_timeout() {
+  timeout="$1"
+  question="$2"
+  py="$(python_bridge)"
+  "$py" - "$timeout" "$ROOT/bin/form-cli" "$question" <<'PY'
+import subprocess
+import sys
+
+timeout = float(sys.argv[1])
+form_cli = sys.argv[2]
+question = sys.argv[3]
+try:
+    proc = subprocess.run(
+        ["bash", form_cli, "ask", question],
+        timeout=timeout,
+    )
+except subprocess.TimeoutExpired:
+    print(f"form-cli ask+: native timeout after {timeout:g}s", file=sys.stderr)
+    raise SystemExit(124)
+raise SystemExit(proc.returncode)
+PY
+}
+
 record_remote_crossing() {
   status="$1"
   query_key="$2"
@@ -424,6 +447,7 @@ record_remote_crossing() {
 ask_native_escalating() {
   remote="claude -p"
   ask_timeout="30"
+  native_timeout="180"
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --remote)
@@ -431,7 +455,7 @@ ask_native_escalating() {
         remote="$2"; shift 2 ;;
       --timeout)
         [ "$#" -ge 2 ] || { echo "form-cli ask+: --timeout needs seconds" >&2; return 2; }
-        ask_timeout="$2"; shift 2 ;;
+        ask_timeout="$2"; native_timeout="$2"; shift 2 ;;
       --) shift; break ;;
       -m|--model|-j|--judge|--trust|--retries|--judge-gate)
         echo "form-cli ask+: local model/judge controls are retired; the native sufficiency gate owns escalation" >&2
@@ -442,11 +466,21 @@ ask_native_escalating() {
       *) break ;;
     esac
   done
-  case "$ask_timeout" in
-    ''|*[!0-9.]*)
-      echo "form-cli ask+: --timeout must be numeric seconds" >&2
-      return 2 ;;
-  esac
+  py="$(python_bridge)"
+  if ! "$py" - "$ask_timeout" <<'PY'
+import math
+import sys
+
+try:
+    timeout = float(sys.argv[1])
+except ValueError:
+    raise SystemExit(1)
+raise SystemExit(0 if math.isfinite(timeout) and timeout > 0 else 1)
+PY
+  then
+    echo "form-cli ask+: --timeout must be numeric seconds greater than zero" >&2
+    return 2
+  fi
   q="$*"
   [ -n "$q" ] || { echo "usage: form-cli ask+ [--remote CMD] [--timeout N] \"question\"" >&2; return 2; }
 
@@ -458,10 +492,9 @@ ask_native_escalating() {
   remote_err="$work/remote.err"
   query_file="$work/query"
   printf '%s' "$q" >"$query_file"
-  py="$(python_bridge)"
   query_key="$("$py" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$query_file")"
 
-  if (ask_native_local "$q") >"$local_out" 2>"$local_err"; then
+  if run_native_ask_with_timeout "$native_timeout" "$q" >"$local_out" 2>"$local_err"; then
     :
   else
     rc="$?"

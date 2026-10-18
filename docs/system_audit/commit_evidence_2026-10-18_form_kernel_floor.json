@@ -32,7 +32,7 @@
       "GitHub Actions after PR"
     ],
     "status": "pending",
-    "summary": "The local repository guard and strict PR-followthrough check pass; exact-head GitHub Actions remains pending until the PR exists."
+    "summary": "The local repository guard, strict PR-followthrough check, and the first exact-head Linux, Windows, and security checks passed. A review-discovered native-timeout repair is pending its fresh exact-head checks."
   },
   "commit_scope": "Update the pinned Form kernel, make form-cli ask use one native sufficiency gate before any remote crossing, retire duplicate ask carriers, re-evaluate the executable floor, and remove the deployment-witness projection loop that starved production liveness.",
   "contributors": [{
@@ -56,6 +56,7 @@
     "status": "pending",
     "test_flows": [
       "former seven-argument ask+ failure through the canonical native router and explicit remote command",
+      "native-stage deadline exits 124 without a remote crossing, while the default native budget completes the real grounded query",
       "66-field structured CTOR projection in exactly three database statements",
       "current-deployment-only WITNESS selection",
       "deep health threadpool isolation with event-loop ping",
@@ -67,6 +68,8 @@
     "form/form: ./validate.sh form-stdlib/form-loader.fk form-stdlib/tests/form-loader-band.fk -> verdict 4095; fourth arm: 1 band(s) four-way; 1 ok; 0 divergent; fkwu included",
     "49 focused deployment observer, substrate projection, and health tests passed",
     "65 broader health and API tests passed",
+    "5 canonical form-cli carrier tests passed, including native-stage timeout isolation",
+    "real ask+ completed native grounding and the explicit remote continuation under the default 180-second native budget",
     "docs/system_audit/form_kernel_floor_2026-10-18.md",
     "live py-spy stack: health -> latest_deployment_observation -> _decode_row -> ctor_field_lookup -> lookup_node"
   ],
@@ -102,13 +105,14 @@
       "make prompt-guide",
       "make wellness",
       "form/form: ./validate.sh form-stdlib/form-loader.fk form-stdlib/tests/form-loader-band.fk",
-      "bin/form-cli ask+ --remote printf remote-served --timeout 5 current form kernel floor features changes gaps",
+      "bin/form-cli ask+ --remote printf remote-served current form kernel floor features changes gaps",
+      "pytest -q api/tests/test_form_cli_carriers.py",
       "pytest focused Form carrier, substrate, observer, and health suites",
       "ruff check changed clean Python surfaces",
       "bash -n changed shell carriers"
     ],
     "status": "pass",
-    "summary": "Parent and submodule began at their upstream heads; native ask routing, fourth-arm loader proof, constant-query CTOR projection, health isolation, and 71 plus 49 plus 65 focused tests passed."
+    "summary": "Parent and submodule began at their upstream heads; native ask routing and deadline isolation, fourth-arm loader proof, constant-query CTOR projection, health isolation, and 71 plus 49 plus 65 focused tests passed."
   },
   "phase_gate": {
     "blockers": ["exact-head CI, merge, production rollout, and restored public proof remain"],

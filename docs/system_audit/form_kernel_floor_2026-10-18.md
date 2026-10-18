@@ -15,7 +15,9 @@ through coherence-kernel PR 595.
 - `form-cli ask` is the single native lookup door. `ask+` now preserves the same staged
   native decision and crosses to a named remote command only after
   `decision:escalate`. Native and rented trust rows remain separate, and the canonical
-  ask ledger records both crossings.
+  ask ledger records both crossings. The native stage is deadline-bound as well as the
+  remote stage: the default allows 180 seconds for grounding and 30 seconds for the
+  oracle, while an explicit `--timeout` constrains both.
 - The loader band passes at verdict 4095 with one fourth-arm band, one passing band,
   and zero divergence.
 - The model lane has tokenization, tensor mapping, sampling, Metal and autoregressive
