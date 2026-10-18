@@ -112,18 +112,8 @@ def _short_error(exc: BaseException) -> str:
 
 _SLOW_PREFIX = "slow: "
 
-# Native-promoted routes stamp their response with an `x-form-router` header
-# naming the carrier that served them: "native-kernel" (the Form kernel-router,
-# the body's actual carrier) or "fanout-python" (the Python fan-out fallback).
-# When the kernel-router container is unhealthy, Traefik fails over to the
-# Python `api` container, which still returns 200 with a valid body — so a
-# native-route regression (e.g. the boolean::bigint 500 fixed in #3087) is
-# invisible to status+shape checks alone: the witness probes the Python 200 and
-# reads "breathing" while the native route is down. An organ that declares
-# `expected_router` makes _apply compare the carrier seen and flag a strain
-# when the route was served by anything but its native carrier. Strain, not
-# silence: the surface still breathes, and a brief deploy-window failover
-# self-heals without scarring uptime.
+# An organ may require an `x-form-router` value when a future fkwu-owned route
+# publishes one. The current production API does not stamp this header.
 _FORM_ROUTER_HEADER = "x-form-router"
 _FALLBACK_PREFIX = "fell back: "
 _PUBLIC_API_BASE = "https://api.coherencycoin.com"

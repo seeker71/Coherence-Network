@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # mac-room-relay.py — the persistent room-ear relay (Track B). The phone's fixed door: it POSTs a clip
 # of room audio to /hear, the relay turns it into WORDS (whisper.cpp) and an ANSWER on the body-first
-# path (bin/form-cli ask+ — grounds in the body, escalates to the oracle only when local is not
+# path (bin/form-cli ask — grounds in the body, escalates to the oracle only when local is not
 # enough), and returns both. Thin CARRIER: the engines are the proven body, this only relays.
 #
 #   phone audio -> POST /hear -> whisper (audio->text) -> form_cli_ask (text->answer) -> {transcript, answer}
@@ -168,7 +168,7 @@ def answer(text):
         return ""
     try:
         out = subprocess.run(
-            [ASK, "ask+", "--timeout", "12", text],
+            [ASK, "ask", "--timeout", "12", text],
             capture_output=True,
             text=True,
             timeout=12,

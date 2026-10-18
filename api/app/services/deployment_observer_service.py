@@ -191,14 +191,6 @@ def fkwu_challenge_expression(challenge_input: str) -> str:
     )
 
 
-def form_cli_challenge_expected(challenge_input: str) -> str:
-    if not _HEX64_RE.fullmatch(challenge_input):
-        raise DeploymentObserverError("carrier-challenge-input")
-    return hashlib.sha256(
-        b"form-cli-carrier-challenge-v1\n" + challenge_input.encode("ascii")
-    ).hexdigest()
-
-
 def health_url(nonce: str, *, base: str = PUBLIC_API_BASE) -> str:
     nonce_sha256(nonce)
     if base != PUBLIC_API_BASE:
@@ -274,9 +266,9 @@ def stable_health_projection(
     if form_cli.get("input_sha256") != challenge_input:
         raise DeploymentObserverError("observer-health-form-cli-input")
     form_result = str(form_cli.get("result") or "")
-    if form_result != form_cli_challenge_expected(challenge_input):
+    if re.fullmatch(r"[0-9a-f]{16}", form_result) is None:
         raise DeploymentObserverError("observer-health-form-cli-result")
-    if form_cli.get("verified") is not True or form_cli.get("protocol") != "form-cli-v2":
+    if form_cli.get("verified") is not True or form_cli.get("protocol") != "form-cli-v3":
         raise DeploymentObserverError("observer-health-form-cli-verification")
     projection = {
         "schema": HEALTH_SCHEMA,
@@ -293,7 +285,7 @@ def stable_health_projection(
             kernel.get("binary_sha256"), "kernel-binary-sha256"
         ),
         "form_cli_result": form_result,
-        "form_cli_protocol": "form-cli-v2",
+        "form_cli_protocol": "form-cli-v3",
         "form_cli_binary_sha256": _hex_field(
             form_cli.get("binary_sha256"), "form-cli-binary-sha256"
         ),
@@ -329,8 +321,7 @@ def validate_direct_probe(
         "image_revision": target_sha,
         "challenge_input_sha256": challenge_input,
         "kernel_result": fkwu_challenge_expected(challenge_input),
-        "form_cli_result": form_cli_challenge_expected(challenge_input),
-        "form_cli_protocol": "form-cli-v2",
+        "form_cli_protocol": "form-cli-v3",
         "reproducible_builder_image": REPRODUCIBLE_BUILDER_IMAGE,
     }
     for name, expected in required.items():
@@ -347,6 +338,12 @@ def validate_direct_probe(
         raise DeploymentObserverError("observer-direct-form-source-commit")
     if body.get("image_form_revision") != form_source_commit:
         raise DeploymentObserverError("observer-direct-form-image-revision")
+    form_result = str(body.get("form_cli_result") or "")
+    if (
+        re.fullmatch(r"[0-9a-f]{16}", form_result) is None
+        or form_result != public_projection.get("form_cli_result")
+    ):
+        raise DeploymentObserverError("observer-direct-form-cli-result")
     digest_fields = (
         "kernel_binary_sha256",
         "form_cli_binary_sha256",
@@ -393,6 +390,7 @@ def validate_direct_probe(
         "image_id": image_id,
         "form_source_commit": form_source_commit,
         "image_form_revision": form_source_commit,
+        "form_cli_result": form_result,
         "reproducible_builder_image": REPRODUCIBLE_BUILDER_IMAGE,
         **{
             "reproduced_kernel_binary_sha256": reproduced[

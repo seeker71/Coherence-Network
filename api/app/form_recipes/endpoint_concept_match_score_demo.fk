@@ -1,0 +1,23 @@
+(do
+  (defn match_count (needles haystack)
+    (if (eq (len needles) 0)
+      0.0
+      (add
+        (if (ge (str_find haystack (head needles) 0) 0) 1.0 0.0)
+        (match_count (tail needles) haystack))))
+  (defn concept_score (keywords concept_text concept_keywords idea_text name_lower)
+    (do
+      (let forward_score (div (match_count keywords concept_text) (len keywords)))
+      (let reverse_score
+        (if (gt (len concept_keywords) 0)
+          (div (match_count concept_keywords idea_text) (len concept_keywords))
+          0.0))
+      (let name_bonus (if (ge (str_find idea_text name_lower 0) 0) 0.3 0.0))
+      (let raw (add (add (mul 0.5 forward_score) (mul 0.3 reverse_score)) name_bonus))
+      (round_ndigits (if (gt raw 1.0) 1.0 raw) 4)))
+  (let keywords (list "energy" "flow" "coherence" "xyz"))
+  (let concept_text "energy flows as coherence through the body field")
+  (let concept_keywords (list "energy" "tissue"))
+  (let idea_text "energy flow coherence xyz")
+  (let name_lower "energy flow")
+  (concept_score keywords concept_text concept_keywords idea_text name_lower))

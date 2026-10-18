@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "COHERENCE_AGENT=grok python3 \"$(git rev-parse --show-toplevel)/scripts/difficult_conversation_arrival.py\""
+            "command": "cd \"$(git rev-parse --show-toplevel)/form\" && ./fkwu ../api/app/form_recipes/session_difficult_conversation_arrival.bml"
           }
         ]
       }

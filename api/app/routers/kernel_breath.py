@@ -26,7 +26,7 @@ from app.routers.kernel_shared import (
 # counts (gas / water / ice), H_max = ln(3). The substrate's breath-rhythm
 # balance signal — 1.0 for equal thirds, -0.0 (zero) for a single phase.
 # Shares the breath-rhythm arithmetic used by vitality_service. This is the first kernel-served
-# route to use a transcendental native — math.log lowers to math_log (ln).
+# route to use fkwu's transcendental native `math_log` (ln).
 # The p > 0 guard is the log-of-zero guard (ln(0) is never evaluated); the
 # single trailing negation matches CPython's `-sum(...)` to the bit,
 # including the -0.0 sign on a single-phase distribution.
@@ -58,8 +58,8 @@ class BreathBalanceResponse(BaseModel):
         "thirds, approaching 0.0 as the distribution collapses into one "
         "phase. The same shape vitality_service uses for breath rhythm. "
         "First kernel-served route to use a transcendental native (ln); the "
-        "p>0 guard is the log-of-zero guard. Kernel-only via "
-        "serve_via_kernel; CPython==Rust value-parity is the gate."
+        "p>0 guard is the log-of-zero guard. fkwu executes the application "
+        "Form recipe through serve_via_kernel."
     ),
 )
 async def breath_balance(
@@ -121,9 +121,9 @@ class ShannonEntropyResponse(BaseModel):
         "(gas/water/ice), H_max = ln(3), rounded to 4 places — 1.0 for equal "
         "thirds, 0.0 when only one phase is present. The body of "
         "breath_service._shannon_entropy_normalized. Folds two natives into one "
-        "recipe (math.log → ln, round_ndigits → CPython-exact round). The p>0 "
-        "guard is the log-of-zero guard. Kernel-only via serve_via_kernel; "
-        "CPython==Rust value-parity is the gate."
+        "recipe (math.log → ln, round_ndigits → compatibility rounding). The p>0 "
+        "guard is the log-of-zero guard. fkwu executes the application Form recipe "
+        "through serve_via_kernel."
     ),
 )
 async def shannon_entropy(
@@ -180,8 +180,6 @@ async def shannon_entropy(
 #       + 0.30*task_card_quality + 0.20*task_card_coverage + 0.15*evidence_coverage)
 # The residual work is the heterogeneous dict/list walk that produces the
 # counts. It is named here so it can move native next.
-# Kernel-only via serve_via_kernel; three-way (CPython/TS/Rust) value-
-# parity is the gate.
 # ---------------------------------------------------------------------------
 
 class CoherenceSummaryScoreResponse(BaseModel):
@@ -229,8 +227,7 @@ class CoherenceSummaryScoreResponse(BaseModel):
         "round(_, 4) on each output. The dict-walk over the task collection that "
         "produces the counts (heterogeneous `context` dicts, presence conditions) "
         "is currently precomputed before dispatch; it is visible next native work. "
-        "Kernel-only via "
-        "serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate."
+        "fkwu executes the application Form recipe through serve_via_kernel."
     ),
 )
 async def coherence_summary_score(

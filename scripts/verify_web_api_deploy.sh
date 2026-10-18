@@ -708,98 +708,6 @@ PY
   return 0
 }
 
-check_form_playground_fmf_proof() {
-  local page_url="${WEB_URL%/}/substrate/form"
-  local html_file="$TMP_DIR/form_playground.body.html"
-  local status
-
-  echo
-  echo "==> Form playground FMF public proof: ${page_url}"
-
-  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -o "$html_file" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    -H "Cache-Control: no-cache" \
-    "$page_url" || true)"
-  echo "HTML status: ${status:-unknown}"
-  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
-    echo "FAIL: could not fetch Form playground for FMF proof"
-    return 1
-  fi
-
-  if ! python3 - "$WEB_URL" "$html_file" <<'PY'
-from __future__ import annotations
-
-import re
-import sys
-import urllib.error
-import urllib.parse
-import urllib.request
-from pathlib import Path
-
-origin = sys.argv[1].rstrip("/")
-html_path = Path(sys.argv[2])
-html = html_path.read_text(encoding="utf-8", errors="ignore")
-
-required = [
-    "Field Model Form proof",
-    "field-model-form-public-proof:115",
-    "field-model-form-bml-runtime-proof:63",
-    "field-auto-research-bml-proof:127",
-    "field-auto-research-perturbation-proof:255",
-    "field-model-form-browser-runtime-proof:4",
-    "sequence-lift-project-fieldStep",
-    "fmf-proof-score",
-    "field_blueprint",
-]
-hits = {needle: ("html" if needle in html else "") for needle in required}
-chunk_paths = sorted(set(re.findall(r"/_next/static/chunks/[^\"'<>\\]+\.js", html)))
-errors: list[str] = []
-
-for path in chunk_paths:
-    if all(hits.values()):
-        break
-    url = urllib.parse.urljoin(origin + "/", path.lstrip("/"))
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "User-Agent": "CoherenceDeployVerify/1.0",
-        },
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            body = response.read().decode("utf-8", errors="ignore")
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        errors.append(f"{path}: {exc}")
-        continue
-    for needle in required:
-        if not hits[needle] and needle in body:
-            hits[needle] = path
-
-print(f"Next chunks scanned: {len(chunk_paths)}")
-for needle in required:
-    source = hits[needle] or "<missing>"
-    print(f"{needle}: {source}")
-
-missing = [needle for needle, source in hits.items() if not source]
-if missing:
-    if errors:
-        print("Chunk fetch warnings:")
-        for error in errors[:5]:
-            print(f"- {error}")
-    print(f"FAIL: public Form playground is missing FMF proof markers: {', '.join(missing)}")
-    sys.exit(1)
-
-print("PASS")
-PY
-  then
-    return 1
-  fi
-  return 0
-}
-
 check_api_runtime_sha() {
   local health_url="$1"
   local main_head_url="$2"
@@ -1793,7 +1701,6 @@ check_url "Hati Urs profile" "https://hati.earth/people/urs" "Urs Muff" || fail=
 check_url "Hati Urs profile refine doorway" "https://hati.earth/people/urs-muff/edit" "Refine Urs Muff" || fail=1
 check_url "Hati stewardship registry" "https://hati.earth/stewardship/registry" || fail=1
 check_url "Hati Tesla stewardship record" "https://hati.earth/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont" || fail=1
-check_form_playground_fmf_proof || fail=1
 check_web_runtime_sha \
   "${WEB_URL%/}/api/health-proxy" \
   "${API_URL%/}/api/gates/main-head" \

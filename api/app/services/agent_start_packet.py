@@ -58,13 +58,13 @@ AGENT_START_PACKET: dict[str, Any] = {
                 "Names are query keys; coordinates carry identity."
             ),
             "primary_surface": (
-                "Grammar (BMF in .fk) → Recipe NodeIDs on lattice → realize (Go/Rust/TS walker). "
-                "Read via native file I/O, HTTP, persistence.fk — not Python form.py eval."
+                "Grammar (BMF in .fk) → Recipe NodeIDs on lattice → realize on fkwu. "
+                "Read via native file I/O, HTTP, and persistence cells."
             ),
             "on_the_way_out": [
-                "api/app/services/substrate/form.py and form_runtime.py (AST + evaluate)",
-                "Form executed by the pinned native kernels in the form submodule",
-                "Treating kernel realization as a separate eval product",
+                "the Python API compatibility host",
+                "consumer-side Form evaluators",
+                "treating realization as a separate eval product",
             ],
             "already_native": [
                 "form-stdlib/persistence.fk lookup-cell and store-cells",
@@ -91,7 +91,7 @@ AGENT_START_PACKET: dict[str, Any] = {
                     "choose / fail / stop and BMA save / restore / discard — angelic undo."
                 ),
                 "cost": (
-                    "Same shape -> same NodeID (node_eq); hot sequences lower to native/JIT."
+                    "Same shape -> same NodeID (node_eq); hot sequences enter the fkwu page JIT."
                 ),
                 "read_first": [
                     "docs/shared/agent-start-packet.md",
@@ -99,7 +99,7 @@ AGENT_START_PACKET: dict[str, Any] = {
                     "kernels/BMF_BML_COMPILER_PICTURE.md",
                     "form/form/form-stdlib/engine.fk",
                 ],
-                "prove_with": "cd form/form && ./validate.sh … (form-stdlib/tests/*-band.fk)",
+                "prove_with": "the smallest focused fkwu source or route observation",
                 "next_ripening": (
                     "form-notation grammar in .fk replacing Python parse of @spec and ?verbs"
                 ),
@@ -113,16 +113,14 @@ AGENT_START_PACKET: dict[str, Any] = {
                 "GET /api/substrate/lattice/stats",
                 "GET /api/substrate/cell/{domain}/{name}",
                 "GET /api/substrate/equivalent/{domain}/{name}",
-                'POST https://api.coherencycoin.com/api/substrate/form {"expression":"?equivalent @spec(agent-pipeline)"}',
+                'local: form-cli ask "what is structurally equivalent to agent-pipeline?"',
             ],
             "doors_note": (
-                "API/CLI may route through Python bootstrap until form-notation grammar lands."
+                "The public surface is read-only REST until the fkwu application host owns the Form query door."
             ),
             "smoke_check": (
-                "curl -s https://api.coherencycoin.com/api/substrate/form "
-                "-H 'Content-Type: application/json' "
-                "-d '{\"expression\":\"?equivalent @spec(agent-pipeline)\"}' ; "
-                "expect JSON with a result kind or clear error, not HTML"
+                "curl -s https://api.coherencycoin.com/api/substrate/lattice/stats ; "
+                "expect lattice JSON, not HTML"
             ),
             "authoring": (
                 "New durable cells: edit source with frontmatter, then coh_substrate.py ingest. "

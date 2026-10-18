@@ -27,7 +27,7 @@ from app.routers.kernel_shared import (
 # concept_auto_tagger._score_concept, transmuted to a Form recipe. The FIRST
 # kernel-served route to fold STRING MEMBERSHIP (`kw in text` lowered to
 # str_find(text, kw, 0) >= 0) rather than an int or float field; it opens the
-# text-scoring family the API_KERNEL_READINESS ledger named as the next gate.
+# text-scoring family now carried directly by the fkwu recipe surface.
 #
 # Current decomposition (mirrors how compute_idea_metrics was decomposed).
 # _score_concept is two capabilities welded together:
@@ -47,11 +47,8 @@ from app.routers.kernel_shared import (
 # concept_keywords as STRING LISTS and concept_text / idea_text / name_lower as
 # STRINGS. form_kernel_bridge marshals a list[str] via _fk_literal's list arm
 # (each element a quoted string literal) and a str as a quoted scalar; the recipe
-# folds membership with str_find. The str_find native is three-way value-identical
-# for ASCII (string-membership-band.fk); the recipe's `for needle in needles` fold
-# lowers to the adapter's _iter head/tail fold (Rust+TS value-exact == CPython —
-# Go carries no _iter, the same situation idea_grounded_cost_sum / grounded_cost
-# ship under). Kernel-only via serve_via_kernel; the host tokenizes via
+# folds membership with str_find. The recipe's `for needle in needles` fold
+# realizes as the fkwu head/tail fold. The host tokenizes via
 # _extract_keywords before dispatch.
 # ---------------------------------------------------------------------------
 
@@ -94,9 +91,8 @@ class ConceptMatchScoreResponse(BaseModel):
         "fraction of idea keywords found in concept_text (str_find >= 0), reverse "
         "= fraction of concept keywords found in idea_text, plus a 0.3 name bonus, "
         "combined round(min(0.5*forward + 0.3*reverse + bonus, 1.0), 4) — the body "
-        "of _score_concept. str_find is three-way value-identical for ASCII "
-        "(string-membership-band.fk); the recipe fold is Rust+TS value-exact == "
-        "CPython. Kernel-only via serve_via_kernel."
+        "of _score_concept. fkwu executes the application Form recipe through "
+        "serve_via_kernel."
     ),
 )
 async def concept_match_score(
@@ -198,10 +194,8 @@ async def concept_match_score(
 # via _fk_literal's list arm (each element a quoted literal; an empty list
 # marshals as `(list)` so `len` is 0 and the empty-guard fires). The recipe's
 # nested fold (`contains_exact` inner str_eq fold, `match_count` outer fold)
-# lowers to the adapter's _iter head/tail fold (Rust+TS value-exact == CPython
-# — Go carries no _iter, the same situation idea_grounded_cost_sum /
-# concept_match_score ship under). str_eq is COMPARE.EQ, value-identical for
-# ASCII. Kernel-only via serve_via_kernel; the host dedups before dispatch.
+# realizes as the fkwu head/tail fold. str_eq is COMPARE.EQ for ASCII.
+# The host dedups before dispatch.
 # ---------------------------------------------------------------------------
 
 
@@ -244,9 +238,8 @@ class TagMatchScoreResponse(BaseModel):
         "unique contributor tags appear in idea_tags (str_eq membership fold), "
         "then max(0.0, min(1.0, matched / |contributor|)), with a 0.5 empty-guard "
         "when either list is empty. The denominator is the deduped contributor-tag "
-        "count. str_eq is COMPARE.EQ, value-identical for ASCII; the recipe fold "
-        "is Rust+TS value-exact == CPython. Kernel-only via "
-        "serve_via_kernel."
+        "count. str_eq is COMPARE.EQ for ASCII. fkwu executes the application "
+        "Form recipe through serve_via_kernel."
     ),
 )
 async def tag_match_score(
@@ -322,18 +315,15 @@ async def tag_match_score(
 #       naming side-output, not the scalar score. The dict projection dissolves at
 #       the bridge; the recipe never sees a dict.
 #   (b) THE COSINE — given the two parallel float vectors, dot + both sums-of-squares in
-#       one parallel index walk, sqrt each norm (math_sqrt, IEEE-correct three-way),
+#       one parallel index walk, sqrt each norm with math_sqrt,
 #       guarded ratio (denom>0 else 0.5), clamp [0,1]. This is what the recipe runs.
 #
 # How the inputs travel: contributor_vec / idea_vec marshal as FLOAT LISTS (equal
 # length, the fixed axis order) via _fk_literal's list arm (each element a float
-# literal). The recipe's parallel index walk lowers to the adapter's _get-indexed
-# while fold — the same shape weighted_average ships under (Rust+TS value-exact ==
-# CPython; Go carries no _get/_iter fold). math_sqrt is bit-identical across runtimes
-# (float-natives-band.fk → sqrt(16)==4.0 tolerance-free; the 1-ULP caveat is math_pow's,
-# not math_sqrt's). Cosine often lands on irrational floats (1/sqrt(2) =
-# 0.7071067811865475); these are three-way bit-identical, verified in the parity proof.
-# Kernel-only via serve_via_kernel; the host projects the vectors + names
+# literal). The recipe's parallel index walk uses fkwu indexed access
+# while fold — the same shape weighted_average uses. Cosine often lands on
+# irrational floats (1/sqrt(2) = 0.7071067811865475).
+# The host projects the vectors + names
 # matched_axes before dispatch.
 # ---------------------------------------------------------------------------
 
@@ -381,12 +371,11 @@ class WorldviewAlignmentResponse(BaseModel):
         "BeliefAxis order (scientific, spiritual, pragmatic, holistic, relational, "
         "systemic) — dict→vector projection currently done before dispatch — and "
         "the kernel SCORES the two parallel vectors: dot(a,b) / (||a||*||b||), with "
-        "norms via math_sqrt (IEEE-correct, three-way bit-identical), a 0.5 zero-denom "
+        "norms via math_sqrt, a 0.5 zero-denom "
         "guard, clamped to [0,1]. matched_axes (axes where cv>0.3 AND iv>0.3) is named "
         "before dispatch from the vectors + axis names — a naming side-output, not the scalar "
-        "score. The parallel index walk is Rust+TS value-exact == CPython; cosine's "
-        "irrational floats (e.g. 1/sqrt(2)) are bit-identical across runtimes. "
-        "Kernel-only via serve_via_kernel."
+        "score. fkwu executes the parallel walk in the application Form recipe "
+        "through serve_via_kernel."
     ),
 )
 async def worldview_alignment(

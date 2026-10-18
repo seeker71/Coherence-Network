@@ -1,6 +1,6 @@
 // /vedic — Urs's Vedic (jyotisha) chart, cast natively: the square, the placements, the dasha cycle.
 //
-// The body is form-stdlib/vedic-chat.fk on the fkwu runtime (four-way proven);
+// The body is form-stdlib/vedic-chat.fk on the fkwu runtime;
 // this page is a door onto it through /api/vedic/chart. The default chart is the
 // birth-moment the body attests for Urs; the API takes another moment by query.
 

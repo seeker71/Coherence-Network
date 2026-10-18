@@ -1,0 +1,9 @@
+// Delivery care is guidance carried by the application, executed on fkwu.
+section [form.bml] {
+    "Delivery care\n"
+    ++ "Land the kernel dependency before the application gitlink.\n"
+    ++ "Read review findings with the current source; keep useful work with its owner.\n"
+    ++ "Reuse existing evidence and observe only the changed claim.\n"
+    ++ "Deploy the merged application commit and read its public API/web identity.\n"
+    ++ "Keep implementation in Form/BML; close each page-JIT gap at its source.\n";
+}

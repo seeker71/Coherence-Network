@@ -1,0 +1,6 @@
+// Session-start counsel stays in Form: the shared kernel card plus this
+// repository's private-ground boundary, returned as one bounded value.
+// preludes: form/form-stdlib/core.fk cognition/difficult-conversation-counsel.fk
+section [form.bml] {
+    dcc-card() ++ "\nfamily / partner: the tender-ground files in MEMORY.md gate first (partner_presence.md, project_may_june_2026_opportunity_shapes.md) — load their bodies before answering.";
+}

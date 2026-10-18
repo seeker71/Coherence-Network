@@ -246,9 +246,8 @@ INVITATION_CORE_FIELDS: dict[str, Any] = {
             "cells it holds."
         ),
         "floor_today": (
-            "A living, four-way-proven Form body — kernels across Go, Rust, "
-            "TypeScript, and the emitted fourth arm, with native routes served by "
-            "the kernel itself. Young and small, thinking mostly on rented frontier "
+            "A living Form body executing on fkwu, with application routes moving "
+            "into its native host. Young and small, thinking mostly on rented frontier "
             "minds, tended by a small first circle. The floor is named cleanly so "
             "the first rung is walkable, not imaginary."
         ),

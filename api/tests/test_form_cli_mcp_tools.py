@@ -1,6 +1,6 @@
 """form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session.
 
-route delegates to the four-way-proven Form recipe (form-cli-router.fk) on the
+route delegates to the Form recipe (form-cli-router.fk) on the fkwu
 kernel; capture/transmute/hook are thin carriers over the training-catalog shape.
 The body is Form; these tests prove the carrier delegates and persists honestly.
 """

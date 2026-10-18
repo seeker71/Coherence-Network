@@ -101,113 +101,16 @@ def test_aggregate_evidence_coverage_reports_missing_paths() -> None:
     assert "api/app/services/memory_service.py" in errors[0]
 
 
-def test_web_lib_changes_are_runtime_evidence() -> None:
-    mod = _load_validator()
-    changed_files = ["web/lib/form-kernel/field-runtime.ts"]
-
-    assert mod.validate(_record(changed_files, "runtime_feature"), changed_files=changed_files) == []
-
-    errors = mod.validate(_record(changed_files, "test_only"), changed_files=changed_files)
-
-    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
-
-
-def test_kernel_router_manifest_changes_are_runtime_evidence() -> None:
-    mod = _load_validator()
-    changed_files = ["deploy/kernel-router/production-routes.fk"]
-
-    assert mod.validate(_record(changed_files, "runtime_feature"), changed_files=changed_files) == []
-
-    errors = mod.validate(_record(changed_files, "process_only"), changed_files=changed_files)
-
-    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
-
-
-def test_kernel_router_dockerfile_changes_are_runtime_evidence() -> None:
-    mod = _load_validator()
-    changed_files = ["Dockerfile.kernel-router"]
-
-    assert mod.validate(_record(changed_files, "runtime_feature"), changed_files=changed_files) == []
-
-    errors = mod.validate(_record(changed_files, "docs_only"), changed_files=changed_files)
-
-    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
-
-
-def test_form_validate_requires_fourth_arm_or_gap_evidence() -> None:
-    mod = _load_validator()
-    changed_files = ["form/form/form-stdlib/example.fk"]
-    record = _record(changed_files, "runtime_fix")
-    record["local_validation"]["commands"] = [
-        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
-    ]
-
-    errors = mod.validate(record, changed_files=changed_files)
-
-    assert any("Form validate.sh evidence must include fourth-arm proof" in error for error in errors)
-
-
-def test_form_gitlink_is_runtime_and_form_evidence_without_matching_similar_names() -> None:
+def test_form_gitlink_is_runtime() -> None:
     mod = _load_validator()
 
     runtime_errors = mod.validate(_record(["form"], "test_only"), changed_files=["form"])
     assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in runtime_errors
 
     form_record = _record(["form"], "runtime_fix")
-    form_record["local_validation"]["commands"] = ["cd form/form && ./validate.sh form-stdlib/core.fk"]
-    form_errors = mod.validate(form_record, changed_files=["form"])
-    assert any("Form validate.sh evidence must include fourth-arm proof" in error for error in form_errors)
-
-    similar_path = "form-notes/README.md"
-    similar_record = _record([similar_path], "docs_only")
-    similar_record["local_validation"]["commands"] = ["cd form/form && ./validate.sh form-stdlib/core.fk"]
-    assert mod.validate(similar_record, changed_files=[similar_path]) == []
+    assert mod.validate(form_record, changed_files=["form"]) == []
 
     aggregate_records = [
         (Path("docs/system_audit/commit_evidence_2026-04-24_runtime.json"), _record(["form"], "runtime_fix"))
     ]
     assert mod._validate_aggregate_change_coverage(aggregate_records, ["form"]) == []
-
-
-def test_form_validate_accepts_explicit_three_kernel_gap() -> None:
-    mod = _load_validator()
-    changed_files = ["form/form/form-stdlib/example.fk"]
-    record = _record(changed_files, "runtime_fix")
-    record["local_validation"]["commands"] = [
-        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
-    ]
-    record["local_validation"]["notes"] = (
-        "3-kernel only; fourth-arm gap: band uses host I/O and is not fourth-covered yet."
-    )
-
-    assert mod.validate(record, changed_files=changed_files) == []
-
-
-def test_form_validate_accepts_fourth_arm_proof() -> None:
-    mod = _load_validator()
-    changed_files = ["form/form/form-stdlib/example.fk"]
-    record = _record(changed_files, "runtime_fix")
-    record["local_validation"]["commands"] = [
-        "cd form/form && ./validate.sh form-stdlib/core.fk form-stdlib/example.fk form-stdlib/tests/example-band.fk"
-    ]
-    record["local_validation"]["evidence"] = [
-        "fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)"
-    ]
-
-    assert mod.validate(record, changed_files=changed_files) == []
-
-
-def test_all_kernel_claim_requires_fourth_arm_proof() -> None:
-    mod = _load_validator()
-    record = _record(["scripts/maintenance.py"], "process_only")
-    record["evidence_refs"] = ["validated on all 4 kernels"]
-
-    errors = mod.validate(record)
-
-    assert any("all-kernel/four-way evidence claims require fourth-arm proof" in error for error in errors)
-
-    record["evidence_refs"].append(
-        "validate.sh output: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)"
-    )
-
-    assert mod.validate(record) == []

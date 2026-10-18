@@ -568,7 +568,6 @@ def test_agent_runner_rejects_material_dirt_inside_reviewed_submodule(monkeypatc
 def test_agent_runner_allows_only_disposable_submodule_output() -> None:
     status = (
         "?? .cache/form-crash.json\0"
-        "?? form-kernel-rust/target/debug/kernel\0"
         "?? form-stdlib/new-band.fk\0"
     )
 

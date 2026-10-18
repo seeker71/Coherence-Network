@@ -169,7 +169,7 @@ def cosine_alignment_score(
     BeliefAxis order (the dict→vector projection + matched_axes naming + the
     empty-idea_axes guard stay in `_score_worldview_alignment`); this helper computes
     only the scalar cosine: dot(a, b) / (||a|| * ||b||), with a 0.5 zero-denom guard,
-    clamped to [0.0, 1.0]. `** 0.5` is the sqrt; the recipe lowers it to math_sqrt
+    clamped to [0.0, 1.0]. `** 0.5` is the sqrt; the recipe calls fkwu `math_sqrt`
     (IEEE-correct, bit-identical to `** 0.5` for these vectors).
     """
     dot = 0.0

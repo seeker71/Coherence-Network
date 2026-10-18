@@ -1,0 +1,21 @@
+(do
+  (defn sum_ints (counts)
+    (if (eq (len counts) 0)
+      0
+      (add (head counts) (sum_ints (tail counts)))))
+  (defn sum_sq_proportions_from (counts total_f acc)
+    (if (eq (len counts) 0)
+      acc
+      (do
+        (let p (div (head counts) total_f))
+        (sum_sq_proportions_from (tail counts) total_f (add acc (mul p p))))))
+  (defn sum_sq_proportions (counts total_f)
+    (sum_sq_proportions_from counts total_f 0.0))
+  (defn simpson_diversity (counts)
+    (do
+      (let total (sum_ints counts))
+      (if (le total 0)
+        0.0
+        (sub 1.0 (sum_sq_proportions counts (add total 0.0))))))
+  (let counts (list 2 1 1))
+  (simpson_diversity counts))

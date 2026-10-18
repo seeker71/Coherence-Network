@@ -32,14 +32,6 @@ _RECIPE = (
     / "public_federation_graph_cli.fk"
 )
 _BAND_ENTRY = "(pfgc-band))"
-_SHA256_RECIPE_CANDIDATES = (
-    Path(__file__).resolve().parents[3]
-    / "form"
-    / "form"
-    / "form-stdlib"
-    / "sha256.fk",
-    Path("/app/form/form-stdlib/sha256.fk"),
-)
 
 if sys.platform == "win32":
     import msvcrt
@@ -97,25 +89,8 @@ def _admit(operation: int, *shape: int) -> None:
         raise RuntimeError("native Form federation admission was not witnessed")
 
 
-def _sha256_recipe_source() -> str:
-    for candidate in _SHA256_RECIPE_CANDIDATES:
-        if candidate.is_file():
-            return candidate.read_text(encoding="utf-8")
-    raise RuntimeError("native Form SHA-256 recipe is unavailable")
-
-
-def _without_prelude_directives(source: str) -> str:
-    return "\n".join(
-        line
-        for line in source.splitlines()
-        if not line.lstrip().startswith("; preludes:")
-    )
-
-
 def _native_recipe_source() -> str:
-    return _without_prelude_directives(
-        _sha256_recipe_source() + "\n" + _RECIPE.read_text(encoding="utf-8")
-    )
+    return _RECIPE.read_text(encoding="utf-8")
 
 
 def _offer_identity(*values: str) -> tuple[str, str]:

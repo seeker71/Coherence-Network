@@ -1,0 +1,35 @@
+(do
+  (defn spec_count (specs)
+    (len specs))
+  (defn total_event_count (specs)
+    (if (eq (len specs) 0)
+      0
+      (add (_get (head specs) "event_count")
+           (total_event_count (tail specs)))))
+  (defn specs_with_value_count (specs)
+    (if (eq (len specs) 0)
+      0
+      (add
+        (if (gt (_get (head specs) "actual_value") 0) 1 0)
+        (specs_with_value_count (tail specs)))))
+  (defn max_event_count_from (specs current)
+    (if (eq (len specs) 0)
+      current
+      (max_event_count_from
+        (tail specs)
+        (if (gt (_get (head specs) "event_count") current)
+          (_get (head specs) "event_count")
+          current))))
+  (defn max_event_count (specs)
+    (max_event_count_from specs 0))
+  (defn grounding_summary (specs)
+    (list (spec_count specs)
+          (total_event_count specs)
+          (specs_with_value_count specs)
+          (max_event_count specs)))
+  (let specs
+    (list
+      (list "__dict__" "event_count" 3 "actual_value" 1.5)
+      (list "__dict__" "event_count" 0 "actual_value" 0.0)
+      (list "__dict__" "event_count" 7 "actual_value" 2.25)))
+  (grounding_summary specs))

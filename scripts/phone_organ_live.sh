@@ -6,7 +6,7 @@
 # co-location sensed when timezones agree. This script is the carrier authored last —
 # it SENSES the phone over adb (a sensor driver) and TRANSPORTS the announcement to the
 # hati-mesh door (/api/hati/mesh/organs/announce). No logic lives here that isn't
-# already a proven four-way recipe; this only reads signals and renders/ships them.
+# already a Form recipe observed on fkwu; this only reads signals and renders/ships them.
 #
 #   sense                 one live reading line, in the beings-channel/temporal-sense shape
 #   announce              POST the organ to the public mesh (skips, named, if the door is dark)

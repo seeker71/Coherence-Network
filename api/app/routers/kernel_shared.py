@@ -9,8 +9,8 @@ its exact ``/api/utils/...`` path with a single ``include_router`` call in
 ``app.main``.
 
 Each endpoint executes on c-bootstrapped fkwu through ``serve_via_kernel``.
-CPython, Go, Rust, and TypeScript remain differential references for the same
-primitive/native assumptions; they are not runtime fallbacks.
+The Python functions preserve the compatibility API contract while fkwu and
+the application-owned Form recipes carry runtime authority.
 """
 from __future__ import annotations
 

@@ -137,11 +137,8 @@ ensure_native_land_cli() {
     printf '%s\n' "$FORM_NATIVE_CLI"
     return
   fi
-  bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
-  if [ ! -x "$ROOT/form/form/form-cli" ]; then
+  FORM_NATIVE_CLI="$(bash "$ROOT/scripts/ensure_form_cli_native.sh" --print-path)" ||
     die "native form-cli unavailable; cannot compute non-host landing readiness in Form"
-  fi
-  FORM_NATIVE_CLI="$ROOT/form/form/form-cli"
   printf '%s\n' "$FORM_NATIVE_CLI"
 }
 
@@ -150,12 +147,6 @@ native_land_readiness() {
   local cli
   cli="$(ensure_native_land_cli)"
   printf '%s\nquit\n' "$cmd" | "$cli" | sed '/^null$/d' | head -1
-}
-
-form_plan_probe() {
-  printf 'form-native-plan: form/form/form-stdlib/current-branch-landing.fk\n'
-  printf 'trust path:native grounded:yes freq:yes suffic:yes -> form-plan-band\n'
-  run bash form/form/validate.sh form-stdlib/core.fk form-stdlib/current-branch-landing.fk form-stdlib/tests/current-branch-landing-band.fk
 }
 
 current_branch() {
@@ -469,12 +460,10 @@ main() {
   branch="$(current_branch)"
   repo="$(resolve_repo)"
   if [ "$DRY_RUN" -eq 1 ]; then
-    form_plan_probe
     print_plan "$branch" "$repo"
     return 0
   fi
 
-  form_plan_probe
   require_clean_worktree
   sync_with_base
   push_current_branch "$branch"
