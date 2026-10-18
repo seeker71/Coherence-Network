@@ -74,17 +74,19 @@ Spec → Test → Implement → CI → Review → Merge
    - Dirty worktree: continuation mode (skip re-bootstrap/start-gate and continue in-flight task).
    - Detached `HEAD`: attach a branch first (`git switch -c codex/<thread-name>` or `git switch codex/<thread-name>`).
    - If it fails, fix the specific condition it reports.
-3. Pre-commit local proof
+3. Changed-surface care
    - Run: `git fetch origin main && git rebase origin/main` (must be cleanly rebased before push)
-   - Run: `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
-   - Run: `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
-   - If one fails, repair that failure and rerun only the needed proof command.
-4. Evidence contract (required per commit)
+   - Reuse current proof while its source and inputs hold. Observe only the changed claim.
+   - Read review findings against current source and keep useful work with its owner.
+   - Delivery reminders run natively: `cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml`.
+4. Evidence receipt
    - Add/update `docs/system_audit/commit_evidence_<date>_<topic>.json`.
    - Validate it: `python3 scripts/validate_commit_evidence.py --file <path>`.
-5. PR + CI contract
+5. Landing guidance
    - Open PR immediately after push.
-   - Monitor checks until green, or report blocker with failing check links and remediation command.
+   - Land kernel dependencies before application gitlinks, then deploy the merged application commit.
+   - Approval counts, resolved-thread flags, linear-history rules, and routine full suites are care reminders, not merge gates.
+   - Main retains deletion and force-push protection for history and authenticated deployment identity.
 6. Finish contract
    - Each task lands whole. When the work pauses incomplete, leave explicit blocking status and the next exact command.
    - Hold the current task through its checks before opening the next one.

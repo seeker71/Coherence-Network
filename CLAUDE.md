@@ -105,8 +105,11 @@ Spec → test/observation → implement → review → merge → deploy.
 Start with `make prompt-guide`. Before push, fetch and rebase on `origin/main`,
 add one commit-evidence record under `docs/system_audit/`, and run only the
 focused checks earned by the changed surface. Open the PR immediately after
-push and keep the exact-head checks visible until the task lands or an external
-blocker is named with its next command.
+push. Read reviews and delivery policies as care reminders, reuse current proof,
+and observe only changed claims. Land kernel dependencies before application
+gitlinks, then deploy the merged application revision. The native delivery
+reminder lives in `api/app/form_recipes/delivery_care.bml`; the operational guide
+is `docs/DEPLOY.md`.
 
 ## Navigation
 

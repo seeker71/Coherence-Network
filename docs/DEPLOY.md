@@ -11,6 +11,28 @@ database access, native kernel DB probes, or deployment credentials.
 
 ## Quick Deploy
 
+Land a kernel dependency before the application PR that pins it. Deploy the
+merged application commit through Hostinger Auto Deploy and read the public
+API/web identity once the rollout completes. Reuse focused evidence while its
+source and inputs hold; a new failure gives its owning surface new work.
+
+Delivery policies live here as care reminders. Read review findings against the
+current source, preserve useful findings with their owner, and observe only the
+changed claim. Approval counts, resolved-thread flags, linear-history rules,
+and routine broad suites do not gate landing. Main's active ruleset retains
+branch-deletion and force-push protection, which also preserves the protected
+ref identity used by the authenticated deployment observer.
+
+The reminder itself is Form/BML:
+
+```bash
+cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml
+```
+
+Hostinger deploy runs on a changed release or explicit request. The independent
+public-deploy contract is available on demand; scheduled redeploys and scheduled
+full-suite gates have retired.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:

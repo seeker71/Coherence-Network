@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/form-floor-release-tail-20261018",
+  "commit_scope": "Land the kernel dependency, move procedural merge and release policies into guides and native delivery care, then deploy the application.",
+  "files_owned": ["AGENTS.md", "docs/DEPLOY.md", "docs/shared/agent-start-packet.md", "api/app/form_recipes/delivery_care.bml", ".github/workflows/thread-gates.yml", ".github/workflows/hostinger-auto-deploy.yml", ".github/workflows/public-deploy-contract.yml", "docs/system_audit/delivery_ruleset_2026-10-18.json"],
+  "change_intent": "runtime_feature",
+  "idea_ids": ["delivery-care-at-source"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [
+    {"contributor_id": "urs", "contributor_type": "human", "roles": ["direction", "landing authorization"]},
+    {"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["implementation", "deployment"]}
+  ],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "coherence-kernel PR #596 merged at 4532c9fcec9b7c9160b61d506c6fa8d61c260c89; the existing d44d40ce411e7f69fa4e413ccbc75b2efc95cf27 gitlink is its ancestor.",
+    "GitHub ruleset 18985174 required closure of an obsolete router review thread. It now retains deletion and non-fast-forward protection; PR #4068 reports CLEAN.",
+    "The obsolete finding PRRT_kwDORObiXM6tniLZ was resolved after its router owner was removed and the fkwu-only readiness source landed.",
+    "cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml returned the five delivery reminders.",
+    "Existing application CI at aa2a316c9a69e01441c1660c1aca33f8367d5f90 passed: https://github.com/seeker71/Coherence-Network/actions/runs/39124654296.",
+    "No fkwu runtime/JIT implementation changed in this continuation; no kernel validation was repeated."
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml", ".github/workflows/hostinger-auto-deploy.yml", ".github/workflows/public-deploy-contract.yml", ".github/workflows/test.yml", "AGENTS.md", "CLAUDE.md", "docs/DEPLOY.md", "docs/shared/agent-start-packet.md", "api/app/form_recipes/delivery_care.bml", "docs/system_audit/delivery_ruleset_2026-10-18.json", "MANIFEST.md"
+  ],
+  "local_validation": {"status": "pass", "summary": "Native BML reminder executed once; workflow changes remove triggers and gates; changed source and whitespace inspected."},
+  "ci_validation": {"status": "pass", "summary": "Reuse the passing application run 39124654296; this continuation changes guidance, workflow retirement, ruleset data, and the observed BML reminder only."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger production"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "Delivery is guided by Form/BML care reminders, kernel dependencies land first, and the merged application revision reaches public API/web.", "public_endpoints": ["https://api.coherencycoin.com/api/ping", "https://coherencycoin.com/api/health-proxy"], "test_flows": ["Read the merged application revision from the deployed API and web after rollout."]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Deployment observation follows the authorized merge; this field records progress and does not impose a merge gate."}
+}

@@ -112,8 +112,15 @@ The live gaps are direct work:
 
 Before push, fetch and rebase onto `origin/main`. Record one honest commit
 evidence JSON for the actual change. Open or update the PR immediately after
-push. CI and public deployment are release observations, not reasons to revive
-retired validation machinery.
+push. Land kernel dependencies before the application gitlink, then deploy the
+merged application commit and read its public identity. Review findings and
+delivery policies are care reminders: follow concrete issues to their source
+and reuse evidence while its inputs hold. The native reminder is
+`cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml`.
+
+Main retains branch-deletion and force-push protection for history and
+authenticated deployment identity. Approval counts, thread-resolution state,
+linear-history rules, and routine full-suite runs do not decide readiness.
 
 End substantive work with:
 
