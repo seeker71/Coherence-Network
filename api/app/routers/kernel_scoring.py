@@ -290,7 +290,7 @@ async def marginal_cc_return(
 # and lib.rs ``py_to_value`` builds a ``Value::Record`` on the inline path. The
 # recipe reads each field via the ``_get`` native (the python-bmf SUBSCRIPT
 # source realization), which now reads Record fields. This is the gate the
-# API_KERNEL_READINESS doc names as blocking ~60% of remaining candidates;
+# old readiness work named as blocking most remaining candidates;
 # homogeneous-dict field access is the clean subset built here. (Heterogeneous
 # object-OR-dict polymorphism — _safe_float reading .field from a model OR
 # ["field"] from a dict across mixed collections — stays CPython; named in the

@@ -64,14 +64,10 @@ class Organ:
                                        # status reads as "strained" while
                                        # the historical uptime stays at 100%
     expected_router: str | None = None  # When set, the organ's response must
-                                       # carry `x-form-router: <this>` (e.g.
-                                       # "native-kernel"). A native route served
-                                       # by the Python fan-out fallback (kernel-
-                                       # router unhealthy → Traefik failover)
-                                       # still returns 200 with a valid body, so
-                                       # status+shape checks miss it; this makes
-                                       # probe._apply flag a "fell back: …"
-                                       # strain naming the carrier actually seen.
+                                       # carry `x-form-router: <this>`. Current
+                                       # production does not stamp this header;
+                                       # the field remains a general probe
+                                       # contract for future fkwu-owned routes.
                                        # Declarative like latency_threshold_ms —
                                        # the check lives once in _apply, so a new
                                        # native-promoted route opts in with one
@@ -92,11 +88,8 @@ UPSTREAM_API_SUBSTRATE_PAGE = "api_substrate_page"   # {API_BASE}/api/substrate/
 UPSTREAM_API_SUBSTRATE_FORM = "api_substrate_form"   # POST {API_BASE}/api/substrate/form
 UPSTREAM_API_SUBSTRATE_INGEST = "api_substrate_ingest"  # POST {API_BASE}/api/substrate/ingest
 
-# The ``active`` values that name a native Form carrier serving execution.
-# The FastAPI bridge reports the c-bootstrap binary as "fkwu"; the BML front
-# door (deploy/kernel-router/production-routes.fk) reports "native-kernel".
-# Either door breathing is the body's execution authority held natively.
-NATIVE_KERNEL_AUTHORITIES = frozenset({"fkwu", "native-kernel"})
+# The sole live Form execution authority.
+NATIVE_KERNEL_AUTHORITIES = frozenset({"fkwu"})
 
 
 # Error boundary marker rendered by the Next.js root error.tsx
@@ -319,10 +312,8 @@ def extract_web_vitality(r: "UpstreamResult") -> OrganVerdict:
 def extract_api_ideas(r: "UpstreamResult") -> OrganVerdict:
     """/api/ideas?limit=1 returns a dict with an 'ideas' list.
 
-    The carrier-path check (native-kernel vs fanout-python via the
-    `x-form-router` header) is applied generically by probe._apply from the
-    organ's `expected_router`, not here — so it covers any native-promoted
-    route without per-extractor code.
+    An optional carrier-path check is applied generically by probe._apply from
+    the organ's `expected_router`, not here.
     """
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
@@ -396,11 +387,7 @@ def extract_db_contention(r: "UpstreamResult") -> OrganVerdict:
 def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
     """A native Form carrier is serving execution, and Python is not.
 
-    Two doors answer ``/api/utils/kernel_status`` and both name a native
-    carrier. The FastAPI bridge reports the c-bootstrap binary as ``fkwu``; the
-    BML front door (``deploy/kernel-router/production-routes.fk``) reports
-    ``native-kernel``. The organ asserts the property both express rather than
-    one door's spelling, so whichever is deployed reads as breathing.
+    ``/api/utils/kernel_status`` must name the c-bootstrapped ``fkwu`` carrier.
 
     The teeth stay: ``unavailable`` — the honest darkness the endpoint reports —
     a missing binary, and any Python authority all register as real silence.

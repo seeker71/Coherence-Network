@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 221
+**Total files**: 213
 
 | File | Purpose |
 |---|---|
@@ -25,7 +25,6 @@
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
 | [test_api_dockerfile_contract.py](test_api_dockerfile_contract.py) | _no top-of-file purpose_ |
-| [test_application_graph_live_db_trial.py](test_application_graph_live_db_trial.py) | Proof that native application graph mutation SQL executes against live DB. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
@@ -61,7 +60,6 @@
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
 | [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
-| [test_difficult_conversation_arrival.py](test_difficult_conversation_arrival.py) | Difficult-conversation arrival — the SessionStart carrier for the kernel's counsel card. |
 | [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
@@ -106,19 +104,14 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
-| [test_form_cli_ask.py](test_form_cli_ask.py) | form_cli `ask` front door: serve Form-native, route the rest, capture for learning. |
-| [test_form_cli_carriers.py](test_form_cli_carriers.py) | Regression coverage for the canonical form-cli ask carriers. |
 | [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
-| [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
 | [test_governance_change_flow.py](test_governance_change_flow.py) | Contributor onboarding + governed change flow (spec: |
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
-| [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
-| [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
 | [test_grocery_ledger.py](test_grocery_ledger.py) | Flow test for the grocery ledger (api/app/routers/grocery.py). |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
@@ -150,7 +143,6 @@
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
-| [test_native_mutation_side_effect_ledger.py](test_native_mutation_side_effect_ledger.py) | Proof that native mutation side effects are source-classified, not circular. |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |

@@ -101,6 +101,7 @@ data/coherence.db
 .codex*
 
 # Runtime artifacts that pollute worktrees (don't commit)
+.hearth/
 api/data/*.db
 api/data/field_story_contributions.jsonl
 experiments/local-llm-cell-v0/_demo_field/

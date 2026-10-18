@@ -96,7 +96,7 @@
     (why "the model cost is not maintainable; switching tool and LLM use to Form-native, learned by efficacy from real usage, is how we keep access to the highest-value capability when the external lane is no longer affordable"))
 
   (synthesis
-    "form-cli-north-star.form names the destination this sideband serves: the form-cli ground-floor binary that runs local Form-native first and a remote LLM oracle only when confidence is low, learning from every oracle call so the oracle is needed less. Its decision loop runs as form-cli-loop.fk (proof tests/form-cli-loop-band.fk -> 31 four-way).")
+    "form-language.md names the current destination: direct fkwu source and native form-cli execution, with every observed page-JIT gap repaired in the JIT rather than diverted through a lowering carrier.")
 
   (next-step
     "The committed-turn carrier now writes coding-act receipts, the Form floor ingests the lowered receipt cell four-way, and a bounded canonical receipt-text lowerer feeds that cell. The remaining carriers are the general JSON parser/text-to-cell native lowerer, the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))

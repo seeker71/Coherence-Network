@@ -204,7 +204,11 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
 
     fkwu is the only runtime on this path.
     """
-    out = _run_staged_source(fk_source, timeout).rstrip("\n").splitlines()
+    out = _run_staged_source(
+        fk_source,
+        timeout,
+        cwd=_form_source_parent(),
+    ).rstrip("\n").splitlines()
     if not out:
         raise RuntimeError("fkwu produced no output")
     return out[0]

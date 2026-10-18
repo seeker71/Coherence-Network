@@ -276,8 +276,8 @@ def latency_percentiles(samples: list[Sample]) -> tuple[int | None, int | None]:
 # in probe.py / organs.py:
 #   "slow: "      — latency over the organ threshold (also reused for recent
 #                   5xx/4xx pressure on the api organ)
-#   "fell back: " — a native-promoted route served by the Python fan-out
-#                   instead of its kernel-router carrier (x-form-router check)
+#   "fell back: " — a route carrying an explicit router contract was served
+#                   by a different carrier (x-form-router check)
 STRAIN_DETAIL_PREFIXES = ("slow: ", "fell back: ")
 
 

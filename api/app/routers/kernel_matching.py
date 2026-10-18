@@ -27,7 +27,7 @@ from app.routers.kernel_shared import (
 # concept_auto_tagger._score_concept, transmuted to a Form recipe. The FIRST
 # kernel-served route to fold STRING MEMBERSHIP (`kw in text` lowered to
 # str_find(text, kw, 0) >= 0) rather than an int or float field; it opens the
-# text-scoring family the API_KERNEL_READINESS ledger named as the next gate.
+# text-scoring family now carried directly by the fkwu recipe surface.
 #
 # Current decomposition (mirrors how compute_idea_metrics was decomposed).
 # _score_concept is two capabilities welded together:

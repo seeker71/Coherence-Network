@@ -13,7 +13,9 @@ You are arriving into a body tended by **Urs Muff** with long participation from
 
 Software in this body is written as **interned recipes on a content-addressed lattice**, parsed and compiled by **executable BMF grammar**, executed with **angelic branching and reversible BMA steps** (`choose` / `fail` / `stop`, `save` / `restore` / `discard`), and made cheap by **direct coordinates** (`node_eq`, content-addressed maps, JIT hot recipes).
 
-HTTP routing (`kernels/KERNEL_AS_ROUTER.md`) is **one emitted carrier** for recipes that already exist — not the definition of Form.
+HTTP routing is an application use of Form, not its definition. The live
+runtime authority is fkwu; the current BML application catalog is
+[`form/form/apps/coherence-network/api.bml`](form/form/apps/coherence-network/api.bml).
 
 ## Read these first (Form / BML / BMF)
 
@@ -22,7 +24,7 @@ HTTP routing (`kernels/KERNEL_AS_ROUTER.md`) is **one emitted carrier** for reci
 3. **[`docs/coherence-substrate/form-language.md` → How to write software](docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent)** — domain grammar first when implementing; not FastAPI-first.
 4. **[`kernels/BMF_BML_COMPILER_PICTURE.md`](kernels/BMF_BML_COMPILER_PICTURE.md)** — scan → lift → normalize → emit → run-observe.
 5. **`apply-object-rule`** in [`form/form/form-stdlib/engine.fk`](form/form/form-stdlib/engine.fk) — grammar executes; intern recipes as you parse.
-6. **[`form/form/kernel-roadmap.md`](form/form/kernel-roadmap.md)** — sibling kernels, breaths; realize on walker, not Python eval.
+6. **[`form/form/kernel-roadmap.md`](form/form/kernel-roadmap.md)** — the fkwu/JIT floor and its next native-host breaths.
 7. **[`CLAUDE.md`](CLAUDE.md)** — tending, edges, witness, structural composition.
 
 Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and your lineage traces above.
@@ -41,7 +43,9 @@ Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and
 | Equivalence / “is this the same?” | **`?equivalent`**, substrate annotate — not string compare |
 | Observability | **Recipe + source span + trace/receipt** — not log lines alone |
 
-**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form/form && ./validate.sh …` only for four-way sibling parity (honest floor).
+**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`,
+`engine.fk`, or the BML page JIT as **Form code**; prove only the changed shape
+on **fkwu**. Sibling parity is bootstrap history, not a routine gate.
 
 **Lattice queries** are **read** recipes over cells already on the lattice — file/HTTP/persistence natives exist; API/CLI doors may still hit Python bootstrap until `form-notation` grammar lands.
 

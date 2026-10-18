@@ -1,7 +1,7 @@
 # fkwu/Form floor — 2026-10-18
 
 This reading follows the current parent `origin/main` and coherence-kernel
-`ea25e00d0`. It treats fkwu as the only kernel. Retired carriers are bootstrap
+`d44d40ce4`. It treats fkwu as the only kernel. Retired carriers are bootstrap
 history, not runtime choices, fallbacks, or recurring validation targets.
 
 ## Executable floor
@@ -13,6 +13,18 @@ history, not runtime choices, fallbacks, or recurring validation targets.
 - The native `form-cli` build and proof are Form/BML flows entered through
   `gate/form-cli-build-run.bml`. The remaining shell wrapper only selects an
   image-built carrier or invokes that gate once for a local carrier.
+- A copied native CLI bundle now publishes its `.source.id` beside the
+  executable, image, symbols, and attestation. The same Form gate answers the
+  current source identity without rebuilding, so cache selection no longer
+  depends on retired generated bootstrap files.
+- Direct native CLI arguments now enter the same Form REPL as piped commands.
+  Form source and image paths remain fkwu runtime inputs; verbs are staged as
+  one bounded Form turn. The focused bundle build published source identity
+  `3da690398f53f7c4`.
+- Deployment observation now reads that v3 bundle directly and compares its
+  carrier challenge with an independently rebuilt carrier. The deleted
+  bootstrap table, stamp, and source-digest files no longer participate in
+  runtime identity.
 - fkwu already carries native cells, sockets, HTTP client operations, crypto,
   and host I/O. The Form stdlib carries JSON and kernel HTTP composition.
 - The current Coherence Network application catalog is
@@ -30,12 +42,35 @@ floor reading.
 - Twenty-two utility recipes that remain called by the compatibility API now
   live as application-owned `.fk` source under `api/app/form_recipes/`. They
   execute through fkwu without the deleted seedbank or generated host tree.
+- Those app recipes use the Form `add` operator directly. The `_plus` spelling
+  left by the retired lowering flow is gone; no lowering route was restored.
+- Federation and dialogue recipes preserve their declared SHA-256 prelude.
+  fkwu owns its high-grammar realization; Python no longer concatenates the
+  BML body into direct Form or strips its prelude declaration.
 - The retired native router, its host harnesses, route manifests, canary probes,
   and Docker service have been released.
+- Current production, setup, kernel, pulse, and route-teaching surfaces now
+  name fkwu alone. Sibling-router claims remain only as explicitly historical
+  evidence or one-way deployment cleanup for old containers.
+- Eighteen completed specs and five kernel-router design sheets whose only
+  executable owners were released with that router have been released too.
+  Their landed evidence remains in dated system-audit records; current specs
+  and teachings now point at the fkwu/BML application host.
 - The browser-side kernel copy and its `/substrate/form` playground have
   been released. The public Python evaluator already returns HTTP 410; keeping
   a second browser kernel implied authority that the deployed body did not
   have.
+- The Python `form_cli.py` implementation, host grammar bridge/demo, `ask+`
+  carrier, and tests that asserted deleted kernel graph-port files have been
+  released. The difficult-conversation session counsel is now an app-owned BML
+  recipe called directly by the hooks, with no Python mirror.
+- Duplicate offline/c-bootstrap/coreutils guides, graph/offline specs, and the
+  Python grammar-coverage audit have been released. Their host-passthrough,
+  lowering, and removed-organ claims no longer compete with the live fkwu/JIT
+  floor.
+- The live Native Kernel Binary, One Engine, and Kernel Knows Itself concepts
+  now name fkwu as the sole runtime and the page JIT as the direct speed path.
+  Other kernel sources remain bootstrap history only.
 - Routine bootstrap and platform-comparison workflows have been released.
   Validation is now claimed only by the changed
   surface; fkwu validation is required when fkwu changes.

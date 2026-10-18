@@ -40,7 +40,6 @@ esac
 
 STDLIB_ROOT="$KERNEL_ROOT/form/form-stdlib"
 [ -d "$STDLIB_ROOT" ] || STDLIB_ROOT="$KERNEL_ROOT/form-stdlib"
-SOURCE_DIGEST_FILE="$STDLIB_ROOT/bootstrap/form-cli.source.sha256"
 TARGET_DIR="$ROOT/.cache/form-cli-native/${host_os}-${host_arch}"
 TARGET="$TARGET_DIR/form-cli"
 RECEIPT="$ROOT/.cache/form-cli-native/selected.json"
@@ -57,10 +56,11 @@ if [ -r "$KERNEL_ROOT/form-cli.sha256" ]; then
   TARGET="$KERNEL_ROOT/form-cli"
   RECEIPT="/root/.coherence-network/attestation/selected-form-cli-carrier.json"
 fi
+SOURCE_ID_FILE="${TARGET}.source.id"
 
 write_receipt() {
-  [ -r "$SOURCE_DIGEST_FILE" ] || {
-    echo "form-cli: source identity is missing: $SOURCE_DIGEST_FILE" >&2
+  [ -r "$SOURCE_ID_FILE" ] || {
+    echo "form-cli: source identity is missing: $SOURCE_ID_FILE" >&2
     return 1
   }
   native_target="$TARGET"
@@ -68,7 +68,7 @@ write_receipt() {
     native_target="$(cygpath -m "$TARGET")"
   fi
   binary_digest="$(sha256_file "$TARGET")"
-  source_digest="$(tr -d '\r\n' < "$SOURCE_DIGEST_FILE")"
+  source_digest="$(sha256_file "$SOURCE_ID_FILE")"
   expected_receipt="{\"schema\":\"selected-form-cli-carrier-v1\",\"native_path\":\"${native_target}\",\"binary_sha256\":\"${binary_digest}\",\"source_sha256\":\"${source_digest}\"}"
   mkdir -p "$(dirname "$RECEIPT")"
   receipt_tmp="${RECEIPT}.tmp.$$"
@@ -112,12 +112,18 @@ mkdir -p "$TARGET_DIR"
 if [ ! -x "$FKWU" ]; then
   cc -O2 -o "$FKWU" "$KERNEL_ROOT/runtime/fkwu-uni.c"
 fi
+CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml)"
+[ "${#CURRENT_SOURCE_ID}" -eq 16 ] || {
+  echo "form-cli: Form source identity is unavailable" >&2
+  exit 1
+}
 
 # A carrier is reusable only while its exact binary/source receipt still
 # matches. A missing or changed receipt asks the Form gate to rebuild it.
-if [ -x "$TARGET" ] && [ -r "$SOURCE_DIGEST_FILE" ] && [ -r "$RECEIPT" ]; then
+if [ -x "$TARGET" ] && [ -r "$SOURCE_ID_FILE" ] && [ -r "$RECEIPT" ] \
+  && [ "$(tr -d '\r\n' < "$SOURCE_ID_FILE")" = "$CURRENT_SOURCE_ID" ]; then
   binary_digest="$(sha256_file "$TARGET")"
-  source_digest="$(tr -d '\r\n' < "$SOURCE_DIGEST_FILE")"
+  source_digest="$(sha256_file "$SOURCE_ID_FILE")"
   expected_receipt="{\"schema\":\"selected-form-cli-carrier-v1\",\"native_path\":\"${TARGET}\",\"binary_sha256\":\"${binary_digest}\",\"source_sha256\":\"${source_digest}\"}"
   if [ "$(tr -d '\r\n' < "$RECEIPT")" = "$expected_receipt" ]; then
     finish
@@ -128,6 +134,10 @@ fi
 (cd "$KERNEL_ROOT" && printf '{"out":"%s","force_link":1,"cc":"cc"}\n' "$TARGET" | ./fkwu gate/form-cli-build-run.bml)
 [ -x "$TARGET" ] || {
   echo "form-cli: Form build gate produced no executable" >&2
+  exit 1
+}
+[ -r "$SOURCE_ID_FILE" ] && [ "$(tr -d '\r\n' < "$SOURCE_ID_FILE")" = "$CURRENT_SOURCE_ID" ] || {
+  echo "form-cli: Form build gate produced no matching source identity" >&2
   exit 1
 }
 finish

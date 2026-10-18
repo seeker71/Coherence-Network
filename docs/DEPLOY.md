@@ -32,7 +32,7 @@ ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
    docker compose build api web && docker compose up -d api web"
 ```
 
-Note: the SHA pin is shared across services (api, web, kernel-router, pulse);
+Note: the SHA pin is shared across services (api, web, pulse);
 updating it moves them all, and `up -d` recreates containers whose config
 changed even if their image did not rebuild. Verify the SHA is a commit in
 *this* repo before patching — `git branch --contains $NEW_SHA` should answer.

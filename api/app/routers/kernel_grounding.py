@@ -256,9 +256,8 @@ async def grounded_roi(
 # ---------------------------------------------------------------------------
 # Endpoint: /api/utils/idea_grounding_summary
 #
-# The FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS — gate #1 in
-# kernels/API_KERNEL_READINESS.md ("heterogeneous polymorphic structure
-# access"). Every prior structure-access route read fields from ONE record (the
+# The first fkwu-served route to reduce over a list of records. Every prior
+# structure-access route read fields from one record (the
 # marginal-CC core); this one receives a LIST of records (one idea's pre-fetched
 # specs) and FOLDS a field across it.
 #
@@ -311,8 +310,8 @@ class IdeaGroundingSummaryResponse(BaseModel):
     summary="Integer grounding signals reduced over a LIST of spec records (first list-of-record-reduction Form recipe)",
     description=(
         "Pure-computation endpoint, body transmuted to a Form recipe — the "
-        "FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS (gate #1 in "
-        "API_KERNEL_READINESS). Receives one idea's pre-fetched spec records as "
+        "first fkwu-served route to reduce over a list of records. Receives "
+        "one idea's pre-fetched spec records as "
         "a list and folds four integer grounding signals across it: spec_count, "
         "total_event_count, specs_with_value_count (a field predicate), and "
         "max_event_count. The honest integer subset of compute_idea_metrics' "

@@ -304,7 +304,7 @@ async def test_docker_local_bases_probe_public_witness_path():
                 content=json.dumps(HEALTHY_IDEAS),
                 headers={
                     "content-type": "application/json",
-                    "x-form-router": "native-kernel",
+                    "x-form-router": "fkwu",
                 },
             )
         if (
@@ -450,29 +450,10 @@ async def test_substrate_form_breathes_on_the_live_kernel_status_shape():
 
 
 @pytest.mark.asyncio
-async def test_substrate_form_breathes_on_the_bml_front_door_shape():
-    """The BML front door's own contract also names a native carrier.
-
-    deploy/kernel-router/production-routes.fk serves kernel_status as
-    ``native-kernel``. Both doors are honest, so both read as breathing.
-    """
-    bml_door = {
-        "active": "native-kernel",
-        "inline_available": False,
-        "binary_available": True,
-        "available": True,
-        "python_authority": False,
-    }
-    by = await _run(_handler(substrate_form_body=bml_door))
-    sample = by["substrate_form"]
-    assert sample.ok is True, sample.detail
-
-
-@pytest.mark.asyncio
 async def test_substrate_form_flags_python_authority():
     """A native-looking carrier that hands authority to Python is silence."""
     handed_over = {
-        "active": "native-kernel",
+        "active": "fkwu",
         "binary_available": True,
         "available": True,
         "python_authority": True,
@@ -738,14 +719,14 @@ async def test_expected_router_fallback_strains(monkeypatch):
     shape both pass, the only tell is the x-form-router header. An organ that
     declares expected_router must read that as strained (breathing surface,
     wrong carrier), not as a clean breath."""
-    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("native-kernel"))
+    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("fkwu"))
     by = await _run(_handler(ideas_headers={"x-form-router": "fanout-python"}))
     sample = by["endpoint_ideas"]
     # The surface still answers, so the probe itself succeeded — strain, not silence.
     assert sample.ok is True
     assert sample.detail is not None
     assert sample.detail.startswith("fell back: ")
-    assert "native-kernel" in sample.detail
+    assert "fkwu" in sample.detail
     assert "fanout-python" in sample.detail
     assert status_from_last_sample(sample) == "strained"
     # Sibling organs are untouched — this is a carrier-path sensing win.
@@ -758,13 +739,13 @@ async def test_expected_router_missing_header_strains(monkeypatch):
     """No x-form-router header on a route that declares one means the native
     carrier never stamped the response — a fallback too, naming what was
     (not) seen."""
-    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("native-kernel"))
+    monkeypatch.setattr(probe, "ORGANS", _organs_with_ideas_expecting("fkwu"))
     by = await _run(_handler(ideas_headers={}))
     sample = by["endpoint_ideas"]
     assert sample.ok is True
     assert sample.detail is not None
     assert sample.detail.startswith("fell back: ")
-    assert "native-kernel" in sample.detail
+    assert "fkwu" in sample.detail
     assert "no router header" in sample.detail
     assert status_from_last_sample(sample) == "strained"
 

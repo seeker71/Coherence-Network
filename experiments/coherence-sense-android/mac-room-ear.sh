@@ -2,7 +2,7 @@
 # mac-room-ear.sh — the room ear's understanding lane (Track B). A clip of room audio becomes WORDS,
 # the words become an answer, on the proven body-first path — the rented-mind loop the phone's broken
 # on-device STT could never carry. Thin CARRIER: the engines are whisper.cpp (audio -> text) and
-# bin/form-cli ask+ (text -> grounded answer, body-first, escalating to the oracle only when local
+# bin/form-cli ask (text -> grounded answer, body-first, escalating to the oracle only when local
 # is not enough). This is the Mac end of phone-audio -> proxy -> agent -> back.
 #
 # Run:  mac-room-ear.sh <clip.wav>          transcribe a clip, then answer it body-first
@@ -41,5 +41,5 @@ echo "  heard: \"$text\""
 [[ -n "$text" ]] || { echo "  (silence — nothing to answer)"; exit 0; }
 
 echo "[room-ear] understanding (body-first agent)..."
-"$ROOT/bin/form-cli" ask+ "$text" 2>/dev/null
+"$ROOT/bin/form-cli" ask "$text" 2>/dev/null
 echo "[room-ear] (recipe: canonical staged Form ask + oracle-escalation; transcription: whisper.cpp; local)"

@@ -164,7 +164,7 @@ async def test_agent_invitation_api_shape() -> None:
     assert "write" in welcome.lower()
     by_surface = {s["surface"]: s for s in body["entry_surfaces"]}
     assert "/substrate" == by_surface["substrate_browser"]["path"]
-    assert "POST" in by_surface["form"]["door"]
+    assert "form-cli ask" in by_surface["form"]["door"]
     assert "/api/contributions" == by_surface["ledger"]["path"]
     assert "/api/treasury" == by_surface["treasury"]["path"]
     # Write paths must be discoverable from the doorway alone, without

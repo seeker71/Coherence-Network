@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 207
+**Total files**: 202
 
 | File | Purpose |
 |---|---|
@@ -56,7 +56,6 @@
 | [coord-heartbeat.sh](coord-heartbeat.sh) | coord-heartbeat.sh — per-agent liveness + upgrade-watch, with idle stand-down. |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
-| [difficult_conversation_arrival.py](difficult_conversation_arrival.py) | Difficult-conversation arrival — host-IO CARRIER for the kernel's counsel card at SessionStart. |
 | [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | embodiment_practice_recipe_proof.py — practices as recipes of cells. |
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
@@ -72,11 +71,8 @@
 | [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — enter the c-bootstrapped fkwu runtime. |
-| [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
-| [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
 | [form_cli_rag.py](form_cli_rag.py) | Filesystem/DB carrier for the native form-cli's self-healing memory. |
 | [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the complete grounded body home. |
-| [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [generate_curated_translations.py](generate_curated_translations.py) | Generate machine-translated locale siblings for installed non-English |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | Generate INDEX.md files for source-code directories. |
@@ -91,7 +87,6 @@
 | [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
-| [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
 | [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | healing_modality_recipe_proof.py — practitioner-with-receiver as Recipe. |
 | [hostinger_api_native_deploy.sh](hostinger_api_native_deploy.sh) | _no top-of-file purpose_ |

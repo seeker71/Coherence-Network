@@ -68,9 +68,9 @@ def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> No
     assert "apt-get" not in builder
     assert "command -v cc >/dev/null" in builder
     assert "command -v openssl >/dev/null" in builder
-    assert builder.count("SOURCE_DATE_EPOCH=0") == 2
-    assert "__DATE__" in fkwu_source
-    assert "__TIME__" in fkwu_source
+    assert builder.count("SOURCE_DATE_EPOCH=0") == 1
+    assert "__DATE__" not in fkwu_source
+    assert "__TIME__" not in fkwu_source
 
 
 def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:

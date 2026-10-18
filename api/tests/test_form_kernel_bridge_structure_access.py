@@ -23,27 +23,18 @@ from app.services.form_kernel_bridge import (
     kernel_available,
     load_recipe,
     resolve_recipe_path,
-    seedbank_examples_dir,
     serve_via_kernel,
 )
 
 
 class TestRecipeResolution:
-    """Bare recipe names recognize the app home before the shared kernel."""
+    """Bare recipe names resolve against the application-owned Form home."""
 
     def test_app_recipe_resolves_from_api_owned_home(self):
         name = "endpoint_reaction_resonance.fk"
         resolved = resolve_recipe_path(name)
 
         assert resolved == app_recipes_dir() / name
-        assert load_recipe(name) == resolved.read_text(encoding="utf-8")
-
-    def test_shared_recipe_falls_through_to_kernel_seedbank(self, monkeypatch):
-        monkeypatch.delenv("FORM_RECIPE_DIR", raising=False)
-        name = "endpoint_idea_grounding_summary_demo.fk"
-        resolved = resolve_recipe_path(name)
-
-        assert resolved == seedbank_examples_dir() / name
         assert load_recipe(name) == resolved.read_text(encoding="utf-8")
 
 
@@ -137,7 +128,7 @@ class TestListOfRecordMarshalling:
 
     The bridge's recursive marshal: scalar→value, dict/model→record, list→list
     of marshalled. A reduction recipe folds over the resulting list-of-records;
-    this is gate #1 ("list-of-record reduction") in API_KERNEL_READINESS.
+    this is the list-of-record reduction shape now owned directly by fkwu.
     """
 
     def test_list_of_dicts_renders_as_list_of_records(self):

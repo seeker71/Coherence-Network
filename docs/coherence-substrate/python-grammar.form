@@ -2,7 +2,7 @@
 # python-grammar.form — Python source as a Form Language cell
 # ─────────────────────────────────────────────────────────────────────
 #
-# Closes the largest remaining file-format gap from grammar_coverage.py
+# Names the Python file-format surface directly in the Form grammar catalog.
 # (927 .py files; the body's API, services, scripts, tests, and the
 # bootstrap layer for organ.py / substrate.py / form.py all live in
 # Python).

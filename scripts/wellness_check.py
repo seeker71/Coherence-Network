@@ -890,95 +890,6 @@ def _metabolic_groups_for_files(paths: list[Path]) -> list[dict[str, object]]:
     )
 
 
-def _static_signal_hits(path: Path) -> Counter[str]:
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore").lower()
-    except OSError:
-        text = ""
-    hits: Counter[str] = Counter()
-    rel_lower = str(path.relative_to(ROOT)).lower()
-    for term in STATIC_SIGNAL_TERMS:
-        count = text.count(term)
-        if term in rel_lower:
-            count += 1
-        if count:
-            hits[term] = count
-    return hits
-
-
-def _static_to_dynamic_evidence(surface: dict[str, object]) -> tuple[int, list[str]]:
-    paths = [ROOT / str(path) for path in surface.get("evidence", ())]
-    present = [str(path.relative_to(ROOT)) for path in paths if path.exists()]
-    return len(present), present
-
-
-def sense_static_to_dynamic_cells() -> list[str]:
-    """Read static surfaces through their dynamic successor cells.
-
-    Static is not a fault by itself; it is source tissue. The end-state is that
-    each static source has a live successor carrier, proof command, and release
-    gate, so wellness can read live cell state instead of re-raising the same
-    ``wants_dynamic`` attention row each run.
-    """
-    lines: list[str] = []
-    rows: list[tuple[int, dict[str, object], Counter[str], int, int, list[str]]] = []
-    for surface in STATIC_TO_DYNAMIC_SURFACES:
-        path = ROOT / str(surface["path"])
-        if not path.exists():
-            continue
-        hits = _static_signal_hits(path)
-        score = sum(hits.values())
-        evidence_count, evidence_paths = _static_to_dynamic_evidence(surface)
-        rows.append((score, surface, hits, _count_file_lines(path), evidence_count, evidence_paths))
-
-    if not rows:
-        return ["  no static surfaces named yet"]
-
-    live_count = sum(1 for *_prefix, evidence_count, _paths in rows if evidence_count >= 4)
-    total = len(rows)
-    lines.append(
-        "  static-to-dynamic lane live — static source tissue now feeds "
-        "dynamic successor cells with proof commands and release gates"
-    )
-    for score, surface, hits, loc, evidence_count, evidence_paths in sorted(rows, key=lambda row: row[0], reverse=True):
-        hit_line = ", ".join(
-            f"{name}={count}" for name, count in hits.most_common(4)
-        )
-        reputation_count = max(score, 1)
-        lines.append(
-            f"  dynamic_successor: {surface['path']} — {surface['kind']} "
-            f"({loc} LOC) -> {surface['successor']}"
-        )
-        lines.append(
-            f"    edge_reputation: {surface['path']} "
-            f"--[static_to_dynamic count={reputation_count}]--> "
-            f"{surface['successor']}"
-        )
-        lines.append(
-            "    compressed_edges: "
-            f"{hit_line or 'path-named static surface=1'}"
-        )
-        lines.append(
-            f"    state: live successor; carrier={surface['carrier']}; "
-            f"evidence={evidence_count}/4; proof={surface['proof']}"
-        )
-        lines.append(f"    evidence_paths: {', '.join(evidence_paths)}")
-        lines.append(f"    release_gate: {surface['wants']}")
-        lines.append(f"    resources: {surface['resources']}")
-    if live_count == total:
-        lines.append(
-            f"  lane_end_state: {live_count}/{total} dynamic successors live — "
-            "attention can compost this lane"
-        )
-    else:
-        lines.append(
-            f"  drift: static-to-dynamic lane has {live_count}/{total} live "
-            "successors; complete the missing proof carriers"
-        )
-    return lines
-
-
-
 def sense_substrate_surprise() -> list[str]:
     """Names structural twins of recently-touched cells that haven't been
     looked at yet.
@@ -1608,7 +1519,6 @@ def main() -> int:
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Locale surfaces — do web, API, and CLI carry the same tongues?", sense_locale_surfaces()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
-        ("Static-to-dynamic cells — do fixed ledgers have live successors?", sense_static_to_dynamic_cells()),
         ("Edge categories — which repeated relations are becoming named clusters?", sense_edge_categories()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),

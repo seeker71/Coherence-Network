@@ -98,7 +98,7 @@ def test_status_last_sample_fell_back_is_strained():
         organ="endpoint_ideas",
         ok=True,
         latency_ms=120,
-        detail="fell back: expected native-kernel, got fanout-python",
+        detail="fell back: expected fkwu, got api-bridge",
     )
     assert status_from_last_sample(fell_back) == "strained"
 

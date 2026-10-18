@@ -2,7 +2,7 @@
 # markdown-grammar.form — markdown as a Form Language cell
 # ─────────────────────────────────────────────────────────────────────
 #
-# Closes the largest file-format gap from grammar_coverage.py (698
+# Names the Markdown file-format surface directly in the Form grammar catalog (698
 # files; the body's documentation, specs, concepts, lineage, READMEs
 # all live in markdown).
 #

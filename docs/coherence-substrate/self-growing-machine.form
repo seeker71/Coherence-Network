@@ -9,7 +9,7 @@
 ; points at the single lever that turns the whole tower from evaluated to native.
 ;
 ; Builds on: universal-evaluator-compiler.form, form-native-agent-shape.form,
-; host-kernel.form, form-cli-north-star.form.
+; host-kernel.form, form-language.md.
 
 (self-growing-machine
 
