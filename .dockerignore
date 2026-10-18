@@ -1,0 +1,4 @@
+# Repository metadata is not native build input. Source identity travels in
+# the pinned gitlink and the Form bundle's source/attestation files.
+.git
+**/.git

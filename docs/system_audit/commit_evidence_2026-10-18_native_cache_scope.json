@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deploy-native-cache-20261018",
+  "commit_scope": "Keep the observed running revision through shallow-checkout build selection and cache unchanged native source across application releases.",
+  "files_owned": [".dockerignore", "Dockerfile.api", "deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["native-source-cache", "observed-deployment-identity"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["deployment repair"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "The deployed image label was 0b99ef368840, but the shallow VPS checkout lacked that commit. The release discarded its actual running revision and selected diff_base=f90847554849, rebuilding only API although the original release also changed web and pulse.",
+    "The observed running revision now remains the diff base; the existing unavailable-diff path selects all services.",
+    "Kernel-builder previously consumed COHERENCE_SOURCE_SHA before COPY/compile, invalidating native cache on every parent release. It now consumes only COHERENCE_FORM_SHA; the final API image still binds both revisions.",
+    "Docker source metadata is excluded from COPY inputs; native source identity and bundle attestation remain the authorities. fkwu runtime/JIT source is unchanged."
+  ],
+  "change_files": [".dockerignore", "Dockerfile.api", "deploy/hostinger/auto-deploy.sh", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Read the actual release trace and shallow-checkout condition; inspect changed Docker configuration and shell syntax/diff."},
+  "ci_validation": {"status": "pending", "summary": "The production image build and serving revision supply the focused observation."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "A failed previous release cannot hide missing service changes, and unchanged native source remains reusable across parent revisions.", "public_endpoints": ["https://api.coherencycoin.com/api/ping", "https://coherencycoin.com/api/health-proxy"], "test_flows": ["Observe production build scope and public API/web identity."]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Authorized rollout supplies the release observation."}
+}

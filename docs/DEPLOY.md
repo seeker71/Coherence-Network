@@ -60,6 +60,12 @@ reads the serving container's immutable revision label. A failed build may
 advance the VPS checkout without advancing the running image, so the checkout
 alone does not establish the deployed comparison base.
 
+Keep that serving revision as the comparison base even in a shallow checkout;
+an unavailable diff asks for the existing complete service build. Native build
+caching follows the pinned Form source, while the final API image carries the
+application revision. Git metadata and a parent-only revision change do not
+invalidate an unchanged native bundle.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:
