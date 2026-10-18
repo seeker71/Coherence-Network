@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deployed-floor-receipt-20261018",
+  "commit_scope": "Retire unobserved recurring proof organs and archive their stale silence records through native Form care.",
+  "files_owned": ["api/app/form_recipes/pulse_proof_care.bml", "pulse/pulse_app/organs.py", "pulse/tests/test_probe.py", "pulse/README.md", "docs/DEPLOY.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["native-delivery-care"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["native pulse care"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "Run 39132094656 completed the rollout but its old verifier exited 1 after three unchanged attempts: kernel.sibling_kernel_role expected differential-reference-only, got bootstrap-history-only; pulse reports ongoing silences schema and audit_integrity.",
+    "Public pulse and its durable store identify stale silence IDs 33302 and 33303, opened 2026-10-11T03:25:56Z. Their latest samples are explicitly unobserved: schema/audit proof omitted by bounded pulse. No schema or audit failure was observed in those current samples.",
+    "Executed cd form && ./fkwu ../api/app/form_recipes/pulse_proof_care.bml with private stdin host/key/store/backup locations. Exit 0: Proof silences retired; history and private backup retained; no success proof inferred. Returned the two exact target IDs and changed-row count 2.",
+    "The BML care uses the existing host-child argv door and the host SQLite resource CLI, with a consistent database backup before a transaction scoped to the two exact observed IDs and organ names. No Python repair or replacement business logic was added.",
+    "Deleted the recurring proof organ registrations, their Python extractors and obsolete test expectations. Their source/sample/silence history is retained; changed claims remain direct work in Form/BML, not automatic proof gates.",
+    "No fkwu C/JIT source changed and no kernel or application test suite ran. The actual native care operation and structural diff are the evidence. Generated local BML carrier copies were released."
+  ],
+  "change_files": ["api/app/form_recipes/pulse_proof_care.bml", "pulse/pulse_app/organs.py", "pulse/tests/test_probe.py", "pulse/README.md", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Native care archived exactly two stale rows after a private backup; structural diff only."},
+  "ci_validation": {"status": "pending", "summary": "Source retirement lands with the focused public-verifier simplification."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Durable care applied; retiring probe registrations follows source landing."},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}

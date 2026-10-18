@@ -58,15 +58,17 @@ HTTP language of a corporate status page is translated:
 
 | Organ             | Signal                                                 |
 |-------------------|--------------------------------------------------------|
-| `api`             | `GET /api/health` → 200 && body.status == "ok"         |
+| `api`             | `GET /api/health/pulse` → 200 && body.status == "ok"   |
 | `web`             | `GET /` → 2xx                                          |
 | `postgres`        | `/api/ready` → db_connected == true                    |
 | `neo4j`           | `/api/ready` not 503 (graph_store available)           |
-| `schema`          | `/api/health` → schema_ok == true                      |
-| `audit_integrity` | `/api/health` → integrity_compromised == false         |
 
-Five of the six organs share two upstream calls, so one probe round costs
-three HTTP requests.
+Schema and audit proof belong to a changed source or concrete finding, not a
+recurring pulse gate. The bounded health projection deliberately omits those
+proofs. Their former probe registrations have retired; their sample and silence
+history remains. The native `api/app/form_recipes/pulse_proof_care.bml` action
+backs up the pulse store privately and closes only the two observed stale
+silence records with an explicit retirement note, never a fabricated success.
 
 ## Running locally
 
