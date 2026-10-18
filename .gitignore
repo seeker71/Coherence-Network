@@ -80,7 +80,6 @@ data/coherence.db
 .codex*
 pytest-cache-files-*
 api/pytest-cache-files-*
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
 *.pyc
 __pycache__/
 .task-*
@@ -134,6 +133,4 @@ form/form/form-stdlib/drafts/
 form/form/form-samples/agent-turns/corpus.jsonl
 .nanite/
 experiments/rune-galdr/.ecapa-model/
-
-# GitNexus structural index (persistent machine-local analysis state)
-.gitnexus/
+.fkwu-*

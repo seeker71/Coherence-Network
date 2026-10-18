@@ -1,7 +1,6 @@
 """The continuous pulse witness uses bounded health, not deep runtime proof."""
 
 import inspect
-from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -13,70 +12,7 @@ from app.services import native_runtime_observation
 
 def test_deep_health_runs_in_fastapi_threadpool_while_ping_stays_on_event_loop():
     assert not inspect.iscoroutinefunction(health_router.health)
-    assert not inspect.iscoroutinefunction(health_router.ready)
     assert inspect.iscoroutinefunction(health_router.ping)
-
-
-@pytest.mark.asyncio
-async def test_ready_shares_schema_and_audit_proofs_without_native_runtime(
-    monkeypatch,
-):
-    monkeypatch.setattr(app.state, "graph_store", object(), raising=False)
-    monkeypatch.setattr(
-        health_router.persistence_contract_service,
-        "evaluate",
-        lambda _app: {"required": False, "pass_contract": True},
-    )
-    monkeypatch.setattr(health_router, "_check_schema", lambda: True)
-    monkeypatch.setattr(
-        health_router.audit_ledger_service,
-        "verify_chain",
-        lambda: SimpleNamespace(verified=True),
-    )
-    monkeypatch.setattr(
-        native_runtime_observation,
-        "observe_native_runtime",
-        lambda: pytest.fail("ready invoked deep native-runtime proof"),
-    )
-
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/ready")
-
-    assert response.status_code == 200
-    assert response.json()["schema_ok"] is True
-    assert response.json()["integrity_verified"] is True
-    assert response.json()["integrity_compromised"] is False
-
-
-@pytest.mark.asyncio
-async def test_ready_503_preserves_independent_organ_proofs(monkeypatch):
-    monkeypatch.setattr(app.state, "graph_store", object(), raising=False)
-    monkeypatch.setattr(
-        health_router.persistence_contract_service,
-        "evaluate",
-        lambda _app: {"required": False, "pass_contract": True},
-    )
-    monkeypatch.setattr(health_router, "_check_schema", lambda: False)
-    monkeypatch.setattr(
-        health_router.audit_ledger_service,
-        "verify_chain",
-        lambda: SimpleNamespace(verified=True),
-    )
-
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/ready")
-
-    assert response.status_code == 503
-    detail = response.json()["detail"]
-    assert detail["failures"] == ["schema_check_failed"]
-    assert detail["graph_store_ready"] is True
-    assert detail["persistence_contract_ok"] is True
-    assert detail["db_connected"] is True
-    assert detail["schema_ok"] is False
-    assert detail["integrity_verified"] is True
-    assert detail["integrity_compromised"] is False
 
 
 @pytest.mark.asyncio

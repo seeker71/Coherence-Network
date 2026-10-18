@@ -1,9 +1,9 @@
 # Form kernel floor — 2026-10-18
 
-This reading began at parent commit `2f2dbcf400e28d1b91413c8ba3531b1e3e66698b`
-and landed in parent commit `0b99ef36884043565cd45a0df85872f931e8f2c3`, with
-coherence-kernel `b1f757be83801a75340273cae0f31a5162d30ded`. The parent was
-rebased onto `origin/main`; the submodule advanced through coherence-kernel PR 595.
+This reading is anchored to parent commit `2f2dbcf400e28d1b91413c8ba3531b1e3e66698b`
+and coherence-kernel `b1f757be83801a75340273cae0f31a5162d30ded`. The parent was
+already aligned with `origin/main`; the submodule was updated from the previous pin
+through coherence-kernel PR 595.
 
 ## Executable floor
 
@@ -18,10 +18,6 @@ rebased onto `origin/main`; the submodule advanced through coherence-kernel PR 5
   ask ledger records both crossings. The native stage is deadline-bound as well as the
   remote stage: the default allows 180 seconds for grounding and 30 seconds for the
   oracle, while an explicit `--timeout` constrains both.
-- Native trust and remote-crossing observations share the writable
-  `~/.coherence-network/rag-requests/form-cli-asks.jsonl` ledger. Statistics retain
-  the legacy root ledger as read-only history, so moving the writer does not erase
-  prior evidence.
 - The loader band passes at verdict 4095 with one fourth-arm band, one passing band,
   and zero divergence.
 - The model lane has tokenization, tensor mapping, sampling, Metal and autoregressive
@@ -50,12 +46,8 @@ The arrival wellness reading observed:
 
 ## Effects of recent features
 
-- The bounded pulse projection keeps continuous API liveness and web-proxy reads away
-  from deep native-runtime proof. Pulse now reads schema and audit-integrity from the
-  readiness response already shared by PostgreSQL and Neo4j, instead of converting the
-  bounded projection's deliberate `false` placeholders into permanent unknown state or
-  scheduling a second deep-health request. Readiness itself runs off the event loop and
-  returns every organ's proof on failure, so one failed proof does not silence siblings.
+- The bounded pulse projection keeps continuous web and monitor reads away from deep
+  health proof.
 - Deployment observation binds public, loopback, container, image, source, and native
   carrier evidence into persisted WITNESS cells.
 - Hati grocery totals now carry one deadline through membership, database, graph, and
@@ -85,24 +77,6 @@ FastAPI worker endpoint, leaving the event loop free for `/api/ping` and other a
 traffic. The documented worktree guard also enters the repository's prepared API
 runtime when the host Python is bare, so the gate itself remains directly runnable.
 
-The first production release restored `/api/ping`, `/api/health`, and `/api/ready` at
-the exact parent SHA. It also exposed three release-tail constraints that local status
-checks had not exercised:
-
-- Pulse assigned schema and audit-integrity to bounded health, so both organs stayed
-  unknown for more than seven days even while deep health returned both proofs true.
-  They now use the shared readiness upstream and treat an explicit false proof as a
-  real silence without adding another monitor request.
-- The container mounted `~/.coherence-network/rag-requests` writable while the ask
-  ledger still targeted its read-only parent. Both native and rented observations now
-  land inside the writable request directory.
-- The GitNexus trial installer assumed a host `npx` that is absent on the production
-  runner, and the pinned package proves its MCP command is stdio-only rather than the
-  previously assumed `--port` server. Docker now refreshes the external index through
-  a read-only repository mount, exposes the real stdio MCP process through a pinned
-  Supergateway SSE carrier, waits for server-level health, and reports failure when no
-  carrier can run.
-
 ## Remaining named work
 
 - Close the 13 missing source paths across six specs and 20 unresolved symbols across
@@ -115,10 +89,8 @@ checks had not exercised:
   kernel-first ownership, preserving the deployment observer control plane on the API.
 - Complete `ll-heap`, general grammar-as-recipe compilation, form-cli self-hosting, and
   full real-model hidden-state-to-answer generation.
-- Close the release-tail proof by observing schema and audit breathing, a writable ask
-  observation, the GitNexus carrier, and a fresh deployment WITNESS on the public
-  revision; then re-run wellness so deployment and CI circulation are measured from
-  the restored public body.
+- Re-run wellness after production release proof so deployment and CI circulation are
+  measured from the restored public body.
 
 ## Trust trace
 

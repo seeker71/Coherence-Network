@@ -361,7 +361,7 @@ ask_native_local() {
     exit 5
   fi
   printf '%s\n' "$trust_line" >&2
-  ask_log="$request_dir/form-cli-asks.jsonl"
+  ask_log="$home/.coherence-network/form-cli-asks.jsonl"
   trust_path="${trust_line#*path:}"; trust_path="${trust_path%% *}"
   trust_grounded="${trust_line#*grounded:}"; trust_grounded="${trust_grounded%% *}"
   trust_freq="${trust_line#*freq:}"; trust_freq="${trust_freq%% *}"
@@ -434,7 +434,7 @@ record_remote_crossing() {
   query_key="$2"
   reason="$3"
   home="${HOME:-$ROOT}"
-  ask_log="$home/.coherence-network/rag-requests/form-cli-asks.jsonl"
+  ask_log="$home/.coherence-network/form-cli-asks.jsonl"
   crossing_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   if ! printf '{"event":"remote","at":"%s","query_key":"%s","path":"rented","grounded":"no","freq":"unknown","suffic":"no","observed":"no","status":"%s","reason":"%s"}\n' \
       "$crossing_at" "$query_key" "$status" "$reason" >>"$ask_log"; then

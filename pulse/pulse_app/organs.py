@@ -179,43 +179,41 @@ def extract_api(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_schema(r: "UpstreamResult") -> OrganVerdict:
-    """Schema organ: require the proof returned by readiness."""
+    """Schema organ: distinguish bounded non-observation from failure."""
+    if not _is_ok(r.status):
+        return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if not _is_ok(r.status) and r.status != 503:
-        return OrganVerdict(False, f"HTTP {r.status}")
-    fields = _ready_fields(body)
-    schema_ok = fields.get("schema_ok")
+    schema_ok = body.get("schema_ok")
     if schema_ok is False:
-        return OrganVerdict(False, "schema_ok=false")
+        return OrganVerdict(
+            True,
+            f"{UNOBSERVED_DETAIL_PREFIX}schema proof omitted by bounded pulse",
+        )
     if schema_ok is not True:
         return OrganVerdict(False, "schema_ok missing")
     return OrganVerdict(True)
 
 
 def extract_audit(r: "UpstreamResult") -> OrganVerdict:
-    """Audit organ: require the proof returned by readiness."""
+    """Audit organ: distinguish bounded non-observation from compromise."""
+    if not _is_ok(r.status):
+        return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
     if body is None:
         return OrganVerdict(False, "empty response body")
-    if not _is_ok(r.status) and r.status != 503:
-        return OrganVerdict(False, f"HTTP {r.status}")
-    fields = _ready_fields(body)
-    if fields.get("integrity_compromised"):
+    if body.get("integrity_compromised"):
         return OrganVerdict(False, "integrity_compromised=true")
-    integrity_verified = fields.get("integrity_verified")
+    integrity_verified = body.get("integrity_verified")
     if integrity_verified is False:
-        return OrganVerdict(False, "integrity_verified=false")
+        return OrganVerdict(
+            True,
+            f"{UNOBSERVED_DETAIL_PREFIX}audit proof omitted by bounded pulse",
+        )
     if integrity_verified is not True:
         return OrganVerdict(False, "integrity_verified missing")
     return OrganVerdict(True)
-
-
-def _ready_fields(body: dict) -> dict:
-    """Return independently parseable readiness fields for 200 or 503."""
-    detail = body.get("detail")
-    return detail if isinstance(detail, dict) else body
 
 
 def _ready_503_reason(body: dict | None) -> str:
@@ -223,12 +221,6 @@ def _ready_503_reason(body: dict | None) -> str:
     if not body:
         return "unknown"
     detail = body.get("detail")
-    if isinstance(detail, dict) and detail.get("error") == "readiness_failed":
-        failures = detail.get("failures") or []
-        if "persistence_contract_failed" in failures:
-            return "persistence_contract_failed"
-        if "graph_store_missing" in failures:
-            return "graph_store_missing"
     if isinstance(detail, dict) and detail.get("error") == "persistence_contract_failed":
         return "persistence_contract_failed"
     if detail == "not ready":
@@ -239,18 +231,6 @@ def _ready_503_reason(body: dict | None) -> str:
 def extract_postgres(r: "UpstreamResult") -> OrganVerdict:
     """Postgres organ: db_connected true, or persistence contract failing."""
     if r.status == 503:
-        body = _require_body(r)
-        if body is not None:
-            fields = _ready_fields(body)
-            if fields.get("persistence_contract_ok") is False:
-                return OrganVerdict(False, "persistence contract failed")
-            if fields.get("db_connected") is False:
-                return OrganVerdict(False, "db_connected=false")
-            if (
-                fields.get("persistence_contract_ok") is True
-                and fields.get("db_connected") is True
-            ):
-                return OrganVerdict(True)
         reason = _ready_503_reason(r.body)
         if reason == "persistence_contract_failed":
             return OrganVerdict(False, "persistence contract failed")
@@ -268,13 +248,6 @@ def extract_postgres(r: "UpstreamResult") -> OrganVerdict:
 def extract_neo4j(r: "UpstreamResult") -> OrganVerdict:
     """Neo4j organ: 503 only counts when graph_store is specifically missing."""
     if r.status == 503:
-        body = _require_body(r)
-        if body is not None:
-            graph_store_ready = _ready_fields(body).get("graph_store_ready")
-            if graph_store_ready is False:
-                return OrganVerdict(False, "graph_store unavailable")
-            if graph_store_ready is True:
-                return OrganVerdict(True)
         reason = _ready_503_reason(r.body)
         if reason == "graph_store_missing":
             return OrganVerdict(False, "graph_store unavailable")
@@ -552,14 +525,14 @@ ORGANS: list[Organ] = [
         name="schema",
         label="Schema",
         description="Structural integrity — core tables present and sound.",
-        upstream=UPSTREAM_API_READY,
+        upstream=UPSTREAM_API_PULSE_HEALTH,
         extractor=extract_schema,
     ),
     Organ(
         name="audit_integrity",
         label="Audit Integrity",
         description="Conscience — the audit ledger's hash chain is unbroken.",
-        upstream=UPSTREAM_API_READY,
+        upstream=UPSTREAM_API_PULSE_HEALTH,
         extractor=extract_audit,
     ),
     # --- outcome organs: rendered pages (SSR is slower than a JSON response) ---

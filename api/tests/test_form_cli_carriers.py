@@ -65,15 +65,13 @@ def test_ask_plus_timeout_bounds_the_native_stage(tmp_path: Path) -> None:
     assert result.returncode == 124
     assert "native timeout after 0.001s" in result.stderr
     assert "should-not-run" not in result.stdout
-    assert not (
-        tmp_path / ".coherence-network" / "rag-requests" / "form-cli-asks.jsonl"
-    ).exists()
+    assert not (tmp_path / ".coherence-network" / "form-cli-asks.jsonl").exists()
 
 
 def test_stats_reads_the_canonical_observation_ledger() -> None:
     source = STATS.read_text(encoding="utf-8")
 
-    assert 'ASKS = CN / "rag-requests" / "form-cli-asks.jsonl"' in source
+    assert 'ASKS = CN / "form-cli-asks.jsonl"' in source
     assert 'row.get("grounded") == "yes"' in source
     assert "form-cli-escalations.jsonl" not in source
     assert "form-cli-trust.json" not in source
