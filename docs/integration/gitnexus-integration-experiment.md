@@ -49,13 +49,14 @@ First call pays the npm fetch (~10s); subsequent calls use the npx cache. Verify
 
 `deploy/hostinger/install-gitnexus.sh` runs at the end of every push-to-main deploy:
 
-1. Reads `npm:` line from `scripts/.gitnexus-pin`.
-2. Pre-caches `gitnexus@$NPM_VERSION` via `npx --yes gitnexus@$NPM_VERSION --version`.
-3. Stops the previous sidecar (PID at `/var/run/gitnexus.pid`).
-4. Starts a new sidecar via `nohup npx --yes gitnexus@$NPM_VERSION mcp --port 8765`.
-5. Logs to `/docker/coherence-network/gitnexus.log`.
+1. Reads the GitNexus, Supergateway, and Node-image pins from `scripts/.gitnexus-pin`.
+2. Mounts the repository read-only while mounting `.gitnexus/`, the global registry, and npm cache from persistent directories outside the checkout.
+3. Refreshes the index with `gitnexus analyze --skip-agents-md` so analysis cannot rewrite repository guidance.
+4. Runs GitNexus's actual stdio-only MCP command behind the pinned Supergateway SSE carrier on port 8765 and waits for a server-level health response.
+5. Uses host `npx` only when Docker is unavailable; that fallback creates the same external index link before analysis.
+6. Logs host output to `/docker/coherence-network/gitnexus.log`; Docker failures remain available through the named `coherence-network-gitnexus` container.
 
-Non-blocking: any failure logs and exits 0 so api/web/pulse deploy keeps flowing.
+The installer returns non-zero when neither carrier can run. Auto-deploy records that incident and keeps the API/web/pulse release flowing, as required by the trial contract.
 
 ### 4. Register the VPS sidecar with runner agents
 

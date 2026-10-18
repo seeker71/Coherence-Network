@@ -134,3 +134,6 @@ form/form/form-stdlib/drafts/
 form/form/form-samples/agent-turns/corpus.jsonl
 .nanite/
 experiments/rune-galdr/.ecapa-model/
+
+# GitNexus structural index (persistent machine-local analysis state)
+.gitnexus/

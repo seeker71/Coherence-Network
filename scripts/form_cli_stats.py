@@ -7,10 +7,11 @@ The DERIVED statistics — rates, the tool->native sovereignty share, the small 
 record files and feeds coded lists to the kernel. Reading 3 MB of catalog to a raw count is carrier
 I/O; the meaning on top of the counts is Form.
 
-Records (under ~/.coherence-network/):
+Records (under ~/.coherence-network/; canonical ask ledger under rag-requests/):
   form-cli-corpus/corpus.jsonl   real agent turns — tool frequency, oracle distribution
   form-cli-catalog.jsonl         captured oracle calls — the local lane's training samples
-  form-cli-asks.jsonl            canonical native trust rows + observed remote crossings
+  rag-requests/form-cli-asks.jsonl
+                                canonical native trust rows + observed remote crossings
   form-cli-model-metric.json     native tool-predictor's last held-out scores (written by `form-cli train`)
 """
 import collections
@@ -26,7 +27,8 @@ STATS_FK = ROOT / "form" / "form" / "form-stdlib" / "form-cli-stats.fk"
 CN = Path.home() / ".coherence-network"
 CORPUS = CN / "form-cli-corpus" / "corpus.jsonl"
 CATALOG = CN / "form-cli-catalog.jsonl"
-ASKS = CN / "form-cli-asks.jsonl"
+ASKS = CN / "rag-requests" / "form-cli-asks.jsonl"
+LEGACY_ASKS = CN / "form-cli-asks.jsonl"
 METRIC = CN / "form-cli-model-metric.json"
 RAG_INDEX = CN / "rag-index" / "index.jsonl"
 
@@ -92,7 +94,7 @@ def bar(p, width=24):
 def main():
     turns = jsonl(CORPUS)
     catalog_n = line_count(CATALOG)
-    ask_records = jsonl(ASKS)
+    ask_records = jsonl(LEGACY_ASKS) + jsonl(ASKS)
     trust_events = [row for row in ask_records if row.get("event") == "trust"]
     remote_events = [
         row

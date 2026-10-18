@@ -1,18 +1,16 @@
 """Health check endpoint (spec 001)."""
 
-from datetime import datetime, timezone
+import ast
 import logging
 import os
-import ast
+from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.middleware.request_outcomes import recent_outcomes_snapshot
-from app.services import persistence_contract_service
-from app.services import unified_db
-from app.services import audit_ledger_service
+from app.services import audit_ledger_service, persistence_contract_service, unified_db
 from app.services.config_service import get_config
 
 router = APIRouter()
@@ -180,6 +178,10 @@ class HealthResponse(_BaseHealthResponse):
 class ReadyResponse(_BaseHealthResponse):
     """GET /api/ready response."""
     db_connected: Annotated[bool, Field(description="Whether the database is reachable")] = False
+    schema_ok: Annotated[
+        bool,
+        Field(description="True if core tables (contributions, contributors, assets) exist"),
+    ] = False
 
 
 class PingResponse(BaseModel):
@@ -204,21 +206,13 @@ async def ping():
 
 
 @router.get("/ready", response_model=ReadyResponse, summary="Readiness probe for k8s/deploy. Returns 200 when API can serve traffic")
-async def ready(request: Request):
+def ready(request: Request):
     """Readiness probe for k8s/deploy. Returns 200 when API can serve traffic."""
-    is_ready = getattr(request.app.state, "graph_store", None) is not None
-    if not is_ready:
-        raise HTTPException(status_code=503, detail="not ready")
+    graph_store_ready = getattr(request.app.state, "graph_store", None) is not None
     persistence_report = persistence_contract_service.evaluate(request.app)
-    if persistence_report.get("required") and not persistence_report.get("pass_contract"):
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "persistence_contract_failed",
-                "failures": persistence_report.get("failures", []),
-                "domains": persistence_report.get("domains", {}),
-            },
-        )
+    persistence_contract_ok = not persistence_report.get("required") or bool(
+        persistence_report.get("pass_contract")
+    )
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
     deployed_sha, deployed_sha_source = _deployed_sha()
@@ -231,22 +225,40 @@ async def ready(request: Request):
     except Exception:
         logger.warning("DB connectivity check failed", exc_info=True)
 
+    schema_ok = _check_schema()
+
     # Check audit ledger integrity (spec 123)
     integrity_compromised = False
     integrity_verified = False
     try:
-        # We only check the last 100 entries for the health check to keep it fast
-        # Full verification is available at /api/audit/verify
         res = audit_ledger_service.verify_chain()
         integrity_verified = True
         integrity_compromised = not res.verified
     except Exception:
         logger.warning("Integrity check failed", exc_info=True)
+    failures = []
+    if not graph_store_ready:
+        failures.append("graph_store_missing")
+    if not persistence_contract_ok:
+        failures.append("persistence_contract_failed")
+    if not db_connected:
+        failures.append("database_unreachable")
+    if not schema_ok:
+        failures.append("schema_check_failed")
     if not integrity_verified or integrity_compromised:
+        failures.append("integrity_verification_failed")
+    if failures:
         raise HTTPException(
             status_code=503,
             detail={
-                "error": "integrity_verification_failed",
+                "error": "readiness_failed",
+                "failures": failures,
+                "graph_store_ready": graph_store_ready,
+                "persistence_contract_ok": persistence_contract_ok,
+                "persistence_failures": persistence_report.get("failures", []),
+                "persistence_domains": persistence_report.get("domains", {}),
+                "db_connected": db_connected,
+                "schema_ok": schema_ok,
                 "integrity_verified": integrity_verified,
                 "integrity_compromised": integrity_compromised,
             },
@@ -262,6 +274,7 @@ async def ready(request: Request):
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
         db_connected=db_connected,
+        schema_ok=schema_ok,
         integrity_compromised=integrity_compromised,
         integrity_verified=integrity_verified,
     )

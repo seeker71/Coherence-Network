@@ -48,7 +48,9 @@ HEALTHY_READY = {
     "deployed_sha": "deadbeef",
     "deployed_sha_source": "GIT_COMMIT_SHA",
     "db_connected": True,
+    "schema_ok": True,
     "integrity_compromised": False,
+    "integrity_verified": True,
 }
 
 HEALTHY_IDEAS = {
@@ -353,7 +355,6 @@ async def test_docker_local_bases_probe_public_witness_path():
     by = {s.organ: s for s in samples}
     assert all(s.ok for s in samples), {name: s.detail for name, s in by.items()}
     assert ("api.coherencycoin.com", "/api/health/pulse") in seen
-    assert ("api.coherencycoin.com", "/api/health") not in seen
     assert ("api.coherencycoin.com", "/api/ready") in seen
     assert ("api.coherencycoin.com", "/api/ideas") in seen
     assert ("api.coherencycoin.com", "/api/utils/kernel_status") in seen
@@ -539,31 +540,65 @@ async def test_api_status_not_ok():
 
 @pytest.mark.asyncio
 async def test_integrity_compromised_flags_audit_only():
-    bad = {**HEALTHY_HEALTH, "integrity_compromised": True}
-    by = await _run(_handler(api_health_body=bad))
+    bad = {**HEALTHY_READY, "integrity_compromised": True}
+    by = await _run(_handler(ready_body=bad))
     assert by["api"].ok is True
     assert by["audit_integrity"].ok is False
     assert "integrity" in (by["audit_integrity"].detail or "")
 
 
 @pytest.mark.asyncio
-async def test_integrity_unverified_is_unknown_on_bounded_pulse():
-    bad = {**HEALTHY_HEALTH, "integrity_verified": False}
-    by = await _run(_handler(api_health_body=bad))
+async def test_integrity_unverified_on_ready_flags_audit():
+    bad = {**HEALTHY_READY, "integrity_verified": False}
+    by = await _run(_handler(ready_body=bad))
     assert by["api"].ok is True
-    assert by["audit_integrity"].ok is True
-    assert (by["audit_integrity"].detail or "").startswith("unobserved: ")
-    assert status_from_last_sample(by["audit_integrity"]) == "unknown"
+    assert by["audit_integrity"].ok is False
+    assert by["audit_integrity"].detail == "integrity_verified=false"
+    assert status_from_last_sample(by["audit_integrity"]) == "silent"
 
 
 @pytest.mark.asyncio
-async def test_schema_unverified_is_unknown_on_bounded_pulse():
-    bad = {**HEALTHY_HEALTH, "schema_ok": False}
-    by = await _run(_handler(api_health_body=bad))
-    assert by["schema"].ok is True
-    assert (by["schema"].detail or "").startswith("unobserved: ")
-    assert status_from_last_sample(by["schema"]) == "unknown"
+async def test_schema_failure_on_ready_flags_schema():
+    bad = {**HEALTHY_READY, "schema_ok": False}
+    by = await _run(_handler(ready_body=bad))
+    assert by["schema"].ok is False
+    assert by["schema"].detail == "schema_ok=false"
+    assert status_from_last_sample(by["schema"]) == "silent"
     assert by["api"].ok is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failed_field", "failed_value", "failed_organ"),
+    [
+        ("schema_ok", False, "schema"),
+        ("integrity_verified", False, "audit_integrity"),
+        ("graph_store_ready", False, "neo4j"),
+        ("persistence_contract_ok", False, "postgres"),
+    ],
+)
+async def test_ready_503_attributes_only_the_failed_organ(
+    failed_field,
+    failed_value,
+    failed_organ,
+):
+    detail = {
+        "error": "readiness_failed",
+        "failures": [f"{failed_organ}_failed"],
+        "graph_store_ready": True,
+        "persistence_contract_ok": True,
+        "db_connected": True,
+        "schema_ok": True,
+        "integrity_verified": True,
+        "integrity_compromised": False,
+    }
+    detail[failed_field] = failed_value
+    body = {"detail": detail}
+
+    by = await _run(_handler(ready_status=503, ready_body=body))
+
+    for organ in ("postgres", "neo4j", "schema", "audit_integrity"):
+        assert by[organ].ok is (organ != failed_organ), (organ, by[organ].detail)
 
 
 @pytest.mark.asyncio
@@ -820,7 +855,7 @@ async def test_slow_probe_flags_strained_not_silent(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_slow_bounded_proof_preserves_unobserved_state(monkeypatch):
+async def test_slow_bounded_api_probe_does_not_hide_ready_proofs(monkeypatch):
     from pulse_app import probe
 
     original = probe._probe_upstream
@@ -844,12 +879,12 @@ async def test_slow_bounded_proof_preserves_unobserved_state(monkeypatch):
         "integrity_verified": False,
     }
 
-    by = await _run(_handler(api_health_body=bounded))
+    by = await _run(_handler(api_health_body=bounded, ready_body=HEALTHY_READY))
 
     for name in ("schema", "audit_integrity"):
         assert by[name].ok is True
-        assert (by[name].detail or "").startswith("unobserved: ")
-        assert status_from_last_sample(by[name]) == "unknown"
+        assert by[name].detail is None
+        assert status_from_last_sample(by[name]) == "breathing"
 
 
 @pytest.mark.asyncio
