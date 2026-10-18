@@ -53,8 +53,9 @@ Ask the body before a rented mind:
 - `form-cli ask` for grounded prose lookup and sufficiency judgment.
 - `form/fkwu form/observe/form-find-ask.bml` for exact structural source lookup.
 - `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when prose
-  must be generated rather than retrieved — the body's own voice on this Mac's
-  Metal, `model_server_calls 0`.
+  must be generated rather than retrieved — the body's own voice on a host that
+  carries the fkwu Metal lane (today: the Mac), `model_server_calls 0`; on any
+  other host, continue down this order.
 - `fsh-main.fk` and shell grammar for native scripted search and orchestration.
 - `scripts/coh_substrate.py form` only while the public lattice bridge remains
   outside the native application host.

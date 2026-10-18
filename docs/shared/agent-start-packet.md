@@ -66,7 +66,8 @@ Use the body in this order:
    lookup when prose retrieval is unnecessary.
 3. `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when
    prose must be generated rather than retrieved — the body's own voice at
-   `model_server_calls 0`.
+   `model_server_calls 0`. The voice opens on a host that carries the fkwu
+   Metal lane (today: the Mac); on any other host, continue down this order.
 4. `fsh-main.fk` and Form host I/O for search, reads, and orchestration.
 5. A rented reasoning model only after the native path misses or cannot yet
    synthesize the answer.
