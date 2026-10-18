@@ -18,10 +18,43 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
-import httpx
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = REPO_ROOT / "api"
+
+
+def _load_httpx():
+    """Enter the repository API runtime when the host Python is bare.
+
+    The documented guard command is ``python3 scripts/worktree_pr_guard.py``.
+    A clean host Python does not carry the API dependency set, while the
+    repository bootstrap creates it under ``api/.venv``. Keep that command
+    truthful by transferring the whole guard process to the prepared runtime
+    before any API service imports occur.
+    """
+    try:
+        import httpx as loaded_httpx
+
+        return loaded_httpx
+    except ModuleNotFoundError as exc:
+        candidates = (
+            API_ROOT / ".venv" / "bin" / "python",
+            API_ROOT / ".venv" / "Scripts" / "python.exe",
+        )
+        current = Path(sys.executable).resolve()
+        for candidate in candidates:
+            if candidate.is_file() and candidate.resolve() != current:
+                os.execv(
+                    str(candidate),
+                    [str(candidate), str(Path(__file__).resolve()), *sys.argv[1:]],
+                )
+        raise SystemExit(
+            "worktree_pr_guard requires the bootstrapped api/.venv runtime; "
+            "run the repository host setup, then repeat the same command"
+        ) from exc
+
+
+httpx = _load_httpx()
+
 DEFAULT_MAINTAINABILITY_OUTPUT = "api/logs/maintainability_audit_report.worktree_guard.json"
 AUTO_HEAL_GENERATED_ARTIFACTS = {"maintainability_audit_report.json"}
 SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (

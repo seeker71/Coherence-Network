@@ -1,49 +1,77 @@
-"""Regression coverage for thin form-cli host carriers."""
+"""Regression coverage for the canonical form-cli ask carriers."""
 
 from __future__ import annotations
 
-import importlib.util
 import os
+import subprocess
 from pathlib import Path
-from types import SimpleNamespace
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-ASK_SMART_PATH = ROOT / "scripts" / "form_cli_ask_smart.py"
-GO_KERNEL = ROOT / "form" / "form" / "form-kernel-go" / "bin-go"
-
-_spec = importlib.util.spec_from_file_location("form_cli_ask_smart", ASK_SMART_PATH)
-assert _spec and _spec.loader
-form_cli_ask_smart = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(form_cli_ask_smart)
+FORM_CLI = ROOT / "bin" / "form-cli"
+STATS = ROOT / "scripts" / "form_cli_stats.py"
 
 
-@pytest.mark.skipif(not (GO_KERNEL.is_file() and os.access(GO_KERNEL, os.X_OK)), reason="Go kernel not built")
-def test_form_cli_smart_uses_pure_control_recipe_not_interactive_repl() -> None:
-    out = form_cli_ask_smart.kernel(
-        [
-            "(frepl-mode 1 0 1)",
-            "(frepl-classify 0 1 0)",
-        ],
-        timeout=5,
+def test_ask_plus_reuses_the_canonical_native_trace() -> None:
+    source = FORM_CLI.read_text(encoding="utf-8")
+
+    assert 'ask+)      ask_native_escalating "$@"' in source
+    assert 'run_native_ask_with_timeout "$native_timeout" "$q"' in source
+    assert 'ask_timeout="$2"; native_timeout="$2"' in source
+    assert "fca-ask-plus-traced" not in source
+    assert "scripts/form_cli_ask.sh" not in source
+
+
+def test_ask_plus_retires_duplicate_model_and_judge_controls() -> None:
+    result = subprocess.run(
+        [str(FORM_CLI), "ask+", "--judge-gate", "question"],
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
-    assert out == ["1", "0"]
+    assert result.returncode == 2
+    assert "native sufficiency gate owns escalation" in result.stderr
 
 
-def test_form_cli_smart_forwards_timeout_to_ask_carrier(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: dict[str, object] = {}
+def test_ask_plus_rejects_invalid_timeout_before_querying() -> None:
+    result = subprocess.run(
+        [str(FORM_CLI), "ask+", "--timeout", "later", "two word question"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
-    def fake_run(args, **kwargs):
-        seen["args"] = args
-        seen["kwargs"] = kwargs
-        return SimpleNamespace(returncode=124)
+    assert result.returncode == 2
+    assert "--timeout must be numeric seconds" in result.stderr
 
-    monkeypatch.setattr(form_cli_ask_smart.subprocess, "run", fake_run)
-    args = SimpleNamespace(model="coder", judge="judge", remote="remote", timeout=3.0)
 
-    assert form_cli_ask_smart.answer_once("question", args) == 124
-    assert "--timeout" in seen["args"]
-    assert "3.0" in seen["args"]
-    assert seen["kwargs"]["timeout"] == 8.0
+def test_ask_plus_timeout_bounds_the_native_stage(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            str(FORM_CLI),
+            "ask+",
+            "--remote",
+            "printf should-not-run",
+            "--timeout",
+            "0.001",
+            "two word question",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "HOME": str(tmp_path)},
+    )
+
+    assert result.returncode == 124
+    assert "native timeout after 0.001s" in result.stderr
+    assert "should-not-run" not in result.stdout
+    assert not (tmp_path / ".coherence-network" / "form-cli-asks.jsonl").exists()
+
+
+def test_stats_reads_the_canonical_observation_ledger() -> None:
+    source = STATS.read_text(encoding="utf-8")
+
+    assert 'ASKS = CN / "form-cli-asks.jsonl"' in source
+    assert 'row.get("grounded") == "yes"' in source
+    assert "form-cli-escalations.jsonl" not in source
+    assert "form-cli-trust.json" not in source

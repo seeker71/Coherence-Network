@@ -17,7 +17,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -56,7 +56,9 @@ from app.services.substrate.category import (
     RType,
 )
 from app.services.substrate.kernel import DOMAIN_BLUEPRINT, DOMAIN_RECIPE
+from app.services.substrate.markdown_frontend import frontmatter_to_structured_ctor
 from app.services.substrate.orm import SubstrateNamedCellORM, SubstrateNodeORM
+from app.services.substrate.projection import ctor_fields
 
 
 @pytest.fixture
@@ -150,6 +152,28 @@ def test_recipe_dedup_via_makeself(session):
     r1_id = build().make_self_id(session)
     r2_id = build().make_self_id(session)
     assert r1_id == r2_id
+
+
+def test_structured_ctor_projects_all_fields_with_constant_database_reads(session):
+    frontmatter = {f"field-{index}": f"value-{index}" for index in range(64)}
+    frontmatter.update({"count": 7, "enabled": True})
+    ctor = frontmatter_to_structured_ctor(session, frontmatter)
+    session.flush()
+    assert ctor is not None
+
+    statements: list[str] = []
+
+    def record_statement(_conn, _cursor, statement, _params, _context, _many):
+        statements.append(statement)
+
+    event.listen(session.bind, "before_cursor_execute", record_statement)
+    try:
+        projected = ctor_fields(session, ctor)
+    finally:
+        event.remove(session.bind, "before_cursor_execute", record_statement)
+
+    assert projected == frontmatter
+    assert len(statements) == 3
 
 
 # ---------------------------------------------------------------------------

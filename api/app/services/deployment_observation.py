@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app import config_loader
 from app.services.substrate import NodeID, make_cell
-from app.services.substrate.projection import ctor_field_lookup
+from app.services.substrate.projection import ctor_fields
 from app.services.substrate.markdown_frontend import (
     BID_witness,
     body_to_access_recipe,
@@ -144,7 +144,8 @@ def _decode_row(session: Session, row: SubstrateNamedCellORM) -> dict[str, Any]:
     ctor = _node_from_db_id(session, row.ctor_recipe_node_id)
     if ctor is None:
         raise DeploymentObservationError("witness-content-missing")
-    payload = {field: ctor_field_lookup(session, ctor, field) for field in _FIELDS}
+    decoded = ctor_fields(session, ctor, _FIELDS)
+    payload = {field: decoded.get(field) for field in _FIELDS}
     payload.update(
         {
             "node_id": f"@1.1.9.{row.cell_id}",
@@ -965,13 +966,28 @@ def latest_deployment_observation(
     allow_expired: bool = True,
     require_current: bool = True,
 ) -> dict[str, Any] | None:
-    rows = (
+    query = (
         session.query(SubstrateNamedCellORM)
         .filter(SubstrateNamedCellORM.domain == "witness")
         .filter(SubstrateNamedCellORM.name.like(f"{_NAME_PREFIX}%"))
-        .order_by(SubstrateNamedCellORM.created_at.desc(), SubstrateNamedCellORM.cell_id.desc())
-        .all()
     )
+    if require_current:
+        from app.services.deployment_observer_service import (
+            DeploymentObserverError,
+            current_deployed_sha,
+        )
+
+        try:
+            current_sha = current_deployed_sha()
+        except DeploymentObserverError:
+            return None
+        query = query.filter(
+            SubstrateNamedCellORM.name.like(f"{_NAME_PREFIX}{current_sha[:12]}-%")
+        )
+    rows = query.order_by(
+        SubstrateNamedCellORM.created_at.desc(),
+        SubstrateNamedCellORM.cell_id.desc(),
+    ).yield_per(16)
     for row in rows:
         try:
             return _verified_payload(
