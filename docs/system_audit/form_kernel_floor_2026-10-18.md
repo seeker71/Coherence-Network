@@ -1,7 +1,7 @@
 # fkwu/Form floor — 2026-10-18
 
 This reading follows the current parent `origin/main` and coherence-kernel
-`1e82aeb14`. It treats fkwu as the only kernel. Retired carriers are bootstrap
+`09b618aff`. It treats fkwu as the only kernel. Retired carriers are bootstrap
 history, not runtime choices, fallbacks, or recurring validation targets.
 
 ## Executable floor
