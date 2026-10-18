@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/deploy-atomic-carriers-20261018",
+  "commit_scope": "Publish retiring deployment carrier files atomically so an overlapping sync preserves an executing file's inode.",
+  "files_owned": [".github/workflows/hostinger-auto-deploy.yml", "docs/DEPLOY.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["atomic-carrier-publication"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex-gpt-6", "contributor_type": "machine", "roles": ["deployment repair"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6"},
+  "evidence_refs": [
+    "The repaired native build completed in 582.5s and published source identity c835bb8d8cee24f8; the final API image was built.",
+    "The executing carrier then reported line 993: syntax error near unexpected token ')'. The file itself passes bash -n and its SHA-256 matches tracked source.",
+    "GitHub run 39131333776 synced the file at 13:23:51 UTC during that build, before cancellation. Direct SCP overwrote the inode Bash was still reading.",
+    "SCP now stages .incoming files and the SSH carrier renames them into place. This changes only OS file publication; application implementation remains Form/BML and fkwu/JIT source is unchanged."
+  ],
+  "change_files": [".github/workflows/hostinger-auto-deploy.yml", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Correlated carrier mtime, exact checksum, syntax read and runner sync timestamps; inspected atomic publication configuration."},
+  "ci_validation": {"status": "pending", "summary": "The production rollout observes the corrected transfer operation."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Authorized production rollout follows source publication."}
+}
