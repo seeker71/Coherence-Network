@@ -19,7 +19,6 @@ ARG COHERENCE_FORM_SHA
 
 FROM docker.io/library/gcc:12.5.0-bookworm@sha256:4adc71d718fb96aeda49f1da3a936e1ea07af2b192493414a8bca1c73b9f2adb AS kernel-builder
 
-ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 
 WORKDIR /build
@@ -27,10 +26,8 @@ WORKDIR /build
 # The compiler and libc arrive in this content-addressed builder image. The
 # independent observer reads this exact pin from the release Dockerfile, so no
 # later package-index movement can change either native build.
-RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
+RUN printf '%s\n' "$COHERENCE_FORM_SHA" \
       | grep -Eq '^[0-9a-f]{40}$' \
- && test "$(printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
-      | grep -Ec '^[0-9a-f]{40}$')" = 2 \
  && command -v cc >/dev/null \
  && command -v openssl >/dev/null
 

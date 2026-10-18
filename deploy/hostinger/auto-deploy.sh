@@ -959,7 +959,7 @@ wait_for_rebuild_recreate_orphans_gone() {
 # Using RUNNING_SHA as the comparison base means: change-detection asks
 # what the CONTAINER is missing, not what the filesystem is missing.
 DIFF_BASE="$OLD_SHA"
-if [[ -n "$RUNNING_SHA" ]] && git cat-file -e "${RUNNING_SHA}^{commit}" 2>/dev/null; then
+if [[ -n "$RUNNING_SHA" ]]; then
   if [[ "$RUNNING_SHA" != "$OLD_SHA" ]]; then
     log "Diff base: using RUNNING_SHA=${RUNNING_SHA:0:12} (container) instead of OLD_SHA=${OLD_SHA:0:12} (repo) — the repo may have advanced past a stalled rebuild"
   fi
