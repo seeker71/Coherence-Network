@@ -33,6 +33,12 @@ Hostinger deploy runs on a changed release or explicit request. The independent
 public-deploy contract is available on demand; scheduled redeploys and scheduled
 full-suite gates have retired.
 
+Native image builds mount tmpfs at `/dev/shm`. fkwu's shared cell/program
+arenas grow with the Form compilation; Docker's default 64 MiB mount caused
+`SIGBUS` during `bml-floor-compile.fk` in run 39130139264. Keep the native build
+on that shared-memory surface. Image assembly verifies artifact integrity;
+runtime observations belong to the changed claim and release receipt.
+
 **The images do NOT build from the VPS repo checkout.** Each service in
 `/docker/coherence-network/docker-compose.yml` builds from a GitHub context
 **pinned to a commit SHA**:

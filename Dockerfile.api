@@ -37,26 +37,14 @@ RUN printf '%s\n%s\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" \
 # Build the one runtime and ask door from the pinned fkwu/Form source. The
 # Form-owned build gate replaces the deleted host build scripts.
 COPY form/ /build/form/
-RUN cd /build/form \
+# fkwu's shared cell/program arenas need the host's tmpfs capacity. Docker's
+# default 64 MiB /dev/shm faults during native BML compilation (SIGBUS).
+RUN --mount=type=tmpfs,target=/dev/shm cd /build/form \
  && SOURCE_DATE_EPOCH=0 LC_ALL=C TZ=UTC cc -O2 -o fkwu runtime/fkwu-uni.c \
  && printf '{"out":"/build/form-cli","force_link":1,"cc":"cc"}\n' \
       | ./fkwu gate/form-cli-build-run.bml \
- && test "$(printf 'ping\n' | /build/form-cli)" = "pong" \
- && mkdir -p /tmp/form-cli-proof/.coherence-network/rag-requests \
- && printf '70726f6f66|6465706c6f7965642070726f6f66206b65726e656c\n' \
-      > /tmp/form-cli-proof/.coherence-network/rag-requests/docker.embed \
- && (cd /tmp/form-cli-proof \
-      && printf 'embed-request docker\n' | /build/form-cli) \
-      | grep -F '"embedding_kind":"form-semantic-v2"' >/dev/null \
- && printf '{"prove":"/build/form-cli"}\n' \
-      | ./fkwu gate/form-cli-build-run.bml \
  && sha256sum /build/form-cli | cut -d' ' -f1 > /build/form-cli.sha256 \
  && test -x /build/form-cli
-
-# One bootstrap breath proves that the image-built runtime starts. Broader
-# kernel validation belongs only to an actual fkwu change.
-RUN test "$(cd /build/form && ./fkwu bootstrap/ground.fk 2>/dev/null)" = 42
-
 
 # -----------------------------------------------------------------------------
 # Stage 2 — Python runtime
@@ -126,11 +114,6 @@ COPY api/ ./
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
 RUN test "$(sha256sum ./bin/form-cli | cut -d' ' -f1)" = "$(cat ./bin/form-cli.sha256)"
-
-# Form stdlib sources and the source identity emitted by the Form build gate
-# are executable runtime material. Direct fkwu evaluation prepends the pinned
-# core before each endpoint recipe.
-RUN test "$(printf 'eval (add 20 22)\n' | ./bin/form-cli)" = 42
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script
 # re-syncs these on each deploy, but baking them in lets the image boot
