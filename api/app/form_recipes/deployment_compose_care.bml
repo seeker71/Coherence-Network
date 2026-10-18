@@ -1,0 +1,40 @@
+// Retire released service owners in the host's live Compose document.
+// Compose supplies its JSON model without resolving environment values;
+// Form edits that model, preserves a private backup and publishes atomically.
+// stdin: {"host":"root@host","key":"/local/key","compose":"/host/docker-compose.yml","backup":"/host/private-backup.yml","stage":"/host/docker-compose.incoming.yml"}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+section [form.bml] {
+ class DeploymentComposeCare {
+  def dcc-get(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
+  def dcc-run(doc, step, args, input) {
+   let argv = append(["ssh", "-i", dcc-get(doc, "key"), "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", dcc-get(doc, "host")], args);
+   let result = hch-run(step, argv, input, hch-by(30000));
+   (Comparable) result[0] == 0 ? result[1] : form_error("deployment compose care: " ++ step ++ " failed; retained private host-child trace");
+  }
+  def dcc-read(doc) = parse-json("deployment-compose", dcc-run(doc, "compose-model-read", ["docker", "compose", "-f", dcc-get(doc, "compose"), "config", "--format", "json", "--no-interpolate", "--no-env-resolution"], ""));
+  def dcc-retired?(name) = (Comparable) name == "kernel-router" || (Comparable) name == "kernel-router-bml-front-door";
+  def dcc-owners(body) = node_children(json-object-get(body, "services"));
+  def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
+  def dcc-body(body) {
+   let services = json-node-object(filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body)));
+   json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
+  }
+  def dcc-apply(doc, body) {
+   let backup = dcc-run(doc, "compose-source-backup", ["cp", "--no-clobber", dcc-get(doc, "compose"), dcc-get(doc, "backup")], "");
+   let private-backup = dcc-run(doc, "compose-backup-private", ["chmod", "600", dcc-get(doc, "backup")], "");
+   let staged = dcc-run(doc, "compose-source-stage", ["tee", dcc-get(doc, "stage")], json-emit(dcc-body(body)) ++ "\n");
+   let yaml = dcc-run(doc, "compose-yaml-carrier", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--format", "yaml", "--no-interpolate", "--no-env-resolution"], "");
+   let rendered = dcc-run(doc, "compose-yaml-stage", ["tee", dcc-get(doc, "stage")], yaml);
+   let private-stage = dcc-run(doc, "compose-stage-private", ["chmod", "600", dcc-get(doc, "stage")], "");
+   let accepted = dcc-run(doc, "compose-model-accept", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--quiet", "--no-interpolate", "--no-env-resolution"], "");
+   let published = dcc-run(doc, "compose-source-publish", ["mv", dcc-get(doc, "stage"), dcc-get(doc, "compose")], "");
+   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Released service owners retired from live Compose; private source backup retained; other services preserved.";
+  }
+  def dcc-care(doc) {
+   let body = dcc-read(doc);
+   dcc-apply(doc, body);
+  }
+ }
+ let doc = parse-json("deployment-compose-care", stdin-text());
+ dcc-care(doc);
+}
