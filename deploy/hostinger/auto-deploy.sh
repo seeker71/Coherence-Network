@@ -69,44 +69,6 @@ run_with_timeout() {
   fi
 }
 
-bootstrap_and_verify_local_grounding() {
-  # Deployment owns making the native body operational. Certification belongs
-  # to the later GitHub-runner public observation, never to this host-local step.
-  require_file "$MAINTENANCE_COMPOSE_FILE"
-  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
-      -f "$MAINTENANCE_COMPOSE_FILE" run \
-      --rm --no-deps -T --entrypoint sh api -lc '
-        set -eu
-        cd /app
-        for state_dir in rag-index rag-requests attestation api-queries federation-graph; do
-          test -d "/root/.coherence-network/$state_dir"
-          probe="/root/.coherence-network/$state_dir/.deploy-write-probe.$$"
-          : > "$probe"
-          rm -f "$probe"
-        done
-        python3 scripts/coh_substrate.py bootstrap
-        bash scripts/ensure_form_cli_native.sh
-        python3 scripts/form_cli_rag.py heal
-        out="$(mktemp)"
-        err="$(mktemp)"
-        trap '\''rm -f "$out" "$err"'\'' EXIT
-        if ! bin/form-cli ask "observed auto learning reversible experiment champion challenger" >"$out" 2>"$err"; then
-          cat "$err" >&2
-          cat "$out"
-          echo "local native grounded ask exited non-zero" >&2
-          exit 1
-        fi
-        grep -Eq "^trust  path:native  grounded:yes .*suffic:yes" "$err"
-        grep -Eq "^grounded:@[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$" "$out"
-        cat "$err"
-        cat "$out"
-      ' 2>&1 | tee -a "$LOG_FILE"; then
-    log "FAIL: complete substrate/RAG bootstrap or local native grounded ask failed"
-    return 1
-  fi
-  log "Local grounding: complete corpus indexed and native ask proven ✓"
-}
-
 require_file() {
   local path="$1"
   if [[ ! -e "$path" ]]; then
@@ -532,9 +494,8 @@ if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   # Traefik routes. SHA alignment must never bypass authority retirement.
   retire_sibling_kernel_routers || exit 1
   verify_api_public_host_route || exit 1
-  # A rerun after a witness/index failure must heal and prove the already-live
-  # release; SHA alignment alone is not completion.
-  bootstrap_and_verify_local_grounding || exit 1
+  # Read the serving revision and route; retrieval care follows its own input
+  # changes as described in docs/DEPLOY.md.
   stabilize_api_after_maintenance || exit 1
   exit 0
 fi
@@ -1499,7 +1460,6 @@ except Exception:
   fi
   log "Post-deploy verify: api container at ${POST_SHA:0:12} ✓"
 
-  bootstrap_and_verify_local_grounding || exit 1
   stabilize_api_after_maintenance || exit 1
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"

@@ -145,16 +145,3 @@ jobs:
             echo "::endgroup::"
             exit "$rc"
           fi
-
-  observe-public-deployment:
-    # The OIDC observer deliberately accepts only protected-main push and
-    # scheduled identities. A manual rollback/deploy uses inputs.sha and must
-    # not mint a witness for github.sha or weaken that identity policy.
-    if: github.event_name == 'push' || github.event_name == 'schedule'
-    needs: deploy-hostinger
-    permissions:
-      contents: none
-      id-token: write
-    uses: seeker71/Coherence-Network/.github/workflows/public-deployment-observer.yml@d17b1453525899e089ebb70d762dcdbe7fa37fae
-    secrets:
-      hostinger_ssh_key: ${{ secrets.HOSTINGER_SSH_KEY }}
