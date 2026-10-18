@@ -228,7 +228,7 @@ def _surface_kind(record: dict[str, Any], path: Path) -> str:
     if "oracle" in text or "witness" in text:
         return "oracle or witness learning"
     if "jit" in text or "native" in text:
-        return "native lowering learning"
+        return "fkwu page JIT learning"
     if "routing" in text or "executor" in text:
         return "model routing"
     if "retire" in text:

@@ -1,0 +1,32 @@
+(do
+  (defn weighted_score (value position)
+    (if (eq position 0) (mul value 100)
+      (if (eq position 1) (mul value 50)
+        (if (eq position 2) (mul value 25) (mul value 10)))))
+  (defn coherence_score_loop (remaining threshold total position)
+    (if (eq (len remaining) 0)
+      total
+      (if (ge (head remaining) threshold)
+        (coherence_score_loop
+          (tail remaining)
+          threshold
+          (add total (weighted_score (head remaining) position))
+          (add position 1))
+        (coherence_score_loop (tail remaining) threshold total position))))
+  (defn coherence_score (values threshold)
+    (coherence_score_loop values threshold 0 0))
+  (defn count_above_loop (remaining threshold count)
+    (if (eq (len remaining) 0)
+      count
+      (count_above_loop
+        (tail remaining)
+        threshold
+        (if (ge (head remaining) threshold) (add count 1) count))))
+  (defn count_above (values threshold)
+    (count_above_loop values threshold 0))
+  (defn coherence_weight (values threshold)
+    (add (mul (count_above values threshold) 100)
+         (coherence_score values threshold)))
+  (let values (list 72 38 91 55 28 67 84 45 95 12))
+  (let threshold 50)
+  (coherence_weight values threshold))

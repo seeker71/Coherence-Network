@@ -84,7 +84,7 @@ This is the same path the body walked for `_cosine` (one numeric, Newton's itera
 
 ## Why this matters beyond Python
 
-Python is the largest file-format gap from `grammar_coverage.py` (927 .py files). Once Python parses to Form, every other language whose grammar is declarable as Pattern primitives gets the same treatment — TypeScript, Rust, Go, JSON, YAML, Markdown, all the way out to audio/image/3D modalities that compose pre-pipelines. The shape proven on Python is the shape every Language cell follows.
+Python remains a large file-format surface in the repository. Once Python parses to Form, every other language whose grammar is declarable as Pattern primitives gets the same treatment — TypeScript, Rust, Go, JSON, YAML, Markdown, all the way out to audio/image/3D modalities that compose pre-pipelines. The shape proven on Python is the shape every Language cell follows.
 
 The visualizer arc ([`lc-form-kernel-runtime-visualizer`](lc-form-kernel-runtime-visualizer.md)) currently shows kernel walks + Python CTOR dispatches as two separate altitudes. Once the parser lives as Form recipes and the engine walks through `pattern_match`, both altitudes collapse to one — the visualizer colors cells by which Pattern CTOR fired during parse, which Rule fired during dispatch, which Python construct fired during evaluation. **One trace surface for the whole arc.**
 

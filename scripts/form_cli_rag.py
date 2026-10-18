@@ -84,10 +84,6 @@ def _classic_form_prefix() -> str:
 
 _CLASSIC_FORM_PREFIX = _classic_form_prefix()
 
-NATIVE_SOURCE_DIGEST_FILE = (
-    Path(ROOT) / _CLASSIC_FORM_PREFIX / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
-)
-
 SOURCES = [
     ("recipe",    f"{_CLASSIC_FORM_PREFIX}/form-stdlib/*.fk"),
     ("spec",      "specs/*.md"),
@@ -116,9 +112,9 @@ def _native_cli_path() -> Path:
     binary = Path(raw)
     try:
         current_binary_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
-        current_source_digest = NATIVE_SOURCE_DIGEST_FILE.read_text(
-            encoding="utf-8"
-        ).strip()
+        current_source_digest = hashlib.sha256(
+            Path(str(binary) + ".source.id").read_bytes()
+        ).hexdigest()
     except OSError as exc:
         raise RuntimeError("verified native form-cli receipt target is unreadable") from exc
     if current_binary_digest != binary_digest:
@@ -583,15 +579,17 @@ def _index_stamp_path(index_path: str) -> str:
 
 
 def _native_source_stamp() -> str:
-    """Bind the cache to the committed native table/stamp inputs."""
-    digest = hashlib.sha256(b"native-rag-carrier-v1\n")
-    for relative in (
-        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli.source.sha256",
-        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli.stamp",
-        f"{_CLASSIC_FORM_PREFIX}/form-stdlib/bootstrap/form-cli-table.txt",
+    """Bind the cache to the selected native v3 carrier bundle."""
+    binary = _native_cli_path()
+    digest = hashlib.sha256(b"native-rag-carrier-v3\n")
+    for suffix in (
+        ".source.id",
+        ".fkb",
+        ".sym",
+        ".native.attestation",
     ):
-        path = Path(ROOT) / relative
-        digest.update(relative.encode("utf-8"))
+        path = Path(f"{binary}{suffix}")
+        digest.update(suffix.encode("ascii"))
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")

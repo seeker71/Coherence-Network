@@ -51,8 +51,8 @@ class WeightedAverageResponse(BaseModel):
     description=(
         "Pure-computation endpoint, body transmuted to a Form recipe. "
         "Returns sum(values[i] * weights[i]) / sum(weights). The substrate's "
-        "bread-and-butter coherence-score combinator. Kernel-only served "
-        "by serve_via_kernel; three-way parity (CPython, TS, Rust) is the gate."
+        "bread-and-butter coherence-score combinator. fkwu executes the "
+        "application Form recipe through serve_via_kernel."
     ),
 )
 async def weighted_average(
@@ -121,7 +121,7 @@ class SimpsonDiversityResponse(BaseModel):
         "Returns 1 - sum((count_i / total)^2) — 0.0 for a single category "
         "(no diversity), approaching 1.0 as the distribution spreads evenly. "
         "The same shape vitality_service uses for contributor-worldview spread. "
-        "Kernel-only via serve_via_kernel; three-way parity is the gate."
+        "fkwu executes the application Form recipe through serve_via_kernel."
     ),
 )
 async def simpson_diversity(
@@ -179,8 +179,8 @@ class IdeaScoreResponse(BaseModel):
         "Returns (potential_value * confidence) / max(estimated_cost + "
         "resistance_risk, 0.5) — the substrate's value-per-cost ranking signal. "
         "The 0.5 CC floor prevents inflated scores when cost and risk are near "
-        "zero. Same body as idea_scoring._score. Kernel-only via "
-        "serve_via_kernel; three-way parity is the gate."
+        "zero. Same body as idea_scoring._score. fkwu executes the application "
+        "Form recipe through serve_via_kernel."
     ),
 )
 async def idea_score(
@@ -252,8 +252,8 @@ class MarginalCcReturnResponse(BaseModel):
         "Returns (value_gap * conf^2) / (remaining_cost + rr*0.5) where "
         "value_gap = max(pv - av, 0.0) and remaining_cost = max(ec - ac, 0.1) — "
         "uncaptured value per remaining CC, confidence discounted twice. The "
-        "arithmetic core of idea_scoring._marginal_cc_return. Kernel-only "
-        "via serve_via_kernel; three-way parity is the gate."
+        "arithmetic core of idea_scoring._marginal_cc_return. fkwu executes the "
+        "application Form recipe through serve_via_kernel."
     ),
 )
 async def marginal_cc_return(
@@ -281,8 +281,7 @@ async def marginal_cc_return(
 #
 # The FIRST kernel-served route to exercise STRUCTURE ACCESS — a recipe that
 # receives a structured object (the idea, marshalled as a kernel Record from a
-# Python dict / model) and pulls named fields out of it, rather than receiving
-# the inputs pre-flattened into separate scalar bindings. Same arithmetic as
+# Python dict / model) and pulls named fields out of it. Same arithmetic as
 # marginal_cc_return; the new capability is the field extraction.
 #
 # How the structure travels into the recipe: the bindings carry one ``idea``
@@ -290,8 +289,8 @@ async def marginal_cc_return(
 # renders ``(record_new <blueprint> "field" value ...)`` on the subprocess path,
 # and lib.rs ``py_to_value`` builds a ``Value::Record`` on the inline path. The
 # recipe reads each field via the ``_get`` native (the python-bmf SUBSCRIPT
-# lowering), which now reads Record fields. This is the gate the
-# API_KERNEL_READINESS doc names as blocking ~60% of remaining candidates;
+# source realization), which now reads Record fields. This is the gate the
+# old readiness work named as blocking most remaining candidates;
 # homogeneous-dict field access is the clean subset built here. (Heterogeneous
 # object-OR-dict polymorphism — _safe_float reading .field from a model OR
 # ["field"] from a dict across mixed collections — stays CPython; named in the
@@ -326,8 +325,8 @@ class IdeaMarginalFromRecordResponse(BaseModel):
         "one structured object (the idea), marshalled into a kernel Record from "
         "a Python dict, and the recipe reads them by name via the kernel's field "
         "accessor. Same arithmetic as marginal_cc_return; the new capability is "
-        "field extraction from a record binding. Kernel-only via "
-        "serve_via_kernel; CPython==Rust value-parity is the gate."
+        "field extraction from a record binding. fkwu executes the application "
+        "Form recipe through serve_via_kernel."
     ),
 )
 async def idea_marginal_from_record(
@@ -366,7 +365,7 @@ async def idea_marginal_from_record(
 # kernel-served route — every prior route returns a scalar. It proves the
 # value-walk carries list construction end to end: the recipe builds the
 # result list via the append-accumulator idiom (form-stdlib's METHOD-CALL
-# accumulator arm / the adapter's `_list_append` lowering) and the result
+# accumulator arm / fkwu list append) and the result
 # round-trips through value_to_py's List arm as a real Python list. Shares
 # its body mirrors idea_scoring._softmax_weights. Uses the
 # math.exp transcendental native (math_exp), like breath_balance's ln.
@@ -403,8 +402,7 @@ class SoftmaxWeightsResponse(BaseModel):
         "flattens the distribution. The same shape idea selection uses to "
         "sample the backlog. This is the FIRST kernel-served route to return "
         "a LIST — the value-walk carries list construction end to end. "
-        "Kernel-only via serve_via_kernel; CPython==Rust element-wise "
-        "value-parity is the gate."
+        "fkwu executes the application Form recipe through serve_via_kernel."
     ),
 )
 async def softmax_weights(

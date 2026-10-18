@@ -149,9 +149,6 @@ export default function AgentQuestionsPage() {
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
           Tasks
         </Link>
-        <Link href="/substrate/form" className="text-muted-foreground hover:text-foreground">
-          Form
-        </Link>
       </nav>
 
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

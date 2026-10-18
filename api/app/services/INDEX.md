@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 255
+**Total files**: 256
 
 | File | Purpose |
 |---|---|
@@ -201,6 +201,7 @@
 | [presence_invitation_service.py](presence_invitation_service.py) | Graph-backed invitation surface for living presences. |
 | [presence_resolver.py](presence_resolver.py) | Presence resolver — backfill image_url + tagline on existing graph nodes. |
 | [presence_service.py](presence_service.py) | Presence — felt-witness that others are here too. |
+| [process_tree_reaper.py](process_tree_reaper.py) | Bounded process-tree termination for native Form carriers. |
 | [prompt_ab_roi_service.py](prompt_ab_roi_service.py) | Backward-compatible wrapper around SlotSelector for prompt variant selection. |
 | [proposal_service.py](proposal_service.py) | Proposals — short suggestions the collective can vote on by meeting. |
 | [proprioception_service.py](proprioception_service.py) | Proprioception service — auto-sensing system state. |

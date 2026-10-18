@@ -1,0 +1,22 @@
+(do
+  (defn cosine_parts (a b dot norm_a norm_b)
+    (if (eq (len a) 0)
+      (list dot norm_a norm_b)
+      (cosine_parts
+        (tail a)
+        (tail b)
+        (add dot (mul (head a) (head b)))
+        (add norm_a (mul (head a) (head a)))
+        (add norm_b (mul (head b) (head b))))))
+  (defn clamp01 (value)
+    (if (gt value 1.0) 1.0 (if (lt value 0.0) 0.0 value)))
+  (defn cosine (a b)
+    (do
+      (let parts (cosine_parts a b 0.0 0.0 0.0))
+      (let denom (mul (math_sqrt (nth parts 1)) (math_sqrt (nth parts 2))))
+      (if (gt denom 0.0)
+        (clamp01 (div (nth parts 0) denom))
+        0.5)))
+  (let contributor_vec (list 0.6 0.0 0.8 0.0 0.0 0.0))
+  (let idea_vec (list 0.8 0.0 0.6 0.0 0.0 0.0))
+  (cosine contributor_vec idea_vec))

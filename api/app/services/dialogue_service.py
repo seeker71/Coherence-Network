@@ -55,14 +55,6 @@ _DIALOGUE_ENVELOPE_RECIPE = (
     / "public_dialogue_envelope.fk"
 )
 _DIALOGUE_BAND_ENTRY = "(dialogue-band))"
-_SHA256_RECIPE_CANDIDATES = (
-    Path(__file__).resolve().parents[3]
-    / "form"
-    / "form"
-    / "form-stdlib"
-    / "sha256.fk",
-    Path("/app/form/form-stdlib/sha256.fk"),
-)
 _FORM_DIGEST_PREFIX = b"form-cli-carrier-challenge-v1\n"
 
 _BCP47_RE = re.compile(
@@ -174,20 +166,7 @@ def _admit_dialogue_envelope(
 
 
 def _native_dialogue_recipe_source() -> str:
-    for candidate in _SHA256_RECIPE_CANDIDATES:
-        if candidate.is_file():
-            sha256_source = candidate.read_text(encoding="utf-8")
-            break
-    else:
-        raise RuntimeError("native Form SHA-256 recipe is unavailable")
-    source = sha256_source + "\n" + _DIALOGUE_ENVELOPE_RECIPE.read_text(
-        encoding="utf-8"
-    )
-    return "\n".join(
-        line
-        for line in source.splitlines()
-        if not line.lstrip().startswith("; preludes:")
-    )
+    return _DIALOGUE_ENVELOPE_RECIPE.read_text(encoding="utf-8")
 
 
 def _contains_control(value: str) -> bool:

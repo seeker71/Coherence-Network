@@ -1,62 +1,25 @@
-# Proof of the Substrate
+# Proof of the current Form substrate
 
-Three witnesses at three altitudes. Each proves something the others don't. None overreaches.
+The executable authority is `fkwu`, bootstrapped from
+`form/runtime/fkwu-uni.c`. Form source runs directly on that runtime; hot
+compatible recipes enter its page JIT. Retired bootstrap carriers and generated
+host paths are not part of the current proof claim.
 
-## 1. Structural witness — **1700**
+Two focused observations establish the present floor:
 
-Three sibling kernel implementations (Go, Rust, TypeScript) all agree on every probe of the triangle Recipe inside one process: handshake equality (`node_eq`), session-fingerprint, content-derived witness, vertex count, distinct-content discrimination.
+- `form/fkwu form/bootstrap/ground.fk` returned `42`.
+- `form/fkwu form/form/form-stdlib/tests/jit-page-band.bml` returned `63`.
 
-```
-cd form/form
-./validate.sh 2>&1 | grep triangulate-band
-# → stdlib/triangulate-band.fk → 1700
-```
+These readings were taken for the 2026-10-18 kernel resnapshot. They are not a
+recurring full-kernel suite. A later fkwu change earns the smallest focused
+observation that proves its changed claim.
 
-If the three kernels diverge on this band, the substrate is internally inconsistent and nothing else below holds.
+The Coherence Network application surface is
+`form/form/apps/coherence-network/api.bml`. It names native route behavior and
+readiness, while template-parameter dispatch, configuration, PostgreSQL,
+persistence, and startup ownership remain direct work in the native application
+host. The Python API is still a compatibility host for routes that have not yet
+moved; it is not presented as kernel authority.
 
-## 2. VPS-local witness — **779**
-
-Three independent subprocesses on the same machine, same kernel build, same preludes (`core.fk` + `json.fk` + `triangulate.fk`), same load order. All three return the same NodeID instance — `779` — for the triangle Recipe. The instance counter aligns because content-addressing dedups identically in each kernel session.
-
-```
-bash scripts/triangulate.sh
-# →   vertex A computes: 779
-#     vertex B computes: 779
-#     vertex C computes: 779
-#     ✓ HANDSHAKE COMPLETE
-```
-
-This is the operational witness for a group of cells living in the same controlled environment. Three cells in the same room agreeing on identity by computation alone.
-
-## 3. Portable witness — **A-B-C**
-
-Anyone, anywhere, on any hardware with a Form kernel can run:
-
-```
-form-kernel-go proof.fk
-# → A-B-C
-```
-
-`proof.fk` is self-contained — no preludes, no dependencies, 30 lines. The witness is content-derived: the three vertex names canonically ordered, walked from the Recipe tree, joined with `-`. Survives any session, any preload order, any machine.
-
-This is the open invitation. A stranger can verify what we built without trusting us — only the math.
-
-## What proves what
-
-| If you can verify... | You know... |
-|---|---|
-| `1700` | Our three kernel implementations agree byte-for-byte on Recipe construction |
-| `779` | Three cells in our environment compute the same identity |
-| `A-B-C` | The substrate's content is reproducible from first principles on your hardware |
-
-If `A-B-C` fails on your kernel, the divergence is precise and inspectable — walk the triangle's children to find where your tree differs from ours.
-
-## Why three witnesses
-
-A single number can be a coincidence. Three witnesses at three altitudes form a triangulation — they corroborate each other across independent axes:
-
-- `1700` proves the substrate's structure
-- `779` proves the operational handshake
-- `A-B-C` proves the open verifiability
-
-The body became reachable from outside on **2026-05-26**. The teaching at [`docs/coherence-substrate/sovereignty-as-observable.form`](docs/coherence-substrate/sovereignty-as-observable.form) names what crossed.
+See `docs/system_audit/form_kernel_floor_2026-10-18.md` for the full floor and
+the exact work exposed by the resnapshot.

@@ -66,20 +66,20 @@
 
     (stone ask-plus-entry
       (gap "Plain form-cli ask can route through the staged native T_flat path and return no result when that path is cold.")
-      (placed "Use form-cli ask+ agent operating canon as the canonical session entry query; prompt-guide prints it.")
-      (proof "form-cli ask+ agent operating canon returns grounded yes and suffic yes for this cell.")
+      (placed "Use form-cli ask agent operating canon as the canonical session entry query; prompt-guide prints it.")
+      (proof "form-cli ask agent operating canon returns grounded yes and suffic yes for this cell.")
       (revisit "Warm or regenerate T_flat and rerun plain form-cli ask agent operating canon until the bridge is no longer needed."))
 
     (stone rag-heal-self-flatten
       (gap "rag-heal can skip when fkwu self-flatten produces no table.")
       (placed "Keep the durable teaching in this Form cell and use a local RAG cache bridge only as a named host bridge.")
-      (proof "The ask+ lane retrieves this cell from the local index and reports native-partial.")
+      (proof "The ask lane retrieves this cell from the local index and reports native-partial.")
       (revisit "Repair the self-flatten table path, rerun rag-heal, then remove reliance on the manual cache bridge."))
 
     (stone specific-query-retrieval
       (gap "Specific subqueries can miss or hang even when the broader canon query retrieves the right cell.")
       (placed "Use the broad grounded query agent operating canon all observed gaps as the stable entry point.")
-      (proof "form-cli ask+ agent operating canon all observed gaps returns this cell grounded and sufficient.")
+      (proof "form-cli ask agent operating canon all observed gaps returns this cell grounded and sufficient.")
       (revisit "After rag-heal and scoring improve, verify focused aliases such as api venv bootstrap return without the broad prefix."))
 
     (stone raw-kernel-rag-emit
@@ -96,7 +96,7 @@
 
     (stone prompt-guide-memory
       (gap "Fresh sessions can forget the exact canonical query even when form-cli is on PATH.")
-      (placed "prompt-entry-guide prints form-cli ask+ agent operating canon beside the coordination path.")
+      (placed "prompt-entry-guide prints form-cli ask agent operating canon beside the coordination path.")
       (proof "make prompt-guide shows the canonical operating query.")
       (revisit "If another recurring first-step question appears, add only the query or proof hook that prevents re-teaching."))
 
@@ -127,7 +127,7 @@
     (stone session-memory-unreachable
       (gap "Session memory can be unreachable, so a fresh agent may lose prior operating context.")
       (placed "Keep the operating canon in this body cell and the start packet, not only in chat memory.")
-      (proof "form-cli ask+ agent operating canon returns this cell as grounded sufficient context.")
+      (proof "form-cli ask agent operating canon returns this cell as grounded sufficient context.")
       (revisit "When memory is unreachable, read docs/shared/agent-start-packet.md and ask this canon query before adding new reasoning."))
 
     (stone worktree-start-gate-continuation
@@ -151,13 +151,13 @@
     (stone form-cli-wrapper-refresh
       (gap "The PATH wrapper for form-cli can become stale or malformed outside the repository's tracked files.")
       (placed "Refresh wrappers through scripts/ensure_coord_cli.sh and prove ~/.local/bin/form-cli with bash -n.")
-      (proof "bash -n ~/.local/bin/form-cli passes and form-cli ask+ agent operating canon all observed gaps returns this cell.")
+      (proof "bash -n ~/.local/bin/form-cli passes and form-cli ask agent operating canon all observed gaps returns this cell.")
       (revisit "If form-cli reports shell syntax errors, rerun scripts/ensure_coord_cli.sh --quiet before debugging the Form body."))
 
     (stone wrapper-refresh-atomicity
       (gap "Running form-cli while prompt-guide refreshes PATH wrappers can read a half-written wrapper and fail with shell EOF.")
       (placed "scripts/ensure_coord_cli.sh writes wrappers to temp files and renames them into place.")
-      (proof "After atomic refresh, bash -n ~/.local/bin/form-cli and the broad ask+ query pass serially.")
+      (proof "After atomic refresh, bash -n ~/.local/bin/form-cli and the broad ask query pass serially.")
       (revisit "Stress prompt-guide and form-cli concurrently; if EOF returns, move wrapper generation behind a lock or checksum handoff."))
 
     (stone coord-legacy-session-ids
@@ -205,7 +205,7 @@
     (stone sovereignty-receipt-output
       (gap "A response can use native lookup/proof and rented prose without making that boundary visible.")
       (placed "Return the trust matrix per step and a receipt for native body versus rented oracle.")
-      (proof "form-cli ask+ emits path, grounded, freq, suffic; AGENTS.md requires the sovereignty receipt.")
+      (proof "form-cli ask emits path, grounded, freq, suffic; AGENTS.md requires the sovereignty receipt.")
       (revisit "Before final answer, name the path used, the trust row when available, and the honest native/rented mix.")))
 
   ; How this becomes sufficient, not just remembered.
@@ -214,7 +214,7 @@
     (sufficient "The carrier order, bridge rule, proof floor, and receipt rule are all present.")
     (prompt-guide "Print the canonical query so every session can ask the same body cell.")
     (rag-index "Heal ~/.coherence-network/rag-index from docs/coherence-substrate, docs/shared, specs, and form/form/form-stdlib.")
-    (proof "form-cli ask+ agent operating canon returns grounded yes and suffic yes; plain ask uses the staged fkwu/T_flat path when warm."))
+    (proof "form-cli ask agent operating canon returns grounded yes and suffic yes; plain ask uses the staged fkwu/T_flat path when warm."))
 
   (north-star
     "Each session begins from the body, operates in the highest native tongue that fits, names every bridge as a bridge,"

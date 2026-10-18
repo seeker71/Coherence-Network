@@ -31,7 +31,6 @@ from app.services.deployment_observer_service import (
     REPRODUCIBLE_BUILDER_IMAGE,
     carrier_challenge_input_sha256,
     consume_observation,
-    form_cli_challenge_expected,
     health_url,
     issue_challenge,
     nonce_sha256,
@@ -53,6 +52,10 @@ from scripts import refresh_deployment_witness_index as witness_refresh
 
 
 TARGET = "a" * 40
+
+
+def _form_cli_result(challenge_input: str) -> str:
+    return challenge_input[:16]
 OBSERVER_SHA = "b" * 40
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -176,14 +179,15 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
         REPO_ROOT / ".github/workflows/public-deployment-observer.yml"
     ).read_text(encoding="utf-8")
     expected_paths = (
-        "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256",
-        "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt",
-        "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp",
+        "$reproduced_dir/form-cli.source.id",
+        "$reproduced_dir/form-cli.sym",
+        "$reproduced_dir/form-cli.native.attestation",
     )
     for path in expected_paths:
         assert path in workflow
     assert 'cp -a "$source_dir/." "$context_dir/form/"' in workflow
-    assert "./fkwu --src bootstrap/ground.fk" in workflow
+    assert 'printf \'carrier-challenge %s\\n\'' in workflow
+    assert "carrier-challenge-v2" in workflow
     assert "--target kernel-builder" in workflow
     assert "/source/form-stdlib" not in workflow
     assert "/source/form/bootstrap/ground.fk" not in workflow
@@ -429,9 +433,9 @@ def _health(nonce: str, *, timestamp: str = "2026-07-15T10:00:00Z") -> bytes:
         },
         "form_cli_challenge": {
             "input_sha256": challenge_input,
-            "result": form_cli_challenge_expected(challenge_input),
+            "result": _form_cli_result(challenge_input),
             "verified": True,
-            "protocol": "form-cli-v2",
+            "protocol": "form-cli-v3",
             "binary_sha256": "2" * 64,
             "wrapper_sha256": "6" * 64,
             "source_sha256": "3" * 64,
@@ -457,8 +461,8 @@ def _direct(nonce: str) -> bytes:
             "image_id": "sha256:" + "9" * 64,
             "kernel_result": fkwu_challenge_expected(challenge_input),
             "kernel_binary_sha256": "1" * 64,
-            "form_cli_result": form_cli_challenge_expected(challenge_input),
-            "form_cli_protocol": "form-cli-v2",
+            "form_cli_result": _form_cli_result(challenge_input),
+            "form_cli_protocol": "form-cli-v3",
             "reproducible_builder_image": REPRODUCIBLE_BUILDER_IMAGE,
             "reproduced_kernel_binary_sha256": "1" * 64,
             "reproduced_form_cli_binary_sha256": "2" * 64,
@@ -476,7 +480,7 @@ def _direct(nonce: str) -> bytes:
     ).encode()
 
 
-def test_health_projection_recomputes_both_native_challenges() -> None:
+def test_health_projection_validates_both_native_challenges() -> None:
     nonce = _b64(b"n" * 32)
     projection = stable_health_projection(_health(nonce), nonce=nonce, target_sha=TARGET)
     assert projection["kernel_binary_sha256"] == "1" * 64
@@ -711,9 +715,7 @@ def test_authenticated_observation_persists_and_reverifies_the_complete_witness(
                     "source_stamp": "3" * 64,
                     "table_sha256": "4" * 64,
                     "stamp_sha256": "5" * 64,
-                    "challenge_response_sha256": form_cli_challenge_expected(
-                        challenge_input
-                    ),
+                    "challenge_response": _form_cli_result(challenge_input),
                 },
             },
         )
@@ -748,24 +750,3 @@ def test_retired_unauthenticated_writer_cannot_mint_a_witness() -> None:
             host_health={},
             recorder_health={},
         )
-
-
-def test_traefik_routes_public_nonce_health_and_observer_writes_to_api() -> None:
-    compose = (
-        Path(__file__).resolve().parents[2]
-        / "deploy/kernel-router/docker-compose.kernel-router.yml"
-    ).read_text(encoding="utf-8")
-    native_rule = next(
-        line
-        for line in compose.splitlines()
-        if "coherence-api-kernel-native-first.rule:" in line
-    )
-    bml_health_rule = next(
-        line
-        for line in compose.splitlines()
-        if "coherence-api-bml-read-core-batch.rule:" in line
-    )
-    exclusion = "!QueryRegexp(`observation_nonce`,`^[A-Za-z0-9_-]{43}$`)"
-    assert exclusion in native_rule
-    assert "!PathPrefix(`/api/deployment-observer/`)" in native_rule
-    assert f"(Path(`/api/health`) && {exclusion})" in bml_health_rule

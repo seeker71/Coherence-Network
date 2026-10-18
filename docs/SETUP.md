@@ -25,8 +25,8 @@ uvicorn app.main:app --reload --port 8000
 Open compatibility API docs at `http://localhost:8000/docs`.
 
 For native kernel/front-door route work, start from
-[`kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md`](../kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md)
-and [`kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md`](../kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md).
+[`shared/agent-start-packet.md`](shared/agent-start-packet.md) and
+[`../form/form/apps/coherence-network/api.bml`](../form/form/apps/coherence-network/api.bml).
 New high-traffic handlers should be BML/domain grammar first; the local API
 process is the bridge/upstream for routes not yet promoted.
 

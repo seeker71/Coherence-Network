@@ -8,7 +8,6 @@ on:
       - 'web/**'
       - 'pulse/**'
       - 'deploy/hostinger/**'
-      - 'deploy/front-door/**'
       - 'docs/breath/**'
       - 'docs/stewardship/**'
       - 'scripts/verify_web_api_deploy.sh'
@@ -27,10 +26,6 @@ on:
       - 'form'
       - 'form/form/form-stdlib/**'
       - 'kernels/python_bmf/**'
-  schedule:
-    # Refresh the full independent observation well inside its 24-hour TTL.
-    # This runs the same deploy/prove body against the current protected main.
-    - cron: '17 */4 * * *'
   workflow_dispatch:
     inputs:
       sha:

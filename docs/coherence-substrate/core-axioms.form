@@ -99,23 +99,11 @@
       (it-is-offered-across-the-boundary axiom-5)
       (the-cell-decides-to-trust-and-accept axiom-4)   # sovereignty — both acknowledge and trust
       (the-new-composition-mints-a-new-node-id axiom-3) # observable, attributable, reversible
-      (both-acknowledge  offerer-acks-it-landed AND target-acks-acceptance)
-      (the-canary IS this-theorem-already-running)))   # see below — needs naming, not building
+      (both-acknowledge  offerer-acks-it-landed AND target-acks-acceptance)))
 
-  # ── The canary — safe-self-update ALREADY RUNNING (cite as proof) ────
-  # "the canary work for self-update could be one of the protocols we allow
-  # for crossing the membrane and ack the invitation" — Urs. It does, today:
-  (self-update-running
-    (offer        native_invitation)                 # the kernel offers to handle a mutation natively
-    (ack          accept-the-invitation OR x-form-python-fallback)  # 1 = accept; fallback = explicit decline (0)
-    (trust        trust-envelope)                     # specs/native-mutation-trust-envelope.md: residual,
-                                                       # reversible-gate-state, side-effect-intents, silence/stop/fail/BMA
-    (reversible   rollback-receipts)                  # the crossing can be un-crossed (axiom-3 made concrete)
-    (observed     satsang-flip-witness)               # form/form/form-stdlib/satsang-flip-witness.fk: dissent + silence visible
-    (sovereign    canary-failures-are-signal-not-gates)  # the canary informs the decision; never overrides it
-    (membrane     the-rollout-boundary)               # scripts/verify_web_api_deploy.sh:109; deploy/hostinger/auto-deploy.sh:713
-    (contract     native-invitation-contract)         # auto-deploy.sh checks "state":"native-invitation-contract" crossed
-    (verdict      "needs naming as the self-update theorem, not building — it already breathes"))
+  # The former sibling-router canary is historical evidence, not a current
+  # production carrier. A new public self-update proof belongs on the fkwu/BML
+  # application host after it owns the complete request and persistence effect.
 
   # ── The fold-points — the granularity is ours to agree ───────────────
   (open-granularity

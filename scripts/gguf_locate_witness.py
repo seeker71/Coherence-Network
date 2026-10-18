@@ -5,7 +5,7 @@ real llama3.2:3b GGUF. The Form recipe is the body; this carrier mirrors its exa
 integer walk to confirm the ALGORITHM scales to the real file (128k-element vocab
 arrays, 255-tensor table) before the M2 buffer-bridge feeds real bytes to the kernel.
 
-A band fixture can't hold a 2GB file; this is the real-data complement to the four-way
+A band fixture can't hold a 2GB file; this is the real-data complement to the focused fkwu
 proof on the synthetic mini-GGUF (form/form/form-stdlib/tests/gguf-locate-band.fk).
 
 Usage: python3 scripts/gguf_locate_witness.py [path-to-gguf]

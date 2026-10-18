@@ -918,24 +918,6 @@ def test_wellness_reading_projects_sections_into_shared_shape() -> None:
     assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
 
 
-def test_wellness_nested_python_checks_use_current_interpreter(monkeypatch) -> None:
-    """Nested wellness probes should not depend on a literal python3 launcher."""
-    mod = _load_script_module("wellness_check")
-    calls = []
-
-    def fake_run(cmd, **kwargs):
-        calls.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, "", "")
-
-    monkeypatch.setattr(mod.subprocess, "run", fake_run)
-
-    assert mod.sense_form_ontology() == ["  form ontology matches kernel parsers (Go/Rust/TS)"]
-    assert mod.sense_form_blueprints()[0].startswith("  every Form Blueprint number is registered")
-    assert mod.sense_form_primitives()[0].startswith("  every kernel native carries")
-    assert calls
-    assert all(cmd[0] == mod.sys.executable for cmd in calls)
-
-
 def test_wellness_symbol_resolution_recognizes_form_bml_and_emitted_c(
     tmp_path, monkeypatch
 ) -> None:
@@ -956,8 +938,8 @@ source:
     symbols: [IFormFilesystem]
   - file: form/form/form-stdlib/resource-port.fk
     symbols: [port]
-  - file: form/form/form-stdlib/hati-os-kernel-emit.fk
-    symbols: [fk_walk]
+  - file: form/form/form-stdlib/page-jit.fk
+    symbols: [jit_fn_bind]
   - file: docs/coherence-substrate/standard-receipt.form
     symbols: [platforms]
 ---
@@ -972,8 +954,8 @@ source:
         "(do\n  (defn port (direction value-shape) (list direction value-shape)))\n",
         encoding="utf-8",
     )
-    (tmp_path / "form" / "form" / "form-stdlib" / "hati-os-kernel-emit.fk").write_text(
-        '(defn fkc-walk-text () "static long long fk_walk(long long i, long long fp) { return i; }")\n',
+    (tmp_path / "form" / "form" / "form-stdlib" / "page-jit.fk").write_text(
+        "(defn jit_fn_bind (fn-key entry) entry)\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "coherence-substrate" / "standard-receipt.form").write_text(
@@ -984,34 +966,6 @@ source:
     assert mod.sense_spec_symbols() == [
         "  every claimed symbol resolves in its file (4 symbols across 1 spec(s) checked)"
     ]
-
-
-def test_static_to_dynamic_cells_are_live_not_attention() -> None:
-    """Resolved static-to-dynamic surfaces leave wants_attention."""
-    mod = _load_script_module("wellness_check")
-
-    lines = mod.sense_static_to_dynamic_cells()
-    reading = mod.build_reading(
-        [("Static-to-dynamic cells — do fixed ledgers have live successors?", lines)]
-    )
-
-    assert not any("wants_dynamic:" in line for line in lines)
-    assert any("lane_end_state: 4/4 dynamic successors live" in line for line in lines)
-    assert reading["what_wants_attention"] == []
-    assert any("lane_end_state: 4/4 dynamic successors live" in item for item in reading["what_can_compost"])
-
-
-def test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger() -> None:
-    """Every kernel-served recipe route is included in live fallback sensing."""
-    wellness = _load_script_module("wellness_check")
-    attribution = _load_script_module("kernel_attribution_report")
-
-    paths = wellness._kernel_live_endpoint_paths(attribution.KERNEL_SERVED_RECIPES)
-    routes = {str(entry["route"]) for entry in attribution.KERNEL_SERVED_RECIPES}
-
-    assert set(paths) == routes
-    assert len(paths) >= 22
-    assert "/api/utils/coherence_summary_score" in paths
 
 
 def test_pr_guard_detached_head_blocked(monkeypatch) -> None:

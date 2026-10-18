@@ -29,9 +29,7 @@ from app.routers.kernel_shared import (
 # bonus per above-threshold count.
 #
 # The runtime path is the Form recipe compiled from
-# form/form/form-kernel-ts/seedbank/python-adapter/examples/
-# endpoint_coherence_weight_demo.py. The parity_suite anchors the canonical
-# result across the source example and kernel siblings.
+# api/app/form_recipes/endpoint_coherence_weight_demo.fk.
 # ---------------------------------------------------------------------------
 
 
@@ -55,10 +53,8 @@ class CoherenceWeightResponse(BaseModel):
     description=(
         "First transmutation gesture: the body of this endpoint is a Form "
         "recipe compiled from "
-        "form/form/form-kernel-ts/seedbank/python-adapter/examples/"
-        "endpoint_coherence_weight_demo.py. The request must run through a "
-        "Form-kernel carrier. Three-way parity (source example, TS, Rust) is "
-        "the regression gate."
+        "api/app/form_recipes/endpoint_coherence_weight_demo.fk. The request "
+        "runs through fkwu."
     ),
 )
 async def coherence_weight(
@@ -175,8 +171,8 @@ class NodeIdCompatibilityResponse(BaseModel):
         "Pure-computation endpoint, body transmuted to a Form recipe. "
         "Returns how many of the four NodeID coordinates (package, level, "
         "type, instance) two cells share — the cheapest structural-"
-        "interchangeability signal. Kernel-only via serve_via_kernel; "
-        "three-way parity (source example, TS, Rust) is the gate."
+        "interchangeability signal. fkwu executes the application Form recipe "
+        "through serve_via_kernel."
     ),
 )
 async def nodeid_compatibility(

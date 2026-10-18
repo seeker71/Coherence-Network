@@ -1,381 +1,104 @@
-# ideas-router.form -- ideas.py as a high-level route recipe
+# ideas-router.form -- the current ideas route family
 #
-# Companion to api/app/routers/ideas.py and
-# specs/ideas-router-form-expression.md.
-#
-# This file names the shape that emerged when the idea portfolio router
-# is read from Form altitude. Python still carries live FastAPI transport for
-# non-promoted ideas paths; bounded public POST/PATCH idea mutations now enter
-# the kernel-router native default invitation, with X-Form-Python-Fallback as
-# explicit fanout. The route
-# choreography lives here: the portfolio is sensed, browsed, chosen from,
-# changed, linked, translated, invested in, rolled up, and inspected as one
-# recipe family.
-
-# ---------------------------------------------------------------------
-# Part 1 -- route and recipe shapes
-# ---------------------------------------------------------------------
+# fkwu is the sole kernel. The BML catalog below is implemented source waiting
+# for native HTTP/config/persistence/startup ownership; FastAPI remains the
+# compatibility HTTP host until that boundary moves end to end.
 
 form idea_route_shape = {
-    name:             ~String,
-    method:           ~String,
-    path:             ~String,
-    movement:         ~String,
-    carrier:          ~String,
-    service_recipe:   ~String,
-    response_shape:   ~String,
-    evidence:         [~String],
+    name: ~String,
+    method: ~String,
+    path: ~String,
+    native_handler: ~String,
+    live_carrier: ~String,
+    state: ~String,
 };
 
 form idea_route_recipe_shape = {
-    family:           ~String,
-    intent:           ~String,
-    routes:           [idea_route_shape],
-    route_trace:      [~String],
-    proof:            [~String],
+    family: ~String,
+    routes: [idea_route_shape],
+    authority: ~String,
+    next_work: ~String,
 };
 
-defn idea_route(name, method, path, movement, service_recipe, response_shape, evidence) =
+defn idea_route(name, method, path, native_handler, state) =
     idea_route_shape {
-        name:           name,
-        method:         method,
-        path:           path,
-        movement:       movement,
-        carrier:        "api/app/routers/ideas.py",
-        service_recipe: service_recipe,
-        response_shape: response_shape,
-        evidence:       evidence,
+        name: name,
+        method: method,
+        path: path,
+        native_handler: native_handler,
+        live_carrier: "api/app/routers/ideas.py",
+        state: state,
     };
 
-defn idea_route_recipe(family, intent, routes, route_trace, proof) =
-    idea_route_recipe_shape {
-        family:      family,
-        intent:      intent,
-        routes:      routes,
-        route_trace: route_trace,
-        proof:       proof,
-    };
-
-# ---------------------------------------------------------------------
-# Part 2 -- recipe families shifted out of imperative route reading
-# ---------------------------------------------------------------------
-
-defn browse_ideas_recipe() = idea_route_recipe(
-    "browse",
-    "Read portfolio cells as ranked, filtered, language-aware lists.",
-    [
-        idea_route("list_ideas", "GET", "/ideas", "browse portfolio", "idea_service.list_ideas", "IdeaPortfolioResponse", ["spec-053", "portfolio-governance"]),
-        idea_route("list_idea_cards", "GET", "/ideas/cards", "browse actionable cards", "inventory_service.build_idea_cards_feed", "dict", ["idea cards feed"]),
-        idea_route("list_ideas_showcase", "GET", "/ideas/showcase", "browse funder showcase", "idea_service.list_showcase_ideas", "IdeaShowcaseResponse", ["showcase route"]),
-        idea_route("get_portfolio_summary", "GET", "/ideas/portfolio-summary", "browse curated rollup", "idea_service.get_portfolio_summary", "dict", ["curated super-ideas"]),
+defn browse_ideas_recipe() = idea_route_recipe_shape {
+    family: "browse",
+    routes: [
+        idea_route("list", "GET", "/api/ideas", "api_ideas", "BML handler implemented; compatibility HTTP live"),
+        idea_route("detail", "GET", "/api/ideas/{idea_id}", "api_idea_detail", "BML handler implemented; template dispatch remains native-host work"),
+        idea_route("resonance", "GET", "/api/ideas/resonance", "api_ideas_resonance", "BML handler implemented; compatibility HTTP live"),
     ],
-    ["read query filters", "normalize tags", "read portfolio service", "project optional language view", "return carrier response"],
-    ["api/app/routers/ideas.py::list_ideas", "api/tests/test_ideas_router_form.py"]
-);
+    authority: "form/form/apps/coherence-network/api.bml",
+    next_work: "move HTTP dispatch, file configuration, and Postgres ownership into the fkwu host",
+};
 
-defn sense_governance_recipe() = idea_route_recipe(
-    "sense",
-    "Read the portfolio body-state without writing it.",
-    [
-        idea_route("get_governance_health", "GET", "/ideas/health", "sense governance", "idea_service.compute_governance_health", "GovernanceHealth", ["spec-126"]),
-        idea_route("get_right_sizing_report", "GET", "/ideas/right-sizing", "sense granularity", "right_sizing_service.build_report", "RightSizingReport", ["spec-158"]),
-        idea_route("get_right_sizing_history", "GET", "/ideas/right-sizing/history", "sense trend", "right_sizing_service.get_history", "RightSizingHistoryResponse", ["spec-158"]),
-        idea_route("get_breath_overview", "GET", "/ideas/breath-overview", "sense breath", "breath_service.compute_breath_overview", "dict", ["gas/water/ice"]),
+defn sense_governance_recipe() = idea_route_recipe_shape {
+    family: "sense",
+    routes: [],
+    authority: "api/app/routers/ideas.py",
+    next_work: "author each remaining sensing route in BML before moving its effects",
+};
+
+defn choose_next_idea_recipe() = idea_route_recipe_shape {
+    family: "choose",
+    routes: [],
+    authority: "api/app/routers/ideas.py",
+    next_work: "move selection semantics as one Form recipe with observed persistence effects",
+};
+
+defn mutate_idea_recipe() = idea_route_recipe_shape {
+    family: "mutate",
+    routes: [
+        idea_route("update", "PATCH", "/api/ideas/{idea_id}", "api_idea_update", "BML handler implemented; compatibility HTTP live"),
     ],
-    ["read aggregate state", "compute score or phase", "surface tightness and flow", "return measured snapshot"],
-    ["api/tests/test_governance_health.py", "api/tests/test_right_sizing.py"]
-);
+    authority: "form/form/apps/coherence-network/api.bml",
+    next_work: "complete native create/delete and move mutation persistence into the fkwu host",
+};
 
-defn choose_next_idea_recipe() = idea_route_recipe(
-    "choose",
-    "Select work from the portfolio with traceable scoring rather than hidden preference.",
-    [
-        idea_route("select_idea", "POST", "/ideas/select", "choose next idea", "idea_service.select_idea", "IdeaSelectionResult", ["weighted stochastic selection"]),
-        idea_route("get_selection_ab_stats", "GET", "/ideas/selection-ab/stats", "compare selection methods", "idea_selection_ab_service.get_comparison", "dict", ["selection comparison"]),
+defn question_answer_recipe() = idea_route_recipe_shape {
+    family: "question-answer",
+    routes: [
+        idea_route("question-create", "POST", "/api/ideas/{idea_id}/questions", "api_idea_question_create", "BML handler implemented; compatibility HTTP live"),
+        idea_route("question-answer", "POST", "/api/ideas/{idea_id}/questions/answer", "api_idea_question_answer", "BML handler implemented; compatibility HTTP live"),
     ],
-    ["read candidate pool", "apply method and temperature", "exclude named cells", "return selected cell with weight"],
-    ["api/app/services/idea_service.py::select_idea"]
-);
+    authority: "form/form/apps/coherence-network/api.bml",
+    next_work: "move template dispatch and persistence into the fkwu host",
+};
 
-defn mutate_idea_recipe() = idea_route_recipe(
-    "mutate",
-    "Create or alter an idea while keeping workspace and parent invariants explicit.",
-    [
-        idea_route("create_idea", "POST", "/ideas", "create idea", "idea_service.create_idea", "IdeaWithScore", ["workspace validation", "parent reciprocal edge"]),
-        idea_route("update_idea", "PATCH", "/ideas/{idea_id}", "update idea", "idea_service.update_idea", "IdeaWithScore", ["require_api_key", "field allow-list"]),
-        idea_route("update_idea_slug", "PATCH", "/ideas/{idea_id}/slug", "rename slug", "idea_service.update_idea_slug", "SlugUpdateResponse", ["slug history"]),
-        idea_route("put_idea_tags", "PUT", "/ideas/{idea_id}/tags", "replace tags", "idea_service.set_idea_tags", "IdeaTagUpdateResponse", ["normalized tag catalog"]),
-    ],
-    ["validate request", "shape graph-node mutation", "execute Form-native default for promoted public create/update", "fan out explicit Python fallback when asked", "repair reciprocal edge when carried", "return refreshed idea"],
-    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea", "form/form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form/form-stdlib/graph-node-port.fk::gn-delete-node", "form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk", "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview", "deploy/kernel-router/production-routes.fk::route_ideas_update_native_preview"]
-);
-
-defn question_answer_recipe() = idea_route_recipe(
-    "question-answer",
-    "Keep standing questions and measured answers attached to the idea-cell.",
-    [
-        idea_route("add_idea_question", "POST", "/ideas/{idea_id}/questions", "add question", "idea_service.add_question", "IdeaWithScore", ["standing questions"]),
-        idea_route("answer_idea_question", "POST", "/ideas/{idea_id}/questions/answer", "answer question", "idea_service.answer_question", "IdeaWithScore", ["measured_delta"]),
-    ],
-    ["find idea", "add or answer question", "preserve duplicate/not-found distinctions", "return updated cell"],
-    ["api/tests/test_idea_standing_questions.py"]
-);
-
-defn link_idea_recipe() = idea_route_recipe(
-    "link",
-    "Show how ideas connect to contributors, children, tasks, specs, concepts, and activity.",
-    [
-        idea_route("fork_idea_endpoint", "POST", "/ideas/{idea_id}/fork", "fork idea", "idea_service.fork_idea", "dict", ["contributor identity"]),
-        idea_route("list_idea_children", "GET", "/ideas/{idea_id}/children", "list children", "idea_service.list_children_of", "list[IdeaWithScore]", ["parent child edge"]),
-        idea_route("list_idea_specs", "GET", "/ideas/{idea_id}/specs", "list specs", "spec_registry_service.list_specs_for_idea", "list[dict]", ["spec frontmatter idea_id"]),
-        idea_route("list_idea_tasks", "GET", "/ideas/{idea_id}/tasks", "list tasks", "agent_service.list_tasks_for_idea", "IdeaTasksResponse", ["task linkage"]),
-        idea_route("get_idea_activity_endpoint", "GET", "/ideas/{idea_id}/activity", "list activity", "idea_service.get_idea_activity", "list[dict]", ["activity trace"]),
-    ],
-    ["resolve source idea", "read linked cells", "preserve missing source as 404", "return relation surface"],
-    ["api/app/routers/ideas.py relation endpoints"]
-);
-
-defn translate_idea_recipe() = idea_route_recipe(
-    "translate",
-    "Project an idea through worldview and language lenses without changing its anchor cell.",
-    [
-        idea_route("translate_idea_view", "GET", "/ideas/{idea_id}/translate", "worldview projection", "concept_translation_service.translate_idea or translate_service.translate_idea", "IdeaTranslationResponse | dict", ["ontology graph", "legacy conceptual lens"]),
-        idea_route("list_idea_translations_all", "GET", "/ideas/{idea_id}/translations", "list lens translations", "lens_translation_service.list_translations_for_idea", "dict", ["spec-181"]),
-        idea_route("get_idea_translation_spec181", "GET", "/ideas/{idea_id}/translations/{lens_id}", "read lens translation", "lens_translation_service.build_idea_translation", "dict", ["spec-181"]),
-        idea_route("post_idea_translation_regenerate", "POST", "/ideas/{idea_id}/translations/{lens_id}", "regenerate lens translation", "lens_translation_service.build_idea_translation", "dict", ["require_api_key", "spec-181"]),
-    ],
-    ["read anchor idea", "extract tags/name/description", "apply lens or language view", "return projection"],
-    ["app.services.translation_cache_service", "app.services.lens_translation_service"]
-);
-
-defn invest_in_idea_recipe() = idea_route_recipe(
-    "invest",
-    "Let value move toward an idea with dry-run and contributor identity preserved.",
-    [
-        idea_route("stake_on_idea", "POST", "/ideas/{idea_id}/stake", "stake CC", "stake_compute_service.execute_stake", "dict", ["dry_run preview", "contributor identity"]),
-        idea_route("get_idea_progress", "GET", "/ideas/{idea_id}/progress", "read staked progress", "stake_compute_service.get_idea_progress", "dict", ["stage/tasks/CC/contributors"]),
-    ],
-    ["resolve contributor", "honor dry-run as no-write preview", "execute or inspect stake", "return value trace"],
-    ["api/tests/test_investments.py", "api/tests/test_portfolio_governance.py"]
-);
-
-defn rollup_super_idea_recipe() = idea_route_recipe(
-    "rollup",
-    "Let super-ideas read and validate their child completion condition.",
-    [
-        idea_route("get_idea_rollup", "GET", "/ideas/{idea_id}/rollup", "read rollup", "idea_service.get_rollup_progress", "RollupProgress", ["super-idea-rollup-criteria"]),
-        idea_route("validate_super_idea_rollup", "POST", "/ideas/{idea_id}/validate-rollup", "validate rollup", "idea_service.validate_super_idea", "RollupProgress", ["require_api_key", "super-idea-rollup-criteria"]),
-    ],
-    ["read super-idea", "count validated children", "apply rollup condition", "return progress or exact blocker"],
-    ["api/tests/test_idea_lifecycle_closure.py"]
-);
-
-defn inspect_idea_recipe() = idea_route_recipe(
-    "inspect",
-    "Return one idea and its local resonance surfaces.",
-    [
-        idea_route("get_idea", "GET", "/ideas/{idea_id}", "inspect idea", "idea_service.get_idea", "IdeaWithScore", ["question votes heard", "language projection"]),
-        idea_route("get_idea_concept_resonance", "GET", "/ideas/{idea_id}/concept-resonance", "inspect concepts", "idea_service.get_concept_resonance_matches", "IdeaConceptResonanceResponse", ["cross-domain concept resonance"]),
-        idea_route("get_idea_resonance", "GET", "/ideas/{idea_id}/resonance", "inspect resonant ideas", "idea_resonance_service.find_resonant_ideas", "list[dict]", ["coherence score"]),
-        idea_route("get_idea_breath", "GET", "/ideas/{idea_id}/breath", "inspect phase", "breath_service.compute_idea_breath", "dict", ["gas/water/ice"]),
-        idea_route("get_idea_lifecycle", "GET", "/ideas/{idea_id}/lifecycle", "inspect closure", "idea_service.get_idea_lifecycle", "dict", ["closure blockers"]),
-    ],
-    ["resolve idea", "attach local evidence", "project requested view", "return exact not-found when absent"],
-    ["api/tests/test_discord_votes_heard.py", "api/tests/test_idea_lifecycle_closure.py"]
-);
-
-# ---------------------------------------------------------------------
-# Part 3 -- the whole router as one structure
-# ---------------------------------------------------------------------
+defn link_idea_recipe() = idea_route_recipe_shape { family: "link", routes: [], authority: "api/app/routers/ideas.py", next_work: "BML route and effect ownership" };
+defn translate_idea_recipe() = idea_route_recipe_shape { family: "translate", routes: [], authority: "api/app/routers/ideas.py", next_work: "BML route and effect ownership" };
+defn invest_in_idea_recipe() = idea_route_recipe_shape { family: "invest", routes: [], authority: "api/app/routers/ideas.py", next_work: "BML route and effect ownership" };
+defn rollup_super_idea_recipe() = idea_route_recipe_shape { family: "rollup", routes: [], authority: "api/app/routers/ideas.py", next_work: "BML route and effect ownership" };
+defn inspect_idea_recipe() = idea_route_recipe_shape { family: "inspect", routes: [], authority: "api/app/routers/ideas.py", next_work: "BML route and effect ownership" };
 
 defn ideas_router_structure() = {
-    route_source: "api/app/routers/ideas.py",
-    form_source: "docs/coherence-substrate/ideas-router.form",
-    north_star: "Ideas move from promise to real contribution through evidence, relation, value flow, and closure.",
-    phase: {
-        blueprint: "idea_route_shape",
-        recipe: "idea_route_recipe_shape",
-        named_cell: "@router(ideas)",
-    },
-    native_carrier: [
-        {
-            path: "/api/ideas/router-structure",
-            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_router_structure",
-            status: "kernel-first capable",
-            meaning: "the high-level ideas router structure is dispatchable by the kernel-router without CPython",
-            boundary: "non-promoted ideas routes still fan out to FastAPI while promoted POST/PATCH mutations use the native default invitation",
-        },
-        {
-            path: "/api/ideas/source-index",
-            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_index",
-            status: "kernel-first capable",
-            meaning: "the kernel-router reads ideas/INDEX.md and returns source-backed idea counts without CPython",
-            boundary: "DB-backed /api/ideas/count still fans out until the live graph storage carrier lands",
-        },
-        {
-            path: "/api/ideas/source-portfolio",
-            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_portfolio",
-            status: "kernel-first capable",
-            meaning: "the kernel-router reads ideas/INDEX.md and emits an IdeaPortfolioResponse-shaped curated portfolio without CPython",
-            boundary: "source-backed curated portfolio is native; DB-backed list/read and specialized mutation routes still fan out until their carriers are promoted",
-        },
-        {
-            path: "/api/ideas/graph-projection",
-            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_graph_projection",
-            status: "kernel-first capable",
-            meaning: "the kernel-router projects fixture graph rows into an IdeaPortfolioResponse-shaped body without CPython",
-            boundary: "fixture rows prove the route binding; live DB-backed reads still fan out until a read carrier is promoted",
-        },
-        {
-            path: "form/form/form-stdlib/graph-node-port.fk::gn-create-node|gn-replace-node|gn-delete-node",
-            route_source: "form/form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
-            status: "Form-native mutable carrier proven",
-            meaning: "idea/spec create, replace, and delete now have native graph-node operations over the storage port",
-            boundary: "method-specific route binding now exists as preview, public gate, and no-header native default for promoted /api/ideas mutations",
-        },
-        {
-            path: "form/form/form-stdlib/auth-port.fk::auth-require-api-key",
-            route_source: "form/form/form-stdlib/tests/auth-port-band.fk",
-            status: "Form-native auth decision carrier proven",
-            meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
-            boundary: "public mutable /api/ideas create/update now use the native default invitation; auth parity remains a carrier for the next protected mutation promotions",
-        },
-        {
-            path: "form/form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
-            route_source: "form/form/form-stdlib/tests/application-graph-node-port-band.fk",
-            status: "Form-native application graph table carrier proven",
-            meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
-            boundary: "public mutable /api/ideas create/update now have preview rows plus no-header native-default execution through the production config carrier",
-        },
-        {
-            path: "POST /api/ideas + PATCH /api/ideas/{idea_id}",
-            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview|route_ideas_update_native_preview",
-            status: "kernel-first trust envelope preview",
-            meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL and return a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state without CPython when X-Form-Native-Preview is present",
-            boundary: "promoted public create/update accepts no-header native default; X-Form-Native-Preview and X-Form-Native-Public-Gate remain explicit higher-priority witnesses",
-        },
-        {
-            path: "deploy/kernel-router/mutation_ab_observation_harness.py",
-            route_source: "api/tests/test_native_mutation_ab_observation.py",
-            status: "A/B observation gate",
-            meaning: "the mutation flip is measured as A no-header native default, B native preview, and C explicit fallback before and after the bounded public move",
-            boundary: "the observation gate promoted only the bounded mutable public routes; broader ordinary traffic remains outside the kernel-router",
-        },
-        {
-            path: "form/form/scripts/application-graph-live-db-test.sh",
-            route_source: "form/form/form-stdlib/integration/application-graph-live-db.fk + api/tests/test_application_graph_live_db_trial.py",
-            status: "live DB execution trial proven",
-            meaning: "Form-native application graph mutation wrappers now create, update, delete, and read back graph_nodes, graph_node_revisions, and graph_edges in a rollback-safe throwaway Postgres",
-            boundary: "this closes the local live DB execution trial and supports the bounded mutable public flip; it still does not perform the all-traffic front-door flip",
-        },
-        {
-            path: "form/form/scripts/application-graph-response-projection-test.sh",
-            route_source: "form/form/form-stdlib/application-graph-response-projection.fk + api/tests/test_application_graph_response_projection.py",
-            status: "response projection parity proven",
-            meaning: "Form-native projection now emits IdeaWithScore and SpecRegistryEntry-shaped mutation responses from live graph rows",
-            boundary: "this closes response projection for the promoted mutable routes; side-effect execution, route-runner binding, and public/default receipts are now proven before broader traffic moves",
-        },
-        {
-            path: "form/form/scripts/native-mutation-side-effects-test.sh",
-            route_source: "form/form/form-stdlib/native-mutation-side-effects.fk + api/tests/test_native_mutation_side_effects_form.py",
-            status: "native side-effect execution carrier proven",
-            meaning: "Form-native side effects now execute parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt against rollback-safe throwaway Postgres",
-            boundary: "this proves the execution carrier and does not bind side-effect execution to public Traefik default traffic; the kernel manifest now carries native default invitation above it",
-        },
-        {
-            path: "form/form/scripts/native-mutation-route-side-effects-test.sh",
-            route_source: "form/form/form-stdlib/native-mutation-route-side-effects.fk + api/tests/test_native_mutation_route_side_effect_binding.py",
-            status: "native route side-effect binding proven",
-            meaning: "application graph mutation and side-effect execution in one Form-native route runner now execute and read back against rollback-safe throwaway Postgres",
-            boundary: "this binds the proven side-effect carrier to native route-runner execution; public-gate rollback receipt and implicit native invitation now sit above it",
-        },
-        {
-            path: "form/form/scripts/native-mutation-public-gate-test.sh",
-            route_source: "form/form/form-stdlib/native-mutation-public-gate.fk + deploy/kernel-router/mutation_public_gate_harness.py + api/tests/test_native_mutation_public_gate.py",
-            status: "native mutation public gate proven",
-            meaning: "X-Form-Native-Public-Gate selects native public-gate route rows, emits route-local rollback and native-invitation receipts, and the Form gate persists public-gate rollback receipts against rollback-safe throwaway Postgres",
-            boundary: "public Traefik now routes promoted /api/ideas mutations to the native default invitation; each response shows the ordinary JSON received, the Form-native mutation recipe it became, and X-Form-Python-Fallback as the decline/control signal",
-        },
-        {
-            path: "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
-            route_source: "api/tests/test_native_mutation_side_effect_ledger.py",
-            status: "source-classified side-effect ledger",
-            meaning: "side effects are separated into primary mutation, Python parity effect, reversible gate receipt, missing Python parity, and not-carried rows before any front-door move",
-            boundary: "rollback receipts are reversible gate safety, not Python parity; idea-valuation-audit-ledger is now carried Form-native while broader unpromoted traffic stays API-backed",
-        },
-        {
-            path: "form/form/scripts/native-idea-valuation-audit-ledger-test.sh",
-            route_source: "form/form/form-stdlib/native-idea-valuation-audit-ledger.fk + api/tests/test_native_idea_valuation_audit_ledger.py",
-            status: "native idea valuation audit ledger proven",
-            meaning: "Form-native idea update now appends hash-chained VALUATION_CHANGE rows to audit_ledger with SYSTEM sender/receiver, field metadata, previous_hash, and hash, and the public gate exposes an idea update runner over that carrier",
-            boundary: "idea valuation audit-ledger parity is carried Form-native; public Traefik now sends promoted mutable routes to persistence-preserving HTTP native execution",
-        },
-    ],
-    recipes: [
-        browse_ideas_recipe(),
-        sense_governance_recipe(),
-        choose_next_idea_recipe(),
-        mutate_idea_recipe(),
-        question_answer_recipe(),
-        link_idea_recipe(),
-        translate_idea_recipe(),
-        invest_in_idea_recipe(),
-        rollup_super_idea_recipe(),
-        inspect_idea_recipe(),
-    ],
-    shifted: [
-        "endpoint list -> recipe family lattice",
-        "imperative branches -> named movements with service carriers",
-        "hidden route intent -> source-backed route_trace",
-        "Python ownership -> Python carrier for Form-declared choreography",
-        "Form-declared choreography -> kernel-router native structure route",
-        "repo idea source -> kernel-router native source-index route",
-        "repo idea source -> kernel-router native curated portfolio route",
-        "graph-node projection proof -> kernel-router native graph-projection route",
-        "mutable service calls -> Form-native graph-node mutation carrier",
-        "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
-        "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
-        "front-door flip -> A/B observation gate before movement",
-        "native SQL preview -> live DB execution trial",
-        "live graph rows -> Form-native mutation response projection",
-        "carried side-effect intents -> Form-native side-effect execution carrier",
-        "side-effect execution carrier -> Form-native mutation route-runner binding",
-        "mutation route-runner binding -> header-gated native public gate with rollback receipt",
-        "side-effect proof -> source-classified side-effect ledger",
-        "missing idea valuation audit-ledger parity -> hash-chained Form-native audit_ledger carrier",
-        "fanout by silence -> implicit native invitation plus explicit X-Form-Python-Fallback signal",
-        "implicit native invitation -> per-request native_invitation translation receipt",
-        "public Traefik no-header default -> bounded Form-native mutable method/path routers",
-    ],
-    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state; mutation_ab_observation_harness.py turns the flip into A/B/C observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses; native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres; native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner; native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate, no-header requests that reach the kernel accept the implicit native invitation, every native mutation response carries a native_invitation receipt naming the ordinary JSON received and the Form-native mutation recipe it became, and X-Form-Python-Fallback fans out as explicit refusal/control signal; native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity; native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates; and mutation_public_gate_harness.py now proves native HTTP mutation persistence through config_database_url -> pg_connect -> pg_exec -> pg_close with Postgres readback. Public mutable DB-backed POST/PATCH /api/ideas Traefik no-header default now enters the kernel-router native default invitation, persists through the mounted production-config carrier, returns the translation receipt, and keeps X-Form-Python-Fallback as the explicit refusal/control signal; unpromoted ideas routes remain API-backed until their own native carriers are proven.",
+    runtime: "fkwu",
+    native_catalog: "form/form/apps/coherence-network/api.bml",
+    live_http_host: "api/app/routers/ideas.py",
+    native_routes: [browse_ideas_recipe(), mutate_idea_recipe(), question_answer_recipe()],
+    retired: ["sibling kernel router", "native preview headers", "Python fallback fanout", "host harnesses"],
+    current_gap: "native template dispatch, configuration, Postgres, persistence, and startup ownership",
 };
 
 defn ideas_router_reading() = {
     observed: [
-        "api/app/routers/ideas.py carries the live HTTP routes",
-        "services carry persistence and computation",
-        "tests prove selected route contracts and this Form expression",
-    ],
-    inferred: [
-        "ideas.py is not one function; it is a portfolio organism with ten route recipe families",
-        "the north star is closure through evidence, relation, value flow, and contribution",
+        "fkwu is the only kernel runtime",
+        "the BML catalog implements selected read and mutation handlers",
+        "FastAPI still carries the public HTTP and persistence boundary",
     ],
     measured: [
-        "api/tests/test_ideas_router_form.py",
-        "api/tests/test_native_mutation_route_bindings.py",
-        "api/tests/test_native_mutation_ab_observation.py",
-        "api/tests/test_application_graph_live_db_trial.py",
-        "api/tests/test_application_graph_response_projection.py",
-        "api/tests/test_native_mutation_side_effects_form.py",
-        "api/tests/test_native_mutation_route_side_effect_binding.py",
-        "api/tests/test_native_mutation_public_gate.py",
-        "api/tests/test_native_mutation_side_effect_ledger.py",
-        "api/tests/test_native_idea_valuation_audit_ledger.py",
-        "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+        "form/form/apps/coherence-network/api.bml",
+        "api/app/routers/ideas.py",
+        "docs/system_audit/form_kernel_floor_2026-10-18.md",
     ],
-    mystery: [
-        "the all-traffic front door waits for each remaining route to carry its own native carrier, invitation receipt, rollback signal, and production evidence",
-    ],
+    direction: "move one complete route family at a time, then remove its Python owner",
 };
-
-defn example_ideas_router_structure() = ideas_router_structure();

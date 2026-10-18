@@ -925,8 +925,8 @@ def _require_current_deployment(
         "form_cli_table_sha256": form_cli.get("table_sha256"),
         "form_cli_stamp_sha256": form_cli.get("stamp_sha256"),
         "form_cli_source_sha256": form_cli.get("source_stamp"),
-        "form_cli_result": form_cli.get("challenge_response_sha256"),
-        "form_cli_protocol": "form-cli-v2",
+        "form_cli_result": form_cli.get("challenge_response"),
+        "form_cli_protocol": "form-cli-v3",
     }
     if current_bindings != carrier_bindings:
         raise DeploymentObservationError("witness-not-current-native-carrier")

@@ -1,0 +1,21 @@
+(do
+  (defn dot_from (values weights total)
+    (if (eq (len values) 0)
+      total
+      (dot_from
+        (tail values)
+        (tail weights)
+        (add total (mul (head values) (head weights))))))
+  (defn dot (values weights)
+    (dot_from values weights 0.0))
+  (defn sum_floats_from (weights total)
+    (if (eq (len weights) 0)
+      total
+      (sum_floats_from (tail weights) (add total (head weights)))))
+  (defn sum_floats (weights)
+    (sum_floats_from weights 0.0))
+  (defn weighted_average (values weights)
+    (div (dot values weights) (sum_floats weights)))
+  (let values (list 0.5 0.75 1.0))
+  (let weights (list 0.25 0.25 0.5))
+  (weighted_average values weights))

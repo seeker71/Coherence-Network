@@ -80,7 +80,6 @@ data/coherence.db
 .codex*
 pytest-cache-files-*
 api/pytest-cache-files-*
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
 *.pyc
 __pycache__/
 .task-*
@@ -102,6 +101,7 @@ data/coherence.db
 .codex*
 
 # Runtime artifacts that pollute worktrees (don't commit)
+.hearth/
 api/data/*.db
 api/data/field_story_contributions.jsonl
 experiments/local-llm-cell-v0/_demo_field/
@@ -134,3 +134,4 @@ form/form/form-stdlib/drafts/
 form/form/form-samples/agent-turns/corpus.jsonl
 .nanite/
 experiments/rune-galdr/.ecapa-model/
+.fkwu-*

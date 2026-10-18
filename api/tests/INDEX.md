@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 248
+**Total files**: 213
 
 | File | Purpose |
 |---|---|
@@ -25,9 +25,6 @@
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
 | [test_api_dockerfile_contract.py](test_api_dockerfile_contract.py) | _no top-of-file purpose_ |
-| [test_application_graph_live_db_trial.py](test_application_graph_live_db_trial.py) | Proof that native application graph mutation SQL executes against live DB. |
-| [test_application_graph_node_port_form.py](test_application_graph_node_port_form.py) | Proof that application graph table mutations have a native Form carrier. |
-| [test_application_graph_response_projection.py](test_application_graph_response_projection.py) | Proof that native graph mutation rows project to response shapes. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
@@ -39,7 +36,6 @@
 | [test_auto_heal_service.py](test_auto_heal_service.py) | Tests for the auto-heal-from-diagnostics spec |
 | [test_automation_usage_api.py](test_automation_usage_api.py) | _no top-of-file purpose_ |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
-| [test_bml_idea_family_harness.py](test_bml_idea_family_harness.py) | Live proof wrapper for the BML idea detail/write family harness. |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
 | [test_canonical_words.py](test_canonical_words.py) | Tests for the canonical-word lexicon interner. |
@@ -64,10 +60,8 @@
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
 | [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
-| [test_difficult_conversation_arrival.py](test_difficult_conversation_arrival.py) | Difficult-conversation arrival — the SessionStart carrier for the kernel's counsel card. |
 | [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
-| [test_doorway_teaching.py](test_doorway_teaching.py) | Doorway teaching tests — does what /come-in promises actually work? |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
@@ -110,22 +104,14 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
-| [test_form_cli_ask.py](test_form_cli_ask.py) | form_cli `ask` front door: serve Form-native, route the rest, capture for learning. |
-| [test_form_cli_capture.py](test_form_cli_capture.py) | form_cli `capture` — live training catalog: request + raw + transmuted, both kept. |
-| [test_form_cli_carriers.py](test_form_cli_carriers.py) | Regression coverage for thin form-cli host carriers. |
-| [test_form_cli_grounding_runtime.py](test_form_cli_grounding_runtime.py) | Executable proof for the NodeID-backed Form-first grounding runtime. |
 | [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
-| [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
-| [test_form_validate_shards.py](test_form_validate_shards.py) | Changed-path selection for the Form validation shards. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
 | [test_governance_change_flow.py](test_governance_change_flow.py) | Contributor onboarding + governed change flow (spec: |
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
-| [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
-| [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
 | [test_grocery_ledger.py](test_grocery_ledger.py) | Flow test for the grocery ledger (api/app/routers/grocery.py). |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
@@ -135,10 +121,7 @@
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
 | [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
-| [test_ideas_graph_projection_form.py](test_ideas_graph_projection_form.py) | Proof that graph-node Form envelopes project to idea API read shape. |
-| [test_ideas_router_form.py](test_ideas_router_form.py) | Proof that the ideas router has a high-level Form expression. |
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
-| [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_ingest_lock_retry.py](test_ingest_lock_retry.py) | Stone: retry the ingest on a lock-timeout cancellation (2026-07-02). |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_instance_pulse.py](test_instance_pulse.py) | Acceptance tests for instance-pulse — per-instance breath sharing. |
@@ -147,32 +130,19 @@
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
-| [test_kernel_attribution_report.py](test_kernel_attribution_report.py) | Regression tests for kernel attribution parity sensing. |
 | [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Production execution authority checks for c-bootstrapped fkwu. |
-| [test_kernel_single_authority.py](test_kernel_single_authority.py) | _no top-of-file purpose_ |
-| [test_kernel_submodule_contract.py](test_kernel_submodule_contract.py) | Contract for the canonical coherence-kernel consumer boundary. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
 | [test_lens_translation_boundaries.py](test_lens_translation_boundaries.py) | _no top-of-file purpose_ |
 | [test_libretranslate_backend.py](test_libretranslate_backend.py) | LibreTranslate backend — verifies translation + glossary post-substitution. |
 | [test_mcp_remote_no_oauth.py](test_mcp_remote_no_oauth.py) | _no top-of-file purpose_ |
 | [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP compatibility exposure after Form execution moved to the native carrier. |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
-| [test_mesh_command_receiver.py](test_mesh_command_receiver.py) | _no top-of-file purpose_ |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
 | [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |
 | [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
-| [test_native_auth_parity_form.py](test_native_auth_parity_form.py) | Proof that mutation auth has a native Form parity carrier. |
-| [test_native_idea_valuation_audit_ledger.py](test_native_idea_valuation_audit_ledger.py) | Proof that idea valuation audit-ledger parity is Form-native. |
-| [test_native_mutation_ab_observation.py](test_native_mutation_ab_observation.py) | Proof for the native mutation A/B observation gate. |
-| [test_native_mutation_public_gate.py](test_native_mutation_public_gate.py) | Proof that native mutation public gates are reversible and receipt-backed. |
-| [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
-| [test_native_mutation_route_side_effect_binding.py](test_native_mutation_route_side_effect_binding.py) | Proof that native mutation route runners bind side-effect execution. |
-| [test_native_mutation_side_effect_ledger.py](test_native_mutation_side_effect_ledger.py) | Proof that native mutation side effects are source-classified, not circular. |
-| [test_native_mutation_side_effects_form.py](test_native_mutation_side_effects_form.py) | Proof that native mutation side-effect intents have a Form execution carrier. |
-| [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
@@ -184,8 +154,8 @@
 | [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_public_dialogues.py](test_public_dialogues.py) | _no top-of-file purpose_ |
+| [test_pulse_health_projection.py](test_pulse_health_projection.py) | The continuous pulse witness uses bounded health, not deep runtime proof. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
-| [test_quotient.py](test_quotient.py) | Tests for the QUOTIENT arm — Python kernel. |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |
 | [test_read_tracking_settlement_bridge.py](test_read_tracking_settlement_bridge.py) | Tests for the read → render-event bridge. |
@@ -202,15 +172,11 @@
 | [test_runtime_api.py](test_runtime_api.py) | Tests for the canonical-route-registry-and-runtime-mapping spec |
 | [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
-| [test_runtime_surface_native_routes.py](test_runtime_surface_native_routes.py) | The runtime-surface instrument SEES the kernel-router's native surface. |
-| [test_runtime_web_api_provenance.py](test_runtime_web_api_provenance.py) | Runtime telemetry preserves web API provenance for route-frequency promotion. |
 | [test_session_greeting.py](test_session_greeting.py) | Session greeting — detect agent + human, greet with memory, across all agents. |
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
 | [test_spec_quality_advisory.py](test_spec_quality_advisory.py) | _no top-of-file purpose_ |
-| [test_spec_registry_router_form.py](test_spec_registry_router_form.py) | Proof that the spec registry has a high-level Form expression. |
-| [test_specs_source_native_route.py](test_specs_source_native_route.py) | Proof that specs can be read from source through a native Form route. |
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |
 | [test_story_protocol_e2e.py](test_story_protocol_e2e.py) | End-to-end integration flow for the story-protocol-integration arc. |
@@ -219,7 +185,6 @@
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
 | [test_substrate_edge_categories.py](test_substrate_edge_categories.py) | Edge-category sensing over source substrate files. |
 | [test_substrate_kernel_image_proposals.py](test_substrate_kernel_image_proposals.py) | Public kernel-image proposal preview contract. |
-| [test_substrate_kernel_parity.py](test_substrate_kernel_parity.py) | Substrate ↔ kernel parity — the kernel reaches the lattice and agrees. |
 | [test_substrate_numeric_schema.py](test_substrate_numeric_schema.py) | Numeric schema sentinels for the coherence-substrate vocabulary. |
 | [test_substrate_read_hook.py](test_substrate_read_hook.py) | Tests for the Claude Code PreToolUse hook that surfaces substrate |
 | [test_substrate_resonance.py](test_substrate_resonance.py) | Flow-centric tests for the dimensional vocabulary and resonance edges. |

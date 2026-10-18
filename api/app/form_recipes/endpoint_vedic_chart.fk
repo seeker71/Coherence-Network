@@ -1,6 +1,6 @@
 ; endpoint_vedic_chart.fk — a birth-moment in, the Vedic chart out as JSON, from the native jyotisha cell.
 ;
-; The body is form-stdlib/vedic-chat.fk (four-way, tests/vedic-chat-band.fk); this recipe
+; The body is form-stdlib/vedic-chat.fk on fkwu; this recipe
 ; carries the route's inputs to (vc-json-chart ...) and PRINTS the JSON so the carrier reads
 ; every line. The defaults are the attested ground the door opens on — Urs, 1971-10-06
 ; 08:15 UT, Luzern — and any other birth-moment rides the same bindings.

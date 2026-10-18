@@ -423,9 +423,9 @@ def health(
             }
             form_cli_challenge = {
                 "input_sha256": challenge_input,
-                "result": form_cli["challenge_response_sha256"],
+                "result": form_cli["challenge_response"],
                 "verified": True,
-                "protocol": "form-cli-v2",
+                "protocol": "form-cli-v3",
                 "binary_sha256": form_cli["binary_sha256"],
                 "wrapper_sha256": form_cli["wrapper_sha256"],
                 "source_sha256": form_cli["source_stamp"],

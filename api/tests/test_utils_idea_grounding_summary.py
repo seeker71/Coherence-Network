@@ -4,7 +4,7 @@ The body runs as a Form recipe (endpoint_idea_grounding_summary_demo.fk) that
 receives one idea's pre-fetched specs as a LIST OF RECORDS (marshalled from a
 Python list[dict|model]) and FOLDS four integer grounding signals across it:
 spec_count, total_event_count, specs_with_value_count, max_event_count. This is
-gate #1 ("list-of-record reduction") in API_KERNEL_READINESS — every prior
+the first list-of-record reduction shape on the fkwu route — every prior
 structure-access route read fields from ONE record; this folds over a list.
 
 Three-way parity of the recipe body (CPython, kernel-bmf, Rust) is the

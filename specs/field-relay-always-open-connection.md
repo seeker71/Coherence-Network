@@ -184,13 +184,10 @@ holding*, not about keeping anyone out.
   append-only board on reconnect is a follow-up task (breath 2).
 - **The route is not yet kernel-served.** Breath 1's WS transport is a Python bootstrap carrier over the
   proven Form decision; promoting it to `X-Form-Router: native-kernel` is a follow-up (north-star gap).
-- **Device dial-out clients (breath 4) — identity carrier built; body encryption + per-platform builds remain as follow-up tasks.**
-  The dial-out client is proven end-to-end against the live relay (`scripts/field_relay_client.py`: ed25519 keys,
-  NodeID = sha256(pubkey), sign/verify, TOFU pin; the trust verdict runs on the proven `fiv-verdict` via the
-  fkwu kernel, `form/form/form-stdlib/field-identity-decide.fk`). First-use-pin → trusted, impersonator rejected
-  (REJECT_NODEID_MISMATCH), and an offline cell drains its consent-ok backlog via `fq-drain` on reconnect — 6/6
-  e2e (evidence `commit_evidence_2026-06-23_field_relay_breath4_e2e.json`). The open tasks: end-to-end body
-  encryption on these keys, and per-platform device builds of the client.
+- **Device dial-out clients (breath 4) are current work.** The retired Python
+  identity/queue mirror no longer stands in for this capability. The native
+  fkwu application needs to carry key identity, body encryption, consent-aware
+  queue drain, and the per-platform device connection end to end.
 
 ## Out of Scope
 

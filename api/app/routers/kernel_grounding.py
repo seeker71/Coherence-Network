@@ -32,13 +32,13 @@ from app.routers.kernel_shared import (
 # list (same list-returning shape as softmax_weights).
 #
 # This is the FIRST kernel-served route to use the round_ndigits native
-# (PR #2320): the adapter lowers Python's two-arg round(x, 4) to
+# (PR #2320): the Form recipe uses fkwu's two-arg round(x, 4)
 # round_ndigits, which replicates CPython's round() for floats EXACTLY
 # (half-to-even at n places). The prior round-half-up shim diverged from
 # CPython on 71,860 of 4M cost/value components; round_ndigits diverges
 # 0/4M. The decimal cases that exposed the divergence — e.g.
 # estimated_cost=33.333 → ec*0.25=8.33325 → 8.3332 (NOT 8.3333) — now
-# match the bit across CPython, the Form-native walker, and form-kernel-rust.
+# match the bit returned by the fkwu/Form source.
 # ---------------------------------------------------------------------------
 
 class CostVectorResponse(BaseModel):
@@ -70,9 +70,8 @@ class CostVectorResponse(BaseModel):
         "as idea_scoring._build_cost_vector. This is the FIRST kernel-served "
         "route to use the round_ndigits native (CPython-exact round(x, 4), "
         "PR #2320): the decimal cases the old round-half-up shim got wrong "
-        "(e.g. ec=33.333 → human_attention 8.3332, not 8.3333) now match the "
-        "bit across all runtimes. Kernel-only via serve_via_kernel; "
-        "CPython==Rust per-component value-parity is the gate."
+        "(e.g. ec=33.333 → human_attention 8.3332, not 8.3333). fkwu executes "
+        "the application Form recipe through serve_via_kernel."
     ),
 )
 async def cost_vector(
@@ -132,9 +131,8 @@ class ValueVectorResponse(BaseModel):
         "lineage (30%), friction_avoided (20%), revenue (0) — each "
         "round(_, 4), plus the rounded total. Same body as "
         "idea_scoring._build_value_vector. Sibling of cost_vector; the "
-        "round_ndigits native (CPython-exact round(x, 4), PR #2320) makes "
-        "every component match CPython to the bit. Kernel-only via "
-        "serve_via_kernel; CPython==Rust per-component value-parity is the gate."
+        "round_ndigits native carries compatibility rounding. fkwu executes the "
+        "application Form recipe through serve_via_kernel."
     ),
 )
 async def value_vector(
@@ -222,10 +220,9 @@ class GroundedRoiResponse(BaseModel):
         "remaining_cost_cc, 4) — guarded to 0.0 when remaining_cost_cc is not "
         "positive, so the kernel never divides by zero. Same body as "
         "idea_scoring._grounded_roi_components. Folds three unlocks into one "
-        "recipe: max-as-comparison, the round_ndigits native (CPython-exact "
-        "round(x, 4), PR #2320), and a guarded-division conditional. "
-        "Kernel-only via serve_via_kernel; CPython==Rust per-component "
-        "value-parity is the gate."
+        "recipe: max-as-comparison, the round_ndigits native, and a guarded-"
+        "division conditional. fkwu executes the application Form recipe through "
+        "serve_via_kernel."
     ),
 )
 async def grounded_roi(
@@ -259,9 +256,8 @@ async def grounded_roi(
 # ---------------------------------------------------------------------------
 # Endpoint: /api/utils/idea_grounding_summary
 #
-# The FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS — gate #1 in
-# kernels/API_KERNEL_READINESS.md ("heterogeneous polymorphic structure
-# access"). Every prior structure-access route read fields from ONE record (the
+# The first fkwu-served route to reduce over a list of records. Every prior
+# structure-access route read fields from one record (the
 # marginal-CC core); this one receives a LIST of records (one idea's pre-fetched
 # specs) and FOLDS a field across it.
 #
@@ -283,7 +279,7 @@ async def grounded_roi(
 # list-of-records — `_fk_literal` renders each element as a `(record_new ...)`
 # literal (subprocess), `py_to_value` builds a `Value::Record` per element
 # inline; the list arm recurses element-wise. The recipe iterates via the
-# head/tail fold the adapter lowers `for s in specs` into. Returns a LIST of the
+# head/tail fold over specs. Returns a LIST of the
 # four integer signals; this route assembles the named response from it.
 # ---------------------------------------------------------------------------
 
@@ -314,8 +310,8 @@ class IdeaGroundingSummaryResponse(BaseModel):
     summary="Integer grounding signals reduced over a LIST of spec records (first list-of-record-reduction Form recipe)",
     description=(
         "Pure-computation endpoint, body transmuted to a Form recipe — the "
-        "FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS (gate #1 in "
-        "API_KERNEL_READINESS). Receives one idea's pre-fetched spec records as "
+        "first fkwu-served route to reduce over a list of records. Receives "
+        "one idea's pre-fetched spec records as "
         "a list and folds four integer grounding signals across it: spec_count, "
         "total_event_count, specs_with_value_count (a field predicate), and "
         "max_event_count. The honest integer subset of compute_idea_metrics' "
@@ -323,8 +319,7 @@ class IdeaGroundingSummaryResponse(BaseModel):
         "fold stay CPython (named in the ledger). The bridge marshals the input "
         "list[dict|model] to a kernel list-of-records (model→dict→record "
         "normalized at the boundary), and the recipe iterates via the head/tail "
-        "fold. Kernel-only via serve_via_kernel; three-way "
-        "(CPython/TS/Rust) value-parity is the gate."
+        "fold. fkwu executes the application Form recipe through serve_via_kernel."
     ),
 )
 async def idea_grounding_summary(
@@ -375,12 +370,6 @@ async def idea_grounding_summary(
 # FLOAT cost/value across one idea's specs:
 #   spec_actual_cost_sum  = sum(s["actual_cost"]  for s in idea_specs)
 #   spec_actual_value_sum = sum(s["actual_value"] for s in idea_specs)
-# That fold was blocked on the kernels: TS's `add`/`_plus` were i32-only, so a
-# float-field SUM threw on TS while running value-exact on Rust+Go. The
-# float-add sibling-parity fix closed that gap — the bare-width MATH arm now
-# promotes to f64 at runtime and `_plus` gained the float arms — so the
-# float-field fold is sibling-portable: CPython == Rust == TS.
-#
 # The accumulator seeds at 0.0 (a float), so every `total = total + s[field]`
 # walks (float, float). The recipe returns [cost_sum, value_sum]; the route
 # names the pair. Sample folds land on non-integer floats (5.25, 3.75) that
@@ -414,10 +403,8 @@ class IdeaGroundedCostSumResponse(BaseModel):
         "FLOAT-FIELD reduction the integer idea_grounding_summary route named "
         "as deferred. Receives one idea's pre-fetched spec records as a list "
         "and folds two FLOAT grounding sums across it: spec_actual_cost_sum and "
-        "spec_actual_value_sum. This was the capability blocked by TS's "
-        "i32-only add/_plus; the float-add sibling-parity fix opened it, so the "
-        "float-field fold is value-exact across CPython / Rust / TS. The bridge "
-        "marshals the input list[dict|model] to a kernel list-of-records and the "
+        "spec_actual_value_sum. The bridge marshals the input list[dict|model] "
+        "to a kernel list-of-records and the "
         "recipe iterates via the head/tail fold with a float accumulator. "
         "Kernel-only via serve_via_kernel."
     ),

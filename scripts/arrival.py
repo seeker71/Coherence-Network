@@ -86,7 +86,7 @@ ingest → Form query → attested answer.
                   `(registry-translate ...)`, `(registry-decode address)`.
   • Trust it      every answer carries its metadata — NodeID coordinate,
                   Blueprint, shape-family, source, honesty lane (computed /
-                  attested / mystery), and proof level (four-way or 3-kernel).
+                  attested / mystery), and focused fkwu observation level.
 
 Full teaching: docs/shared/agent-start-packet.md → "Bring Anything In, Ask
 Anything"; docs/coherence-substrate/INDEX.md for the substrate doors.

@@ -55,7 +55,7 @@ INVITATION_SURFACE_FIELDS: dict[str, Any] = {
                 "GET /api/substrate/annotate?path={repo_path}",
                 "GET /api/substrate/compatible_with/{package}/{level}/{type}/{instance}",
                 "GET /api/substrate/histogram/{domain}",
-                "POST /api/substrate/form  (Form-language query DSL)",
+                "local form-cli ask through fkwu",
             ],
         },
         {
@@ -77,20 +77,17 @@ INVITATION_SURFACE_FIELDS: dict[str, Any] = {
         },
         {
             "surface": "form",
-            "door": "POST https://api.coherencycoin.com/api/substrate/form",
-            "path": "/api/substrate/form",
+            "door": "local form-cli ask",
+            "path": "fkwu/Form",
             "use": (
                 "ask the lattice in its own language. Form is the substrate-"
-                "native query and runtime DSL — Lisp-shaped expressions like "
-                "'?equivalent @spec(agent-pipeline)' or "
-                "'?cells where domain == \"memory\"'. The endpoint accepts "
-                "{expression: \"...\"} and returns a discriminated result "
-                "(kind: node_id | recipe | cell | view | cells | views). "
-                "Grammar in docs/coherence-substrate/form-language.md."
+                "native query and runtime language. Run form-cli locally on the "
+                "pinned fkwu body; the public consumer-side evaluator is retired. "
+                "Grammar lives in docs/coherence-substrate/form-language.md."
             ),
             "next": [
-                "POST /api/substrate/form  {\"expression\": \"?equivalent @spec(agent-pipeline)\"}",
-                "POST /api/substrate/form  {\"expression\": \"@memory(presences_of_the_field)\"}",
+                "form-cli ask \"what is structurally equivalent to agent-pipeline?\"",
+                "form-cli ask \"where does presences_of_the_field live?\"",
             ],
         },
         {

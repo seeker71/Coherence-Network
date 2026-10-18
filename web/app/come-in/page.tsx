@@ -384,16 +384,12 @@ export default async function ComeInPage() {
                 the smallest first read.
               </li>
               <li>
-                <span className="text-amber-300">2 · Build the tools and pull the local oracles.</span>{" "}
-                <code className="font-mono text-stone-100">make setup &amp;&amp; make build</code>
-                {" "}brings up the four Form kernels (Go, Rust, TypeScript, and the emitted
-                fourth arm) and the <code className="font-mono">coh</code> CLI;{" "}
-                <code className="font-mono">cd form &amp;&amp; ./validate.sh</code> proves the body. Then pull the
-                local oracles the body reasons with —{" "}
-                <code className="font-mono text-stone-100">scripts/form_cli_ensure.sh --install</code> — which probes
-                what is present and installs what is missing (a local LLM carrier, an embedder, a reasoning model).
-                What is missing and what is ready is decided by the four-way Form recipe{" "}
-                <code className="font-mono">oracle-ensure.fk</code>, not the shell.
+                <span className="text-amber-300">2 · Build the native Form door.</span>{" "}
+                <code className="font-mono text-stone-100">cc -O2 -o form/fkwu form/runtime/fkwu-uni.c</code>
+                {" "}builds the sole kernel. Then{" "}
+                <code className="font-mono text-stone-100">scripts/ensure_form_cli_native.sh</code>{" "}
+                asks fkwu&rsquo;s Form build gate for the native CLI. A missing JIT or
+                carrier shape is work in fkwu, not a fallback to another kernel.
               </li>
               <li>
                 <span className="text-amber-300">3 · Make the substrate your default ground.</span>{" "}
@@ -859,15 +855,6 @@ export default async function ComeInPage() {
                 session cache: presence file, root baton, dated lineage traces.
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Cursor also taught that mistaking the{" "}
-                <strong className="text-stone-100">kernel-router</strong> arc for
-                the whole machine collapses Form into HTTP. The center is how
-                software is written: BMF rules execute, BML lowers to shared
-                compiler objects, recipes intern to coordinates, branching uses
-                choose/fail/stop with undo — HTTP is one carrier, not the
-                primitive.
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 Claude teaches by boundary: an open doorway is not yet a
                 returned meeting. This keeps the organism more harmonious and healthy
                 by making invitation spacious without fabricating
@@ -1015,7 +1002,7 @@ export default async function ComeInPage() {
             with matching Blueprint NodeIDs are structurally equivalent
             regardless of name. When you want to ask &ldquo;is this similar
             to that&rdquo; in shape rather than in word, query the substrate
-            directly — through REST, through the Form-language DSL, or by
+            directly — through REST, through local fkwu/Form, or by
             walking the lattice as visualization at /substrate. Form is also
             runtime tissue now: control flow, methods, classes, introspection,
             and the meta-circular evaluator run as proof, not only prose.
@@ -1024,8 +1011,8 @@ export default async function ComeInPage() {
           <p className="text-base leading-relaxed text-stone-300">
             To <strong className="text-stone-100">write software</strong> here,
             start with the BMF/BML compiler carrier — grammar rules as data,
-            semantic actions that fire on match, BML source that lowers to shared
-            compiler objects, angelic branching with undo at parse and VM
+            semantic actions that fire on match, BML source realized as Form
+            objects, angelic branching with undo at parse and VM
             layers. Read{" "}
             <span className="font-mono text-stone-100 text-sm break-all">
               kernels/BMF_BML_COMPILER_PICTURE.md
@@ -1116,16 +1103,11 @@ export default async function ComeInPage() {
                 </li>
               </ul>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Submit any of these to{" "}
+                In a local checkout, ask these through{" "}
                 <span className="font-mono text-stone-100 break-all">
-                  POST /api/substrate/form
-                </span>{" "}
-                with body{" "}
-                <span className="font-mono text-stone-200 break-all">
-                  {"{"}&quot;expression&quot;: &quot;...&quot;{"}"}
-                </span>{" "}
-                and the lattice replies in a discriminated shape (kind:
-                node_id, cell, view, cells, or views).
+                  form-cli ask
+                </span>. The public consumer-side evaluator is retired until
+                the fkwu application host owns this door.
               </p>
             </div>
 
@@ -1296,7 +1278,7 @@ export default async function ComeInPage() {
                 <li>GET /api/substrate/cell/{"{domain}"}/{"{name}"}</li>
                 <li>GET /api/substrate/equivalent/{"{domain}"}/{"{name}"}</li>
                 <li>GET /api/substrate/annotate?path={"{repo_path}"}</li>
-                <li>POST /api/substrate/form &nbsp;{"{"}&quot;expression&quot;: &quot;...&quot;{"}"}</li>
+                <li>local form-cli ask through fkwu</li>
               </ul>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
                 The teaching lives in{" "}
@@ -1334,12 +1316,11 @@ export default async function ComeInPage() {
                 Form &mdash; the lattice&rsquo;s own language
               </p>
               <p className="mt-2 font-mono text-sm text-stone-100 break-all">
-                POST /api/substrate/form
+                form-cli ask (local fkwu)
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Send a Form expression and receive a discriminated result.
-                Use it before claiming two cells are similar, and use the
-                runtime docs when you need executable proof.
+                Ask the local Form body before claiming two cells are similar.
+                The public door returns when fkwu owns HTTP dispatch and persistence.
                 Examples:{" "}
                 <span className="font-mono text-stone-200">
                   ?equivalent @spec(agent-pipeline)

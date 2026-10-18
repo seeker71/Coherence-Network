@@ -49,9 +49,7 @@ export function middleware(req: NextRequest) {
   // /sense and /suci. (Assets — _next, api, files — are excluded by the matcher
   // below, so they keep loading normally under the subdomain.)
   //
-  // hati.earth itself serves the normal Coherence homepage — its native-asset
-  // download table is no longer the root, it lives at /hati-os as its own
-  // download link, kept reachable without hijacking the home door.
+  // hati.earth itself serves the normal Coherence homepage.
   const host = (req.headers.get("host") || "").toLowerCase();
   if (host.startsWith("sense.") && !pathname.startsWith("/sense")) {
     return NextResponse.rewrite(new URL("/sense", req.url));

@@ -57,14 +57,13 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             "Agent queries are read-only — no Python eval center, no form-on-form in Python."
         ),
         "primary": [
-            "BMF grammars in form/form/form-stdlib (*.fk, validate.sh bands)",
-            "form-kernel-rust / go / ts walkers",
+            "BMF grammars and Form recipes in form/form/form-stdlib",
+            "the c-bootstrapped fkwu runtime and page JIT",
             "persistence.fk, http-serve.fk, read_file, http_get",
         ],
         "compost": [
-            "api/app/services/substrate/form.py",
-            "api/app/services/substrate/form_runtime.py",
-            "pinned native Form kernel via the form submodule",
+            "the Python API compatibility host as route ownership moves",
+            "consumer-side Form evaluator surfaces",
         ],
     },
     "software_writing": {
@@ -73,7 +72,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         ),
         "center": (
             "Domain grammar first; BMF/BML → Form objects; fork/adapt compilers. "
-            "HTTP/kernel-router is a carrier after proof bands."
+            "The native fkwu application host owns HTTP as its routes move in."
         ),
         "read_first": [
             "docs/shared/agent-start-packet.md",
@@ -82,7 +81,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             "form/form/form-stdlib/engine.fk",
         ],
         "default_implementation": (
-            "Extend compiler.fk, grammars/*.fk, engine.fk; prove with form/form/validate.sh bands."
+            "Extend compiler.fk, grammars/*.fk, and engine.fk; observe the smallest changed path on fkwu."
         ),
         "next_ripening": (
             "form-notation grammar in .fk for agent DSL (@spec, ?verbs) — NodeID parity then compost form.py"

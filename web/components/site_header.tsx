@@ -38,7 +38,6 @@ const PRIMARY_NAV: NavItemKey[] = [
 // treasury, search, blog, and the API for builders.
 const SECONDARY_NAV: NavItemKey[] = [
   { href: "/vision/recipes", labelKey: "nav.recipes" },
-  { href: "/substrate/form", labelKey: "nav.formPlayground" },
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
   { href: "/search", labelKey: "nav.search" },

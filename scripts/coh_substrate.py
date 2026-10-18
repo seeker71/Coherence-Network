@@ -1156,7 +1156,7 @@ def cmd_form(args: argparse.Namespace) -> int:
 
 def cmd_check(args: argparse.Namespace) -> int:
     if args.file:
-        print("check is owned by the native kernel; pass the file to form-kernel-rust check", file=sys.stderr)
+        print("check is owned by fkwu/Form; pass the source through the native Form door", file=sys.stderr)
     else:
         print("check is owned by the native kernel; use coh substrate form for native evaluation", file=sys.stderr)
     return 2

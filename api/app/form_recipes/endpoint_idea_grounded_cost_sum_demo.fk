@@ -1,0 +1,17 @@
+(do
+  (defn sum_record_field_from (records field total)
+    (if (eq (len records) 0)
+      total
+      (sum_record_field_from
+        (tail records) field (add total (_get (head records) field)))))
+  (defn sum_record_field (records field)
+    (sum_record_field_from records field 0.0))
+  (defn grounded_cost_sum (specs)
+    (list (sum_record_field specs "actual_cost")
+          (sum_record_field specs "actual_value")))
+  (let specs
+    (list
+      (list "__dict__" "actual_cost" 3.5 "actual_value" 1.5)
+      (list "__dict__" "actual_cost" 1.25 "actual_value" 0.0)
+      (list "__dict__" "actual_cost" 0.5 "actual_value" 2.25)))
+  (grounded_cost_sum specs))

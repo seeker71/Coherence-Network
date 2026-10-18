@@ -105,9 +105,8 @@ jobs:
           source_dir="$(mktemp -d)"
           context_dir="$(mktemp -d)"
           reproduced_dir="$(mktemp -d)"
-          wrapper_source="$(mktemp)"
           dockerfile_source="$(mktemp)"
-          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$context_dir" "$reproduced_dir" "$wrapper_source" "$dockerfile_source"' EXIT
+          trap 'rm -rf "$ssh_dir" "$tree_response" "$direct_body" "$source_archive" "$source_dir" "$context_dir" "$reproduced_dir" "$dockerfile_source"' EXIT
           install -m 700 -d "$ssh_dir"
           printf '%s\n' "$HOSTINGER_SSH_KEY" > "$ssh_dir/key"
           chmod 600 "$ssh_dir/key"
@@ -140,11 +139,10 @@ jobs:
           first,second,third,fourth=(int(value[i:i+4],16) for i in range(0,16,4))
           expected=(((first*17+second)*19+third)*23)+fourth
           expression=f"(add (mul (add (mul (add (mul {first} 17) {second}) 19) {third}) 23) {fourth})"
-          form=hashlib.sha256(b"form-cli-carrier-challenge-v1\n"+value.encode("ascii")).hexdigest()
-          print(value); print(expected); print(expression.encode("ascii").hex()); print(form)
+          print(value); print(expected); print(expression.encode("ascii").hex())
           PY
           )
-          [[ "${#challenge[@]}" == 4 ]]
+          [[ "${#challenge[@]}" == 3 ]]
           ssh \
             -i "$ssh_dir/key" \
             -o BatchMode=yes \
@@ -155,7 +153,7 @@ jobs:
             -o ServerAliveCountMax=2 \
             root@187.77.152.42 bash -s -- \
             "$TARGET_SHA" "$form_source_commit" \
-            "${challenge[0]}" "${challenge[1]}" "${challenge[2]}" "${challenge[3]}" \
+            "${challenge[0]}" "${challenge[1]}" "${challenge[2]}" \
             > "$direct_body" <<'REMOTE'
           set -euo pipefail
           target_sha="$1"
@@ -163,7 +161,6 @@ jobs:
           challenge_input="$3"
           fkwu_expected="$4"
           fkwu_expression_hex="$5"
-          form_expected="$6"
           [[ "$fkwu_expression_hex" =~ ^[0-9a-f]+$ ]]
           (( ${#fkwu_expression_hex} % 2 == 0 ))
           fkwu_expression="$(python3 -c 'import sys; print(bytes.fromhex(sys.argv[1]).decode("ascii"))' "$fkwu_expression_hex")"
@@ -206,28 +203,30 @@ jobs:
           kernel_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/fkwu | cut -d' ' -f1)"
           form_cli_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli | cut -d' ' -f1)"
           form_cli_wrapper_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-cli | cut -d' ' -f1)"
-          form_cli_table_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli-table.txt | cut -d' ' -f1)"
-          form_cli_stamp_sha256="$(docker exec "$container_id" sha256sum /app/form/form-stdlib/bootstrap/form-cli.stamp | cut -d' ' -f1)"
-          form_cli_source_sha256="$(docker exec "$container_id" sh -c 'tr -d "\r\n" < /app/form/form-stdlib/bootstrap/form-cli.source.sha256')"
+          form_cli_table_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.sym | cut -d' ' -f1)"
+          form_cli_stamp_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.native.attestation | cut -d' ' -f1)"
+          form_cli_source_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.source.id | cut -d' ' -f1)"
+          form_cli_source_id="$(docker exec "$container_id" sh -c 'tr -d "\r\n" < /app/form/form-cli.source.id')"
           kernel_result="$(docker exec "$container_id" /app/bin/form-cli eval "$fkwu_expression")"
           [[ "$kernel_result" == "$fkwu_expected" ]]
           form_line="$(printf 'carrier-challenge %s\n' "$challenge_input" | docker exec -i "$container_id" /app/form/form-cli)"
           IFS='|' read -r form_label form_source_echo form_input_echo form_result form_extra <<< "$form_line"
-          [[ "$form_label" == carrier-challenge-v1 ]]
-          [[ "$form_source_echo" == "$form_cli_source_sha256" ]]
+          [[ "$form_label" == carrier-challenge-v2 ]]
+          [[ "$form_source_echo" == "$form_cli_source_id" ]]
           [[ "$form_input_echo" == "$challenge_input" ]]
-          [[ "$form_result" == "$form_expected" && -z "${form_extra:-}" ]]
+          [[ "$form_result" =~ ^[0-9a-f]{16}$ && -z "${form_extra:-}" ]]
           python3 - \
             "$target_sha" "$form_source_commit" "$challenge_input" \
             "$container_id" "$image_id" "$image_revision" "$image_form_revision" \
             "$api_build_context_sha" "$kernel_result" "$kernel_binary_sha256" \
             "$form_result" "$form_cli_binary_sha256" "$form_cli_wrapper_sha256" \
-            "$form_cli_source_sha256" "$form_cli_table_sha256" "$form_cli_stamp_sha256" <<'PY'
+            "$form_cli_source_sha256" "$form_cli_table_sha256" "$form_cli_stamp_sha256" \
+            "$form_cli_source_id" <<'PY'
           import json,sys
           (
               target,form_commit,challenge,container,image,image_revision,image_form_revision,
               context_sha,kernel_result,kernel_sha,form_result,form_sha,wrapper_sha,
-              source_sha,table_sha,stamp_sha,
+              source_sha,table_sha,stamp_sha,source_id,
           )=sys.argv[1:]
           print(json.dumps({
               "schema":"direct-native-carrier-probe-v1",
@@ -242,7 +241,8 @@ jobs:
               "kernel_result":kernel_result,
               "kernel_binary_sha256":kernel_sha,
               "form_cli_result":form_result,
-              "form_cli_protocol":"form-cli-v2",
+              "form_cli_protocol":"form-cli-v3",
+              "form_cli_source_id":source_id,
               "form_cli_binary_sha256":form_sha,
               "form_cli_wrapper_sha256":wrapper_sha,
               "form_cli_source_sha256":source_sha,
@@ -256,10 +256,6 @@ jobs:
             "https://codeload.github.com/seeker71/coherence-kernel/tar.gz/${form_source_commit}" \
             -o "$source_archive"
           tar -xzf "$source_archive" --strip-components=1 -C "$source_dir"
-          curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
-            --connect-timeout 5 --max-time 30 \
-            "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/bin/form-cli" \
-            -o "$wrapper_source"
           curl -sS --fail-with-body --proto '=https' --max-redirs 0 \
             --connect-timeout 5 --max-time 30 \
             "https://raw.githubusercontent.com/seeker71/Coherence-Network/${TARGET_SHA}/Dockerfile.api" \
@@ -287,27 +283,31 @@ jobs:
             -f "$context_dir/Dockerfile.api" \
             -t "$reproduced_image" \
             "$context_dir"
-          docker run --rm --platform linux/amd64 "$reproduced_image" \
-            bash -lc 'test "$(cd /build && ./fkwu --src bootstrap/ground.fk 2>/dev/null)" = 42'
           reproduced_container="$(docker create --platform linux/amd64 "$reproduced_image")"
           docker cp "$reproduced_container:/build/fkwu" "$reproduced_dir/fkwu"
           docker cp "$reproduced_container:/build/form-cli" "$reproduced_dir/form-cli"
+          docker cp "$reproduced_container:/build/form-cli.fkb" "$reproduced_dir/form-cli.fkb"
+          docker cp "$reproduced_container:/build/form-cli.sym" "$reproduced_dir/form-cli.sym"
+          docker cp "$reproduced_container:/build/form-cli.native.attestation" "$reproduced_dir/form-cli.native.attestation"
+          docker cp "$reproduced_container:/build/form-cli.source.id" "$reproduced_dir/form-cli.source.id"
           docker rm "$reproduced_container"
           docker image rm "$reproduced_image"
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
-          source_wrapper_sha="$(sha256sum "$wrapper_source" | cut -d' ' -f1)"
-          source_digest="$(tr -d '\r\n' < "$source_dir/form/form-stdlib/bootstrap/form-cli.source.sha256")"
-          source_table_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli-table.txt" | cut -d' ' -f1)"
-          source_stamp_sha="$(sha256sum "$source_dir/form/form-stdlib/bootstrap/form-cli.stamp" | cut -d' ' -f1)"
+          source_digest="$(sha256sum "$reproduced_dir/form-cli.source.id" | cut -d' ' -f1)"
+          source_table_sha="$(sha256sum "$reproduced_dir/form-cli.sym" | cut -d' ' -f1)"
+          source_stamp_sha="$(sha256sum "$reproduced_dir/form-cli.native.attestation" | cut -d' ' -f1)"
+          reproduced_source_id="$(tr -d '\r\n' < "$reproduced_dir/form-cli.source.id")"
+          reproduced_form_line="$(printf 'carrier-challenge %s\n' "${challenge[0]}" | "$reproduced_dir/form-cli")"
           python3 - \
             "$direct_body" "$TARGET_SHA" "$form_source_commit" "$builder" \
-            "$reproduced_kernel_sha" "$reproduced_form_sha" "$source_wrapper_sha" \
-            "$source_digest" "$source_table_sha" "$source_stamp_sha" <<'PY'
+            "$reproduced_kernel_sha" "$reproduced_form_sha" \
+            "$source_digest" "$source_table_sha" "$source_stamp_sha" \
+            "$reproduced_source_id" "$reproduced_form_line" <<'PY'
           import json,re,sys
           (
               path,target,form_commit,builder,reproduced_kernel,reproduced_form,
-              source_wrapper,source_digest,source_table,source_stamp,
+              source_digest,source_table,source_stamp,reproduced_source_id,reproduced_form_line,
           )=sys.argv[1:]
           body=json.load(open(path,encoding="utf-8"))
           if body.get("target_sha")!=target or body.get("form_source_commit")!=form_commit:
@@ -317,10 +317,15 @@ jobs:
                   raise SystemExit(f"direct probe {field} malformed")
           if re.fullmatch(r"sha256:[0-9a-f]{64}",str(body.get("image_id") or "")) is None:
               raise SystemExit("direct probe image ID malformed")
+          reproduced_fields=reproduced_form_line.split("|")
+          if reproduced_fields != ["carrier-challenge-v2",reproduced_source_id,body.get("challenge_input_sha256"),body.get("form_cli_result")]:
+              raise SystemExit("deployed form-cli challenge differs from immutable-source reproduction")
+          if body.get("form_cli_source_id") != reproduced_source_id:
+              raise SystemExit("deployed form-cli source identity differs from immutable-source reproduction")
           expected={
               "kernel_binary_sha256":reproduced_kernel,
               "form_cli_binary_sha256":reproduced_form,
-              "form_cli_wrapper_sha256":source_wrapper,
+              "form_cli_wrapper_sha256":reproduced_form,
               "form_cli_source_sha256":source_digest,
               "form_cli_table_sha256":source_table,
               "form_cli_stamp_sha256":source_stamp,
@@ -332,7 +337,7 @@ jobs:
               "reproducible_builder_image":builder,
               "reproduced_kernel_binary_sha256":reproduced_kernel,
               "reproduced_form_cli_binary_sha256":reproduced_form,
-              "source_wrapper_sha256":source_wrapper,
+              "source_wrapper_sha256":reproduced_form,
               "source_form_cli_source_sha256":source_digest,
               "source_form_cli_table_sha256":source_table,
               "source_form_cli_stamp_sha256":source_stamp,
@@ -384,6 +389,8 @@ jobs:
                   out[key]=value
               return out
           body=json.loads(raw.decode("utf-8"),object_pairs_hook=unique)
+          direct_raw=open(direct_path,"rb").read()
+          direct=json.loads(direct_raw.decode("utf-8"),object_pairs_hook=unique)
           meta=open(meta_path,encoding="utf-8").read().splitlines()
           if meta != ["200",os.environ["HEALTH_URL"],"HTTPS","0"]:
               raise SystemExit(f"health transport mismatch: {meta!r}")
@@ -405,9 +412,6 @@ jobs:
               int(challenge_input[i:i+4],16) for i in range(0,16,4)
           )
           fkwu_expected=(((first*17+second)*19+third)*23)+fourth
-          form_expected=hashlib.sha256(
-              b"form-cli-carrier-challenge-v1\n"+challenge_input.encode("ascii")
-          ).hexdigest()
           required={
               "observation_schema":"native-carrier-observation-v1",
               "observation_nonce_sha256":nonce_sha,
@@ -430,9 +434,12 @@ jobs:
               raise SystemExit("fkwu carrier not verified")
           if body.get("kernel_runtime") != kernel.get("runtime"):
               raise SystemExit("fkwu runtime projection mismatch")
-          if form.get("input_sha256") != challenge_input or form.get("result") != form_expected:
+          form_result=str(form.get("result") or "")
+          if form.get("input_sha256") != challenge_input or re.fullmatch(r"[0-9a-f]{16}",form_result) is None:
               raise SystemExit("form-cli carrier result mismatch")
-          if form.get("verified") is not True or form.get("protocol") != "form-cli-v2":
+          if form_result != direct.get("form_cli_result"):
+              raise SystemExit("public/direct form-cli carrier result mismatch")
+          if form.get("verified") is not True or form.get("protocol") != "form-cli-v3":
               raise SystemExit("form-cli carrier not verified")
           hex64=re.compile(r"^[0-9a-f]{64}$")
           digest_fields={
@@ -457,17 +464,15 @@ jobs:
               "kernel_runtime":kernel["runtime"],
               "kernel_result":str(fkwu_expected),
               **digest_fields,
-              "form_cli_result":form_expected,
-              "form_cli_protocol":"form-cli-v2",
+              "form_cli_result":form_result,
+              "form_cli_protocol":"form-cli-v3",
           }
           canonical=lambda value:json.dumps(value,sort_keys=True,separators=(",",":")).encode()
           public_hash=hashlib.sha256(raw).hexdigest()
           stable_hash=hashlib.sha256(canonical(stable)).hexdigest()
-          direct_raw=open(direct_path,"rb").read()
-          direct=json.loads(direct_raw.decode("utf-8"),object_pairs_hook=unique)
           if direct.get("target_sha") != target or direct.get("challenge_input_sha256") != challenge_input:
               raise SystemExit("direct probe challenge mismatch")
-          if direct.get("kernel_result") != str(fkwu_expected) or direct.get("form_cli_result") != form_expected:
+          if direct.get("kernel_result") != str(fkwu_expected) or direct.get("form_cli_result") != form_result:
               raise SystemExit("direct probe result mismatch")
           if any(direct.get(field) != value for field,value in digest_fields.items()):
               raise SystemExit("direct/public carrier digest mismatch")

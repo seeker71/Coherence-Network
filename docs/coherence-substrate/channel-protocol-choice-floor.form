@@ -30,7 +30,6 @@
     (bml-source-textual-spans "form/form/form-stdlib/bml-source.fk" "form/form/form-stdlib/tests/bml-source-brace-state-step-proof.fk" "form/form/form-stdlib/tests/bml-source-cursor-body-span-proof.fk")
     (bml-choice-routing-metadata "form/form/form-stdlib/bml-source.fk" "form/form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "four-way 4095 on fkwu")
     (bml-choice-receipt-row "form/form/form-stdlib/bml-source.fk" "form/form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "four-way 131071 on fkwu")
-    (production-route-choice-caller "deploy/kernel-router/production-routes.fk" "deploy/kernel-router/mutation_public_gate_harness.py" "native mutation default/public-gate responses persist brcr-realize route_choice_signature")
     (host-recipe-library-choice-caller "scripts/view_recipe_library.py" "api/tests/test_view_recipe_library_choice.py" "viewer emits recipe-choice-runtime-compatible JSON receipts for selected recipe/tongue paths")
     (bml-interface-and-class-model "form/form/form-stdlib/grammars/bml.fk" "form/form/form-stdlib/tests/bml-full-class-model-proof.fk")
     (bml-generics "form/form/form-stdlib/bml.fk" "form/form/form-stdlib/tests/bml-generics-band.fk")

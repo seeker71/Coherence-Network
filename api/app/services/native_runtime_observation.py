@@ -18,9 +18,10 @@ from typing import Any
 SCHEMA = "native-runtime-observation-v1"
 KERNEL_EXPRESSION = "(add 20 22)"
 KERNEL_EXPECTED = 42
-FORM_CLI_SCHEMA = "form-cli-carrier-v2"
+FORM_CLI_SCHEMA = "form-cli-carrier-v3"
 FORM_CLI_BUILD_ID = "coherence-kernel-fkwu-native-v2"
-FORM_CLI_CHALLENGE_DOMAIN = b"form-cli-carrier-challenge-v1\n"
+FORM_CLI_CHALLENGE_PROTOCOL = "carrier-challenge-v2"
+_HEX16 = re.compile(r"^[0-9a-f]{16}$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _CACHE_SECONDS = 15.0
 _CACHE_LOCK = threading.Lock()
@@ -160,10 +161,10 @@ def _selected_form_cli_binary(root: Path) -> Path:
         raise NativeRuntimeObservationError("selected form-cli carrier unavailable")
     if _sha256_file(binary) != binary_sha:
         raise NativeRuntimeObservationError("selected form-cli carrier digest mismatch")
-    source_digest_file = (
-        _classic_form_root(root) / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
-    )
-    if source_digest_file.read_text(encoding="ascii").strip() != source_sha:
+    source_identity_file = Path(f"{binary}.source.id")
+    if not source_identity_file.is_file():
+        raise NativeRuntimeObservationError("selected form-cli source identity missing")
+    if _sha256_file(source_identity_file) != source_sha:
         raise NativeRuntimeObservationError("selected form-cli source digest mismatch")
     return binary
 
@@ -197,19 +198,18 @@ def _observe_form_cli(
     root: Path, *, challenge_input: str | None = None
 ) -> dict[str, Any]:
     binary = _selected_form_cli_binary(root)
-    classic_root = _classic_form_root(root)
-    table = classic_root / "form-stdlib" / "bootstrap" / "form-cli-table.txt"
-    stamp_file = classic_root / "form-stdlib" / "bootstrap" / "form-cli.stamp"
-    source_digest_file = (
-        classic_root / "form-stdlib" / "bootstrap" / "form-cli.source.sha256"
-    )
+    image = Path(f"{binary}.fkb")
+    symbols = Path(f"{binary}.sym")
+    attestation = Path(f"{binary}.native.attestation")
+    source_identity_file = Path(f"{binary}.source.id")
     wrapper = root / "bin" / "form-cli"
     wrapper_manifest = root / "bin" / "form-cli.sha256"
     for path in (
         binary,
-        table,
-        stamp_file,
-        source_digest_file,
+        image,
+        symbols,
+        attestation,
+        source_identity_file,
         wrapper,
         wrapper_manifest,
     ):
@@ -227,55 +227,55 @@ def _observe_form_cli(
         raise NativeRuntimeObservationError("form-cli wrapper digest manifest malformed")
     if wrapper_sha != expected_wrapper_sha:
         raise NativeRuntimeObservationError("form-cli wrapper digest mismatch")
-    freshness_stamp = stamp_file.read_text(encoding="ascii").strip()
-    if not re.fullmatch(r"[0-9a-f]{16}", freshness_stamp):
-        raise NativeRuntimeObservationError("form-cli freshness stamp malformed")
-    source_stamp = source_digest_file.read_text(encoding="ascii").strip()
-    if not _HEX64.fullmatch(source_stamp):
-        raise NativeRuntimeObservationError("form-cli source digest malformed")
+    source_id = source_identity_file.read_text(encoding="ascii").strip()
+    if not _HEX16.fullmatch(source_id):
+        raise NativeRuntimeObservationError("form-cli source identity malformed")
+    source_stamp = _sha256_file(source_identity_file)
     identity = _run_cli_line(binary, "carrier-id", cwd=root)
     identity_fields = identity.split("|")
     if identity_fields != [
         "carrier-id",
         FORM_CLI_SCHEMA,
-        source_stamp,
+        source_id,
         FORM_CLI_BUILD_ID,
     ]:
         raise NativeRuntimeObservationError("form-cli carrier identity mismatch")
     nonce = challenge_input or secrets.token_hex(32)
     if not _HEX64.fullmatch(nonce):
         raise NativeRuntimeObservationError("form-cli challenge input malformed")
-    expected_response = hashlib.sha256(
-        FORM_CLI_CHALLENGE_DOMAIN + nonce.encode("ascii")
-    ).hexdigest()
     challenge = _run_cli_line(
         binary,
         f"carrier-challenge {nonce}",
         cwd=root,
     )
     challenge_fields = challenge.split("|")
-    if challenge_fields != [
-        "carrier-challenge-v1",
-        source_stamp,
-        nonce,
-        expected_response,
-    ]:
+    if (
+        len(challenge_fields) != 4
+        or challenge_fields[0] != FORM_CLI_CHALLENGE_PROTOCOL
+        or challenge_fields[1] != source_id
+        or challenge_fields[2] != nonce
+        or _HEX16.fullmatch(challenge_fields[3]) is None
+    ):
         raise NativeRuntimeObservationError("form-cli nonce challenge mismatch")
     return {
         "verified": True,
         "schema": FORM_CLI_SCHEMA,
         "build_id": FORM_CLI_BUILD_ID,
+        "source_id": source_id,
         "source_stamp": source_stamp,
-        "freshness_stamp": freshness_stamp,
-        "source_digest_authority": str(source_digest_file),
+        "freshness_stamp": source_id,
+        "source_digest_authority": str(source_identity_file),
         "binary_sha256": binary_sha,
         "digest_authority": digest_authority,
-        "table_sha256": _sha256_file(table),
-        "stamp_sha256": _sha256_file(stamp_file),
+        "image_sha256": _sha256_file(image),
+        "symbols_sha256": _sha256_file(symbols),
+        "attestation_sha256": _sha256_file(attestation),
+        "table_sha256": _sha256_file(symbols),
+        "stamp_sha256": _sha256_file(attestation),
         "wrapper_sha256": wrapper_sha,
         "wrapper_digest_authority": str(wrapper_manifest),
         "challenge_nonce": nonce,
-        "challenge_response_sha256": expected_response,
+        "challenge_response": challenge_fields[3],
     }
 
 
@@ -316,7 +316,7 @@ def _observe_kernel(*, challenge_input: str | None = None) -> dict[str, Any]:
         "result": value,
         "binary_sha256": binary_sha,
         "execution_authority": "c-bootstrap-fkwu",
-        "sibling_kernel_role": "differential-reference-only",
+        "sibling_kernel_role": "bootstrap-history-only",
     }
 
 
@@ -326,9 +326,10 @@ def _artifact_fingerprint(root: Path) -> str:
         classic_root / "form-cli",
         root / "form" / "form-cli.sha256",
         root / ".cache" / "form-cli-native" / "selected.json",
-        classic_root / "form-stdlib" / "bootstrap" / "form-cli.stamp",
-        classic_root / "form-stdlib" / "bootstrap" / "form-cli.source.sha256",
-        classic_root / "form-stdlib" / "bootstrap" / "form-cli-table.txt",
+        classic_root / "form-cli.fkb",
+        classic_root / "form-cli.sym",
+        classic_root / "form-cli.native.attestation",
+        classic_root / "form-cli.source.id",
         root / "bin" / "form-cli",
         root / "bin" / "form-cli.sha256",
     ]
@@ -363,7 +364,7 @@ def _observe_uncached(root: Path) -> dict[str, Any]:
         "form_cli": {
             key: value
             for key, value in form_cli.items()
-            if key not in {"challenge_nonce", "challenge_response_sha256"}
+            if key not in {"challenge_nonce", "challenge_response"}
         },
     }
     canonical = json.dumps(stable, sort_keys=True, separators=(",", ":"))
