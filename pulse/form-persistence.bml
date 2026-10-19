@@ -9,11 +9,20 @@ section [form.bml] {
  class FormPersistence {
   def fp-vector() = bp("FormPersistentSequence");
   def fp-null() = bp("FormPersistentNull");
-  def fp-pack(v) = nothing?(v) ? intern_node(fp-null(),[]) : value_kind(v) == "list" ? intern_node(fp-vector(),map(x => fp-pack(x),v)) : value_kind(v) == "string" ? intern_trivial_string(v) : value_kind(v) == "float" ? intern_trivial_float(v.str()) : intern_trivial_int(v);
+  def fp-pack(v) = nothing?(v) ? intern_node(fp-null(),[]) : value_kind(v) == "list" ? intern_node(fp-vector(),map(x => fp-pack(x),v)) : value_kind(v) == "string" ? intern_trivial_string(v) : value_kind(v) == "float" ? make_float64(v) : intern_trivial_int(v);
   def fp-unpack(v) = node_eq(node_category(v),fp-vector()) ? map(x => fp-unpack(x),node_children(v)) : node_eq(node_category(v),fp-null()) ? nothing() : node_value(v);
   def fp-read(path, fallback) { let node = read_form_binary(path); nothing?(node) ? file_size(path) >= 0 ? form_error("native Recipe could not be read: " ++ path) : fallback : fp-unpack(node); }
   def fp-required(path) = file_size(path)<0 ? form_error("native history page is missing: " ++ path) : fp-read(path,nothing());
-  def fp-write(path, v) { let n = write_form_binary(path,fp-pack(v)); n < 0 ? form_error("native Recipe publication failed: " ++ path) : n; }
+  def fp-write(path, v) {
+   let stage = path ++ ".pending-" ++ host_pid().str();
+   let n = write_form_binary(stage,fp-pack(v));
+   n < 0 ? form_error("native Recipe staging failed: " ++ path) : {
+    // A canonical name only ever refers to complete, synchronized bytes.
+    // The next publication's barrier orders this rename before its dependents.
+    let stable = host_sync();
+    host_path_rename(stage,path) != 0 ? form_error("native Recipe publication failed: " ++ path) : n;
+   };
+  }
   def fp-get(pairs, key, fallback) { let found = filter(p => p[0] == key,pairs); nil?(found) ? fallback : found[0][1]; }
   def fp-set(pairs, key, value) = append(filter(p => p[0] != key,pairs),[[key,value]]);
   // Compute a structural key once, rather than at every merge comparison.
@@ -51,7 +60,8 @@ section [form.bml] {
    };
   }
   def fp-lock(root) {
-   fp-take(root ++ "/lock",0);
+   let owned = fp-take(root ++ "/lock",0);
+   owned != 1 ? form_error("native persistence owner could not be recorded: " ++ root) : owned;
   }
   // Reuse native owner/claim care, without expiring a living transaction.
   def fp-take(path,tries) = host_dir_mkdir(path) == 1 ? dl-own(path) : host_path_is_dir(path) != 1 ? form_error("native persistence lock is not writable: " ++ path) : {

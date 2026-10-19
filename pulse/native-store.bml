@@ -89,10 +89,13 @@ section [form.bml] {
     let end = fp-replay(path,offset,(txn,at) => record_set(box,"meta",nw-project(cfg,record_get(box,"meta"),txn,number,at)));
     let current = record_get(box,"meta");
     end < file_size(path) ? {
-     let kept = host_path_rename(path,path ++ ".torn-" ++ now_unix_ms().str());
-     let moved = kept != 0 ? form_error("native recovery tail could not be retained: " ++ path) : host_sync();
      let next = fp-set(fp-set(current,"journal",number+1),"offset",0);
      let saved = fp-write(nw-path(cfg,"state.fkb"),next);
+     // The old log stays replayable until its replacement checkpoint is durable.
+     // A crash before archive leaves extra evidence, never a missing authority.
+     let checkpoint = host_sync();
+     let kept = host_path_rename(path,path ++ ".torn-" ++ now_unix_ms().str());
+     let moved = kept != 0 ? form_error("native recovery tail could not be retained: " ++ path) : host_sync();
      next;
     } : nw-recover-at(cfg,current,number+1,0);
    };
