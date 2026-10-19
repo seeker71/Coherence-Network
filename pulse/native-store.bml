@@ -42,16 +42,62 @@ section [form.bml] {
     fp-write(indexpath,[seq,append(filter(p => p[0] != number,parts),[entry])]);
    };
   }
-  def nw-day(cfg,day,seq,rows) {
+  def nw-day(cfg,day,seq,rows,indexed) {
    let raw = nw-raw(cfg,day,seq,rows);
    let made = nw-dir(cfg,"days/" ++ day);
    let pages = foldl((out,name) => {
     let prior = nw-stat(cfg,day,name);
-    prior[0] >= seq ? out : cons([nw-stat-path(cfg,day,name),nw-stats-seq(nw-stats-rows(prior,filter(row => row[2] == name,rows)),seq)],out);
+    let current = prior[0] >= seq ? prior : nw-stats-seq(nw-stats-rows(prior,filter(row => row[2] == name,rows)),seq);
+    let stat = prior[0] >= seq ? out : cons([nw-stat-path(cfg,day,name),current],out);
+    !indexed ? stat : {
+     let cardpath = nw-card-path(cfg,day,name); let made = nw-dir(cfg,"cards/" ++ day);
+     let card = fp-read(cardpath,[-1,0,0,nothing(),nothing()]);
+     card[0]>=current[0] ? stat : cons([cardpath,nw-card-value(current)],stat);
+    };
    },[],nw-unique(map(row => row[2],rows)));
    fp-write-batch(pages);
   }
   def nw-stats-seq(stat,seq) = [seq,stat[1],stat[2],stat[3]];
+  def nw-card-path(cfg,day,name) = nw-path(cfg,"cards/" ++ day ++ "/" ++ nw-key(name) ++ ".fkb");
+  def nw-card-value(stat) { let p = fp-ordered-percentiles(stat[3],[50,95]); [stat[0],stat[1],stat[2],p[0],p[1]]; }
+  def nw-card(cfg,meta,day,name) = file_size(nw-stat-path(cfg,day,name)) >= 0 ? fp-required(nw-card-path(cfg,day,name)) : [0,0,0,nothing(),nothing()];
+  def nw-day-number(day) = fp-time(day ++ "T00:00:00Z")/86400000;
+  def nw-range-path(cfg,level,bucket,name) = nw-path(cfg,"ranges/" ++ level.str() ++ "/" ++ bucket.str() ++ "/" ++ nw-key(name) ++ ".fkb");
+  def nw-node(cfg,days,level,bucket,name) = level == 0 ? nw-stat(cfg,fp-day(bucket*86400000),name) : any?(day => nw-day-number(day)/fp-block-size(level) == bucket,days) ? fp-required(nw-range-path(cfg,level,bucket,name)) : [0,0,0,[]];
+  def nw-range-levels(cfg,days,changed,names,seq,level) = level>6 ? 0 : {
+   let buckets = nw-unique(map(day => nw-day-number(day)/fp-block-size(level),changed));
+   let pages = foldl((out,bucket) => {
+    let made = nw-dir(cfg,"ranges/" ++ level.str() ++ "/" ++ bucket.str());
+    foldl((items,name) => {
+     let path = nw-range-path(cfg,level,bucket,name); let old = fp-read(path,[-1,0,0,[]]);
+     old[0]>=seq ? items : {
+      let left = nw-node(cfg,days,level - 1,bucket*2,name); let right = nw-node(cfg,days,level - 1,bucket*2+1,name);
+      cons([path,[seq,left[1]+right[1],left[2]+right[2],fp-histogram-chunks([left[3],right[3]])]],items);
+     };
+    },out,names);
+   },[],buckets);
+   let saved = fp-write-batch(pages);
+   nw-range-levels(cfg,days,changed,names,seq,level+1);
+  };
+  def nw-index-build(cfg,name,changed) {
+   let meta = nw-meta(cfg); let days = fp-get(meta,"days",[]); let seq = fp-get(meta,"seq",0);
+   let cards = map(day => { let made = nw-dir(cfg,"cards/" ++ day); [nw-card-path(cfg,day,name),nw-card-value(nw-stat(cfg,day,name))]; },changed);
+   let saved = fp-write-batch(cards);
+   nw-range-levels(cfg,days,changed,[name],seq,1);
+  }
+  def nw-source-days(cfg,days) = map(day => [day,fp-required(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"))[0]],days);
+  def nw-index-ensure(cfg,organs) = nw-locked(cfg,meta => {
+   let sources = nw-source-days(cfg,fp-get(meta,"days",[])); let prior = fp-get(meta,"query_days",[]);
+   let changed = map(p => p[0],filter(p => fp-get(meta,"query_index",0) != 1 || fp-get(prior,p[0],-1) != p[1],sources));
+   let names = map(organ => wr-text(organ,"name"),organs);
+   let built = map(name => {
+    let new_organ = !any?(old => old == name,fp-get(meta,"query_organs",[]));
+    let needed = new_organ ? map(p => p[0],sources) : changed;
+    nil?(needed) ? "" : fp-task(cfg,"../pulse/index.bml",wr-overlay(cfg,fp-object([["organ",name],["changed_days",needed]])));
+   },names);
+   let current = fp-set(fp-set(fp-set(fp-set(meta,"query_index",1),"query_days",sources),"query_seq",fp-get(meta,"seq",0)),"query_organs",names);
+   let saved = fp-write(nw-path(cfg,"state.fkb"),current); let stable = host_sync(); current;
+  });
   def nw-bucket(cfg,number) = fp-read(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"),[0,[]]);
   def nw-buckets(cfg,meta,seq,changes) {
    let made = nw-dir(cfg,"silences");
@@ -69,12 +115,17 @@ section [form.bml] {
    let seq = txn[0]; let rows = txn[1]; let changes = txn[2];
    seq <= fp-get(meta,"seq",0) ? meta : {
     let days = nw-unique(map(row => substring(row[1],0,10),rows));
-    let published = foldl((n,day) => nw-day(cfg,day,seq,filter(row => substring(row[1],0,10) == day,rows)),0,days);
+    let published = foldl((n,day) => nw-day(cfg,day,seq,filter(row => substring(row[1],0,10) == day,rows),fp-get(meta,"query_index",0) == 1),0,days);
+    let all_days = sort-strs(nw-unique(append(fp-get(meta,"days",[]),days)));
+    let names = nw-unique(append(map(row => row[2],rows),map(organ => wr-text(organ,"name"),node_children(parse-json("pulse-index-organs",read_file("../pulse/organs.json"))))));
+    let indexed = fp-get(meta,"query_index",0) == 1 && !nil?(days) ? nw-range-levels(cfg,all_days,days,names,seq,1) : 0;
     let buckets = nw-buckets(cfg,meta,seq,changes);
     let ids = map(row => row[0],changes);
     let open = filter(row => nothing?(row[3]),append(filter(row => !any?(id => id == row[0],ids),fp-get(meta,"open",[])),changes));
     let updates = [["seq",seq],["samples_total",fp-get(meta,"samples_total",0)+len(rows)],["max_rowid",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_rowid",0),rows)],["max_silence",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_silence",0),changes)],["tails",nw-tails(meta,rows)],["days",sort-strs(nw-unique(append(fp-get(meta,"days",[]),days)))],["buckets",buckets],["open",open],["journal",number],["offset",end]];
-    let current = foldl((m,p) => fp-set(m,p[0],p[1]),meta,updates);
+    let query_days = foldl((out,day) => fp-set(out,day,seq),fp-get(meta,"query_days",[]),days);
+    let next = foldl((m,p) => fp-set(m,p[0],p[1]),meta,updates);
+    let current = fp-get(meta,"query_index",0) == 1 ? fp-set(fp-set(next,"query_days",query_days),"query_seq",seq) : next;
     // Pages reach stable storage before their checkpoint can skip replay.
     let stable = host_sync();
     let saved = fp-write(nw-path(cfg,"state.fkb"),current);
@@ -116,7 +167,12 @@ section [form.bml] {
   def nw-create(cfg) { let dir = hch-mkdirs(nw-root(cfg)); let present = file_size(nw-path(cfg,"state.fkb")) >= 0; present ? nw-meta(cfg) : { let m = nw-blank(); let written = fp-write(nw-path(cfg,"state.fkb"),m); m; }; }
   def nw-raw-day(cfg,day,since) {
    let index = fp-read(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"),[0,[]]);
-   foldl((rows,entry) => entry[2] < since ? rows : append(rows,filter(row => fp-time(row[1]) >= since,fp-required(nw-path(cfg,"raw/" ++ day ++ "/part-" ++ fp-pad(entry[0],8) ++ ".fkb"))[1])),[],index[1]);
+   foldl((rows,entry) => entry[2] < since ? rows : {
+    let page = fp-required(nw-path(cfg,"raw/" ++ day ++ "/part-" ++ fp-pad(entry[0],8) ++ ".fkb"))[1];
+    // The committed page bounds already prove whole-page inclusion. Parse
+    // individual timestamps only in a page that straddles the moving cutoff.
+    append(rows,entry[1]>=since ? page : filter(row => fp-time(row[1])>=since,page));
+   },[],index[1]);
   }
  }
 }

@@ -18,7 +18,7 @@ COPY form/runtime /app/form/runtime
 COPY pulse/*.bml pulse/config.json pulse/organs.json /app/pulse/
 COPY pulse/fkwu.conf /app/form/fkwu.conf
 WORKDIR /app/form
-# Assemble the three resident entry points once on the builder's native tmpfs.
+# Assemble application entry images once on the builder's native tmpfs.
 # Running requests load their native images rather than recompiling the same
 # BML in eleven parallel workers. Authored BML remains the source authority.
 RUN --mount=type=tmpfs,target=/dev/shm ./fkwu --check ../pulse/main.bml \
@@ -27,6 +27,7 @@ RUN --mount=type=tmpfs,target=/dev/shm ./fkwu --check ../pulse/main.bml \
  && ./fkwu --check ../pulse/migrate.bml \
  && ./fkwu --check ../pulse/round.bml \
  && ./fkwu --check ../pulse/read.bml \
+ && ./fkwu --check ../pulse/index.bml \
  && ./fkwu --check ../pulse/health.bml
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA

@@ -1,0 +1,17 @@
+// One native parallel source trace. Full bodies and headers stay private.
+// stdin: {"base":"https://api.example","web":"https://example"}
+// Total and serving time are measured; the existing TLS door does not report
+// DNS/connect/first-byte timestamps, so this trace never invents those stages.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/form-persistence.bml
+section [form.bml] {
+ let doc = parse-json("pulse-latency-input",stdin-text());
+ let cfg = wr-overlay(wr-config(),doc); let dir = wr-io(cfg,"latency-trace"); let made = hch-mkdirs(dir);
+ let requests = json-object-has?(doc,"requests") ? map(row => map(v => node_value(v),node_children(row)),wr-array(doc,"requests")) : [["ready",wr-text(doc,"base") ++ "/api/ready"],["ideas",wr-text(doc,"base") ++ "/api/ideas?limit=1&offset=0&sort=marginal_cc"],["vitality",wr-text(doc,"base") ++ "/api/workspaces/coherence-network/vitality"],["web",wr-text(doc,"web") ++ "/"],["pulse",wr-text(doc,"web") ++ "/pulse"]];
+ let rows = record_new(0,"observations",[]); let began = host_monotonic_ms();
+ let wave = wr-http-wave(cfg,map(row => fp-object([["name",row[0]],["method","GET"],["url",row[1]],["payload",""],["trace_directory",dir],["timeout_ms",35000]]),requests),(request,meta,status) => {
+  let one = fp-object([["name",wr-text(request,"name")],["url",wr-text(request,"url")],["transport_exit",status],["http_code",wr-number(meta,"status")],["total_ms",wr-number(meta,"latency_ms")],["serving_runtime_ms",wr-text(meta,"serving_runtime_ms")]]);
+  record_set(rows,"observations",cons(one,record_get(rows,"observations")));
+ });
+ let observations = reverse(record_get(rows,"observations"));
+ fp-emit(fp-object([["native","fkwu"],["elapsed_ms",host_monotonic_ms()-began],["evidence_directory",dir],["observations",observations]]));
+}

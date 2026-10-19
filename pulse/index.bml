@@ -1,0 +1,8 @@
+// A native derived-index worker owns one organ's temporary nodes. The parent
+// holds publication ownership; raw history and its checkpoint stay authoritative.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/native-store.bml
+section [form.bml] {
+ let cfg = wr-overlay(wr-config(),parse-json("pulse-index",stdin-text()));
+ let built = nw-index-build(cfg,wr-text(cfg,"organ"),map(d => node_value(d),wr-array(cfg,"changed_days")));
+ "{\"query_index\":\"derived from native daily history\"}";
+}

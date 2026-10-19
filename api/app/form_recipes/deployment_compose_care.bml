@@ -46,7 +46,10 @@ section [form.bml] {
    // pulse/config.json owns application configuration; keep unrelated settings.
    let environment = dcc-labels(json-object-get(native,"environment"));
    let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"PULSE_",0) != 0,node_children(environment)));
-   dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb"));
+   let labels = dcc-labels(json-object-get(native,"labels"));
+   let routes = [["traefik.http.routers.pulse.service","pulse"],["traefik.http.routers.pulse-web.rule","(Host(`coherencycoin.com`) || Host(`www.coherencycoin.com`)) && (Path(`/pulse`) || Path(`/pulse/`))"],["traefik.http.routers.pulse-web.priority","200"],["traefik.http.routers.pulse-web.entrypoints","websecure"],["traefik.http.routers.pulse-web.tls.certresolver","letsencrypt"],["traefik.http.routers.pulse-web.service","pulse"]];
+   let owned = foldl((out,p) => dcc-set(out,p[0],json-node-string(p[1])),labels,routes);
+   dcc-set(dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb")),"labels",owned);
   }
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {
