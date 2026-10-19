@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Root-cause and heal the news organ's production timeout (the request awaited every source in sequence at 15 s each); surface the voice's refusal reason in this body's event door; add the launchd carrier for the kernel steward; union-merge ledgers.",
+  "files_owned": ["api/app/services/news_ingestion_service.py", "api/app/form_recipes/event_transmute.bml", "scripts/install_kernel_steward.sh", ".gitattributes"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces", "external-presence-bots-and-news"],
+  "task_ids": ["news-feed-timeout-root-cause", "kernel-steward-carrier"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["root cause", "carrier"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Root cause, read in api/app/services/news_ingestion_service.py: fetch_feeds awaited each active RSS source one after another inside the request with a 15 s client timeout, so an empty or stale cache meant a request longer than the edge allows; observed live 2026-10-19 as curl /api/news/feed timing out at 15 s with 0 bytes.",
+    "Heal: sources fetched concurrently (asyncio.gather) with a 5 s per-source bound; a fresh cache answers at once; a stale cache answers at once and refreshes behind the request (one shared background task); an empty cache waits at most news.first_fetch_wait_seconds (6 s) and answers with what arrived. api/tests/test_external_presence.py: 9 passed.",
+    "The event door prints the voice's refusal reason from the result's reason slot (fcnv-none index 7): model-queued behind another admission, or the memory governor's hold, now visible in the reading line.",
+    "scripts/install_kernel_steward.sh: a thin launchd carrier (every 120 s, RunAtLoad) running the kernel's observe/kernel-steward-run.bml act 1 from the runner checkout with a seed-freshness line; the logic is Form (coherence-kernel: the kernel steward, band 15).",
+    ".gitattributes: docs/system_audit/*.jsonl merge=union, so ledger rows appended on both sides merge as the union — tonight's event-transmute ledger conflict was this class.",
+    "Production deploys today failed on a timed-out roll-forward and a missing gate/form-cli-build-run.bml inside the image build; a sibling's PRs on Form-owned image sources are the heal in progress, so the live observation of /api/news/feed follows that rollout."
+  ],
+  "change_files": ["api/app/services/news_ingestion_service.py", "api/app/form_recipes/event_transmute.bml", "scripts/install_kernel_steward.sh", ".gitattributes", "docs/system_audit/commit_evidence_2026-10-19_news_bounded_and_kernel_steward_carrier.json"],
+  "local_validation": {"status": "pass", "summary": "9 external-presence tests pass with the bounded fetch; the event door preflights clean in the kernel; the carrier script is syntax-checked and mirrors the heartbeat's plist shape."},
+  "ci_validation": {"status": "pending", "summary": "The deploy workflow is being healed by a sibling's rollout; the live route observation follows it."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "GET /api/news/feed answers within seconds from cache while sources refresh behind it; a held or queued voice names its reason in the event door's reading line.", "public_endpoints": ["https://api.coherencycoin.com/api/news/feed"], "test_flows": ["curl -m 10 https://api.coherencycoin.com/api/news/feed?limit=2"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Live observation waits on the sibling's rollout; this field records progress rather than gating delivery."}
+}
