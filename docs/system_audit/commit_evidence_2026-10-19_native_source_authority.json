@@ -1,0 +1,20 @@
+{
+ "date":"2026-10-19","thread_branch":"codex/pulse-source-authority-20261019",
+ "commit_scope":"Keep fkwu source fixes on one authority and retire the reintroduced source-depth cutoff.","change_intent":"runtime_fix",
+ "idea_ids":["pipeline-reliability"],"spec_ids":["pulse-silence-boundary-repair"],"task_ids":["pulse-native-dispatch"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["native source authority and release care"]}],
+ "agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "files_owned":["form",".gitmodules","docs/DEPLOY.md"],"change_files":["form",".gitmodules","docs/DEPLOY.md"],
+ "evidence_refs":[
+  "Review4315643156 exposed a mismatch between the actual immutable main-source pin and .gitmodules tracking form-submodule. This consumer now explicitly tracks main, retaining immutable pins and observed source seals rather than a second branch-name authority. The optional distribution remains available to other consumers.",
+  "Distribution0563230ff had the native source reader and retired forty-level cutoff; authoring main lacked both. PR608 repaired the reader on main. Kernel PR610 merged efc20a698c451bb5b27cb48e86eaa3f423976610, removing the old cutoff there too. No runtime/JIT code changed.",
+  "The isolated native walk retained a source file after45 directory levels and honored its ignore rule. The first assertion wrongly expected one file, omitting .gitignore itself; the corrected fixture observed both legitimate source files. No broad kernel or sibling suite ran.",
+  "The preceding image-style build accepted startup, sealed recipe, Linux-amd64 bundle and executable with source identity6d3c117149c6ef13. That evidence belongs to the prior source bytes, not a claim that the new source identity is already deployed.",
+  "Concurrent parent PR4093 reset the gitlink to235068596f06456c1a76c08f609f94fb69d5d062, and the VPS subsequently selected that source and repeated the retired Git call. This release rebases over concurrent parent changes and pins the kernel descendant containing their transmute organ plus native dispatch, framing, private contexts and source care. No unrelated work is dropped.",
+  "OpenAI supplied reasoning; exact model/task tokens unavailable. Form supplied source lookup and the directory observation. No latency threshold, retention or history contents changed."
+ ],
+ "local_validation":{"status":"pass","summary":"Focused native depth/ignore observation; existing accepted image build retained with its exact source identity."},
+ "ci_validation":{"status":"pending","summary":"Read actual changed-source findings."},"deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "e2e_validation":{"status":"pending","expected_behavior_delta":"Future submodule updates follow the same main-source authority as immutable pins; deep source files remain included; all current native Pulse dispatch and event features remain admitted.","public_endpoints":["https://pulse.coherencycoin.com/pulse/health","https://coherencycoin.com/pulse"],"test_flows":["Native deep-source walk","Current immutable source build","Affected public Pulse routes"]},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Merged latest-source rollout and public observation follow."}
+}
