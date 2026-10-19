@@ -107,6 +107,33 @@ async def test_source_artifact_sensing_creates_provenance_edge_and_profile():
         assert "_ingestion_policy:summary_and_extracted_concepts_only" in dim_keys
 
 
+@pytest.mark.asyncio
+async def test_list_sensings_filters_kind_on_the_flattened_node(monkeypatch):
+    # graph_service flattens a node's properties onto the node itself; the kind filter and the
+    # ordering read them there (a nested `properties` key is the fallback), as the sensing
+    # projection does — until 2026-10-20 the filter read only `properties`, so `?kind=skin`
+    # answered [] while the unfiltered list carried skin sensings
+    nodes = [
+        {"id": "sensing-a", "type": "event", "sensing_kind": "skin", "summary": "a",
+         "content": "a", "observed_at": "2026-10-19T15:45:19+00:00"},
+        {"id": "sensing-b", "type": "event", "sensing_kind": "breath", "summary": "b",
+         "content": "b", "observed_at": "2026-10-19T16:00:00+00:00"},
+        {"id": "sensing-c", "type": "event", "properties": {"sensing_kind": "skin",
+         "observed_at": "2026-10-19T17:00:00+00:00"}, "summary": "c", "content": "c"},
+        {"id": "not-a-sensing", "type": "event", "summary": "d", "content": "d"},
+    ]
+    monkeypatch.setattr(graph_service, "list_nodes", lambda **_: {"items": nodes})
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        skin = await client.get("/api/sensings", params={"kind": "skin"})
+        everything = await client.get("/api/sensings")
+
+    assert skin.status_code == 200
+    assert [s["id"] for s in skin.json()] == ["sensing-c", "sensing-a"]
+    assert everything.status_code == 200
+    assert [s["id"] for s in everything.json()] == ["sensing-c", "sensing-b", "sensing-a"]
+
+
 def test_provenance_edge_helper_rejects_incomplete_metadata():
     source = graph_service.create_node(
         id=_uid("sensing"),

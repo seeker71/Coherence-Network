@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "GET /api/sensings?kind= answered [] in production because the kind filter and the ordering read a nested `properties` key the graph service never fills (it flattens properties onto the node, as _is_sensing and _node_to_sensing already read); they now read the flattened node with the nested key as fallback.",
+  "files_owned": ["api/app/routers/sensings.py", "api/tests/test_source_artifact_sensing_graph.py"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["sensings-kind-filter"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["root cause", "fix", "test"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Observed live 2026-10-20 00:11 WITA on revision 79cd36862: GET /api/sensings?limit=2 → [sensing-20261019T154519-509b61 skin, sensing-20260519T155757-9b5db2 skin]; GET /api/sensings?kind=skin&limit=2 → []. The concept page's WorldSignals component asks exactly ?kind=skin&limit=10.",
+    "Root cause in api/app/routers/sensings.py: list_sensings filtered on (n.get('properties') or {}).get('sensing_kind') and sorted on properties.observed_at, while _is_sensing and _node_to_sensing read the flattened node (comment in the file: graph_service flattens properties onto the top level). The filter could never match.",
+    "Fix: _node_property reads the flattened key first and the nested key as fallback; the filter, the sensing test and the ordering use it (ordering falls back to created_at).",
+    "tests/test_source_artifact_sensing_graph.py: new test_list_sensings_filters_kind_on_the_flattened_node (flattened and nested nodes, kind filter, ordering); file: 3 passed, pytest exit code read directly."
+  ],
+  "change_files": ["api/app/routers/sensings.py", "api/tests/test_source_artifact_sensing_graph.py", "docs/system_audit/commit_evidence_2026-10-20_sensings_kind_filter_reads_flattened_node.json"],
+  "local_validation": {"status": "pass", "summary": "pytest -q tests/test_source_artifact_sensing_graph.py: 3 passed."},
+  "ci_validation": {"status": "pending", "summary": "The PR's Test workflow runs the suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Rolls out with the next Hostinger Auto Deploy of main (three are queued behind GitHub's runner backlog as this is written)."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "GET /api/sensings?kind=skin&limit=10 returns the skin sensings newest first; the concept page's world signals show the projected event reading.", "public_endpoints": ["https://api.coherencycoin.com/api/sensings?kind=skin&limit=10"], "test_flows": ["curl -s 'https://api.coherencycoin.com/api/sensings?kind=skin&limit=2'"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Awaits the rollout; the live check is the e2e flow above."}
+}
