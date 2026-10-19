@@ -48,6 +48,13 @@ Retrieval/index maintenance follows changed sources. The former post-rollout
 Python bootstrap and text-format grounding gate have retired: they duplicated
 the content migration and asserted the released host CLI's output contract.
 Keep retrieval findings as native Form work with their source and owner.
+`api/app/form_recipes/source_maintenance.bml` accepts explicit changed source
+coordinates. Each child owns a separate input file; a Docker child cannot consume
+the remaining paths of an inherited shell loop. The existing Python ARTIFACT/DB
+projection and RAG coordinator remain named retiring migration doors, not release
+requirements. BML owns the maintenance sequence and care; embedding runs on fkwu.
+The former automatic shell ingest/heal release stage is retired. A stale binding
+earns repair at its source, without relabeling a completed application rollout.
 
 Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
@@ -59,9 +66,10 @@ pages, assets, provider readiness, persistence, Telegram and pulse readings are
 not recurring release gates. When one of those surfaces changes or signals an
 issue, follow that finding at its source with the smallest relevant observation.
 Pulse's schema/audit proof registrations have retired for the same reason:
-bounded health does not observe those claims. Native `pulse_proof_care.bml`
-preserves the store and archives the two stale silences as retired proof work,
-not as successful observations.
+bounded health does not observe those claims. Their historical retirement notes
+remain in the silence ledger; the completed two-record retirement action is
+released. Native `pulse/snapshot.bml` supplies consistent Form-store snapshots
+without external database tools or rewriting historical receipts.
 The compatibility health carrier reuses its native observation while artifact
 bytes hold. A fifteen-second challenge-expiry timer has retired; changed carrier
 bytes or explicit care give the observation work, not elapsed time alone.
@@ -79,19 +87,69 @@ The same care action moves web routers onto one service owner before releasing
 duplicate port declarations and the superseded two-host Hati router. The current
 five-host Hati route stays intact; `www.coherencycoin.com` names its service
 explicitly. Compose label arrays and maps share one native editable model.
+Pulse builds from the repository root through `pulse/Dockerfile`, keeping the
+original `pulse_data:/data` volume. File-backed `pulse/config.json` owns its
+application settings; native Compose care retires PULSE_* environment values and
+supplies the fkwu shared-memory resource. Image assembly realizes application BML
+once on native tmpfs, and requests reuse those images. Pulse's socket listener,
+TLS probes, cadence, persistence and query/repair templates are BML on the pinned
+fkwu. Native Recipe pages and checksummed transaction logs replace the SQLite
+engine. For a legacy volume, prepare its immutable base snapshot with
+`pulse/migrate.bml` while the old witness stays live. Startup imports the final
+row-ID delta and refreshed silence receipts, then archives the legacy files in
+the same volume. Keep the volume and private recovery snapshot intact. All history
+persists; public read windows do not delete records. Follow an actual persistence
+finding with its smallest fixture or archive-backed observation, not kernel suites.
+
+The `/pulse` web route belongs to that same native owner. Compose care gives its
+exact path on the existing web hosts priority over the Next.js router,
+preserving the independent Pulse origin and unrelated web routes. Publish this
+file-backed route configuration without activation before the merged rollout;
+Compose derives the host expression from its existing web routers rather than
+holding a second host list, and activates it with the new Pulse image. The Next.js Pulse family and its
+cross-origin configuration are retired. Native HTML reads one coherent snapshot,
+discloses complete day/archive evidence, and sends no hydration payload.
+Its response forbids proxy transformations and scripts while retaining no-store
+freshness. Observe the public HTML, not just the origin response: an injected
+analytics beacon is a boundary finding, not native page code. Source-keyed
+closed-endpoint indexes provide exact silence counts without decoding the archive
+on every page; disclosure still reads every matching original receipt and note.
+On the first indexed startup, native workers derive daily cards and exact range
+summaries from retained daily history. Later starts compare raw-day sequence
+coordinates and reconcile only changed sources, including writes from an older
+service during handoff. Keep the existing volume and recovery copies. This
+derivation is application startup, not a kernel validation run.
 
 Ordinary runtime telemetry invalidates its own event view, not provider facts.
 The retired cross-service flush took the provider-refresh lock on the API event
 loop, stalled `/api/ping`, and caused Docker/Traefik to withdraw the API route.
 Provider collection keeps its own refresh and invalidation. Follow a new latency
-finding with `pulse_latency_trace.bml`: one parallel HTTP wave retains private
-bodies/headers and separates network timing from the serving runtime header.
+finding with `pulse/trace.bml`: one native parallel HTTP wave retains private
+bodies/headers and reports total and serving runtime time separately. The curl
+trace is retired; unexposed DNS/connect/first-byte timestamps are not inferred.
 The retiring HTTP membrane gives synchronous readiness, contention, idea reads
 and vitality calls to its existing synchronous dispatch rather than claiming the
 event loop. No extra pool or second implementation sits beside Form. Native
 `runtime_read_care.bml` declares the worker-history source/time access path and
 builds its PostgreSQL index online; a fresh store or changed read shape gives
 that schema care work, not a recurring full-table scan on every release.
+Anonymous meeting summaries follow the same shape: `anonymous_trace_query.bml`
+owns the ordered, source-point-bound read; the existing Form/SQL membrane only
+passes bound values and rows. The matching native schema blueprint indexes the
+source expression and update order. This retains full same-browser history and
+the global view without loading every event for each meeting write. The source
+carrier enters fkwu normally so its native grammar discovery carries BML; the
+obsolete raw-reader forcing flag has retired.
+Keep the image's native source home coherent: `/app/form/form-stdlib` pairs
+with `/app/runtime`, just as the checkout's `form/form/form-stdlib` pairs with
+`form/runtime`. The carrier derives runtime resources from that stdlib home.
+`native_image_layout_care.bml` can publish the unchanged pinned resources at the
+canonical live path while the corrected image assembles; the image retires the
+former location rather than keeping a duplicate path or adding a kernel patch.
+The query template has no runtime inputs: materialize it through fkwu once at
+the immutable image's service initialization, then bind the source point at the
+database door. Repeated source staging/compilation is not per-request work; a
+changed image/source activates a new native template, not a wall-clock expiry.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope

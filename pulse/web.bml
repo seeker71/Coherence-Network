@@ -1,0 +1,68 @@
+// The pulse page owns one native snapshot, not three HTTP reads plus hydration.
+// Day links disclose every overlapping silence and its complete repair note.
+import ../pulse/store.bml;
+import ../pulse/html.bml;
+section [form.bml] {
+ class PulseWeb {
+  def pw-style() = "*{box-sizing:border-box}body{margin:0;background:#100f0e;color:#ebe9e5;font:15px/1.6 system-ui,sans-serif}a{color:#86dfbf;text-underline-offset:3px}a:focus-visible,summary:focus-visible{outline:2px solid #86dfbf;outline-offset:4px}header,main,footer{max-width:1024px;margin:auto;padding:22px}nav{display:flex;gap:18px;flex-wrap:wrap;align-items:center}header{border-bottom:1px solid #343330}main{display:grid;gap:20px}h1,h2,h3,p{margin:0 0 10px}h1{font-size:32px}h2{font-size:23px;font-weight:500}h3{font-size:17px}.card{border:1px solid #343b37;border-radius:20px;padding:24px;background:linear-gradient(#1c211e,#151916)}.muted,small{color:#aaa9a2}.row{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap}.breathing{--tone:#69cf9d}.strained{--tone:#edba63}.silent{--tone:#ed8190}.unknown{--tone:#92938f}.state{color:var(--tone)}.dot{display:inline-block;width:9px;height:9px;border-radius:100%;background:var(--tone);margin-right:8px}.bars{display:flex;gap:2px;height:30px;margin:16px 0 6px}.bar{background:var(--tone);flex:1;min-width:2px;border-radius:3px;opacity:.85}.bar:hover,.bar:focus-visible{opacity:1;outline:2px solid white}.empty{height:35%;align-self:end}.percent{font-size:28px;font-weight:300}.ranges a{padding:5px 10px;border-radius:8px;border:1px solid #414b44}.ranges [aria-current]{background:#284334}svg{max-width:100%;color:#85cdae}details{margin:10px 0}summary{cursor:pointer}li{padding:12px 0;border-bottom:1px solid #343b37;overflow-wrap:anywhere}time,code{font-size:12px}.note{white-space:pre-wrap;overflow-wrap:anywhere}.skip{position:absolute;top:-100px}.skip:focus{top:0;background:#100f0e;padding:10px}@media(prefers-color-scheme:light){body{background:#f7f7f2;color:#202622}.card{background:#fff;border-color:#c8d3cb}.muted,small{color:#58645b}a{color:#27694c}.ranges [aria-current]{background:#d9eadf}.bar:hover{outline-color:#202622}}";
+  def pw-value(doc,key) { let n = json-object-get(doc,key); node_eq(node_category(n),JSON-NULL()) ? nothing() : node_value(n); }
+  def pw-state(status) = any?(s => s == status,["breathing","strained","silent","unknown"]) ? status : "unknown";
+  def pw-headline(status) = status == "breathing" ? "All organs breathing" : status == "strained" ? "Something is strained" : status == "silent" ? "Something has gone silent" : "The witness has no current reading";
+  def pw-status(status) = fh-tag("span",[["class","state " ++ pw-state(status)]],[fh-tag("span",[["class","dot"]],[]),fh-text(status)]);
+  def pw-url(days,organ,date) = "/pulse?days=" ++ days.str() ++ "&organ=" ++ organ ++ "&date=" ++ date;
+  def pw-silence(row,organs) {
+   let found = filter(o => wr-text(o,"name") == row[1],organs);
+   fh-tag("li",[["id","silence-" ++ row[0].str()]],[pw-status(row[4])," · ",fh-text(nil?(found) ? row[1] : wr-text(found[0],"label")),fh-tag("p",[],[fh-tag("time",[],[fh-text(row[2])])," → ",fh-tag("time",[],[fh-text(nothing?(row[3]) ? "ongoing" : row[3])])]),fh-tag("p",[["class","note"]],[fh-text(row[5])])]);
+  }
+  def pw-spark(daily) {
+   let points = filter(p => !nothing?(p[1]),map(i => [i,pw-value(daily[i],"latency_p50_ms"),pw-value(daily[i],"latency_p95_ms")],range(0,len(daily))));
+   nil?(points) ? fh-tag("small",[],["No latency samples yet"]) : {
+    let values = foldl((out,p) => cons(p[1],cons(nothing?(p[2]) ? p[1] : p[2],out)),[],points);
+    let low = foldl((a,b) => b<a ? b : a,values[0],values); let high = foldl((a,b) => b>a ? b : a,values[0],values);
+    let xden = len(daily)>1 ? len(daily) - 1 : 1; let yden = high>low ? high - low : 1;
+    let xy = (p,v) => (2.0+p[0]*236.0/xden).str() ++ "," ++ (22.0-(v - low)*20.0/yden).str();
+    let path = str-spans(map(i => (i == 0 || points[i][0] != points[i - 1][0]+1 ? "M" : "L") ++ xy(points[i],points[i][1]),range(0,len(points))));
+    let bands = map(p => fh-tag("path",[["d","M" ++ xy(p,p[1]) ++ "L" ++ xy(p,nothing?(p[2]) ? p[1] : p[2])],["stroke","currentColor"],["stroke-opacity","0.25"]],[]),points);
+    fh-tag("svg",[["width","240"],["height","24"],["viewBox","0 0 240 24"],["role","img"],["aria-label","Daily latency p50 with p50–p95 range; gaps mean no samples"]],append(bands,[fh-tag("path",[["d",path],["fill","none"],["stroke","currentColor"]],[])]));
+   };
+  }
+  def pw-organ(history,current,days) {
+   let name = wr-text(history,"name"); let daily = wr-array(history,"daily"); let status = wr-text(current,"status");
+   let bars = map(day => {
+    let date = wr-text(day,"date"); let samples = wr-number(day,"samples"); let failures = wr-number(day,"failures");
+    let label = date ++ " · " ++ wr-text(day,"status") ++ " · " ++ samples.str() ++ " samples, " ++ failures.str() ++ " failures · p50 " ++ fh-text(pw-value(day,"latency_p50_ms")) ++ " ms · p95 " ++ fh-text(pw-value(day,"latency_p95_ms")) ++ " ms. Read daily evidence and silences.";
+    fh-tag("a",[["class","bar " ++ pw-state(wr-text(day,"status")) ++ (samples == 0 ? " empty" : "")],["href",pw-url(days,name,date)],["title",label],["aria-label",label]],[]);
+   },daily);
+   let observed = any?(d => wr-number(d,"samples")>0,daily);
+   fh-tag("article",[["class","card"]],[fh-tag("div",[["class","row"]],[fh-tag("div",[],[fh-tag("h3",[],[pw-status(status)," · ",fh-text(wr-text(history,"label"))]),fh-tag("p",[["class","muted"]],[fh-text(wr-text(history,"description"))])]),fh-tag("div",[["class","percent"]],[observed ? fh-text(pw-value(history,"uptime_pct")) ++ "%" : "—"])]),fh-tag("div",[["class","bars"],["aria-label","Daily breath; select a day for all evidence"]],bars),fh-tag("div",[["class","row muted"]],[fh-tag("small",[],[fh-text(nil?(daily) ? "" : wr-text(daily[0],"date"))]),fh-tag("small",[],["today"])]),fh-tag("div",[["class","row"]],[pw-spark(daily),fh-tag("small",[],["Window latency: p50 ",fh-text(pw-value(history,"latency_p50_ms"))," ms · p95 ",fh-text(pw-value(history,"latency_p95_ms"))," ms"])]),len(wr-text(current,"detail")) == 0 ? "" : fh-tag("p",[["class","note"]],[fh-text(wr-text(current,"detail"))])]);
+  }
+  def pw-render(cfg,meta,organs,days) {
+   let at = now_unix_ms(); let now = ws-now-at(cfg,meta,organs,at); let history = ws-history-at(cfg,meta,organs,days,at);
+   let detail = wr-text(cfg,"view") == "silences" || (len(wr-text(cfg,"organ"))>0 && len(wr-text(cfg,"date"))>0);
+   let rows = detail ? ws-silence-rows-at(cfg,meta,days,at) : [];
+   pw-document(cfg,meta,organs,days,now,history,rows,ws-silence-count-at(cfg,meta,days,at));
+  }
+  def pw-document(cfg,meta,organs,days,now,history,rows,total) {
+   let name = wr-text(cfg,"organ"); let date = wr-text(cfg,"date"); let chosen = filter(o => wr-text(o,"name") == name,organs);
+   let dates = wr-array(wr-array(history,"organs")[0],"daily");
+   let day = filter(d => wr-text(d,"date") == date,dates);
+   let selected = !nil?(chosen) && !nil?(day);
+   let matching = selected ? filter(r => r[1] == name && fp-time(r[2])<fp-time(date ++ "T00:00:00Z")+86400000 && (nothing?(r[3]) || fp-time(r[3])>=fp-time(date ++ "T00:00:00Z")),rows) : [];
+   let range = fh-tag("nav",[["class","ranges"],["aria-label","History window"]],map(n => fh-tag("a",append([["href","/pulse?days=" ++ n.str()]],n == days ? [["aria-current","page"]] : []),[n.str()," days"]),[7,30,90,180]));
+   let current = wr-array(now,"organs"); let overall = json-object-get(history,"overall");
+   let cards = map(h => { let found = filter(o => wr-text(o,"name") == wr-text(h,"name"),current); pw-organ(h,nil?(found) ? parse-json("missing-organ","{}") : found[0],days); },wr-array(history,"organs"));
+   let archive = wr-text(cfg,"view") == "silences";
+   let open = fp-get(meta,"open",[]);
+   fh-document("Pulse",pw-style(),[
+    fh-tag("a",[["class","skip"],["href","#main-content"]],["Skip to content"]),
+    fh-tag("header",[],[fh-tag("nav",[["aria-label","Primary"]],map(p => fh-link(wr-url(wr-text(cfg,"web_base"),p[0]),p[1]),[["/","Coherence Network"],["/vision","Vision"],["/presences","Presences"],["/ideas","Work"],["/resonance","Pulse"],["/come-in","Come in"]]))]),
+    fh-tag("main",[["id","main-content"]],append([
+     fh-tag("div",[["class","row"]],[fh-tag("h1",[],["Pulse"]),range]),fh-tag("p",[["class","muted"]],["The breath of our living body, remembered. Every reading and repair stays with its source."]),
+     fh-tag("section",[["class","card"]],[pw-status(wr-text(now,"overall")),fh-tag("h2",[],[pw-headline(wr-text(now,"overall"))]),fh-tag("p",[],[fh-text(pw-value(overall,"uptime_pct")),"% steady breath · ",days.str()," days · weakest organ: ",fh-text(pw-value(overall,"worst_organ"))]),fh-tag("small",[],["Listened at ",fh-text(wr-text(now,"checked_at"))]),nil?(open) ? "" : fh-detail("Ongoing silences",[fh-tag("ul",[],map(r => pw-silence(r,organs),open))])]),
+     selected ? fh-tag("section",[["class","card"]],[fh-tag("h2",[],[fh-text(wr-text(chosen[0],"label"))," · ",fh-text(date)]),fh-tag("p",[],[pw-status(wr-text(day[0],"status"))," · ",wr-number(day[0],"samples").str()," samples · ",wr-number(day[0],"failures").str()," failures · p50 ",fh-text(pw-value(day[0],"latency_p50_ms"))," ms · p95 ",fh-text(pw-value(day[0],"latency_p95_ms"))," ms"]),fh-tag("p",[],["All overlapping silences: ",len(matching).str()]),fh-tag("ul",[],map(r => pw-silence(r,organs),matching))]) : ""
+    ],append(cards,[fh-tag("section",[["class","card"]],[fh-tag("h2",[],["Remembered silences"]),fh-tag("p",[],[total.str()," in this window. Select a day bar for its full evidence, or ",fh-link("/pulse?days=" ++ days.str() ++ "&view=silences","read every silence and repair note"),"."]),archive ? fh-tag("ul",[],map(r => pw-silence(r,organs),rows)) : ""]),fh-tag("small",[],["Witness started ",fh-text(wr-text(now,"witness_started_at"))," · Form-native persistence · fkwu JIT"])]))),
+    fh-tag("footer",[],[fh-tag("nav",[["aria-label","Related pages"]],map(p => fh-link(wr-url(wr-text(cfg,"web_base"),p[0]),p[1]),[["/vitality","Vitality"],["/identity/keys","Attribution"],["/api-health","API health"],["/diagnostics","Diagnostics"]]))])
+   ]);
+  }
+ }
+}

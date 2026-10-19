@@ -11,9 +11,13 @@ section [form.bml] {
    quote ++ hch-join(split-on(name, quote), quote ++ quote) ++ quote;
   }
   // [name, relation, [[column, direction]]]: a reusable ordered-read blueprint.
-  def rrc-paths() = [["runtime_events_source_recorded_at", "runtime_events", [["source", "ASC"], ["recorded_at", "DESC"]]]];
-  def rrc-index(path) = "CREATE INDEX CONCURRENTLY IF NOT EXISTS " ++ rrc-ident(path[0]) ++ " ON " ++ rrc-ident(path[1]) ++ " (" ++ hch-join(map(column => rrc-ident(column[0]) ++ " " ++ column[1], path[2]), ", ") ++ ");\n";
-  def rrc-sql() = str-spans(map(path => rrc-index(path), rrc-paths())) ++ "SELECT json_build_object('index',c.relname,'valid',i.indisvalid,'ready',i.indisready) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE c.relname='runtime_events_source_recorded_at';\nEXPLAIN SELECT * FROM runtime_events WHERE source='worker' ORDER BY recorded_at DESC LIMIT 5000;\n";
+  def rrc-paths() = [
+   ["runtime_events_source_recorded_at", "runtime_events", [["source", "ASC"], ["recorded_at", "DESC"]]],
+   ["graph_nodes_trace_source_updated_at", "graph_nodes", [["(properties ->> 'source_point_id')", "ASC", true], ["updated_at", "DESC"]], "type = 'event'"]
+  ];
+  def rrc-column(column) = (len(column) > 2 && column[2] ? column[0] : rrc-ident(column[0])) ++ " " ++ column[1];
+  def rrc-index(path) = "CREATE INDEX CONCURRENTLY IF NOT EXISTS " ++ rrc-ident(path[0]) ++ " ON " ++ rrc-ident(path[1]) ++ " (" ++ hch-join(map(column => rrc-column(column), path[2]), ", ") ++ ")" ++ (len(path) > 3 ? " WHERE " ++ path[3] : "") ++ ";\n";
+  def rrc-sql() = str-spans(map(path => rrc-index(path), rrc-paths())) ++ "SELECT json_build_object('index',c.relname,'valid',i.indisvalid,'ready',i.indisready) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE c.relname IN ('runtime_events_source_recorded_at','graph_nodes_trace_source_updated_at');\nEXPLAIN SELECT * FROM runtime_events WHERE source='worker' ORDER BY recorded_at DESC LIMIT 5000;\nEXPLAIN SELECT * FROM graph_nodes WHERE type='event' AND (CAST('anon:source-plan' AS TEXT) IS NULL OR properties ->> 'source_point_id'='anon:source-plan') ORDER BY updated_at DESC;\n";
   def rrc-care(doc) {
    let argv = append(["ssh", "-i", rrc-text(doc, "key"), "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", rrc-text(doc, "host")], ["docker", "exec", "-i", "-u", "postgres", rrc-text(doc, "container"), "psql", "--no-psqlrc", "-qAt", "--set", "ON_ERROR_STOP=on", "-U", rrc-text(doc, "role"), "-d", rrc-text(doc, "database")]);
    let run = hch-run("runtime-read-care", argv, rrc-sql(), hch-by(600000));

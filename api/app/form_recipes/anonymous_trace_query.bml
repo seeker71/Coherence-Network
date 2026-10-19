@@ -1,0 +1,13 @@
+// Native ordered-read template. Values remain bound by the existing database
+// resource: source_point_id scopes one browser; null retains the global view.
+// No visitor key, identity or trace payload is interpolated into source/SQL.
+// preludes: form/form-stdlib/core.fk
+section [form.bml] {
+ class OrderedTraceRead {
+  def otr-join(parts, separator) = nil?(parts) ? "" : len(parts) == 1 ? parts[0] : parts[0] ++ separator ++ otr-join(parts[1:], separator);
+  def otr-select(relation, fields, predicates, order) = "SELECT " ++ otr-join(fields, ", ") ++ " FROM " ++ relation ++ " WHERE " ++ otr-join(predicates, " AND ") ++ " ORDER BY " ++ otr-join(order, ", ");
+  def otr-traces() = otr-select("graph_nodes", ["*"], ["type = 'event'", "(NULLIF(CAST(:source_point_id AS TEXT), '') IS NULL OR properties ->> 'source_point_id' = :source_point_id)"], ["updated_at DESC"]);
+ }
+ print_str(otr-traces());
+ 0;
+}

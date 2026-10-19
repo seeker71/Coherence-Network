@@ -1,9 +1,18 @@
 // Delivery care is guidance carried by the application, executed on fkwu.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/bml/host-child.bml
 section [form.bml] {
+    def dc-telemetry?(path) = any?(known => path == known,["receipts/local-flow-review.jsonl","receipts/session-rent-ledger.jsonl","receipts/rented-work-sessions.jsonl"]) || any?(dir => path == dir || str_find(path,dir ++ "/",0) == 0,[".cache",".pytest_cache",".ruff_cache"]);
+    def dc-material(status) = filter(line => len(line)>3 && !dc-telemetry?(substring(line,3,len(line))),split-on(status,"\n"));
+    let source = hch-run("delivery-kernel-source",["git","status","--porcelain=v1","--untracked-files=all"],"",hch-by(10000));
+    let changes = hch-ok?(source) ? dc-material(source[1]) : [];
     "Delivery care\n"
     ++ "Land the kernel dependency before the application gitlink.\n"
+    ++ "Read kernel source changes with their owner; session reflection receipts are telemetry, not a reason to reset a checkout.\n"
+    ++ "Give retrieval maintenance changed sources or an explicit request; prompt arrival does not repeat its Python bootstrap.\n"
+    ++ "For changed retrieval sources, source_maintenance.bml retains one file-backed task per path; the retiring projection/RAG database doors are explicit care, not release gates.\n"
     ++ "Read review findings with the current source; keep useful work with its owner.\n"
     ++ "Reuse existing evidence and observe only the changed claim.\n"
     ++ "Deploy the merged application commit and read its public API/web identity.\n"
-    ++ "Keep implementation in Form/BML; close each page-JIT gap at its source.\n";
+    ++ "Keep implementation in Form/BML; close each page-JIT gap at its source.\n"
+    ++ (!hch-ok?(source) ? "Kernel source provenance is unread; retain its native task trace before claiming pin-only proof.\n" : nil?(changes) ? "Kernel source matches its checkout; known local telemetry/cache changes are separate.\n" : "Kernel source differs from its checkout:\n" ++ hch-join(changes,"\n") ++ "\nKeep these coordinates in the proof receipt and land their owning kernel work before claiming pin-only reproducibility.\n");
 }

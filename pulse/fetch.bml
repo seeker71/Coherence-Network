@@ -1,0 +1,19 @@
+// One native network arrival. The parent owns its deadline and records failures.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/templates.bml
+section [form.bml] {
+ let request = parse-json("pulse-fetch", stdin-text());
+ let began = host_monotonic_ms();
+ let response = wr-fetch(wr-text(request,"method"), wr-text(request,"url"), wr-text(request,"payload"), 20);
+ let elapsed = host_monotonic_ms()-began;
+ let dir = wr-text(request,"trace_directory"); let made = len(dir) == 0 ? 0 : hch-mkdirs(dir);
+ let body = len(dir) == 0 ? 0 : write_file_text(dir ++ "/" ++ wr-text(request,"name") ++ ".body",response[1]);
+ let headers = len(dir) == 0 ? 0 : write_file_text(dir ++ "/" ++ wr-text(request,"name") ++ ".headers",response[3]);
+ json-emit(json-node-object([
+  json-node-pair("status",json-node-int(response[0])),
+  json-node-pair("body",json-node-string(response[1])),
+  json-node-pair("router",json-node-string(response[2])),
+  json-node-pair("latency_ms",json-node-int(elapsed)),
+  json-node-pair("serving_runtime_ms",json-node-string(wr-header(split-on(response[3],"\r\n"),"x-coherence-runtime-ms"))),
+  json-node-pair("observed_ms",json-node-int(now_unix_ms()))
+ ]));
+}

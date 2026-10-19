@@ -1,0 +1,51 @@
+import ../pulse/store.bml;
+section [form.bml] {
+ class WitnessProbe {
+  def wp-request(cfg, organ) = json-node-object([
+   json-node-pair("name",json-node-string(wr-text(organ,"upstream"))),
+   json-node-pair("url",json-node-string(wr-text(cfg,wr-text(organ,"base")) ++ wr-text(organ,"path"))),
+   json-node-pair("method",json-node-string(json-object-has?(organ,"method") ? wr-text(organ,"method") : "GET")),
+   json-node-pair("payload",json-node-string(json-object-has?(organ,"payload") ? json-emit(json-object-get(organ,"payload")) : ""))
+  ]);
+  def wp-distinct(requests, seen, out) = nil?(requests) ? reverse(out) : {
+   let name = wr-text(requests[0],"name");
+   any?(x => x == name, seen) ? wp-distinct(requests[1:],seen,out) : wp-distinct(requests[1:],cons(name,seen),cons(requests[0],out));
+  };
+  def wp-verdict(organ, observation, exit) {
+   let status = wr-number(observation,"status");
+   let text = wr-text(observation,"body");
+   let doc = parse-json("upstream-json", str_find(trim(text),"{",0) == 0 ? text : "{}");
+   let cases = filter(one => wr-number(one,"http") == status && nil?(wr-rules(doc,text,wr-array(one,"when"))), wr-array(organ,"cases"));
+   let bad = wr-rules(doc,text,wr-array(organ,"rules"));
+   exit != 0 || status == 0 ? [false, exit == 137 ? "probe timed out after 10s" : "native HTTP transport failure"]
+   : !nil?(cases) ? [json-emit(json-object-get(cases[0],"ok")) == "true",wr-text(cases[0],"detail")]
+   : (status < 200) || (status > (json-object-has?(organ,"http_max") ? wr-number(organ,"http_max") : 299)) ? [false,"HTTP " ++ status.str()]
+   : !nil?(bad) ? [false, json-object-has?(organ,"strain_fields") && json-emit(json-object-get(doc,"healthy")) == "false" ? "write-lane strain: oldest txn " ++ json-emit(json-object-get(doc,"max_txn_age_seconds")) ++ "s, " ++ json-emit(json-object-get(doc,"lock_waiters")) ++ " lock-waiter(s)" : wr-text(bad[0],"detail")]
+   : [true,wp-pressure(organ,doc)];
+  }
+  def wp-pressure(organ, doc) {
+   let pressure = wr-path(doc,wr-array(organ,"pressure_path"));
+   let total = wr-number(pressure,"total");
+   let server = wr-number(pressure,"5xx");
+   let client = wr-number(pressure,"4xx");
+   !json-object-has?(organ,"pressure_path") ? "" : server > 0 ? "slow: " ++ server.str() ++ "× 5xx in last 1m (of " ++ total.str() ++ " requests)" : total >= 20 && client * 2 > total ? "slow: " ++ client.str() ++ "× 4xx in last 1m (of " ++ total.str() ++ " requests)" : "";
+  }
+  def wp-sample(organ, observation, exit) {
+   let verdict = wp-verdict(organ,observation,exit);
+   let latency = exit == 137 ? 10000 : wr-number(observation,"latency_ms");
+   let stamp = json-object-has?(observation,"observed_ms") ? wr-number(observation,"observed_ms") : now_unix_ms();
+   let expected = wr-text(organ,"expected_router");
+   let router = wr-text(observation,"router");
+   let threshold = wr-number(organ,"threshold_ms");
+   let detail = !verdict[0] ? verdict[1] : len(expected) > 0 && expected != router ? "fell back: expected " ++ expected ++ ", got " ++ (len(router) == 0 ? "no router header" : router) : latency > threshold ? "slow: " ++ latency.str() ++ "ms > " ++ threshold.str() ++ "ms threshold" : verdict[1];
+   [fp-stamp(stamp),wr-text(organ,"name"),verdict[0] ? 1 : 0,latency,len(detail) == 0 ? nothing() : detail];
+  }
+  def wp-round(cfg, organs) {
+   let result = record_new(bp("PulseObservationWave"));
+   let requests = wp-distinct(map(organ => wp-request(cfg,organ), organs),[],[]);
+   let wave = wr-http-wave(cfg,requests,(request,observation,exit) => record_set(result,wr-text(request,"name"),[observation,exit]));
+   let samples = map(organ => { let response = record_get(result,wr-text(organ,"upstream")); wp-sample(organ,response[0],response[1]); }, organs);
+   ws-record(cfg,samples,organs);
+  }
+ }
+}

@@ -1,190 +1,141 @@
-# Pulse Monitor
+# Pulse — the independent Form witness
 
-> The witness that remembers the breath of Coherence Network.
+Pulse runs reusable BML templates through the pinned fkwu native source/JIT door.
+It observes the public API and web origins, remembers every sample in native Form
+Recipe pages, derives silence receipts, and serves the existing read-only JSON API.
+Its process and storage stay independent of the API, PostgreSQL and Neo4j. The
+public `/pulse` page is served directly by the same native read owner.
 
-Pulse is a small standalone service whose only job is to ping the main
-Coherence Network from outside, durably record every sample, derive
-**silences** (our word for incidents) from consecutive failures, and expose
-the history over a tiny read-only API so the `/pulse` page on the main web
-can render the last 90 days of the body's breath.
+## The living surface
 
-It deliberately does not share code, runtime, or database with the main
-`api/` service. A service cannot reliably report its own death — so the
-witness lives next door instead of inside.
+- `GET /pulse/now`: current organs and unresolved silences.
+- `GET /pulse/history?days=N`: daily bars, uptime and exact nearest-rank p50/p95.
+- `GET /pulse/silences?days=N`: silence history and repair notes.
+- `GET /pulse/health`: native witness liveness and durable sample count.
+- `GET /`: service identity and endpoint discovery.
+- `GET /pulse?days=N`: native HTML with daily evidence and complete repair notes.
 
-## Phase 1 caveat (read me)
+History and silence windows accept every integer from 1 through 180; the default
+is 90. Organs and assertions live in `organs.json`. Shared upstreams are observed
+once per round, in parallel native workers. TLS verifies certificates through
+fkwu's existing TLS resource. Each sample carries its own observed completion time.
+The HTTP listener uses native sockets; neither curl nor a host web server is used.
 
-In Phase 1 the witness runs as a **third docker-compose service on the same
-VPS** as `api` and `web`. This means:
+## Source owners
 
-- The witness survives `api` restarts, crashes, bad deploys, DB outages,
-  and graph-DB outages. These are the common failure modes.
-- The witness does **not** survive whole-host outages of the VPS (power,
-  network, Hostinger maintenance). In those moments, nothing tells us
-  anything — which is also exactly what you'd see on your own status page.
+`templates.bml` carries reusable HTTP and declarative assertion templates.
+`form-persistence.bml` carries typed snapshots, publication ownership, weighted
+histograms, balanced JSON spans and checksummed transaction frames.
+`native-store.bml` specializes them into replayable raw-page,
+daily histogram, exact range-summary, daily-card and silence indexes. `store.bml` owns query/repair templates; `probe.bml`
+specializes them from the organ catalog. `main.bml` owns cadence and the independent
+native HTTP child. `http.bml` owns the public boundary; `fetch.bml` owns a native
+network arrival. Persistence crosses only the existing native file resources;
+there is no database process, SQL interpreter or host-language business logic.
+`html.bml` supplies escaped document/disclosure templates; `web.bml` specializes
+them for Pulse. One coherent native snapshot replaces the three HTTP reads and
+React hydration path. Day links reveal full daily readings and every overlapping
+silence; the complete archive link has no thirty-record display cap. The page
+keeps ordinary site navigation on the configured canonical web origin, including
+when it is read at the independent Pulse origin. Silence windows use interval
+overlap, retaining closed receipts that began before the cutoff and ended within it.
+The bucket's source-sequence-keyed end bound keeps that read exact and bounded.
+Sorted closed-interval endpoints and open counts supply the page's exact archive
+count without loading every note. Full interval rows are read when disclosed.
+The page offers 7/30/90/180-day windows and accepts the API's existing 1–180-day range.
+The default page remains seven days. No JavaScript or external assets are needed.
+HTML carries `Cache-Control: no-store, no-transform` and `script-src 'none'`:
+fresh native evidence stays intact across proxies rather than acquiring analytics.
 
-Phase 2 moves the witness to a second host (Fly.io free tier, or a small
-second VPS, or a GitHub Actions cron as a cheap secondary witness). The
-code does not need to change for that — only the deploy target.
+## Configuration and running
 
-## Endpoints
+`config.json` is the production configuration. A git-ignored `config.local.json`
+beside it can supply a complete local configuration. Values come from files,
+including public origins, store/legacy/work paths, interval, port and CORS.
+For local use choose writable store/work paths, then:
 
-All endpoints are public, read-only JSON. CORS defaults to `*`; override
-with `PULSE_CORS_ORIGINS`.
-
-| Method | Path               | Purpose                                               |
-|--------|--------------------|-------------------------------------------------------|
-| GET    | `/pulse/now`       | Current snapshot of every organ + overall status     |
-| GET    | `/pulse/history`   | 90-day (or `?days=N`) daily bars per organ           |
-| GET    | `/pulse/silences`  | Past silences within the window + ongoing silences   |
-| GET    | `/pulse/health`    | The witness's own liveness ping                      |
-
-## Vocabulary
-
-The witness uses the Living Collective frequency per `CLAUDE.md`. The raw
-HTTP language of a corporate status page is translated:
-
-| Corporate          | Living Collective       |
-|--------------------|-------------------------|
-| component          | **organ**               |
-| up / operational   | **breathing**           |
-| degraded           | **strained**            |
-| down / outage      | **silent**              |
-| uptime %           | **steady breath**       |
-| incident           | **silence**             |
-| monitoring service | **witness**             |
-
-## Organs
-
-| Organ             | Signal                                                 |
-|-------------------|--------------------------------------------------------|
-| `api`             | `GET /api/health/pulse` → 200 && body.status == "ok"   |
-| `web`             | `GET /` → 2xx                                          |
-| `postgres`        | `/api/ready` → db_connected == true                    |
-| `neo4j`           | `/api/ready` not 503 (graph_store available)           |
-
-Schema and audit proof belong to a changed source or concrete finding, not a
-recurring pulse gate. The bounded health projection deliberately omits those
-proofs. Their former probe registrations have retired; their sample and silence
-history remains. The native `api/app/form_recipes/pulse_proof_care.bml` action
-backs up the pulse store privately and closes only the two observed stale
-silence records with an explicit retirement note, never a fabricated success.
-
-## Running locally
-
-```bash
-cd pulse
-python -m pip install -e ".[dev]"
-python -m pytest
-
-PULSE_API_BASE=https://api.coherencycoin.com \
-PULSE_WEB_BASE=https://coherencycoin.com \
-PULSE_DB_PATH=./data/pulse.db \
-uvicorn pulse_app.main:app --port 8100
-
-curl -s http://localhost:8100/pulse/now | jq
-curl -s http://localhost:8100/pulse/health | jq
+```sh
+cd form
+./fkwu ../pulse/main.bml
 ```
 
-## Environment variables
+The host provides libssl with trusted CA roots. The container builds
+the unchanged pinned fkwu and supplies those resources. Build from the repository
+root with `pulse/Dockerfile`; keep the existing `pulse_data:/data` volume.
+Native `api/app/form_recipes/deployment_compose_care.bml` moves the Compose build
+context to that root and retires the former PULSE_* environment configuration,
+preserving routing, volumes and unrelated operator settings.
 
-| Var                       | Default                          | Purpose                                  |
-|---------------------------|----------------------------------|------------------------------------------|
-| `PULSE_API_BASE`          | `https://api.coherencycoin.com`  | Main API base URL                        |
-| `PULSE_WEB_BASE`          | `https://coherencycoin.com`      | Main web base URL                        |
-| `PULSE_DB_PATH`           | `./data/pulse.db`                | SQLite file path                         |
-| `PULSE_INTERVAL_SECONDS`  | `30`                             | Probe cadence                            |
-| `PULSE_RETENTION_DAYS`    | `180`                            | Raw-sample retention (silences forever)  |
-| `PULSE_CORS_ORIGINS`      | `*`                              | Comma-separated list                     |
+## Memory and repair
 
-When `PULSE_API_BASE=http://api:8000` or `PULSE_WEB_BASE=http://web:3000`
-is used in Docker, the monitor lifts those service aliases to the public
-origins before probing. The witness measures the same Traefik/native-router
-path visitors use, not a container-network shortcut.
+Raw rows retain their original row IDs, fields, silence IDs and repair notes.
+Native daily counts and latency histograms retain exact percentile ranks;
+the sliding window's partial first day reads the smaller raw-page side of its
+cutoff. A prefix is subtracted from the exact daily count/histogram; a suffix is
+used directly. Both preserve observed-only rows and nearest-rank weights. No history
+window, latency threshold or failure is hidden by a cache.
+Daily cards and aligned binary range summaries are durable derived indexes,
+not time-to-live response caches. Each transaction publishes changed leaves,
+cards and ancestor summaries before its checkpoint. Six levels describe physical
+fan-in: longer ranges use additional blocks, without a retention or read cap.
+Startup derives indexes once and reconciles changed raw-day sequence coordinates;
+an older writer's subsequent rows therefore remain visible at handoff. Native
+`index.bml` workers keep temporary index construction inside each organ's task.
 
-## Deploy to the VPS (docker-compose snippet)
+Three consecutive observed failures open a silence. Five minutes of unresolved
+silence escalates severity. Three observed successes close it at the first closing
+success and preserve a `boundary_repair_protocol: choice=re_enter` note with its
+count and evidence window. Explicitly unobserved historical samples remain
+unknown and do not enter uptime, percentile or repair evidence. Stale samples
+become unknown after three probe intervals. An unresolved silence keeps the
+overall witness at least strained. All imported and subsequent history persists;
+the public 1–180-day window is a read shape, not a deletion policy.
 
-Add these sections to `/docker/coherence-network/docker-compose.yml` on
-the VPS next to the existing `api` and `web` services:
+## History handoff and recovery
 
-```yaml
-services:
-  pulse:
-    build: ./repo/pulse
-    restart: unless-stopped
-    environment:
-      - PULSE_API_BASE=http://api:8000
-      - PULSE_WEB_BASE=http://web:3000
-      - PULSE_DB_PATH=/data/pulse.db
-      - PULSE_INTERVAL_SECONDS=30
-      - PULSE_RETENTION_DAYS=180
-      - PULSE_CORS_ORIGINS=https://coherencycoin.com,https://www.coherencycoin.com
-    volumes:
-      - pulse-data:/data
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.pulse.rule=Host(`pulse.coherencycoin.com`)
-      - traefik.http.routers.pulse.entrypoints=websecure
-      - traefik.http.routers.pulse.tls=true
-      - traefik.http.routers.pulse.tls.certresolver=letsencrypt
-      - traefik.http.services.pulse.loadbalancer.server.port=8100
+`sqlite-import.bml` reads the legacy file format directly, including committed,
+checksum-valid WAL frames. `import-history.bml` streams the base archive into native
+pages using resumable native workers. `migrate.bml` takes file-backed configuration
+on stdin: `source`, `store_path`, and `work_path`. Run it against an immutable private
+snapshot while the old witness continues serving. At cutover, startup reads rows
+after the imported row ID and refreshes silence closures/notes from `legacy_path`.
+It then archives the original database and WAL under the native store's
+`retired-sqlite/` directory. No external SQLite runtime participates in import or service.
 
-volumes:
-  pulse-data:
-```
+Native transaction frames are flushed before indexed pages, and those pages before
+their checkpoint. Independent pages share a staged-byte publication barrier;
+dependent indexes cross a following barrier. Recovery checkpoints the next journal
+before archiving a torn predecessor, replays complete frames idempotently, and retains a torn
+tail intact. Missing or unreadable existing Recipe pages are findings, not empty
+history. `snapshot.bml` makes a consistent native snapshot through streaming file
+resources; supply a fresh `destination` outside `store_path`. Legacy recovery copies
+remain private and recoverable; they are not an active persistence path.
 
-Then on the VPS:
+The container's `fkwu.conf` gives each native task private temporary nodes
+(`FK_FIELD_OFF 1`). Durable Recipe files carry memory between tasks. Reads,
+observation waves and import ranges end their own task process, releasing temporary
+nodes rather than accumulating a second shared-field copy of the entire archive.
+The listener and cadence owner stay small; all task code still uses the fkwu JIT.
+Compound JSON is emitted as balanced spans, retaining canonical Form scalar
+escaping. Histogram counts are accumulated once; daily pages are read once per
+history request. Health reads its single atomic checkpoint without a history lock.
 
-```bash
-cd /docker/coherence-network/repo && git pull origin main
-cd /docker/coherence-network
-docker compose build --no-cache pulse
-docker compose up -d pulse
-docker compose logs -f pulse
-```
+## Focused observation and delivery
 
-One Cloudflare A record: `pulse.coherencycoin.com → 187.77.152.42`.
+Reuse existing grounding. When this application boundary changes, one
+`observe.bml` fixture observes nearest-rank history, supported windows and durable
+three-sample silence repair and crash replay on a separate native store. A native network round and
+actual HTTP responses establish the running replacement. No kernel suite or
+sibling-kernel validation belongs to this application movement.
+For a changed web boundary, `web-observe.bml` reads the complete native HTML,
+checks escaping and weighted ranks, and reports its payload and elapsed time.
+`trace.bml` replaces the retired curl trace with one native parallel wave. Complete
+bodies and headers remain private; total time and the serving runtime header are
+reported separately. Unexposed TLS stage timestamps are not fabricated.
 
-## How silences are derived
-
-A silence is not written by the scheduler — it is **derived** from raw
-samples by `pulse_app/analysis.py`. Rules:
-
-- **Open** a silence when an organ has ≥ 3 consecutive failures. The
-  silence's `started_at` is the timestamp of the first failure in the run.
-- **Escalate** a silence from `strained` to `silent` when it has been
-  ongoing for ≥ 5 minutes.
-- **Close** a silence when ≥ 3 consecutive successes return. The silence's
-  `ended_at` is the timestamp of the first closing success.
-
-Thresholds live in one place (`pulse_app/analysis.py`) so they are easy
-to tune.
-
-## Boundary repair proof
-
-A silence is the pulse witness's stop receipt. The reusable rule now lives
-in Form as `form/form/form-stdlib/sovereign-boundary-protocol.fk`: boundary
-evidence chooses `allow`, `stop`, `witness`, or `re_enter`, and the choice
-is carried by a traceable `CHOICE-RECEIPT`. Pulse maps open silence evidence
-into that generic protocol through
-`form/form/form-stdlib/pulse-boundary-repair.fk`.
-
-The deployed pulse service is still the Python carrier. Re-entry is not a
-hidden state flip: when the witness has at least three consecutive breathing
-samples for the organ, it closes the silence with a `boundary_repair_protocol`
-note in the existing `silences.note` field. The note records the `re_enter`
-choice, the evidence count, and the sample window that supported repair.
-
-`GET /pulse/now` reconciles from durable samples before it reads the
-open-silence list. This keeps the current snapshot coherent: if repair
-evidence is sufficient, stale open silences close before the response; if
-repair evidence is incomplete, the silence remains visible and the
-overall witness status stays at least `strained`.
-
-Form proof:
-
-```bash
-cd ../form
-./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk
-./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk
-```
+Before replacing a running witness, retain its private consistent snapshot. Observe
+the replacement against that archive, then land and deploy with the original
+volume. For a legacy SQLite volume, follow the one-time handoff above. Verify
+service identity, current samples, history and silence receipts.
+An API restart is observable independently; whole-host loss still calls for a
+separately hosted witness rather than a claim this process cannot establish.

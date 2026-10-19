@@ -1,0 +1,10 @@
+{
+  "store_path": "/data/form-persistence",
+  "legacy_path": "/data/pulse.db",
+  "work_path": "/data/native-io",
+  "port": 8100,
+  "interval_seconds": 30,
+  "api_base": "https://api.coherencycoin.com",
+  "web_base": "https://coherencycoin.com",
+  "cors_origins": ["https://coherencycoin.com", "https://www.coherencycoin.com"]
+}

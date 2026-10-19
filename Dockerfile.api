@@ -91,7 +91,9 @@ COPY --from=kernel-builder /build/form-cli.sym /app/form/form-cli.sym
 COPY --from=kernel-builder /build/form-cli.native.attestation /app/form/form-cli.native.attestation
 COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id
 COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
-COPY form/runtime /app/form/runtime
+# The image's stdlib is /app/form/form-stdlib, so its source home is /app:
+# source-compiler resolves runtime/fkwu-optable.h beside that form/ directory.
+COPY form/runtime /app/runtime
 COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form-stdlib/
 RUN mkdir -p /app/bin \
  && ln /app/form/form-cli /app/bin/form-cli \

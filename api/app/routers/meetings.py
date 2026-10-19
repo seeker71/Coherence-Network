@@ -101,7 +101,7 @@ async def capture_meeting_resonance(body: MeetingCaptureIn) -> dict:
     status_code=201,
     summary="Record a privacy-light anonymous meeting trace",
 )
-async def record_anonymous_meeting_trace(body: AnonymousMeetingTraceIn) -> dict:
+def record_anonymous_meeting_trace(body: AnonymousMeetingTraceIn) -> dict:
     try:
         return anonymous_meeting_trace_service.record_anonymous_meeting_trace(body.model_dump())
     except ValueError as exc:
@@ -112,7 +112,7 @@ async def record_anonymous_meeting_trace(body: AnonymousMeetingTraceIn) -> dict:
     "/meetings/anonymous-traces",
     summary="List recent privacy-light anonymous meeting traces",
 )
-async def list_anonymous_meeting_traces(
+def list_anonymous_meeting_traces(
     source_point_id: str | None = Query(default=None, min_length=6, max_length=40),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> dict:

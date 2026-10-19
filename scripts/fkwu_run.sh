@@ -2,8 +2,9 @@
 # fkwu_run.sh — enter the c-bootstrapped fkwu runtime.
 #
 # Production/source lane: `--src` compiles the pinned c-bootstrap when needed,
-# prepends the pinned Form stdlib core, and executes source directly. No sibling
-# kernel and no flattening enters this lane.
+# prepends the pinned Form stdlib core, and enters fkwu's Form/BML source door.
+# The native entry owns grammar discovery and JIT execution; no sibling kernel
+# or separate flattening path enters this lane.
 #
 # Usage:
 #   fkwu_run.sh --src <module.fk>...
@@ -15,8 +16,8 @@ FORM_SOURCE_ROOT="$ROOT/form"
 if [ "${1:-}" = "--src" ]; then
     shift
     [ "$#" -ge 1 ] || { echo "fkwu_run: --src needs at least one .fk source" >&2; exit 2; }
-    runtime_source="$ROOT/form/runtime/fkwu-uni.c"
-    runtime_header="$ROOT/form/runtime/fkwu-optable.h"
+    runtime_source="$FORM_SOURCE_ROOT/../runtime/fkwu-uni.c"
+    runtime_header="$FORM_SOURCE_ROOT/../runtime/fkwu-optable.h"
     [ -f "$runtime_source" ] && [ -f "$runtime_header" ] || {
         echo "fkwu_run: pinned c-bootstrap source is absent from form/runtime" >&2
         exit 3
@@ -66,7 +67,7 @@ if [ "${1:-}" = "--src" ]; then
         printf '\n' >> "$source_file"
         sed 's/\r$//' "$recipe" >> "$source_file"
     done
-    "$FKWU" --src "$source_file"
+    "$FKWU" "$source_file"
     exit "$?"
 fi
 

@@ -1,0 +1,24 @@
+// Consistent native store snapshot. Files stream through the existing native
+// resource while the Form transaction owner holds the publication lock.
+// stdin: {store_path,destination}; destination is fresh and outside the source.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/native-store.bml
+section [form.bml] {
+ class WitnessSnapshot {
+  def wsn-copy(source,destination) {
+   let made = hch-mkdirs(destination);
+   foldl((n,name) => name == "lock" ? 0 : {
+    let from = source ++ "/" ++ name; let to = destination ++ "/" ++ name;
+    host_path_is_dir(from) == 1 ? wsn-copy(from,to) : host_file_copy(from,to) != file_size(from) ? form_error("native snapshot copy failed: " ++ from) : 0;
+   },0,host_dir_list(source) ?? []);
+  }
+  def wsn-save(cfg) {
+   let source = nw-root(cfg); let dest = wr-text(cfg,"destination");
+   len(dest) == 0 || dest == source || str_find(dest,source ++ "/",0) == 0 || host_path_exists(dest) == 1 ? form_error("native snapshot needs a fresh destination outside its source") : nw-locked(cfg,meta => {
+    let copied = wsn-copy(source,dest);
+    let stable = host_sync();
+    json-emit(fp-object([["format","form-native-snapshot-v1"],["samples",fp-get(meta,"samples_total",0)],["last_silence_id",fp-get(meta,"max_silence",0)],["destination",dest]]));
+   });
+  }
+ }
+ wsn-save(wr-overlay(wr-config(),parse-json("native-pulse-snapshot",stdin-text())));
+}
