@@ -77,9 +77,11 @@ def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> No
 
 
 def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
+    # the image's layout: the source home is the root (/app), its stdlib /app/form/form-stdlib and
+    # the runtime source beside form/ at /app/runtime — fkwu_run.sh reads it as <source root>/../runtime
     root = tmp_path / "image"
     scripts = root / "scripts"
-    runtime = root / "form" / "runtime"
+    runtime = root / "runtime"
     stdlib = root / "form" / "form-stdlib"
     scripts.mkdir(parents=True)
     runtime.mkdir(parents=True)
@@ -92,10 +94,12 @@ def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -
     offered = root / "offered.fk"
     offered.write_text("offered-recipe-marker\n", encoding="utf-8")
     fkwu = root / "form" / "fkwu"
+    # fkwu_run.sh folds the stdlib core and the offered recipes into one program file and
+    # hands the kernel that single path
     fkwu.write_text(
         "#!/usr/bin/env bash\n"
-        "grep -q flat-core-marker \"$2\" || exit 4\n"
-        "grep -q offered-recipe-marker \"$2\" || exit 5\n"
+        "grep -q flat-core-marker \"$1\" || exit 4\n"
+        "grep -q offered-recipe-marker \"$1\" || exit 5\n"
         "printf '42\\n'\n",
         encoding="utf-8",
     )
@@ -177,30 +181,25 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
     assert "--forwarded-allow-ips=*" not in dockerfile
 
 
-def test_deploy_grounding_runs_in_resource_bounded_sidecars() -> None:
+def test_release_runs_no_substrate_maintenance_and_form_owns_changed_source_work() -> None:
+    # since #4088 the release script carries no ingest or RAG heal of its own (the shell gate that
+    # re-ingested on every rollout is retired); a changed source is maintained on request by the
+    # Form owner, which runs the projection and the heal inside the serving container as explicit steps
     deploy = (REPO_ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(
         encoding="utf-8"
     )
-    maintenance = (
-        REPO_ROOT / "deploy" / "hostinger" / "docker-compose.maintenance.yml"
+    owner = (
+        REPO_ROOT / "api" / "app" / "form_recipes" / "source_maintenance.bml"
     ).read_text(encoding="utf-8")
-    sidecar = '-f "$MAINTENANCE_COMPOSE_FILE" run'
 
-    assert deploy.count(sidecar) >= 4
-    assert deploy.count("--rm --no-deps -T --entrypoint sh api -lc") >= 4
+    assert "run_substrate_ingest" not in deploy
+    assert "coh_substrate.py bootstrap" not in deploy
+    assert "form_cli_rag.py heal" not in deploy
     assert "--cpus" not in deploy
     assert "--memory" not in deploy
-    assert "cpus: 1.0" in maintenance
-    assert "mem_limit: 2g" in maintenance
-    assert 'traefik.enable: "false"' in maintenance
-    assert "python3 scripts/coh_substrate.py bootstrap" in deploy
-    assert "python3 scripts/form_cli_rag.py heal" in deploy
-    lines = deploy.splitlines()
-    for index, line in enumerate(lines):
-        if "python3 scripts/form_cli_rag.py heal" not in line:
-            continue
-        launch_window = "\n".join(lines[max(0, index - 30) : index + 1])
-        assert sidecar in launch_window
+    assert "source_maintenance.bml" in deploy
+    assert '"scripts/coh_substrate.py","ingest-paths"' in owner
+    assert '"scripts/form_cli_rag.py","heal"' in owner
 
 
 def test_eager_startup_cache_warm_is_disabled_by_file_configuration() -> None:
