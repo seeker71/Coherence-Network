@@ -135,3 +135,10 @@ form/form/form-samples/agent-turns/corpus.jsonl
 .nanite/
 experiments/rune-galdr/.ecapa-model/
 .fkwu-*
+
+# fkwu keeps compile caches beside each source it runs; regenerable, git forgets them (mirrors form/.gitignore)
+*.fkb
+*.sym
+*.lowfk
+*.fkb.w*
+*.sym.w*
