@@ -16,25 +16,29 @@ section [form.bml] {
   }
   def po-fixture(cfg, organs) {
    let started = ws-start(cfg);
-   let failed = wr-sql(cfg,"fixture-failures","INSERT INTO samples SELECT strftime('%Y-%m-%dT%H:%M:%SZ','now','-'||n||' seconds'),'api',0,100,'fixture transport failure' FROM (SELECT 8 n UNION ALL SELECT 7 UNION ALL SELECT 6);" ++ ws-reconcile(organs));
-   let opened = wr-json-sql(cfg,"fixture-open","SELECT json_object('count',count(*)) FROM silences WHERE ended_at IS NULL;");
-   let restored = wr-sql(cfg,"fixture-successes","INSERT INTO samples SELECT strftime('%Y-%m-%dT%H:%M:%SZ','now','-'||n||' seconds'),'api',1,ms,NULL FROM (SELECT 3 n,10 ms UNION ALL SELECT 2,20 UNION ALL SELECT 1,30);" ++ ws-reconcile(organs));
-   let history = wr-json-sql(cfg,"fixture-history",ws-history(organs,7));
-   let closed = wr-json-sql(cfg,"fixture-close",ws-silences(organs,7));
+   let now = now_unix_ms();
+   let fail = ws-record(cfg,map(i => [fp-stamp(now - (8-i)*1000),"api",0,100,"fixture transport failure"],range(0,3)),organs);
+   let opened = len(fp-get(nw-meta(cfg),"open",[]));
+   let restored = ws-record(cfg,map(i => [fp-stamp(now - (3-i)*1000),"api",1,(i+1)*10,nothing()],range(0,3)),organs);
+   let history = ws-history(cfg,nw-meta(cfg),organs,7);
+   let silences = ws-silences(cfg,nw-meta(cfg),organs,7);
    let first = wr-array(history,"organs")[0];
-   let bars = wr-array(first,"daily");
-   let windows = foldl((ok, days) => { let read = wr-json-sql(cfg,"fixture-window-" ++ days.str(),ws-history(organs,days)); ok && len(wr-array(wr-array(read,"organs")[0],"daily")) == days; },true,[1,30,90,180]);
-   let summary = wr-json-sql(cfg,"fixture-summary","SELECT json_object('days',(SELECT sum(samples) FROM witness_days),'latencies',(SELECT sum(n) FROM witness_latencies),'raw',(SELECT count(*) FROM samples));");
-   let silence = wr-array(closed,"silences")[0];
-   let ok = wr-number(opened,"count") == 1 && len(wr-array(closed,"silences")) == 1 && json-emit(json-object-get(silence,"ended_at")) != "null" && str_find(wr-text(silence,"note"),"closed after 3 consecutive",0) >= 0 && wr-number(first,"latency_p50_ms") == 20 && wr-number(first,"latency_p95_ms") == 30 && len(bars) == 7 && wr-number(summary,"days") == wr-number(summary,"raw") && windows;
-   ok ? "{\"fixture\":\"observed\",\"nearest_rank\":[20,30],\"silence\":\"three failures open; three successes close with receipt\",\"windows\":[1,7,30,90,180]}" : form_error("pulse application fixture did not match its contract");
+   let receipt = wr-array(silences,"silences")[0];
+   let windows = all?(days => len(wr-array(wr-array(ws-history(cfg,nw-meta(cfg),organs,days),"organs")[0],"daily")) == days,[1,30,90,180]);
+   let before = nw-meta(cfg);
+   let complete = nw-commit(cfg,before,[[7,fp-stamp(now),"api",1,40,nothing()]],[]);
+   // A durable journal and pages whose checkpoint did not survive.
+   let checkpoint = fp-write(nw-path(cfg,"state.fkb"),before);
+   let log = nw-log(cfg,fp-get(complete,"journal",0));
+   let torn = host_pwrite(log,file_size(log),"000000000100 partial");
+   let recovered = nw-recover(cfg); let again = nw-recover(cfg);
+   let raw = nw-raw-day(cfg,fp-day(now),0);
+   let recovery = fp-get(recovered,"samples_total",0) == 7 && fp-get(again,"samples_total",0) == 7 && len(raw) == 7 && nw-stat(cfg,fp-day(now),"api")[1] == 7;
+   let ok = opened == 1 && len(fp-get(nw-meta(cfg),"open",[])) == 0 && str_find(wr-text(receipt,"note"),"closed after 3 consecutive",0)>=0 && wr-number(first,"latency_p50_ms") == 20 && wr-number(first,"latency_p95_ms") == 30 && windows && recovery;
+   ok ? "{\"fixture\":\"observed\",\"persistence\":\"form-recipes\",\"nearest_rank\":[20,30],\"silence\":\"durable repair receipt\",\"recovery\":\"idempotent; torn tail retained\",\"windows\":[1,7,30,90,180]}" : form_error("native persistence fixture did not match its contract");
   }
  }
- let cfg = wr-overlay(wr-config(),parse-json("pulse-observation", stdin-text()));
+ let cfg = wr-overlay(wr-config(),parse-json("pulse-observation",stdin-text()));
  let organs = ws-organs();
- wr-text(cfg,"mode") == "boundary" ? po-boundary(cfg) : wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : wr-text(cfg,"mode") == "round" ? {
-  let started = ws-start(cfg);
-  let sampled = wp-round(cfg,organs);
-  wr-sql(cfg,"observe",ws-health() ++ ws-now(cfg,organs));
- } : wr-sql(cfg,"observe",ws-health() ++ ws-now(cfg,organs));
+ wr-text(cfg,"mode") == "boundary" ? po-boundary(cfg) : wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : nw-locked(cfg,meta => json-emit(ws-now(cfg,meta,organs)));
 }

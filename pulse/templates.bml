@@ -1,4 +1,4 @@
-// Reusable resource templates: native Form HTTP, one SQLite resource boundary.
+// Reusable native HTTP and file-backed configuration templates.
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/host-child.bml
 import form-stdlib/http-client.bml;
 section [form.bml] {
@@ -10,19 +10,8 @@ section [form.bml] {
   def wr-array(doc, key) = node_children(json-object-get(doc, key));
   def wr-overlay(base, overrides) = json-node-object(append(filter(pair => !json-object-has?(overrides,json-pair-key(pair)),node_children(base)),node_children(overrides)));
   def wr-config() = parse-json("pulse-config", read_file("../pulse/config.local.json") ?? read_file("../pulse/config.json"));
-  def wr-quote(text) = "'" ++ hch-join(split-on(text, "'"), "''") ++ "'";
   def wr-path(doc, path) = nil?(path) ? doc : wr-path(json-object-get(doc, json-string-value(path[0])), path[1:]);
   def wr-io(cfg, name) = wr-text(cfg, "work_path") ++ "/" ++ host_pid().str() ++ "-" ++ name;
-  def wr-release(cfg, name) {
-   let dir = wr-io(cfg, name);
-   let removed = foldl((n, ext) => host_path_remove(dir ++ "/sqlite" ++ ext), 0, [".in",".out",".err",".exit",".prev.in",".prev.out",".prev.err",".prev.exit"]);
-   host_dir_rmdir(dir);
-  }
-  def wr-sql(cfg, name, sql) {
-   let run = hch-run-in(wr-io(cfg, name), "sqlite", ["sqlite3", "-batch", "-bail", "-cmd", ".timeout 5000", wr-text(cfg, "db_path")], sql, nothing());
-   (Comparable) run[0] == 0 ? trim(run[1]) : form_error("pulse SQLite " ++ name ++ ": " ++ run[1] ++ run[2]);
-  }
-  def wr-json-sql(cfg, name, sql) = parse-json(name, wr-sql(cfg, name, sql));
   def wr-rules(doc, text, rules) = filter(rule => !wr-rule(doc, text, rule), rules);
   def wr-rule(doc, text, rule) {
    let value = wr-path(doc, wr-array(rule, "path"));

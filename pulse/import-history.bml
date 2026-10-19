@@ -1,0 +1,166 @@
+// Lossless native import into Recipe pages. No SQLite executable is invoked.
+import ../pulse/native-store.bml;
+import ../pulse/sqlite-import.bml;
+section [form.bml] {
+ class WitnessHistoryImport {
+  def whi-sample(row) = cons(row[0],row[1]);
+  def whi-flush(cfg,box) {
+   let rows = reverse(record_get(box,"buffer"));
+   nil?(rows) ? 0 : {
+    let seq = record_get(box,"seq")+1;
+    let meta = record_get(box,"meta");
+    let days = nw-unique(map(row => substring(row[1],0,10),rows));
+    let raw = foldl((n,day) => nw-raw(cfg,day,seq,filter(row => substring(row[1],0,10) == day,rows)),0,days);
+    let tails = nw-tails(meta,rows);
+    let next = foldl((m,p) => fp-set(m,p[0],p[1]),meta,[["seq",seq],["samples_total",fp-get(meta,"samples_total",0)+len(rows)],["max_rowid",rows[len(rows) - 1][0]],["tails",tails],["days",sort-strs(nw-unique(append(fp-get(meta,"days",[]),days)))]]);
+    let saved = record_set(box,"meta",next);
+    let advanced = record_set(box,"seq",seq);
+    let cleared = record_set(box,"buffer",[]);
+    let counted = record_set(box,"buffer_n",0);
+    let observed = record_set(box,"observed",record_get(box,"observed")+len(filter(row => nw-observed(row),rows)));
+    seq%100 == 0 ? print_str("native import samples=" ++ fp-get(next,"samples_total",0).str() ++ "\n") : 0;
+   };
+  }
+  def whi-samples(cfg,pager,meta,after,through,observed) {
+   let box = record_new(0,"meta",meta,"buffer",[],"buffer_n",0,"seq",fp-get(meta,"seq",0),"observed",observed);
+   let walk = sfi-range(pager,sfi-root(pager,"samples"),after,through,batch => {
+    let rows = map(row => whi-sample(row),batch);
+    let put = record_set(box,"buffer",append(reverse(rows),record_get(box,"buffer")));
+    let count = record_set(box,"buffer_n",record_get(box,"buffer_n")+len(rows));
+    record_get(box,"buffer_n") >= 4096 ? whi-flush(cfg,box) : 0;
+   });
+   let last = whi-flush(cfg,box);
+   [record_get(box,"meta"),record_get(box,"observed")];
+  }
+  // Worker lifetimes partition native pool ownership, not the retained history.
+  // Every range publishes a resumable checkpoint before its process releases.
+  def whi-part(cfg,path,after,through) {
+   let prior = fp-read(nw-path(cfg,"import-progress.fkb"),[nw-blank(),0]);
+   let part = whi-samples(cfg,sfi-open(path),prior[0],after,through,prior[1]);
+   let kept = fp-write(nw-path(cfg,"import-progress.fkb"),part);
+   let durable = host_sync();
+   json-emit(fp-object([["samples",fp-get(part[0],"samples_total",0)],["through",through]]));
+  }
+  def whi-parts(cfg,path,after,last) = after >= last ? fp-read(nw-path(cfg,"import-progress.fkb"),[nw-blank(),0]) : {
+   let through = after+65536 < last ? after+65536 : last;
+   let doc = wr-overlay(cfg,fp-object([["mode","part"],["source",path],["after",after],["through",through]]));
+   let result = fp-task(cfg,"../pulse/migrate.bml",doc);
+   let shown = print_str(result ++ "\n");
+   whi-parts(cfg,path,through,last);
+  };
+  def whi-counts(pager) {
+   let counts = record_new(0);
+   let walk = sfi-walk(pager,sfi-root(pager,"witness_days"),batch => foldl((n,row) => { let v = row[1]; record_set(counts,v[0] ++ "/" ++ v[1],[v[2],v[3]]); },0,batch));
+   counts;
+  }
+  def whi-stat-publish(cfg,counts,box) {
+   let key = record_get(box,"key");
+   len(key) == 0 ? 0 : {
+    let parts = split-on(key,"/");
+    let count = record_get(counts,key);
+    let made = nw-dir(cfg,"days/" ++ parts[1]);
+    fp-write(nw-stat-path(cfg,parts[1],parts[0]),[0,count[0],count[1],reverse(record_get(box,"hist"))]);
+   };
+  }
+  def whi-statistics(cfg,pager,organ) {
+   let counts = whi-counts(pager);
+   let box = record_new(0,"key","","hist",[],"entries",0,"latencies",0);
+   let walk = sfi-group(pager,sfi-root(pager,"witness_latencies"),organ,batch => foldl((n,row) => {
+    let v = row[1]; let key = v[0] ++ "/" ++ v[1];
+    let finish = key == record_get(box,"key") ? 0 : whi-stat-publish(cfg,counts,box);
+    let reset = key == record_get(box,"key") ? 0 : record_set(box,"hist",[]);
+    let named = record_set(box,"key",key);
+    let entries = record_set(box,"entries",record_get(box,"entries")+1);
+    let latencies = record_set(box,"latencies",record_get(box,"latencies")+v[3]);
+    record_set(box,"hist",cons([v[2],v[3]],record_get(box,"hist")));
+   },0,batch));
+   let final = whi-stat-publish(cfg,counts,box);
+   // Days with observations but no successful latency still have their counts.
+   let keys = filter(key => split-on(key,"/")[0] == organ,record_keys(counts));
+   let missing = foldl((n,key) => { let parts = split-on(key,"/"); let made = nw-dir(cfg,"days/" ++ parts[1]); let count = record_get(counts,key); file_size(nw-stat-path(cfg,parts[1],parts[0])) >= 0 ? 0 : fp-write(nw-stat-path(cfg,parts[1],parts[0]),[0,count[0],count[1],[]]); },0,keys);
+   [foldl((n,key) => n+record_get(counts,key)[0],0,keys),record_get(box,"entries"),record_get(box,"latencies")];
+  }
+  def whi-stat-parts(cfg,path,pager) {
+   let counts = whi-counts(pager);
+   let names = nw-unique(map(key => split-on(key,"/")[0],record_keys(counts)));
+   foldl((totals,organ) => {
+    let doc = wr-overlay(cfg,fp-object([["mode","statistics"],["source",path],["organ",organ]]));
+    let result = fp-task(cfg,"../pulse/migrate.bml",doc);
+    let shown = print_str("native histogram " ++ organ ++ " " ++ result ++ "\n");
+    let values = map(v => node_value(v),node_children(parse-json("native-statistics",result)));
+    [totals[0]+values[0],totals[1]+values[1],totals[2]+values[2]];
+   },[0,0,0],names);
+  }
+  def whi-silences(cfg,pager,meta) {
+   let box = record_new(0,"rows",[],"meta",meta,"count",0,"notes",0);
+   let walk = sfi-walk(pager,sfi-root(pager,"silences"),batch => {
+    let changes = map(row => cons(row[0],row[1][1:]),batch);
+    let m = record_get(box,"meta");
+    let buckets = nw-buckets(cfg,m,fp-get(m,"seq",0)+1,changes);
+    let ids = map(row => row[0],changes);
+    let open = filter(row => nothing?(row[3]),append(filter(row => !any?(id => id == row[0],ids),fp-get(m,"open",[])),changes));
+    let next = fp-set(fp-set(fp-set(fp-set(m,"seq",fp-get(m,"seq",0)+1),"buckets",buckets),"open",open),"max_silence",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(m,"max_silence",0),changes));
+    let kept = record_set(box,"meta",next);
+    let counted = record_set(box,"count",record_get(box,"count")+len(changes));
+    record_set(box,"notes",record_get(box,"notes")+len(filter(row => !nothing?(row[5]),changes)));
+   });
+   [record_get(box,"meta"),record_get(box,"count"),record_get(box,"notes")];
+  }
+  def whi-import(cfg,path) {
+   let pager = sfi-open(path);
+   let made = hch-mkdirs(nw-root(cfg));
+   let existing = file_size(nw-path(cfg,"state.fkb")) >= 0;
+   existing ? form_error("native history import keeps an existing store intact; use a fresh destination") : {
+    let progress = fp-read(nw-path(cfg,"import-progress.fkb"),[nw-blank(),0]);
+    let root = sfi-root(pager,"samples");
+    let first = fp-get(progress[0],"max_rowid",0)>0 ? fp-get(progress[0],"max_rowid",0) : sfi-edge(pager,root,false) - 1;
+    let samples = whi-parts(cfg,path,first,sfi-edge(pager,root,true));
+    let observed = whi-stat-parts(cfg,path,pager);
+    observed[0] != samples[1] ? form_error("native history import: observed sample counts differ from exact summaries") : {
+     let silences = whi-silences(cfg,pager,samples[0]);
+     let meta = silences[0];
+     let stable = host_sync();
+     let published = fp-write(nw-path(cfg,"state.fkb"),meta);
+     let receipt = [["format","form-native-history-import-v1"],["samples",fp-get(meta,"samples_total",0)],["max_rowid",fp-get(meta,"max_rowid",0)],["observed",observed[0]],["histogram_entries",observed[1]],["latency_samples",observed[2]],["silences",silences[1]],["last_silence_id",fp-get(meta,"max_silence",0)],["repair_notes",silences[2]]];
+     let kept = fp-write(nw-path(cfg,"import-receipt.fkb"),receipt);
+     let durable = host_sync();
+     receipt;
+    };
+   };
+  }
+  def whi-resume(cfg,path) {
+   let pager = sfi-open(path);
+   let box = record_new(0,"meta",nw-recover(cfg));
+   let after = fp-get(record_get(box,"meta"),"max_rowid",0);
+   let copied = sfi-after(pager,sfi-root(pager,"samples"),after,batch => {
+    nil?(batch) ? 0 : record_set(box,"meta",nw-commit(cfg,record_get(box,"meta"),map(row => whi-sample(row),batch),[]));
+   });
+   // A silence can have closed since the base snapshot; refresh its original ID
+   // and note, including updates whose sample rows were already in the base.
+   let silences = whi-silences(cfg,pager,record_get(box,"meta"));
+   let stable = host_sync();
+   let kept = fp-write(nw-path(cfg,"state.fkb"),silences[0]);
+   let prior = fp-read(nw-path(cfg,"import-receipt.fkb"),[]);
+   let counts = whi-counts(pager);
+   let observed = foldl((n,key) => n+record_get(counts,key)[0],0,record_keys(counts));
+   let receipt = foldl((r,p) => fp-set(r,p[0],p[1]),prior,[["samples",fp-get(silences[0],"samples_total",0)],["max_rowid",fp-get(silences[0],"max_rowid",0)],["observed",observed],["silences",silences[1]],["last_silence_id",fp-get(silences[0],"max_silence",0)],["repair_notes",silences[2]],["cutover_at",fp-stamp(now_unix_ms())]]);
+   let published = fp-write(nw-path(cfg,"import-receipt.fkb"),receipt);
+   let durable = host_sync();
+   receipt;
+  }
+  def whi-retire(cfg,path) {
+   let dir = nw-path(cfg,"retired-sqlite"); let made = hch-mkdirs(dir);
+   let moved = foldl((n,suffix) => file_size(path ++ suffix) < 0 ? 0 : host_path_rename(path ++ suffix,dir ++ "/pulse.db" ++ suffix) != 0 ? form_error("native history kept; legacy archive rename failed: " ++ path ++ suffix) : 0,0,["","-wal","-shm"]);
+   host_sync();
+  }
+  def whi-start(cfg) {
+   let path = wr-text(cfg,"legacy_path");
+   let legacy = len(path)>0 && file_size(path)>=0;
+   let dir = hch-mkdirs(nw-root(cfg));
+   let imported = file_size(nw-path(cfg,"state.fkb")) < 0 ? legacy ? whi-import(cfg,path) : nw-create(cfg) : 0;
+   let final = legacy ? whi-resume(cfg,path) : 0;
+   let retired = legacy ? whi-retire(cfg,path) : 0;
+   nw-recover(cfg);
+  }
+ }
+}

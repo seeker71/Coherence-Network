@@ -61,8 +61,8 @@ issue, follow that finding at its source with the smallest relevant observation.
 Pulse's schema/audit proof registrations have retired for the same reason:
 bounded health does not observe those claims. Their historical retirement notes
 remain in the silence ledger; the completed two-record retirement action is
-released. Native `pulse/snapshot.bml` supplies reusable private online backup and
-snapshot-backed native rollout care without rewriting historical receipts.
+released. Native `pulse/snapshot.bml` supplies consistent Form-store snapshots
+without external database tools or rewriting historical receipts.
 The compatibility health carrier reuses its native observation while artifact
 bytes hold. A fifteen-second challenge-expiry timer has retired; changed carrier
 bytes or explicit care give the observation work, not elapsed time alone.
@@ -85,8 +85,14 @@ original `pulse_data:/data` volume. File-backed `pulse/config.json` owns its
 application settings; native Compose care retires PULSE_* environment values and
 supplies the fkwu shared-memory resource. Image assembly realizes application BML
 once on native tmpfs, and requests reuse those images. Pulse's socket listener,
-TLS probes, cadence and query/repair templates are BML on the pinned fkwu; SQLite
-is the single durable external resource, crossed once per round or database read.
+TLS probes, cadence, persistence and query/repair templates are BML on the pinned
+fkwu. Native Recipe pages and checksummed transaction logs replace the SQLite
+engine. For a legacy volume, prepare its immutable base snapshot with
+`pulse/migrate.bml` while the old witness stays live. Startup imports the final
+row-ID delta and refreshed silence receipts, then archives the legacy files in
+the same volume. Keep the volume and private recovery snapshot intact. All history
+persists; public read windows do not delete records. Follow an actual persistence
+finding with its smallest fixture or archive-backed observation, not kernel suites.
 
 Ordinary runtime telemetry invalidates its own event view, not provider facts.
 The retired cross-service flush took the provider-refresh lock on the API event

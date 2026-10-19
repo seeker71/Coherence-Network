@@ -1,0 +1,10 @@
+// One coherent read owns its native temporary nodes through its response.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/store.bml
+section [form.bml] {
+ let cfg = wr-overlay(wr-config(),parse-json("pulse-read",stdin-text()));
+ let organs = ws-organs(); let path = wr-text(cfg,"path"); let days = wr-number(cfg,"days");
+ nw-locked(cfg,meta => {
+  let current = path == "/pulse/now" ? ws-care(cfg,meta,organs) : meta;
+  json-emit(path == "/pulse/health" ? ws-health(current) : path == "/pulse/now" ? ws-now(cfg,current,organs) : path == "/pulse/history" ? ws-history(cfg,current,organs,days) : ws-silences(cfg,current,organs,days));
+ });
+}

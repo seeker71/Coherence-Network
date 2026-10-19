@@ -1,0 +1,7 @@
+// One observation wave owns its temporary native pool, then publishes its effect.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/probe.bml
+section [form.bml] {
+ let cfg = wr-overlay(wr-config(),parse-json("pulse-round",stdin-text()));
+ let current = wp-round(cfg,ws-organs());
+ json-emit(ws-health(current));
+}

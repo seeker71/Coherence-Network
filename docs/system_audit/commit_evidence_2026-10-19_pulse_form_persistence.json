@@ -1,0 +1,24 @@
+{
+ "date":"2026-10-19",
+ "thread_branch":"codex/pulse-native-persistence-20261019",
+ "commit_scope":"Lift the final pulse SQLite boundary into reusable Form/BML persistence and task-scoped native ownership; preserve all raw rows and silence receipts.",
+ "change_intent":"runtime_feature",
+ "idea_ids":["pipeline-reliability"],
+ "spec_ids":["pulse-silence-boundary-repair"],
+ "task_ids":["pulse-native-persistence"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["native persistence and history handoff"]}],
+ "agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "evidence_refs":[
+  "Native form-cli grounding was insufficient for this persistence movement. Source inspection and measured native execution supplied the contracts; reasoning and prose remain rented OpenAI frontier output, exact model and token counters unavailable.",
+  "The private consistent production snapshot holds 6339698 samples, 37002 original silence IDs and 36486 non-null repair notes. The old engine supplied this one-time online handoff before its runtime path was retired. Native BML reads the legacy page/record/WAL formats directly; no SQLite executable or host codec participates in the replacement.",
+  "Focused native application fixture observed exact nearest-rank [20,30], 1/7/30/90/180-day windows, three failures opening and three successes closing with the durable receipt. A lost checkpoint plus torn log tail replays idempotently: seven raw rows and seven observations remain seven on repeated recovery, with the torn bytes retained.",
+  "The native import fixture preserved typed snapshots, source row IDs, exact summary counts, original silence ID 7 and its note. A subsequent row and updated historical closure were imported at cutover; restart stayed idempotent and archived the legacy file. The fixture caught an overflowing row-ID bound at its source. A committed WAL fixture observed checksum validation, signed integers, IEEE floats and overflow payloads.",
+  "Actual Docker assembly exposed missing native Form source dependencies. The image now includes their source closure. The first archive import stopped with SIGBUS at resident_bytes=1025028096: completed workers accumulated temporary Recipe nodes in the shared field. Its durable import checkpoint remained intact. Existing file-backed FK_FIELD_OFF gives application tasks private native temporary ownership; the resumed actual import measured about 70 MiB rather than filling the 1 GiB mount. No shared field was reset, kernel source changed, gitlink moved, or kernel suite run.",
+  "Native task scopes carry import ranges, ordered histogram groups, coherent reads and observation waves through the same fkwu JIT. Typed Recipe pages retain raw records and exact summaries. Checksummed journals flush before pages and checkpoints; replay is idempotent. Completed tasks release their temporary nodes. No application history retention deletion or external SQL path remains.",
+  "Container assembly realizes only application entry images on native tmpfs. Focused source observations and git diff --check passed. Full archive import, immutable rollout and public observations remain delivery work before landing; no broad validation or sibling-kernel checks are requested."
+ ],
+ "local_validation":{"status":"pass","summary":"Focused native application, codec, WAL, handoff and recovery observations; unchanged kernel."},
+ "ci_validation":{"status":"pending","summary":"Read existing delivery care on the pushed head."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Complete the running native archive import, archive-backed HTTP observation, landing and rollout."}
+}
