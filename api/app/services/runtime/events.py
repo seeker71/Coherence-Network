@@ -40,15 +40,6 @@ def _invalidate_runtime_events_cache() -> None:
     _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
     _RUNTIME_EVENTS_CACHE["rows"] = []
 
-    try:
-        from app.services import automation_usage_service
-
-        automation_usage_service.invalidate_cache()
-    except (ImportError, Exception):
-        pass
-
-    _RUNTIME_EVENTS_CACHE["rows"] = []
-
 
 def list_events(
     limit: int = 100,
