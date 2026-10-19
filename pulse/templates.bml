@@ -59,7 +59,6 @@ section [form.bml] {
    wr-http-await(pending, receive);
   };
   def wr-http-wave(cfg, requests, receive) = wr-http-await(map(request => wr-http-begin(cfg, request), requests), receive);
-  def wr-http-head(conn, acc) = str_find(acc, "\r\n\r\n", 0) >= 0 ? acc : { let chunk = socket_recv(conn, 65536); nothing?(chunk) || len(chunk) == 0 ? acc : wr-http-head(conn, acc ++ chunk); };
   def wr-header(head, key) {
    let found = filter(line => str_find(wr-lower(line), key ++ ":", 0) == 0, head);
    nil?(found) ? "" : trim(substring(found[0], len(key) + 1, len(found[0])));
@@ -72,14 +71,6 @@ section [form.bml] {
    nil?(found) ? fallback : { let pair = reverse(found)[0]; let at = str_find(pair,"=",0); at<0 ? "" : wr-decode(substring(pair,at+1,len(pair)),0,""); };
   }
   def wr-send(conn, text, at) = at >= len(text) ? 0 : { let sent = socket_send(conn, substring(text, at, len(text))); sent <= 0 ? -1 : wr-send(conn, text, at + sent); };
-  def wr-serve(listener, handle) {
-   let conn = socket_accept(listener);
-   let raw = conn < 0 ? "" : wr-http-head(conn, "");
-   let response = len(raw) == 0 ? "" : handle(raw);
-   let sent = len(response) == 0 ? 0 : wr-send(conn, response, 0);
-   let closed = conn < 0 ? 0 : socket_close(conn);
-   wr-serve(listener, handle);
-  }
   def wr-hex(text, at, n) = at >= len(text) ? n : { let b = str_byte_at(wr-lower(text), at); wr-hex(text, at + 1, n * 16 + (b <= 57 ? b - 48 : b - 87)); };
   def wr-decode(text, at, out) = at >= len(text) ? out : {
    let ch = substring(text,at,at+1);

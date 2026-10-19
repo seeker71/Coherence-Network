@@ -27,6 +27,7 @@ RUN --mount=type=tmpfs,target=/dev/shm ./fkwu --check ../pulse/main.bml \
  && ./fkwu --check ../pulse/migrate.bml \
  && ./fkwu --check ../pulse/round.bml \
  && ./fkwu --check ../pulse/read.bml \
+ && ./fkwu --check ../pulse/read-view.bml \
  && ./fkwu --check ../pulse/index.bml \
  && ./fkwu --check ../pulse/health.bml
 ARG COHERENCE_SOURCE_SHA

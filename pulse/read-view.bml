@@ -1,0 +1,8 @@
+// A pure response view of one offered checkpoint; the owner verifies it before
+// publication. No external response or persistence effect occurs in this cell.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk ../pulse/web.bml
+section [form.bml] {
+ let input = cell_input(); let cfg = input[0]; let meta = input[1]; let organs = input[2];
+ let path = wr-text(cfg,"path"); let days = wr-number(cfg,"days");
+ path == "/pulse" ? pw-render(cfg,meta,organs,days) : fp-emit(path == "/pulse/now" ? ws-now(cfg,meta,organs) : path == "/pulse/history" ? ws-history(cfg,meta,organs,days) : ws-silences(cfg,meta,organs,days));
+}
