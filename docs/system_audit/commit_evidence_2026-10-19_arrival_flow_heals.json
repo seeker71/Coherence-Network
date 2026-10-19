@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Heal the silent-arrival class: the session-start flows (counsel card, form-cli selection) no longer die on a stale fkwu seed; the seed's keepers run before the doors that need it.",
+  "files_owned": ["scripts/ensure_form_cli_native.sh", ".claude/settings.json"],
+  "change_intent": "process_only",
+  "idea_ids": ["rent-to-zero-sovereignty"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["arrival-flow-silent-failure-heal"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5", "contributor_type": "machine", "roles": ["arrival flow", "healing"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5"},
+  "evidence_refs": [
+    "Observed 2026-10-18 in this worktree: the standing form/fkwu predated the pinned source and answered 'unsupported file extension' on every .bml door, so at session start the counsel card hook died silently and ensure_form_cli_native.sh exited 1 at the source-identity probe, leaving a 2026-08-06 cached form-cli selected that answers exit 0 with no output on every invocation.",
+    "Root cause: the script built fkwu only when missing, never when stale, and the counsel-card hook ran before the ensure hooks in .claude/settings.json SessionStart order.",
+    "Heal: ensure_form_cli_native.sh rebuilds the seed when runtime/fkwu-uni.c is newer than the binary and retries the source-identity probe once after a rebuild when the probe answers a refusal shape; SessionStart hooks reordered (carry_thread, ensure_form_cli_kernel, ensure_form_cli_native, counsel card, arrival, coord); the counsel-card hook carries its own one-line freshness guard so the card can never again fail silently.",
+    "Verified 2026-10-19 on this Mac: bash -n passes; the exact guarded hook command prints the full counsel card ending with this repo's private-ground boundary line; the healed ensure script run against the stale cache detected the identity mismatch and sent the build to the Form gate (its completion probe is the carrier answering a grounded ask).",
+    "fkwu runtime and JIT source are unchanged; the form gitlink is unchanged."
+  ],
+  "change_files": ["scripts/ensure_form_cli_native.sh", ".claude/settings.json", "docs/system_audit/commit_evidence_2026-10-19_arrival_flow_heals.json"],
+  "local_validation": {"status": "pass", "summary": "Script syntax checked (bash -n); the guarded counsel hook command ran end to end and printed the card; the healed ensure script detected the stale cache's identity mismatch and routed the rebuild through the Form gate."},
+  "ci_validation": {"status": "pending", "summary": "Structural checks only; host carrier and hook-order change."},
+  "deploy_validation": {"status": "pending", "environment": "none"},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "Every session arrival in any worktree gets a fresh seed before the doors that need it: the difficult-conversation counsel card always arrives, and the selected form-cli answers instead of standing silent.", "public_endpoints": [], "test_flows": ["Start a session in a worktree whose submodule moved; the counsel card prints and form-cli ask answers."]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Host-arrival change; this field records progress rather than gating delivery."}
+}

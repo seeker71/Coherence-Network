@@ -109,10 +109,20 @@ FKWU="$KERNEL_ROOT/fkwu"
 }
 
 mkdir -p "$TARGET_DIR"
-if [ ! -x "$FKWU" ]; then
+# The seed is fresh only while it is newer than its source: a submodule
+# checkout move leaves a standing binary that refuses .bml doors by
+# extension, which silently broke every arrival flow downstream of it
+# (observed 2026-10-18: the counsel card and this script both died on it).
+if [ ! -x "$FKWU" ] || [ "$KERNEL_ROOT/runtime/fkwu-uni.c" -nt "$FKWU" ]; then
   cc -O2 -o "$FKWU" "$KERNEL_ROOT/runtime/fkwu-uni.c"
 fi
 CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml)"
+if [ "${#CURRENT_SOURCE_ID}" -ne 16 ]; then
+  # a stale seed answers the probe with a refusal, not an identity; rebuild
+  # it once from the pinned source and ask again before giving up
+  cc -O2 -o "$FKWU" "$KERNEL_ROOT/runtime/fkwu-uni.c"
+  CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml)"
+fi
 [ "${#CURRENT_SOURCE_ID}" -eq 16 ] || {
   echo "form-cli: Form source identity is unavailable" >&2
   exit 1
