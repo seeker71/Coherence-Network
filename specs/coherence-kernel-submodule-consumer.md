@@ -4,32 +4,29 @@ status: done
 source:
   - file: .gitmodules
     symbols: [submodule.form]
-  - file: api/app/services/form_kernel_bridge.py
-    symbols: [resolve_recipe_path(), app_recipes_dir(), seedbank_examples_dir()]
-  - file: api/scripts/local_runner.py
-    symbols: [_create_worktree(), _create_standalone_task_repo(), _initialize_worktree_submodules()]
-  - file: api/scripts/agent_runner.py
-    symbols: [_initialize_repo_submodules(), _repo_submodules_match_reviewed_pins()]
-  - file: scripts/prepare_form_submodule.py
-    symbols: [preserve_legacy_form(), verify_reviewed_form()]
-  - file: api/tests/test_kernel_submodule_contract.py
-    symbols: [test_form_is_pinned_path_preserving_kernel_submodule(), test_kernel_regeneration_is_owned_by_submodule(), test_network_endpoint_recipes_are_owned_by_the_api()]
+  - file: form/form/form-stdlib/bml/source-tree.bml
+    symbols: [tracked-files(), stw-files()]
+  - file: form/form/form-stdlib/bml/native-socket-dispatch.bml
+    symbols: [nsd-open(), nsd-serve()]
+  - file: pulse/http.bml
+    symbols: [cell_call(), nsd-open()]
 requirements:
   - "Coherence Network consumes coherence-kernel as an exact gitlink at the existing form/ path."
-  - "Kernel deltas are reconciled upstream while Network-owned endpoint recipes remain with the API."
+  - "Authored fkwu changes land on kernel main; this consumer tracks that same source authority while pinning an immutable commit."
+  - "Kernel deltas are reconciled upstream while Network-owned recipes remain with their application."
   - "CI, deploy, clone, and autonomous-worktree paths initialize the recursive submodule before use."
-  - "Existing form/form/form-stdlib and form/form-kernel-* consumer paths remain valid."
+  - "The existing form/runtime and form/form/form-stdlib fkwu source/JIT paths remain valid; sibling kernels are bootstrap references."
   - "Kernel bootstrap regeneration is authored inside coherence-kernel; the consumer has no script that writes committed form/ artifacts."
 done_when:
   - "A recursive clone populates form/ at the superproject's pinned gitlink SHA."
-  - "Shared and application recipe ownership tests pass."
-  - "Host deploy and task-worktree bootstrap contracts pass."
+  - "The affected application admits its recipe closure from the pinned native source."
+  - "The immutable release build and affected public observation retain their exact source identity."
   - 'file_exists(".gitmodules")'
-  - 'file_exists("api/tests/test_kernel_submodule_contract.py")'
-  - 'pytest_passes("api/tests/test_kernel_submodule_contract.py")'
-test: "cd api && python3 -m pytest -q tests/test_kernel_submodule_contract.py tests/test_form_kernel_bridge_structure_access.py tests/test_api_dockerfile_contract.py"
+  - 'file_exists("form/runtime/fkwu-uni.c")'
+  - 'file_exists("pulse/http.bml")'
+test: "cd form && ./fkwu --check ../pulse/http.bml"
 constraints:
-  - "Do not mount the whole coherence-kernel repository at form/, which would create form/form/."
+  - "Preserve the admitted fkwu source/JIT layout and application recipe paths at the existing form/ gitlink."
   - "Do not use a compatibility symlink; Windows checkouts must receive a real directory tree."
   - "Do not copy or fork canonical kernel sources back into the superproject."
 ---
@@ -45,24 +42,25 @@ task worktrees operate on an empty gitlink.
 
 ## Requirements
 
-- [x] **R1**: Replace the tracked top-level `form/` source tree with a gitlink to
-  the exact `coherence-kernel` `form-submodule` snapshot whose root tree equals
-  canonical `main:form`.
+- [x] **R1**: Keep `form/` as an exact immutable `coherence-kernel` main-source
+  gitlink. `.gitmodules` tracks that same authority. The optional curated
+  distribution serves other consumers, not a second authoring home or a
+  branch-name release gate for this one.
 - [x] **R2**: Reconcile every newer Network kernel delta before the cut: land the
   `fam-tanh` band and astro recipe upstream, move the ten live Network endpoint
   recipes to `api/app/form_recipes/`, and preserve the intentional retirement of
   `form-gen.fk`.
-- [x] **R3**: Keep existing paths such as `form/form/form-stdlib/` and
-  `form/form/form-kernel-rust/` valid so Dockerfiles, scripts, and runtime callers do
-  not gain a second topology.
+- [x] **R3**: Keep `form/runtime/` and `form/form/form-stdlib/` valid so the fkwu
+  JIT and application callers share one topology. Other kernels remain bootstrap
+  references aligned with fkwu, not recurring consumer-validation targets.
 - [x] **R4**: Initialize recursive submodules in GitHub Actions, Hostinger deploy,
   Windows worker startup, documented clone/worktree entry, prompt entry, and
   autonomous task-repository creation.
 - [x] **R5**: Resolve bare app-owned recipes from `api/app/form_recipes/` before
   falling through to shared recipes in the coherence-kernel seedbank.
-- [x] **R6**: Keep every maintainer carrier that writes committed kernel
-  bootstrap artifacts inside `form/form/scripts/`; the consumer root retains only
-  read/build/run carriers for the reviewed gitlink.
+- [x] **R6**: Keep kernel build/publication care with the kernel's native doors
+  (`form/gate/` and `form/form/form-stdlib/bml/`); the consumer builds and runs the
+  pinned source without holding another copy of kernel implementation.
 
 ## Research Inputs
 
@@ -75,6 +73,10 @@ task worktrees operate on an empty gitlink.
 - `2026-07-15` - current Git object comparison — observed 13 Network-only paths and 107 differing shared paths before reconciliation.
 
 ## Files to Create/Modify
+
+The July migration references below describe that completed cut, not a routine
+validation prescription. Current authority is `.gitmodules`, the immutable
+gitlink, native source closure and affected application boundary above.
 
 - `.gitmodules` and `form` — path-preserving, exact coherence-kernel gitlink.
 - `api/app/form_recipes/` — ten Network-owned live endpoint recipes.
@@ -91,24 +93,28 @@ task worktrees operate on an empty gitlink.
 
 ## Acceptance Tests
 
-- `api/tests/test_kernel_submodule_contract.py::test_form_is_pinned_path_preserving_kernel_submodule`
-- `api/tests/test_kernel_submodule_contract.py::test_network_endpoint_recipes_are_owned_by_the_api`
-- `api/tests/test_form_kernel_bridge_structure_access.py::TestRecipeResolution`
-- `api/tests/test_edge_cases_regression.py` worktree-focused tests.
-- `scripts/test_hostinger_deploy_form_paths.sh` deployment bootstrap contract.
-- Manual validation: fresh `git clone --recurse-submodules` resolves
-  `form/form/validate.sh` and `form/form/form-stdlib/core.fk` at the pinned gitlink.
+- Manual validation when initialization changes: a recursive checkout resolves
+  the exact gitlink and the fkwu source/JIT paths.
+- Changed application inputs give native recipe admission work; image assembly
+  already performs that admission, so retain its source-keyed evidence.
+- The immutable build records its source seal and the affected public route
+  observes the deployed behavior. Branch names do not substitute for this proof.
 
 ## Verification
 
-```bash
+Reuse current initialization, admission and release receipts. A changed pin,
+caller or observed failure gives the relevant boundary work. For an admission
+finding, the smallest source read is `cd form && ./fkwu --check ../pulse/http.bml`;
+do not repeat it when the matching immutable build has already admitted those
+bytes. No routine kernel or sibling suite is part of a consumer bump. Runtime
+changes, when genuinely needed, get their focused native observation at source.
+
+Reference commands for a new initialization or admission finding (reuse an
+existing matching receipt rather than running them again):
+
+```sh
 git submodule status --recursive
-cd api && python3 -m pytest -q tests/test_kernel_submodule_contract.py tests/test_form_kernel_bridge_structure_access.py tests/test_api_dockerfile_contract.py
-cd api && python3 -m pytest -q tests/test_edge_cases_regression.py -k worktree
-bash scripts/test_hostinger_deploy_form_paths.sh
-python3 scripts/validate_spec_quality.py --file specs/coherence-kernel-submodule-consumer.md
-make prompt-guide
-make wellness
+cd form && ./fkwu --check ../pulse/http.bml
 ```
 
 ## Out of Scope
@@ -123,16 +129,21 @@ make wellness
   initializes it or fails with the exact repair command.
 - Risk: nested path filters do not observe a gitlink SHA change; workflows that
   watch Form include the exact `form` path.
-- Assumption: `form-submodule` remains a generated distribution branch and all
-  authored kernel changes continue to land on coherence-kernel `main` first.
+- Source authority: authored changes land on kernel `main`; this consumer pins
+  those immutable source commits and tracks `main` explicitly. Keep retired
+  limitations retired there too. Optional distribution carries remain available
+  without becoming a second authority for consumer fixes.
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task `coherence-kernel-blueprint-publication-gate`: Blueprint table
-  generation and registry mutation are intentionally blocked in
-  this consumer. The current `coherence-kernel` main tree does not yet carry the
-  publication scripts that historically lived in Coherence Network. Move that
-  authoring/publish gate upstream before the next Blueprint allocation, prove it
-  there, then advance this reviewed gitlink. Read-only `--check` remains available
-  here, and future kernel updates continue through an explicit upstream change
-  followed by a reviewed gitlink bump.
+- Native Blueprint, grammar and cell evolution belongs with its upstream source
+  owner. A missing capability carries the actual caller, source inputs and
+  finding there; it is work, not a blanket consumer publication blocker.
+- Legacy Blueprint-table generators remain bootstrap references. A changed
+  bootstrap input can give its owner focused work without turning sibling-kernel
+  comparison into a recurring application release requirement.
+- Follow-up task `coherence-kernel-source-continuity`: when a concurrent parent
+  change touches the gitlink, retain all currently
+  admitted features in the chosen descendant. Record the source identity and
+  affected observation; do not restore retired paths merely to match an older
+  branch guide.
