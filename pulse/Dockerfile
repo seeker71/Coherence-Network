@@ -5,7 +5,7 @@ WORKDIR /build
 COPY form/runtime /build/runtime
 RUN cc -O2 -o /build/fkwu runtime/fkwu-uni.c
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 # SQLite is the durable file resource. TLS is called directly by fkwu through
 # libssl; no Python, curl, web server, scheduler or shell owns application logic.
 RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 libssl3 ca-certificates \
@@ -15,6 +15,13 @@ COPY form/form/form-stdlib /app/form/form/form-stdlib
 COPY form/runtime /app/form/runtime
 COPY pulse/*.bml pulse/config.json pulse/organs.json /app/pulse/
 WORKDIR /app/form
+# Assemble the three resident entry points once on the builder's native tmpfs.
+# Running requests load their native images rather than recompiling the same
+# BML in eleven parallel workers. Authored BML remains the source authority.
+RUN --mount=type=tmpfs,target=/dev/shm ./fkwu --check ../pulse/main.bml \
+ && ./fkwu --check ../pulse/http.bml \
+ && ./fkwu --check ../pulse/fetch.bml \
+ && ./fkwu --check ../pulse/health.bml
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 LABEL org.opencontainers.image.title="pulse"

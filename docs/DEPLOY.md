@@ -59,9 +59,10 @@ pages, assets, provider readiness, persistence, Telegram and pulse readings are
 not recurring release gates. When one of those surfaces changes or signals an
 issue, follow that finding at its source with the smallest relevant observation.
 Pulse's schema/audit proof registrations have retired for the same reason:
-bounded health does not observe those claims. Native `pulse_proof_care.bml`
-preserves the store and archives the two stale silences as retired proof work,
-not as successful observations.
+bounded health does not observe those claims. Their historical retirement notes
+remain in the silence ledger; the completed two-record retirement action is
+released. Native `pulse/snapshot.bml` supplies reusable private online backup and
+snapshot-backed native rollout care without rewriting historical receipts.
 The compatibility health carrier reuses its native observation while artifact
 bytes hold. A fifteen-second challenge-expiry timer has retired; changed carrier
 bytes or explicit care give the observation work, not elapsed time alone.
@@ -79,6 +80,13 @@ The same care action moves web routers onto one service owner before releasing
 duplicate port declarations and the superseded two-host Hati router. The current
 five-host Hati route stays intact; `www.coherencycoin.com` names its service
 explicitly. Compose label arrays and maps share one native editable model.
+Pulse builds from the repository root through `pulse/Dockerfile`, keeping the
+original `pulse_data:/data` volume. File-backed `pulse/config.json` owns its
+application settings; native Compose care retires PULSE_* environment values and
+supplies the fkwu shared-memory resource. Image assembly realizes application BML
+once on native tmpfs, and requests reuse those images. Pulse's socket listener,
+TLS probes, cadence and query/repair templates are BML on the pinned fkwu; SQLite
+is the single durable external resource, crossed once per round or database read.
 
 Ordinary runtime telemetry invalidates its own event view, not provider facts.
 The retired cross-service flush took the provider-refresh lock on the API event

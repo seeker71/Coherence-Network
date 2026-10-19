@@ -46,7 +46,7 @@ section [form.bml] {
    // pulse/config.json owns application configuration; keep unrelated settings.
    let environment = dcc-labels(json-object-get(native,"environment"));
    let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"PULSE_",0) != 0,node_children(environment)));
-   dcc-set(native,"environment",kept);
+   dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb"));
   }
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {

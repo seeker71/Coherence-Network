@@ -2,6 +2,18 @@
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/probe.bml
 section [form.bml] {
  class PulseObservation {
+  def po-boundary(cfg) {
+   let base = wr-text(cfg,"base");
+   let rows = map(request => {
+    let began = host_monotonic_ms();
+    let response = wr-fetch("GET",base ++ request[1],"",0);
+    let elapsed = host_monotonic_ms()-began;
+    let doc = parse-json("pulse-boundary",len(response[1]) == 0 ? "{}" : response[1]);
+    let organs = wr-array(doc,"organs");
+    json-node-object([json-node-pair("surface",json-node-string(request[0])),json-node-pair("status",json-node-int(response[0])),json-node-pair("latency_ms",json-node-int(elapsed)),json-node-pair("bytes",json-node-int(len(response[1]))),json-node-pair("organs",json-node-int(len(organs))),json-node-pair("daily_bars",json-node-int(nil?(organs) ? 0 : len(wr-array(organs[0],"daily")))),json-node-pair("samples_total",json-object-get(doc,"samples_total")),json-node-pair("silences",json-node-int(len(wr-array(doc,"silences")))),json-node-pair("overall",json-object-get(doc,"overall"))]);
+   },[["health","/pulse/health"],["now","/pulse/now"],["history","/pulse/history?days=7"],["silences","/pulse/silences?days=7"]]);
+   json-emit(json-node-object([json-node-pair("native",json-node-string("fkwu")),json-node-pair("observations",json-node-array(rows))]));
+  }
   def po-fixture(cfg, organs) {
    let started = ws-start(cfg);
    let failed = wr-sql(cfg,"fixture-failures","INSERT INTO samples SELECT strftime('%Y-%m-%dT%H:%M:%SZ','now','-'||n||' seconds'),'api',0,100,'fixture transport failure' FROM (SELECT 8 n UNION ALL SELECT 7 UNION ALL SELECT 6);" ++ ws-reconcile(organs));
@@ -20,7 +32,7 @@ section [form.bml] {
  }
  let cfg = wr-overlay(wr-config(),parse-json("pulse-observation", stdin-text()));
  let organs = ws-organs();
- wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : wr-text(cfg,"mode") == "round" ? {
+ wr-text(cfg,"mode") == "boundary" ? po-boundary(cfg) : wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : wr-text(cfg,"mode") == "round" ? {
   let started = ws-start(cfg);
   let sampled = wp-round(cfg,organs);
   wr-sql(cfg,"observe",ws-health() ++ ws-now(cfg,organs));
