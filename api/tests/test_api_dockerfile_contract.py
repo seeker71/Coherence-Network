@@ -44,7 +44,10 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     assert "cc -O2 -o fkwu runtime/fkwu-uni.c" in dockerfile
     assert "COPY --from=kernel-builder /build/form/fkwu /app/form/fkwu" in dockerfile
     assert "gate/form-cli-build-run.bml" in dockerfile
-    assert "COPY form/runtime /app/form/runtime" in dockerfile
+    # the image's source home is /app (its stdlib is /app/form/form-stdlib), so the runtime
+    # source rides along at /app/runtime, where source-compiler resolves runtime/fkwu-optable.h
+    assert "COPY form/runtime /app/runtime" in dockerfile
+    assert "COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id" in dockerfile
     assert "cargo build" not in dockerfile
     assert "form-kernel-rust" not in dockerfile
 

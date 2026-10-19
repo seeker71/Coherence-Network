@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The API Dockerfile contract test follows the image's source home (#4083 moved the runtime source to /app/runtime) and holds the image to the source-identity copy the kernel's copy flow now publishes.",
+  "files_owned": ["api/tests/test_api_dockerfile_contract.py"],
+  "change_intent": "test_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["dockerfile-contract-source-home"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["test"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Observed 2026-10-20: tests/test_api_dockerfile_contract.py failed on main — it asserted `COPY form/runtime /app/form/runtime` while #4083 (2026-10-19) deliberately copies the runtime to /app/runtime, the image's source home, where source-compiler resolves runtime/fkwu-optable.h beside /app/form/.",
+    "The test now asserts the line the Dockerfile carries and the reason beside it, and additionally holds the image to `COPY --from=kernel-builder /build/form-cli.source.id` — the copy every production build of 2026-10-19 died on until the kernel's copy flow published the identity beside the copy (coherence-kernel #613, band claim 65536 in #614).",
+    "api/tests/test_api_dockerfile_contract.py: 2 passed."
+  ],
+  "change_files": ["api/tests/test_api_dockerfile_contract.py", "docs/system_audit/commit_evidence_2026-10-20_dockerfile_contract_follows_source_home.json"],
+  "local_validation": {"status": "pass", "summary": "pytest -q tests/test_api_dockerfile_contract.py: 2 passed."},
+  "ci_validation": {"status": "pending", "summary": "The PR's Test workflow runs the suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "A test-only change; the healed image (79cd36862) is rolling forward on the VPS as this is written."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The Dockerfile contract test passes on main.", "public_endpoints": [], "test_flows": ["cd api && pytest -q tests/test_api_dockerfile_contract.py"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Test-only; nothing to deploy."}
+}
