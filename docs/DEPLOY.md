@@ -48,6 +48,13 @@ Retrieval/index maintenance follows changed sources. The former post-rollout
 Python bootstrap and text-format grounding gate have retired: they duplicated
 the content migration and asserted the released host CLI's output contract.
 Keep retrieval findings as native Form work with their source and owner.
+`api/app/form_recipes/source_maintenance.bml` accepts explicit changed source
+coordinates. Each child owns a separate input file; a Docker child cannot consume
+the remaining paths of an inherited shell loop. The existing Python ARTIFACT/DB
+projection and RAG coordinator remain named retiring migration doors, not release
+requirements. BML owns the maintenance sequence and care; embedding runs on fkwu.
+The former automatic shell ingest/heal release stage is retired. A stale binding
+earns repair at its source, without relabeling a completed application rollout.
 
 Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
@@ -95,10 +102,11 @@ persists; public read windows do not delete records. Follow an actual persistenc
 finding with its smallest fixture or archive-backed observation, not kernel suites.
 
 The `/pulse` web route belongs to that same native owner. Compose care gives its
-exact path on the two Coherence web hosts priority over the Next.js router,
+exact path on the existing web hosts priority over the Next.js router,
 preserving the independent Pulse origin and unrelated web routes. Publish this
 file-backed route configuration without activation before the merged rollout;
-Compose activates it with the new Pulse image. The Next.js Pulse family and its
+Compose derives the host expression from its existing web routers rather than
+holding a second host list, and activates it with the new Pulse image. The Next.js Pulse family and its
 cross-origin configuration are retired. Native HTML reads one coherent snapshot,
 discloses complete day/archive evidence, and sends no hydration payload.
 On the first indexed startup, native workers derive daily cards and exact range

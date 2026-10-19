@@ -958,15 +958,8 @@ sync_form_stdlib() {
 
 sync_form_stdlib
 
-# Substrate auto-ingest. The coherence-substrate (content-addressed
-# numeric lattice) lives in the api's database. Each deploy syncs the
-# source-of-truth content (specs, ideas, vision-kb concepts, presences)
-# into the container and re-runs the ingester. Re-ingestion is
-# idempotent — content-addressed Blueprint NodeIDs hash-match existing
-# cells. Memory cells live outside the repo (in ~/.claude/) and are
-# skipped automatically. Grounding is a deployment contract: an incomplete
-# substrate or path-only RAG index fails the deploy instead of shipping a
-# healthy-looking service whose core cannot answer from its own body.
+# Content resources for the compatibility readers. Retrieval projections are
+# explicit changed-source work owned by source_maintenance.bml, not release gates.
 # Runs AFTER wait_for_running api so the DB connection is stable.
 sync_substrate_content() {
   log "substrate: syncing content + scripts into api container"
@@ -1035,154 +1028,6 @@ sync_substrate_content() {
   fi
 }
 
-run_substrate_ingest() {
-  # If we can compute the changed-files set since the last deployed SHA,
-  # ingest ONLY those files instead of re-ingesting all 481+. The
-  # substrate's cell-intern is already content-addressed (same hash →
-  # same NodeID, no new row), but the file read + parse + encode runs
-  # for every file in --all mode regardless. Per-file ingest with the
-  # git-changed set turns this from minutes-to-tens-of-minutes into
-  # seconds when content hasn't changed in the ingestable domains.
-  #
-  # Fall back to --all when:
-  #   - OLD_SHA unknown (cold start)
-  #   - OLD_SHA == TARGET_SHA but rebuild was requested (running API at
-  #     wrong SHA path)
-  #   - git diff fails for any reason
-  #   - the grounding/bootstrap carriers changed, because their new migration
-  #     shape must reconcile the complete source body before RAG heal runs
-  local from="$1" to="$2"
-  require_file "$MAINTENANCE_COMPOSE_FILE"
-  local started ended elapsed all_changed full_refresh_reason="" old_form_sha new_form_sha
-  local removed_ingestable=""
-  local ingestable_pattern='^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^docs/shared/.*\.md$|^form/form/form-stdlib/.*\.fk$'
-  started="$(date +%s)"
-
-  if [[ -z "$from" || "$from" == "$to" ]]; then
-    full_refresh_reason="SHAs unknown or equal"
-  elif ! all_changed="$(changed_paths_between "$from" "$to" 2>/dev/null)"; then
-    full_refresh_reason="changed-path comparison unavailable"
-  elif grep -Fxq 'form/.gitlink-diff-unavailable' <<< "$all_changed"; then
-    full_refresh_reason="form gitlink commits unavailable"
-  elif grep -Eq \
-      '^(scripts/(coh_substrate|form_cli_rag)\.py|api/app/services/(grounding_source\.py|substrate/))' \
-      <<< "$all_changed"; then
-    full_refresh_reason="grounding bootstrap/RAG carrier changed"
-  else
-    removed_ingestable="$(printf '%s\n' "$all_changed" \
-      | grep -E "$ingestable_pattern" \
-      | while IFS= read -r path; do
-          [[ ! -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
-        done \
-      || true)"
-    if [[ -n "$removed_ingestable" ]]; then
-      # Incremental ingest cannot retract a row whose source no longer exists.
-      # Reconcile removals in the release path so the later public observer can
-      # publish only its one dynamic WITNESS within the proxy deadline.
-      full_refresh_reason="ingestable source removed"
-    else
-      old_form_sha="$(git -C "$REPO_DIR" rev-parse "${from}:form" 2>/dev/null || true)"
-      new_form_sha="$(git -C "$REPO_DIR" rev-parse "${to}:form" 2>/dev/null || true)"
-      if [[ -n "$old_form_sha" && -n "$new_form_sha" && "$old_form_sha" != "$new_form_sha" ]]; then
-        # The persisted RAG binding includes the native Form source identity.
-        # Incremental ingest must not ask an old binding to interpret a new body;
-        # rebuild the complete grounded index first, then heal its carrier stamp.
-        full_refresh_reason="native Form source identity changed"
-      fi
-    fi
-  fi
-
-  if [[ -n "$full_refresh_reason" ]]; then
-    log "substrate: ${full_refresh_reason} — bootstrapping the complete grounded body"
-    set +e
-    # A measured cold SQLite bootstrap of the complete 1,546-source corpus can
-    # exceed twenty minutes while structured concept CTORs are interned. Give
-    # the complete rebuild a full hour; a timeout must never manufacture a
-    # partial "ready" body.
-    run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-3600}" \
-      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
-        -f "$MAINTENANCE_COMPOSE_FILE" run \
-        --rm --no-deps -T --entrypoint sh api -lc \
-        'cd /app && python3 scripts/coh_substrate.py bootstrap && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
-      2>&1 | tee -a "$LOG_FILE"
-    local rc=$?
-    set -e
-    ended="$(date +%s)"
-    elapsed=$((ended - started))
-    log "substrate: complete bootstrap took ${elapsed}s (rc=$rc)"
-    if [[ "$rc" -ne 0 ]]; then
-      log "FAIL: grounded substrate/RAG bootstrap returned $rc"
-    fi
-    return "$rc"
-  fi
-
-  # Ingestable tissue: the .md content domains PLUS the substrate's own
-  # shape-files (docs/coherence-substrate/*.form) and stdlib recipes
-  # (form/form/form-stdlib/**/*.fk). The latter two land as ARTIFACT cells so
-  # form-first attribution can resolve their NodeIDs from the live lattice
-  # instead of from memory. They reach the substrate only through
-  # ingest-paths (the `ingest`/`ingest --all` commands skip non-.md), so
-  # the per-file loop below dispatches every path through ingest-paths.
-  local changed
-  changed="$(printf '%s\n' "$all_changed" \
-              | grep -E "$ingestable_pattern" \
-              | while IFS= read -r path; do
-                  [[ -f "$REPO_DIR/$path" ]] && printf '%s\n' "$path"
-                done \
-              || true)"
-  if [[ -z "$changed" ]]; then
-    ended="$(date +%s)"
-    elapsed=$((ended - started))
-    log "substrate: no ingestable files changed in ${from:0:12}..${to:0:12} — skipped (${elapsed}s)"
-    return 0
-  fi
-
-  local count
-  count="$(printf '%s\n' "$changed" | grep -c .)"
-  log "substrate: ingesting $count changed files (not --all)"
-
-  set +e
-  local rc=0
-  while IFS= read -r path; do
-    [[ -z "$path" ]] && continue
-    # ingest-paths (not `ingest`) so .form/.fk land as ARTIFACT cells and
-    # .md still routes to its domain ingester. Structured CTOR is the
-    # default; the 300s ceiling covers a concept's word-cell interning
-    # against prod Postgres (120s dropped lc-cognitive-sovereignty).
-    run_with_timeout "${SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS:-300}" \
-      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
-        -f "$MAINTENANCE_COMPOSE_FILE" run \
-        --rm --no-deps -T --entrypoint sh api -lc \
-        "cd /app && python3 scripts/coh_substrate.py ingest-paths '/app/$path'" \
-      2>&1 | tee -a "$LOG_FILE"
-    local file_rc=$?
-    if [[ "$file_rc" -ne 0 ]]; then
-      log "substrate: ingest failed for $path (rc=$file_rc) — continuing"
-      rc=$file_rc
-    fi
-  done <<< "$changed"
-  set -e
-
-  ended="$(date +%s)"
-  elapsed=$((ended - started))
-  if [[ "$rc" -eq 0 ]] && grep -Eq \
-      '^(specs/.*\.md|docs/vision-kb/concepts/.*\.md|docs/coherence-substrate/.*\.form|docs/shared/.*\.md|form/form/form-stdlib/.*\.fk)$' \
-      <<< "$changed"; then
-    run_with_timeout "${SUBSTRATE_RAG_HEAL_TIMEOUT_SECONDS:-300}" \
-      docker compose -f "$COMPOSE_ROOT/docker-compose.yml" \
-        -f "$MAINTENANCE_COMPOSE_FILE" run \
-        --rm --no-deps -T --entrypoint sh api -lc \
-        'cd /app && bash scripts/ensure_form_cli_native.sh && python3 scripts/form_cli_rag.py heal' \
-      2>&1 | tee -a "$LOG_FILE"
-    rc=$?
-  fi
-
-  log "substrate: ingest + NodeID RAG heal of $count files took ${elapsed}s (final rc=$rc)"
-  if [[ "$rc" -ne 0 ]]; then
-    log "FAIL: incremental grounded substrate/RAG refresh returned $rc"
-  fi
-  return "$rc"
-}
 
 # Wait for both containers to reach the "running" state in docker compose.
 # The deeper health check is left to the workflow's Verify Public Deployment
@@ -1219,11 +1064,6 @@ retire_sibling_kernel_routers || exit 1
 verify_api_public_host_route || exit 1
 
 sync_substrate_content
-# Use DIFF_BASE (RUNNING_SHA when known) so substrate ingest catches any
-# content the container is missing, not just what the repo's HEAD claims
-# is new. Same reasoning as the rebuild gate above: the repo advances on
-# git reset even when the container didn't see the change.
-run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
 
 # Post-deploy assertion: the api container's /api/health must now report
 # TARGET_SHA. If it doesn't, the deploy is silently stuck — either the

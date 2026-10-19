@@ -3,11 +3,12 @@
 // Form edits that model, preserves a private backup and publishes atomically.
 // stdin: {"host":"root@host","key":"/local/key","compose":"/host/docker-compose.yml","backup":"/host/private-backup.yml","stage":"/host/docker-compose.incoming.yml","activate":["web"]}
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+import remote_task.bml;
 section [form.bml] {
  class DeploymentComposeCare {
   def dcc-get(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
   def dcc-run(doc, step, args, input) {
-   let argv = append(["ssh", "-i", dcc-get(doc, "key"), "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", dcc-get(doc, "host")], args);
+   let argv = rmt-argv(doc,args);
    let result = hch-run(step, argv, input, hch-by(30000));
    (Comparable) result[0] == 0 ? result[1] : form_error("deployment compose care: " ++ step ++ " failed; retained private host-child trace");
   }
@@ -36,7 +37,16 @@ section [form.bml] {
    dcc-set(service, "labels", dcc-set(current, "traefik.http.routers.coherence-web.service", json-node-string("coherence-web")));
   }
   def dcc-owners(body) = node_children(json-object-get(body, "services"));
-  def dcc-pulse(service) {
+  def dcc-web-rules(body) {
+   let web = json-object-get(json-object-get(body,"services"),"web");
+   let labels = dcc-labels(json-object-get(web,"labels"));
+   let rules = map(pair => json-string-value(json-pair-value(pair)),filter(pair => {
+    let key = json-pair-key(pair); let value = json-string-value(json-pair-value(pair)) ?? "";
+    str_find(key,"traefik.http.routers.",0) == 0 && substring(key,len(key) - 5,len(key)) == ".rule" && str_find(value,"Host(",0)>=0;
+   },node_children(labels)));
+   nil?(rules) ? form_error("native Pulse routing needs the current web host rules") : "(" ++ hch-join(rules," || ") ++ ")";
+  }
+  def dcc-pulse(service,web_rules) {
    let build = json-object-get(service,"build");
    let context = dcc-get(build,"context");
    let root = str_find(context,".git#",0) >= 0 ? split-on(context,":pulse")[0] : "/docker/coherence-network/repo";
@@ -47,13 +57,14 @@ section [form.bml] {
    let environment = dcc-labels(json-object-get(native,"environment"));
    let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"PULSE_",0) != 0,node_children(environment)));
    let labels = dcc-labels(json-object-get(native,"labels"));
-   let routes = [["traefik.http.routers.pulse.service","pulse"],["traefik.http.routers.pulse-web.rule","(Host(`coherencycoin.com`) || Host(`www.coherencycoin.com`)) && (Path(`/pulse`) || Path(`/pulse/`))"],["traefik.http.routers.pulse-web.priority","200"],["traefik.http.routers.pulse-web.entrypoints","websecure"],["traefik.http.routers.pulse-web.tls.certresolver","letsencrypt"],["traefik.http.routers.pulse-web.service","pulse"]];
+   let routes = [["traefik.http.routers.pulse.service","pulse"],["traefik.http.routers.pulse-web.rule",web_rules ++ " && (Path(`/pulse`) || Path(`/pulse/`))"],["traefik.http.routers.pulse-web.priority","200"],["traefik.http.routers.pulse-web.entrypoints","websecure"],["traefik.http.routers.pulse-web.tls.certresolver","letsencrypt"],["traefik.http.routers.pulse-web.service","pulse"]];
    let owned = foldl((out,p) => dcc-set(out,p[0],json-node-string(p[1])),labels,routes);
    dcc-set(dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb")),"labels",owned);
   }
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {
-   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
+   let web_rules = dcc-web-rules(body);
+   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
    json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
   }
   def dcc-apply(doc, body) {

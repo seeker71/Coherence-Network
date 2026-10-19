@@ -94,8 +94,9 @@ section [form.bml] {
   def ws-silence-rows(cfg,meta,days) {
    let now = now_unix_ms(); let since = (now/1000)*1000 - days*86400000;
    let open = fp-get(meta,"open",[]);
-   let buckets = filter(b => b[1]>=since || any?(r => r[0]/256 == b[0],open),fp-get(meta,"buckets",[]));
-   let rows = foldl((out,b) => append(out,filter(r => fp-time(r[2])>=since || nothing?(r[3]),fp-required(nw-path(cfg,"silences/" ++ fp-pad(b[0],8) ++ ".fkb"))[1])),[],buckets);
+   let ends = fp-get(meta,"silence_ends",[]);
+   let buckets = filter(b => b[1]>=since || fp-get(ends,b[0],[-1,0])[1]>=since || any?(r => r[0]/256 == b[0],open),fp-get(meta,"buckets",[]));
+   let rows = foldl((out,b) => append(out,filter(r => fp-time(r[2])>=since || nothing?(r[3]) || fp-time(r[3])>=since,fp-required(nw-path(cfg,"silences/" ++ fp-pad(b[0],8) ++ ".fkb"))[1])),[],buckets);
    sort-by(rows,r => 0 - fp-time(r[2]));
   }
   def ws-silences(cfg,meta,organs,days) {

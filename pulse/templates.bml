@@ -9,6 +9,8 @@ section [form.bml] {
   def wr-lower(text) = wr-lower-at(text, 0, "");
   def wr-array(doc, key) = node_children(json-object-get(doc, key));
   def wr-overlay(base, overrides) = json-node-object(append(filter(pair => !json-object-has?(overrides,json-pair-key(pair)),node_children(base)),node_children(overrides)));
+  def wr-origin(base) = len(base)>0 && substring(base,len(base) - 1,len(base)) == "/" ? wr-origin(substring(base,0,len(base) - 1)) : base;
+  def wr-url(base,path) = wr-origin(base) ++ (str_find(path,"/",0) == 0 ? path : "/" ++ path);
   def wr-config() = parse-json("pulse-config", read_file("../pulse/config.local.json") ?? read_file("../pulse/config.json"));
   def wr-path(doc, path) = nil?(path) ? doc : wr-path(json-object-get(doc, json-string-value(path[0])), path[1:]);
   def wr-io(cfg, name) = wr-text(cfg, "work_path") ++ "/" ++ host_pid().str() ++ "-" ++ name;
