@@ -86,6 +86,16 @@ section [form.bml] {
    nw-range-levels(cfg,days,changed,[name],seq,1);
   }
   def nw-source-days(cfg,days) = map(day => [day,fp-required(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"))[0]],days);
+  // Closed intervals can begin before the requested window. Their end bound
+  // belongs beside the start bound, keyed by the source bucket's own sequence.
+  def nw-end-index(cfg,meta,numbers) = foldl((out,number) => {
+   let page = fp-required(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"));
+   let prior = fp-get(out,number,[-1,0]);
+   prior[0] == page[0] ? out : {
+    let end = foldl((n,row) => nothing?(row[3]) ? n : { let at = fp-time(row[3]); at>n ? at : n; },0,page[1]);
+    fp-set(out,number,[page[0],end]);
+   };
+  },fp-get(meta,"silence_ends",[]),numbers);
   def nw-index-ensure(cfg,organs) = nw-locked(cfg,meta => {
    let sources = nw-source-days(cfg,fp-get(meta,"days",[])); let prior = fp-get(meta,"query_days",[]);
    let changed = map(p => p[0],filter(p => fp-get(meta,"query_index",0) != 1 || fp-get(prior,p[0],-1) != p[1],sources));
@@ -95,7 +105,8 @@ section [form.bml] {
     let needed = new_organ ? map(p => p[0],sources) : changed;
     nil?(needed) ? "" : fp-task(cfg,"../pulse/index.bml",wr-overlay(cfg,fp-object([["organ",name],["changed_days",needed]])));
    },names);
-   let current = fp-set(fp-set(fp-set(fp-set(meta,"query_index",1),"query_days",sources),"query_seq",fp-get(meta,"seq",0)),"query_organs",names);
+   let ends = nw-end-index(cfg,meta,map(b => b[0],fp-get(meta,"buckets",[])));
+   let current = fp-set(fp-set(fp-set(fp-set(fp-set(meta,"query_index",1),"query_days",sources),"query_seq",fp-get(meta,"seq",0)),"query_organs",names),"silence_ends",ends);
    let saved = fp-write(nw-path(cfg,"state.fkb"),current); let stable = host_sync(); current;
   });
   def nw-bucket(cfg,number) = fp-read(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"),[0,[]]);
@@ -125,7 +136,8 @@ section [form.bml] {
     let updates = [["seq",seq],["samples_total",fp-get(meta,"samples_total",0)+len(rows)],["max_rowid",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_rowid",0),rows)],["max_silence",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_silence",0),changes)],["tails",nw-tails(meta,rows)],["days",sort-strs(nw-unique(append(fp-get(meta,"days",[]),days)))],["buckets",buckets],["open",open],["journal",number],["offset",end]];
     let query_days = foldl((out,day) => fp-set(out,day,seq),fp-get(meta,"query_days",[]),days);
     let next = foldl((m,p) => fp-set(m,p[0],p[1]),meta,updates);
-    let current = fp-get(meta,"query_index",0) == 1 ? fp-set(fp-set(next,"query_days",query_days),"query_seq",seq) : next;
+    let with_ends = fp-set(next,"silence_ends",nw-end-index(cfg,meta,nw-unique(map(row => row[0]/256,changes))));
+    let current = fp-get(meta,"query_index",0) == 1 ? fp-set(fp-set(with_ends,"query_days",query_days),"query_seq",seq) : with_ends;
     // Pages reach stable storage before their checkpoint can skip replay.
     let stable = host_sync();
     let saved = fp-write(nw-path(cfg,"state.fkb"),current);

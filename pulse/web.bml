@@ -53,13 +53,13 @@ section [form.bml] {
    let open = fp-get(meta,"open",[]);
    fh-document("Pulse",pw-style(),[
     fh-tag("a",[["class","skip"],["href","#main-content"]],["Skip to content"]),
-    fh-tag("header",[],[fh-tag("nav",[["aria-label","Primary"]],map(p => fh-link(p[0],p[1]),[["/","Coherence Network"],["/vision","Vision"],["/presences","Presences"],["/ideas","Work"],["/resonance","Pulse"],["/come-in","Come in"]]))]),
+    fh-tag("header",[],[fh-tag("nav",[["aria-label","Primary"]],map(p => fh-link(wr-url(wr-text(cfg,"web_base"),p[0]),p[1]),[["/","Coherence Network"],["/vision","Vision"],["/presences","Presences"],["/ideas","Work"],["/resonance","Pulse"],["/come-in","Come in"]]))]),
     fh-tag("main",[["id","main-content"]],append([
      fh-tag("div",[["class","row"]],[fh-tag("h1",[],["Pulse"]),range]),fh-tag("p",[["class","muted"]],["The breath of our living body, remembered. Every reading and repair stays with its source."]),
      fh-tag("section",[["class","card"]],[pw-status(wr-text(now,"overall")),fh-tag("h2",[],[pw-headline(wr-text(now,"overall"))]),fh-tag("p",[],[fh-text(pw-value(overall,"uptime_pct")),"% steady breath · ",days.str()," days · weakest organ: ",fh-text(pw-value(overall,"worst_organ"))]),fh-tag("small",[],["Listened at ",fh-text(wr-text(now,"checked_at"))]),nil?(open) ? "" : fh-detail("Ongoing silences",[fh-tag("ul",[],map(r => pw-silence(r,organs),open))])]),
      selected ? fh-tag("section",[["class","card"]],[fh-tag("h2",[],[fh-text(wr-text(chosen[0],"label"))," · ",fh-text(date)]),fh-tag("p",[],[pw-status(wr-text(day[0],"status"))," · ",wr-number(day[0],"samples").str()," samples · ",wr-number(day[0],"failures").str()," failures · p50 ",fh-text(pw-value(day[0],"latency_p50_ms"))," ms · p95 ",fh-text(pw-value(day[0],"latency_p95_ms"))," ms"]),fh-tag("p",[],["All overlapping silences: ",len(matching).str()]),fh-tag("ul",[],map(r => pw-silence(r,organs),matching))]) : ""
     ],append(cards,[fh-tag("section",[["class","card"]],[fh-tag("h2",[],["Remembered silences"]),fh-tag("p",[],[len(rows).str()," in this window. Select a day bar for its full evidence, or ",fh-link("/pulse?days=" ++ days.str() ++ "&view=silences","read every silence and repair note"),"."]),archive ? fh-tag("ul",[],map(r => pw-silence(r,organs),rows)) : ""]),fh-tag("small",[],["Witness started ",fh-text(wr-text(now,"witness_started_at"))," · Form-native persistence · fkwu JIT"])]))),
-    fh-tag("footer",[],[fh-tag("nav",[["aria-label","Related pages"]],map(p => fh-link(p[0],p[1]),[["/vitality","Vitality"],["/identity/keys","Attribution"],["/api-health","API health"],["/diagnostics","Diagnostics"]]))])
+    fh-tag("footer",[],[fh-tag("nav",[["aria-label","Related pages"]],map(p => fh-link(wr-url(wr-text(cfg,"web_base"),p[0]),p[1]),[["/vitality","Vitality"],["/identity/keys","Attribution"],["/api-health","API health"],["/diagnostics","Diagnostics"]]))])
    ]);
   }
  }

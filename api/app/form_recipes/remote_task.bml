@@ -1,0 +1,9 @@
+// Shared remote argument boundary. SSH transports one command string; quoting
+// belongs here so a source path remains data on both sides of that membrane.
+section [form.bml] {
+ class RemoteTask {
+  def rmt-text(doc,key) = json-string-value(json-object-get(doc,key)) ?? "";
+  def rmt-quote(text) = "'" ++ hch-join(split-on(text,"'"),"'\"'\"'") ++ "'";
+  def rmt-argv(doc,args) = ["ssh","-i",rmt-text(doc,"key"),"-o","BatchMode=yes","-o","ConnectTimeout=15","--",rmt-text(doc,"host"),hch-join(map(arg => rmt-quote(arg),args)," ")];
+ }
+}
