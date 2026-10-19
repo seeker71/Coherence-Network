@@ -1,18 +1,24 @@
-// Generic private online snapshot: immutable receipt plus a separate writable
-// rehearsal database. No sample, silence ID or historical note is rewritten.
-// stdin: {host,key,db,directory,backup,stage}
-// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/templates.bml
+// Consistent native store snapshot. Files stream through the existing native
+// resource while the Form transaction owner holds the publication lock.
+// stdin: {store_path,destination}; destination is fresh and outside the source.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/native-store.bml
 section [form.bml] {
  class WitnessSnapshot {
-  def wsn-run(doc, name, argv, input) {
-   let result = hch-run(name,append(["ssh","-i",wr-text(doc,"key"),"-o","BatchMode=yes","-o","ConnectTimeout=15",wr-text(doc,"host")],argv),input,hch-by(120000));
-   (Comparable) result[0] == 0 ? result[1] : form_error("pulse snapshot " ++ name ++ ": retained exact resource trace");
+  def wsn-copy(source,destination) {
+   let made = hch-mkdirs(destination);
+   foldl((n,name) => name == "lock" ? 0 : {
+    let from = source ++ "/" ++ name; let to = destination ++ "/" ++ name;
+    host_path_is_dir(from) == 1 ? wsn-copy(from,to) : host_file_copy(from,to) != file_size(from) ? form_error("native snapshot copy failed: " ++ from) : 0;
+   },0,host_dir_list(source) ?? []);
   }
-  def wsn-save(doc) {
-   let private = wsn-run(doc,"snapshot-private-directory",["install","-d","-m","0700",wr-text(doc,"directory")],"");
-   let stage = wsn-run(doc,"snapshot-stage-directory",["install","-d","-m","0700",wr-text(doc,"stage")],"");
-   wsn-run(doc,"snapshot-online",["sqlite3","-batch","-bail",wr-text(doc,"db")],".timeout 5000\n.backup " ++ wr-quote(wr-text(doc,"backup")) ++ "\n.open " ++ wr-quote(wr-text(doc,"backup")) ++ "\n.backup " ++ wr-quote(wr-text(doc,"stage") ++ "/pulse.db") ++ "\nSELECT json_object('samples',count(*),'first_sample',min(ts),'last_sample',max(ts),'silences',(SELECT count(*) FROM silences),'last_silence_id',(SELECT max(id) FROM silences),'repair_notes',(SELECT count(*) FROM silences WHERE note IS NOT NULL)) FROM samples;\n");
+  def wsn-save(cfg) {
+   let source = nw-root(cfg); let dest = wr-text(cfg,"destination");
+   len(dest) == 0 || dest == source || str_find(dest,source ++ "/",0) == 0 || host_path_exists(dest) == 1 ? form_error("native snapshot needs a fresh destination outside its source") : nw-locked(cfg,meta => {
+    let copied = wsn-copy(source,dest);
+    let stable = host_sync();
+    json-emit(fp-object([["format","form-native-snapshot-v1"],["samples",fp-get(meta,"samples_total",0)],["last_silence_id",fp-get(meta,"max_silence",0)],["destination",dest]]));
+   });
   }
  }
- wsn-save(parse-json("pulse-snapshot",stdin-text()));
+ wsn-save(wr-overlay(wr-config(),parse-json("native-pulse-snapshot",stdin-text())));
 }
