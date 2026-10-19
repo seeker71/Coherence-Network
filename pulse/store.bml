@@ -59,8 +59,8 @@ section [form.bml] {
   }
   def ws-duration(start,end) { let d = (end - fp-time(start))/1000; d<0 ? 0 : d; }
   def ws-rank(hist, rank, n) = nil?(hist) ? nothing() : n+hist[0][1] >= rank ? hist[0][0] : ws-rank(hist[1:],rank,n+hist[0][1]);
-  def ws-percentiles(hist) {
-   let ordered = sort-by(hist,p => p[0]);
+  def ws-percentiles(hist) = ws-percentiles-ordered(fp-histogram(hist));
+  def ws-percentiles-ordered(ordered) {
    let n = foldl((count,p) => count+p[1],0,ordered);
    n == 0 ? [nothing(),nothing()] : [ws-rank(ordered,(n*50+99)/100,0),ws-rank(ordered,(n*95+99)/100,0)];
   }
@@ -71,14 +71,15 @@ section [form.bml] {
    let boundary = nw-raw-day(cfg,fp-day(since),since);
    let histories = map(organ => {
     let name = wr-text(organ,"name");
-    let daily = map(day => {
-     let s = nw-stat(cfg,day,name);
-     let p = ws-percentiles(s[3]);
+    let loaded = map(day => [day,nw-stat(cfg,day,name)],dates);
+    let daily = map(page => {
+     let day = page[0]; let s = page[1];
+     let p = ws-percentiles-ordered(s[3]);
      fp-object([["date",day],["status",s[1] == 0 ? "unknown" : s[2]*2>s[1] ? "silent" : 100.0*(s[1]-s[2])/s[1]>=99.5 ? "breathing" : "strained"],["samples",s[1]],["failures",s[2]],["latency_p50_ms",p[0]],["latency_p95_ms",p[1]]]);
-    },dates);
+    },loaded);
     let initial = nw-stats-rows([0,0,0,[]],filter(row => row[2] == name,boundary));
-    let total = foldl((s,day) => { let d = nw-stat(cfg,day,name); [0,s[1]+d[1],s[2]+d[2],append(s[3],d[3])]; },initial,dates);
-    let percentiles = ws-percentiles(total[3]);
+    let total = foldl((s,page) => { let d = page[1]; [0,s[1]+d[1],s[2]+d[2],cons(d[3],s[3])]; },[0,initial[1],initial[2],[initial[3]]],loaded);
+    let percentiles = ws-percentiles-ordered(fp-histogram-chunks(total[3]));
     [total[1],fp-object([["name",name],["label",wr-text(organ,"label")],["description",wr-text(organ,"description")],["uptime_pct",ws-uptime(total[1],total[2])],["latency_p50_ms",percentiles[0]],["latency_p95_ms",percentiles[1]],["daily",daily]])];
    },organs);
    let observed = filter(h => h[0]>0,histories);

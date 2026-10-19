@@ -22,8 +22,9 @@ The HTTP listener uses native sockets; neither curl nor a host web server is use
 ## Source owners
 
 `templates.bml` carries reusable HTTP and declarative assertion templates.
-`form-persistence.bml` carries typed snapshots, publication ownership and checksummed
-transaction frames. `native-store.bml` specializes them into replayable raw-page,
+`form-persistence.bml` carries typed snapshots, publication ownership, weighted
+histograms, balanced JSON spans and checksummed transaction frames.
+`native-store.bml` specializes them into replayable raw-page,
 daily histogram and silence indexes. `store.bml` owns query/repair templates; `probe.bml`
 specializes them from the organ catalog. `main.bml` owns cadence and the independent
 native HTTP child. `http.bml` owns the public boundary; `fetch.bml` owns a native
@@ -77,7 +78,9 @@ It then archives the original database and WAL under the native store's
 `retired-sqlite/` directory. No external SQLite runtime participates in import or service.
 
 Native transaction frames are flushed before indexed pages, and those pages before
-their checkpoint. Recovery replays complete frames idempotently and retains a torn
+their checkpoint. Independent pages share a staged-byte publication barrier;
+dependent indexes cross a following barrier. Recovery checkpoints the next journal
+before archiving a torn predecessor, replays complete frames idempotently, and retains a torn
 tail intact. Missing or unreadable existing Recipe pages are findings, not empty
 history. `snapshot.bml` makes a consistent native snapshot through streaming file
 resources; supply a fresh `destination` outside `store_path`. Legacy recovery copies
@@ -88,6 +91,9 @@ The container's `fkwu.conf` gives each native task private temporary nodes
 observation waves and import ranges end their own task process, releasing temporary
 nodes rather than accumulating a second shared-field copy of the entire archive.
 The listener and cadence owner stay small; all task code still uses the fkwu JIT.
+Compound JSON is emitted as balanced spans, retaining canonical Form scalar
+escaping. Histogram counts are accumulated once; daily pages are read once per
+history request. Health reads its single atomic checkpoint without a history lock.
 
 ## Focused observation and delivery
 

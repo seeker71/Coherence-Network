@@ -16,6 +16,7 @@ section [form.bml] {
   });
   def po-boundary(cfg) {
    let base = wr-text(cfg,"base");
+   let requests = json-object-has?(cfg,"requests") ? map(row => map(v => node_value(v),node_children(row)),wr-array(cfg,"requests")) : [["health","/pulse/health"],["now","/pulse/now"],["history","/pulse/history?days=7"],["silences","/pulse/silences?days=7"]];
    let rows = map(request => {
     let began = host_monotonic_ms();
     let response = wr-fetch("GET",base ++ request[1],"",0);
@@ -23,7 +24,7 @@ section [form.bml] {
     let doc = parse-json("pulse-boundary",len(response[1]) == 0 ? "{}" : response[1]);
     let organs = wr-array(doc,"organs");
     json-node-object([json-node-pair("surface",json-node-string(request[0])),json-node-pair("status",json-node-int(response[0])),json-node-pair("latency_ms",json-node-int(elapsed)),json-node-pair("bytes",json-node-int(len(response[1]))),json-node-pair("organs",json-node-int(len(organs))),json-node-pair("daily_bars",json-node-int(nil?(organs) ? 0 : len(wr-array(organs[0],"daily")))),json-node-pair("samples_total",json-object-get(doc,"samples_total")),json-node-pair("silences",json-node-int(len(wr-array(doc,"silences")))),json-node-pair("overall",json-object-get(doc,"overall"))]);
-   },[["health","/pulse/health"],["now","/pulse/now"],["history","/pulse/history?days=7"],["silences","/pulse/silences?days=7"]]);
+   },requests);
    json-emit(json-node-object([json-node-pair("native",json-node-string("fkwu")),json-node-pair("observations",json-node-array(rows))]));
   }
   def po-fixture(cfg, organs) {

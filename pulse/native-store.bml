@@ -6,7 +6,7 @@ section [form.bml] {
   def nw-unique(xs) = foldl((out,x) => any?(v => v == x,out) ? out : cons(x,out),[],xs);
   def nw-root(cfg) = wr-text(cfg,"store_path");
   def nw-path(cfg, tail) = nw-root(cfg) ++ "/" ++ tail;
-  def nw-meta(cfg) = fp-read(nw-path(cfg,"state.fkb"),[]);
+  def nw-meta(cfg) = fp-required(nw-path(cfg,"state.fkb"));
   def nw-dir(cfg, tail) = hch-mkdirs(nw-path(cfg,tail));
   def nw-blank() = [["format",1],["seq",0],["samples_total",0],["max_rowid",0],["max_silence",0],["started_at",now_unix_ms()],["tails",[]],["days",[]],["buckets",[]],["open",[]],["journal",0],["offset",0]];
   def nw-key(s) = fp-hex(fp-bytes(s,len(s) - 1,[]));
@@ -19,12 +19,11 @@ section [form.bml] {
   }
   def nw-stat-path(cfg,day,organ) = nw-path(cfg,"days/" ++ day ++ "/" ++ nw-key(organ) ++ ".fkb");
   def nw-stat(cfg,day,organ) = fp-read(nw-stat-path(cfg,day,organ),[0,0,0,[]]);
-  def nw-hist-add(hist, latency, n) {
-   let key = latency.str();
-   let hit = filter(p => p[0] == latency,hist);
-   append(filter(p => p[0] != latency,hist),[[latency,n+(nil?(hit) ? 0 : hit[0][1])]]);
+  def nw-stats-rows(stat,rows) {
+   let observed = filter(row => nw-observed(row),rows);
+   let latency = map(row => [row[4],1],filter(row => row[3] != 0 && !nothing?(row[4]),observed));
+   [stat[0],stat[1]+len(observed),stat[2]+len(filter(row => row[3] == 0,observed)),fp-histogram(append(stat[3],latency))];
   }
-  def nw-stats-rows(stat,rows) = foldl((s,row) => !nw-observed(row) ? s : [s[0],s[1]+1,s[2]+(row[3] == 0 ? 1 : 0),row[3] != 0 && !nothing?(row[4]) ? nw-hist-add(s[3],row[4],1) : s[3]],stat,rows);
   def nw-raw(cfg,day,seq,rows) {
    let dir = "raw/" ++ day;
    let made = nw-dir(cfg,dir);
@@ -46,12 +45,13 @@ section [form.bml] {
   def nw-day(cfg,day,seq,rows) {
    let raw = nw-raw(cfg,day,seq,rows);
    let made = nw-dir(cfg,"days/" ++ day);
-   foldl((n,name) => {
+   let pages = foldl((out,name) => {
     let prior = nw-stat(cfg,day,name);
-    prior[0] >= seq ? 0 : fp-write(nw-stat-path(cfg,day,name),nw-stats-seq(nw-stats-rows(prior,filter(row => row[2] == name,rows)),seq));
-   },0,nw-unique(map(row => row[2],rows)));
+    prior[0] >= seq ? out : cons([nw-stat-path(cfg,day,name),nw-stats-seq(nw-stats-rows(prior,filter(row => row[2] == name,rows)),seq)],out);
+   },[],nw-unique(map(row => row[2],rows)));
+   fp-write-batch(pages);
   }
-  def nw-stats-seq(stat,seq) = [seq,stat[1],stat[2],sort-by(stat[3],p => p[0])];
+  def nw-stats-seq(stat,seq) = [seq,stat[1],stat[2],stat[3]];
   def nw-bucket(cfg,number) = fp-read(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"),[0,[]]);
   def nw-buckets(cfg,meta,seq,changes) {
    let made = nw-dir(cfg,"silences");
