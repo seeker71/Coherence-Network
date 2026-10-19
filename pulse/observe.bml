@@ -2,6 +2,18 @@
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/probe.bml
 section [form.bml] {
  class PulseObservation {
+  def po-inventory(cfg) = nw-locked(cfg,meta => {
+   let days = fp-get(meta,"days",[]);
+   let raw = foldl((counts,day) => {
+    let index = fp-required(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"))[1];
+    [counts[0]+foldl((n,p) => n+p[3],0,index),counts[1]+len(index)];
+   },[0,0],days);
+   let silence = foldl((counts,bucket) => {
+    let rows = fp-required(nw-path(cfg,"silences/" ++ fp-pad(bucket[0],8) ++ ".fkb"))[1];
+    [counts[0]+len(rows),counts[1]+len(filter(row => !nothing?(row[5]),rows))];
+   },[0,0],fp-get(meta,"buckets",[]));
+   raw[0] != fp-get(meta,"samples_total",0) ? form_error("native indexed history differs from its durable sample count") : json-emit(fp-object([["samples",raw[0]],["raw_pages",raw[1]],["max_rowid",fp-get(meta,"max_rowid",0)],["days",len(days)],["first_day",nil?(days) ? nothing() : days[0]],["last_day",nil?(days) ? nothing() : reverse(days)[0]],["silences",silence[0]],["last_silence_id",fp-get(meta,"max_silence",0)],["repair_notes",silence[1]],["import_receipt",fp-object(fp-read(nw-path(cfg,"import-receipt.fkb"),[]))]]));
+  });
   def po-boundary(cfg) {
    let base = wr-text(cfg,"base");
    let rows = map(request => {
@@ -40,5 +52,5 @@ section [form.bml] {
  }
  let cfg = wr-overlay(wr-config(),parse-json("pulse-observation",stdin-text()));
  let organs = ws-organs();
- wr-text(cfg,"mode") == "boundary" ? po-boundary(cfg) : wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : nw-locked(cfg,meta => json-emit(ws-now(cfg,meta,organs)));
+ wr-text(cfg,"mode") == "boundary" ? po-boundary(cfg) : wr-text(cfg,"mode") == "fixture" ? po-fixture(cfg,organs) : wr-text(cfg,"mode") == "inventory" ? po-inventory(cfg) : nw-locked(cfg,meta => json-emit(ws-now(cfg,meta,organs)));
 }

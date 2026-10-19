@@ -16,6 +16,8 @@ section [form.bml] {
   def fp-write(path, v) { let n = write_form_binary(path,fp-pack(v)); n < 0 ? form_error("native Recipe publication failed: " ++ path) : n; }
   def fp-get(pairs, key, fallback) { let found = filter(p => p[0] == key,pairs); nil?(found) ? fallback : found[0][1]; }
   def fp-set(pairs, key, value) = append(filter(p => p[0] != key,pairs),[[key,value]]);
+  // Compute a structural key once, rather than at every merge comparison.
+  def fp-order(xs,key,before) = map(pair => pair[1],sort-with((a,b) => before(a[0],b[0]),nothing(),map(x => [key(x),x],xs)));
   def fp-json(v) = nothing?(v) ? json-node-null() : value_kind(v) == "node_id" ? v : value_kind(v) == "list" ? json-node-array(map(x => fp-json(x),v)) : value_kind(v) == "string" ? json-node-string(v) : value_kind(v) == "float" ? json-node-float-text(v.str()) : json-node-int(v);
   def fp-object(pairs) = json-node-object(map(p => json-node-pair(p[0],fp-json(p[1])),pairs));
   def fp-pad(n, width) { let s = n.str(); len(s) >= width ? s : fp-pad-text(s,width); }

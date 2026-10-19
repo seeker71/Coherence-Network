@@ -35,11 +35,12 @@ section [form.bml] {
   // Worker lifetimes partition native pool ownership, not the retained history.
   // Every range publishes a resumable checkpoint before its process releases.
   def whi-part(cfg,path,after,through) {
+   let began = host_monotonic_ms();
    let prior = fp-read(nw-path(cfg,"import-progress.fkb"),[nw-blank(),0]);
    let part = whi-samples(cfg,sfi-open(path),prior[0],after,through,prior[1]);
    let kept = fp-write(nw-path(cfg,"import-progress.fkb"),part);
    let durable = host_sync();
-   json-emit(fp-object([["samples",fp-get(part[0],"samples_total",0)],["through",through]]));
+   json-emit(fp-object([["samples",fp-get(part[0],"samples_total",0)],["through",through],["elapsed_ms",host_monotonic_ms() - began]]));
   }
   def whi-parts(cfg,path,after,last) = after >= last ? fp-read(nw-path(cfg,"import-progress.fkb"),[nw-blank(),0]) : {
    let through = after+65536 < last ? after+65536 : last;

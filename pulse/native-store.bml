@@ -11,7 +11,7 @@ section [form.bml] {
   def nw-blank() = [["format",1],["seq",0],["samples_total",0],["max_rowid",0],["max_silence",0],["started_at",now_unix_ms()],["tails",[]],["days",[]],["buckets",[]],["open",[]],["journal",0],["offset",0]];
   def nw-key(s) = fp-hex(fp-bytes(s,len(s) - 1,[]));
   def nw-observed(row) = nothing?(row[5]) || str_find(row[5],"unobserved: ",0) != 0;
-  def nw-sort-rows(rows) = sort-with((a,b) => fp-time(a[1]) == fp-time(b[1]) ? a[0] <= b[0] : fp-time(a[1]) <= fp-time(b[1]),nothing(),rows);
+  def nw-sort-rows(rows) = fp-order(rows,row => [fp-time(row[1]),row[0]],(a,b) => a[0] == b[0] ? a[1]<=b[1] : a[0]<=b[0]);
   def nw-tail(rows) { let sorted = nw-sort-rows(rows); drop(len(sorted)>20 ? len(sorted) - 20 : 0,sorted); }
   def nw-tails(meta, rows) {
    let names = nw-unique(map(row => row[2],rows));
