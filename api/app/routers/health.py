@@ -204,7 +204,7 @@ async def ping():
 
 
 @router.get("/ready", response_model=ReadyResponse, summary="Readiness probe for k8s/deploy. Returns 200 when API can serve traffic")
-async def ready(request: Request):
+def ready(request: Request):
     """Readiness probe for k8s/deploy. Returns 200 when API can serve traffic."""
     is_ready = getattr(request.app.state, "graph_store", None) is not None
     if not is_ready:
@@ -486,7 +486,7 @@ def health(
     "/health/db-contention",
     summary="Leading indicator of DB write-lane contention (oldest txn age + lock-waiters)",
 )
-async def db_contention():
+def db_contention():
     """A leading indicator of write-lane lock contention — wedge prevention.
 
     On 2026-07-02 the substrate write lane wedged three times on a long-held
