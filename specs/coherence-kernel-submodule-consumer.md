@@ -112,8 +112,15 @@ changes, when genuinely needed, get their focused native observation at source.
 Reference commands for a new initialization or admission finding (reuse an
 existing matching receipt rather than running them again):
 
+For initialization, compare the SHA in the index's `160000` gitlink row with the
+checked-out kernel HEAD. They name the same immutable source. Submodule status
+alone is informational: `-` means uninitialized and `+` means mismatched, even
+when that command exits zero. Either observation gives initialization care work;
+neither is an exact-pin pass. Admission is a separate application observation.
+
 ```sh
-git submodule status --recursive
+git ls-files --stage form
+git -C form rev-parse HEAD
 cd form && ./fkwu --check ../pulse/http.bml
 ```
 

@@ -1,10 +1,11 @@
 {
- "date":"2026-10-19","thread_branch":"codex/kernel-consumer-guidance-20261019",
+ "date":"2026-10-19","thread_branch":"codex/consumer-pin-reading-20261019",
  "commit_scope":"Align the canonical consumer contract with the landed fkwu main-source authority and minimal source-owned care.","change_intent":"docs_only",
  "idea_ids":["coherence-kernel-one-home"],"spec_ids":["coherence-kernel-submodule-consumer"],"task_ids":["pulse-native-dispatch"],
  "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["source contract reconciliation"]}],"agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
  "files_owned":["specs/coherence-kernel-submodule-consumer.md"],"change_files":["specs/coherence-kernel-submodule-consumer.md"],
  "evidence_refs":[
+  "Review4315894171 correctly distinguishes informational submodule status from exact-pin evidence. The guide now explicitly compares the SHA in the index gitlink row with the checked-out kernel HEAD, and names minus/plus status prefixes as missing/mismatched observations even when the status command exits zero. No new automated runtime or kernel gate is introduced.",
   "Review4315828555 identified that .gitmodules and deployment guidance followed main while the canonical consumer spec still required a generated form-submodule snapshot. The spec now names the same immutable main-source authority as landed PR4095, preserves the fkwu source/JIT path contract, and treats optional distribution names as guidance rather than a release gate.",
   "The July migration references remain explicitly historical. Stale Python test paths and blanket consumer/kernel validation commands no longer prescribe current release work. The named test_kernel_submodule_contract.py file is absent in the current tree; no host-language implementation was added or rewritten.",
   "Current acceptance follows recursive initialization, affected native application admission, immutable source seals and affected public observation. Reuse matching image admission evidence rather than repeat it. Needed upstream capability and bootstrap work retains its source owner instead of becoming an indefinite publication blocker.",
