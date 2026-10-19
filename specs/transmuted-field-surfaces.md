@@ -6,6 +6,8 @@ source:
     symbols: [tm-lifts, tm-register, tm-packet]
   - file: form/observe/transmute-run.bml
     symbols: [tmr-run]
+  - file: api/app/form_recipes/event_transmute.bml
+    symbols: [et-run]
   - file: form/form/form-stdlib/word-frequency-purify.fk
     symbols: [wfp-rows, wfp-purified]
   - file: form/cognition/dialogue-covenant.fk
@@ -65,12 +67,31 @@ covenant, transmuted signals, presences on the mesh. Meaning is stored once; eve
 | encyclopedia (what an article is for) | a concept, its Hz, its lineage, its sources | `/vision/{id}`, `/concepts`, the 184-concept ontology |
 | thread (what a reply chain is for) | a conversation under the covenant, unlisted by id | `public-dialogue-cpu-organ`, `/api/dialogues` |
 
-**Transmutation** (`form/form-stdlib/bml/transmute.bml`, `observe/transmute-run.bml`): a passage in → the words
-the purify grammar knows are lifted (`law` → a currently-observed belief with a freshness stamp; `must` → this comes
-first, the cell still chooses; `not` → the path that is offered) → the body's own voice renders it under the covenant
-card, keeping every fact and attributing the source → the register is counted before and after → a `TransmuteRow`
-stands in the ledger. Then the satsang ack (`ingest/satsang-transmute.fk`): offered against an axiom, witnessed,
-composted, frozen into the field, or recurring as work.
+**Transmutation** (`form/form-stdlib/bml/transmute.bml`, `observe/transmute-run.bml`, and this body's own door
+`api/app/form_recipes/event_transmute.bml`). Transmutation is not a word swap. An event is read in five layers,
+each one of the field's own moves, and told from there by the body's voice:
+
+1. **What happened** — the facts, names and numbers exactly as given, attributed to the source, kept whole.
+2. **What it is asking for** — the observer first (`lc-when-the-pressure-comes`, move 1: *what is here*), then the
+   need under the pressure named once in the words the event itself gives (move 2) — what the event shows, never what
+   anyone in it feels.
+3. **Which ideas it serves** — the body reads its own seeds natively first: the super-ideas of `ideas/INDEX.md` and
+   the 203 concepts of `docs/vision-kb/INDEX.md` with their Hz, read from the index lines as they stand (no second
+   copy); resonance is the words the event and a seed share, strongest first, and what resonates is what the voice
+   sees. The voice names two or three ideas by id and says for each whether the event is *evidence for* it, a *call
+   to* it, or a *question to* it — and only ids the seeds hold enter the row; a name the field does not hold is a
+   counterfeit and is dropped.
+4. **The gift** (move 3) — what the event has not yet unwrapped: what becomes possible if those ideas answered it,
+   and one door where a person standing in the event could meet the field.
+5. **The lift** — the same event told from trust: the fact unchanged, the direction toward aliveness, in the four
+   sentences the surfaces carry — the stream's line, the board's pin, the encyclopedia's evidence on the idea's
+   page, the thread's opening question.
+
+Beneath the layers is the operator (move 5): frequency, angle and focus chosen in the open at the moment the
+pressure discharges. The purify grammar lifts the control words it knows; the register and the resonance are
+measured before and after; a row stands in the ledger with the ideas served. Then the satsang ack
+(`ingest/satsang-transmute.fk`): each served idea's reading offered against an axiom — witnessed, composted, frozen
+into the field as evidence on that idea, or recurring as work (a new idea or spec seed).
 
 **Finding each other.** The resonance kernel reads a text into the concept vocabulary (`text_to_symbol`,
 `compute_crk`); belief profiles find resonant peers; the concept Hz map is the band map. Meeting is by invitation,

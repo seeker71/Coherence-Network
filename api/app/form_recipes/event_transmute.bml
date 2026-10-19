@@ -1,0 +1,43 @@
+// event_transmute.bml — this body's door for an event from the world: the kernel's transmute organ, handed this
+// repository's own ideas and concepts as the seeds, so the reading says which of OUR ideas the event serves.
+//
+//   cd form && printf '%s\n%s\n%s\n' "$SOURCE" "$MODEL" "$EVENT" | ./fkwu ../api/app/form_recipes/event_transmute.bml
+//
+// stdin: line 1 the source (URL or name); line 2 the model ("0" reads without the voice, blank the registry's answer
+// model, a registry id such as qwen38-q4); every line after is the event. The seeds are read from ../ideas/INDEX.md
+// (the super-ideas) and ../docs/vision-kb/INDEX.md (the concepts with their Hz) as they stand — no second copy. The
+// body's resonance read chooses which concept seeds the voice sees; the voice names the ideas the event serves by id,
+// and only ids the seeds hold enter the row. Rows land in ../docs/system_audit/event-transmute-ledger.jsonl.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/line-grammar.fk form/form-stdlib/bml/transmute.bml form/form-stdlib/bml/form-cli-native-voice.bml form/form-stdlib/bml/ledger.bml
+section [form.bml] {
+ blueprint EventTransmuteRow { at_unix_ms: int, source: string, bytes_in: int, bytes_out: int, seeds: int, resonant: int, ideas_served: list<string>, register_before: int, register_after: int, voice: string }
+ class EventTransmute {
+  def et-ledger() = "../docs/system_audit/event-transmute-ledger.jsonl";
+  def et-ideas() = "../ideas/INDEX.md";
+  def et-concepts() = "../docs/vision-kb/INDEX.md";
+  def et-shown-concepts() = 24;
+  def et-line() { let l = read_line(); nothing?(l) ? "" : trim(l); }
+  def et-rest-go(acc) { let l = read_line(); nothing?(l) ? acc : et-rest-go(acc ++ l ++ "\n"); }
+  def et-join(xs) = nil?(xs) ? "" : nil?(xs[1:]) ? xs[0] : xs[0] ++ ", " ++ et-join(xs[1:]);
+  def et-run() {
+   let source = et-line();
+   let flag = et-line();
+   let event = trim(et-rest-go(""));
+   let seeds = tm-seeds-at(et-ideas(), et-concepts());
+   let resonant = tm-resonance(seeds, event);
+   let shown = tm-shown(seeds, resonant, et-shown-concepts());
+   let lifts = tm-lifts(event);
+   let request = (Comparable) len(flag) == 0 ? json-node-object([]) : json-node-object([oh-s("model", flag)]);
+   let asked = (String) flag == "0" ? ["not-asked", ""] : fcnv-ask(tm-event-packet(source, event, lifts, shown), request);
+   let answer = (String) asked[0] == "answered" ? trim(asked[1]) : "";
+   let served = tm-served(answer, seeds);
+   let ids = map(s => tm-sid(s), served);
+   let said = print_str("[event] source=" ++ ((Comparable) len(source) == 0 ? "(none)" : source) ++ " · seeds " ++ len(seeds).str() ++ " · resonant " ++ len(resonant).str() ++ " · ideas served " ++ len(served).str() ++ ((Comparable) len(served) == 0 ? "" : " (" ++ et-join(ids) ++ ")") ++ " · register " ++ tm-register(event).str() ++ " -> " ++ tm-register(answer).str() ++ " · voice=" ++ asked[0] ++ "\n");
+   let resonated = nil?(resonant) ? 0 : print_str("the body's resonance read:\n" ++ tm-resonant-lines(tm-take(resonant, 8)));
+   let told = len(answer) > 0 ? print_str("\n" ++ answer ++ "\n") : 0;
+   let kept = ledger-append(et-ledger(), EventTransmuteRow{at_unix_ms: now_unix_ms(), source: source, bytes_in: len(event), bytes_out: len(answer), seeds: len(seeds), resonant: len(resonant), ideas_served: ids, register_before: tm-register(event), register_after: tm-register(answer), voice: asked[0]});
+   0;
+  }
+ }
+ et-run();
+}
