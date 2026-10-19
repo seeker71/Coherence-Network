@@ -1,0 +1,18 @@
+{
+ "date":"2026-10-19","thread_branch":"codex/consumer-pin-reading-20261019",
+ "commit_scope":"Align the canonical consumer contract with the landed fkwu main-source authority and minimal source-owned care.","change_intent":"docs_only",
+ "idea_ids":["coherence-kernel-one-home"],"spec_ids":["coherence-kernel-submodule-consumer"],"task_ids":["pulse-native-dispatch"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["source contract reconciliation"]}],"agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "files_owned":["specs/coherence-kernel-submodule-consumer.md"],"change_files":["specs/coherence-kernel-submodule-consumer.md"],
+ "evidence_refs":[
+  "Review4315894171 correctly distinguishes informational submodule status from exact-pin evidence. The guide now explicitly compares the SHA in the index gitlink row with the checked-out kernel HEAD, and names minus/plus status prefixes as missing/mismatched observations even when the status command exits zero. No new automated runtime or kernel gate is introduced.",
+  "Review4315828555 identified that .gitmodules and deployment guidance followed main while the canonical consumer spec still required a generated form-submodule snapshot. The spec now names the same immutable main-source authority as landed PR4095, preserves the fkwu source/JIT path contract, and treats optional distribution names as guidance rather than a release gate.",
+  "The July migration references remain explicitly historical. Stale Python test paths and blanket consumer/kernel validation commands no longer prescribe current release work. The named test_kernel_submodule_contract.py file is absent in the current tree; no host-language implementation was added or rewritten.",
+  "Current acceptance follows recursive initialization, affected native application admission, immutable source seals and affected public observation. Reuse matching image admission evidence rather than repeat it. Needed upstream capability and bootstrap work retains its source owner instead of becoming an indefinite publication blocker.",
+  "This is contract-only; the active runtime deployment remains9b43f07c34a29798dfbf6fe657eabc7615f38233 with kernel efc20a698c451bb5b27cb48e86eaa3f423976610. No kernel or sibling suite, runtime change, latency threshold or history change is part of this commit. OpenAI supplied reasoning; Form supplied the source reads."
+ ],
+ "local_validation":{"status":"pass","summary":"Canonical contract compared against the landed source metadata and current native paths; no runtime suite."},"ci_validation":{"status":"pending","summary":"Read actual changed-contract findings."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger; this contract-only commit does not alter the active runtime release"},
+ "e2e_validation":{"status":"pending","expected_behavior_delta":"Future consumer bumps follow current source ownership and observed admission rather than stale distribution/test prescriptions.","public_endpoints":["https://github.com/seeker71/Coherence-Network/blob/main/specs/coherence-kernel-submodule-consumer.md"],"test_flows":["Canonical source-contract reconciliation"]},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Documentation-only evidence; runtime rollout is tracked separately at its actual source identity."}
+}
