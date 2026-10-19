@@ -1,37 +1,12 @@
-// Native listener and reusable durable read templates; no framework or host server.
-// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk ../pulse/store.bml
+// Admitted native cells survive into each isolated request context. Socket and
+// child completion events wake the owner; no request executable or file bridge.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/native-socket-dispatch.bml ../pulse/http-handler.bml
 section [form.bml] {
- class PulseHttp {
-  def ph-days(target) {
-   let route = split-on(target,"?")[0];
-   let text = trim(wr-query(target,"days",route == "/pulse" || route == "/pulse/" ? "7" : "90"));
-   let digits = str_find(text,"+",0) == 0 ? substring(text,1,len(text)) : text;
-   let n = str_to_int(digits); wr-digits?(digits,0) && n >= 1 && n <= 180 ? n : 0;
-  }
-  def ph-cors(cfg, raw) {
-   let origin = wr-header(split-on(raw,"\r\n"),"origin");
-   let origins = wr-array(cfg,"cors_origins");
-   let wildcard = any?(one => json-string-value(one) == "*",origins);
-   wildcard || any?(one => json-string-value(one) == origin,origins) ? "Access-Control-Allow-Origin: " ++ (wildcard ? "*" : origin) ++ "\r\nVary: Origin\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\n" : "";
-  }
-  def ph-handle(cfg, organs, raw) {
-   let began = host_monotonic_ms();
-   let words = split-on(split-on(raw,"\r\n")[0]," ");
-   let method = words[0];
-   let target = len(words) < 2 ? "" : words[1];
-   let route = split-on(target,"?")[0]; let path = route == "/pulse/" ? "/pulse" : route;
-   let days = ph-days(target);
-   let known = any?(one => one == path,["/","/pulse","/pulse/health","/pulse/now","/pulse/history","/pulse/silences"]);
-   let code = !known ? 404 : method != "GET" && method != "OPTIONS" ? 405 : (path == "/pulse" || path == "/pulse/history" || path == "/pulse/silences") && days == 0 ? 422 : 200;
-   let request = fp-object([["path",path],["days",days],["organ",wr-query(target,"organ","")],["date",wr-query(target,"date","")],["view",wr-query(target,"view","")]]);
-   let body = code != 200 ? (code == 422 ? "{\"detail\":\"days must be an integer from 1 to 180\"}" : "{\"detail\":\"Not Found or method not allowed\"}") : method == "OPTIONS" ? "{}" : path == "/" ? "{\"service\":\"pulse\",\"version\":\"1.1.0-form\",\"runtime\":\"fkwu\",\"endpoints\":[\"/pulse\",\"/pulse/now\",\"/pulse/history\",\"/pulse/silences\",\"/pulse/health\"]}" : fp-task(cfg,"../pulse/read.bml",wr-overlay(cfg,request));
-   let html = code == 200 && method == "GET" && path == "/pulse";
-   let policy = "Cache-Control: no-store, no-transform\r\n" ++ (html ? "Content-Security-Policy: script-src 'none'; object-src 'none'; base-uri 'none'\r\n" : "");
-   wr-response-as(code,body,ph-cors(cfg,raw) ++ policy ++ "X-Form-Router: fkwu\r\nX-Coherence-Runtime-Ms: " ++ (host_monotonic_ms()-began).str() ++ "\r\n",html ? "text/html" : "application/json");
-  }
- }
  let cfg = wr-config();
- let organs = ws-organs();
- let listener = socket_listen(wr-number(cfg,"port"));
- listener < 0 ? form_error("pulse native listener could not open") : wr-serve(listener,raw => ph-handle(cfg,organs,raw));
+ let read = cell_call("../pulse/read.bml",nothing(),"check");
+ let view = cell_call("../pulse/read-view.bml",nothing(),"check");
+ record_get(read,"errors")>0 || record_get(view,"errors")>0 ? form_error("native HTTP read admission failed") : {
+  let organs = ws-organs();
+  nsd-serve(nsd-open(wr-number(cfg,"port"),raw => ph-handle(wr-overlay(cfg,fp-object([["request_began_ms",host_monotonic_ms()]])),organs,raw)));
+ };
 }

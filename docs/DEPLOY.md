@@ -119,6 +119,17 @@ summaries from retained daily history. Later starts compare raw-day sequence
 coordinates and reconcile only changed sources, including writes from an older
 service during handoff. Keep the existing volume and recovery copies. This
 derivation is application startup, not a kernel validation run.
+Readiness dispatch is Form/BML emitted through fkwu's RAM-image JIT. Linux images
+carry their explicit ISA tag; an ARM image is never admitted as x86. The listener
+admits its read cells once and retains held values in private copy-on-write request
+contexts. Keep Pulse's `FK_STORE_PRIVATE` configuration with this ownership:
+both values and JIT program pages must stay private, not merely the global node
+field. A pre-fork completion pipe wakes the owner when the request exits. No external
+server, replica, request-file adapter or nested executable serves the route.
+Read views hold only brief checkpoint boundaries, not the writer lock through
+rendering. The ending boundary waits out in-flight publication and re-enters a
+crossed version before a response can leave. Observe independent health/document
+progress beside a long archive read when this dispatch or ownership changes.
 
 Ordinary runtime telemetry invalidates its own event view, not provider facts.
 The retired cross-service flush took the provider-refresh lock on the API event
@@ -151,9 +162,12 @@ the immutable image's service initialization, then bind the source point at the
 database door. Repeated source staging/compilation is not per-request work; a
 changed image/source activates a new native template, not a wall-clock expiry.
 
-The native build enumerates its private source copy with Form's
-`source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
-reads the serving container's immutable revision label. A failed build may
+The native build and form-cli private-body flow enumerate source copies with
+Form's `source-tree.bml`. Docker snapshots need no usable Git metadata: actual
+files own the source set, and the existing sealed closure owns build identity.
+The retired `git ls-files` call mistook a refused snapshot pointer for an empty
+body. Keep that finding at the source reader, not a Docker-specific bypass.
+Build scope reads the serving container's immutable revision label. A failed build may
 advance the VPS checkout without advancing the running image, so the checkout
 alone does not establish the deployed comparison base.
 

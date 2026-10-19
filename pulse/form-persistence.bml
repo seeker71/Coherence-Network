@@ -27,6 +27,17 @@ section [form.bml] {
   }
   def fp-get(pairs, key, fallback) { let found = filter(p => p[0] == key,pairs); nil?(found) ? fallback : found[0][1]; }
   def fp-set(pairs, key, value) = append(filter(p => p[0] != key,pairs),[[key,value]]);
+  // source() offers [version,value] at its publication boundary. view(value)
+  // returns a native cell outcome. Only a stable version publishes its value;
+  // an overlapping writer resumes the same offered read with fresh evidence.
+  def fp-coherent(source,view) {
+   let before = source(); let observed = view(before[1]); let after = source();
+   let stable = before[0] == after[0];
+   !stable ? fp-coherent(source,view) : record_get(observed,"errors")>0 || !nothing?(record_get(observed,"stopped")) ? {
+    print(["native-read-source",before[0],record_get(observed,"diag"),record_get(observed,"stopped")]);
+    form_error("native coherent read failed at its retained source observation");
+   } : record_get(observed,"value");
+  }
   // Compute a structural key once, rather than at every merge comparison.
   def fp-order(xs,key,before) = map(pair => pair[1],sort-with((a,b) => before(a[0],b[0]),nothing(),map(x => [key(x),x],xs)));
   def fp-histogram(pairs) = fp-histogram-chunks([pairs]);
