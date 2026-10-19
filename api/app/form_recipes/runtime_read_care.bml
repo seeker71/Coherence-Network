@@ -1,0 +1,25 @@
+// A read shape owns its physical access path. Keep schema care in Form rather
+// than adding another Python migration/writer. PostgreSQL builds online; rows,
+// history, callers and the existing query contract remain unchanged.
+// stdin: {"host":"root@host","key":"/local/key","container":"postgres-container","database":"coherence","role":"coherence"}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+section [form.bml] {
+ class RuntimeReadCare {
+  def rrc-text(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
+  def rrc-ident(name) {
+   let quote = byte_to_str(34);
+   quote ++ hch-join(split-on(name, quote), quote ++ quote) ++ quote;
+  }
+  // [name, relation, [[column, direction]]]: a reusable ordered-read blueprint.
+  def rrc-paths() = [["runtime_events_source_recorded_at", "runtime_events", [["source", "ASC"], ["recorded_at", "DESC"]]]];
+  def rrc-index(path) = "CREATE INDEX CONCURRENTLY IF NOT EXISTS " ++ rrc-ident(path[0]) ++ " ON " ++ rrc-ident(path[1]) ++ " (" ++ hch-join(map(column => rrc-ident(column[0]) ++ " " ++ column[1], path[2]), ", ") ++ ");\n";
+  def rrc-sql() = str-spans(map(path => rrc-index(path), rrc-paths())) ++ "SELECT json_build_object('index',c.relname,'valid',i.indisvalid,'ready',i.indisready) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE c.relname='runtime_events_source_recorded_at';\nEXPLAIN SELECT * FROM runtime_events WHERE source='worker' ORDER BY recorded_at DESC LIMIT 5000;\n";
+  def rrc-care(doc) {
+   let argv = append(["ssh", "-i", rrc-text(doc, "key"), "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", rrc-text(doc, "host")], ["docker", "exec", "-i", "-u", "postgres", rrc-text(doc, "container"), "psql", "--no-psqlrc", "-qAt", "--set", "ON_ERROR_STOP=on", "-U", rrc-text(doc, "role"), "-d", rrc-text(doc, "database")]);
+   let run = hch-run("runtime-read-care", argv, rrc-sql(), hch-by(600000));
+   hch-ok?(run) ? run[1] : form_error("runtime read care failed; exact input, output and exit retained by host-child");
+  }
+ }
+ print_str(rrc-care(parse-json("runtime-read-care", stdin-text())));
+ 0;
+}

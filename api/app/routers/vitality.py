@@ -13,6 +13,6 @@ router = APIRouter()
 
 
 @router.get("/workspaces/{workspace_id}/vitality", summary="Return living-system health metrics for a workspace")
-async def get_vitality(workspace_id: str) -> dict:
+def get_vitality(workspace_id: str) -> dict:
     """Return living-system health metrics for a workspace."""
     return vitality_service.compute_vitality(workspace_id=workspace_id)
