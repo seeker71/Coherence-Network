@@ -1,0 +1,22 @@
+// Reusable escaped HTML, disclosure and document templates. Browser-native UI;
+// no client evaluator, hydration payload, script or external asset is needed.
+import ../pulse/form-persistence.bml;
+section [form.bml] {
+ class FormHtml {
+  def fh-escape(text) = fh-escape-from(text,0,[]);
+  // Copy ordinary runs, not one temporary node per byte of trusted prose.
+  def fh-escape-from(text,at,parts) {
+   let found = filter(p => p[0]>=0,map(pair => [str_find(text,pair[0],at),pair[1]],[["&","&amp;"],["<","&lt;"],[">","&gt;"],["\"","&quot;"],["'","&#39;"]]));
+   nil?(found) ? str-spans(reverse(cons(substring(text,at,len(text)),parts))) : {
+    let first = foldl((a,b) => b[0]<a[0] ? b : a,found[0],found);
+    fh-escape-from(text,first[0]+1,cons(first[1],cons(substring(text,at,first[0]),parts)));
+   };
+  }
+  def fh-text(value) = fh-escape(nothing?(value) ? "—" : value_kind(value) == "string" ? value : value.str());
+  def fh-attrs(pairs) = str-spans(map(pair => " " ++ pair[0] ++ "=\"" ++ fh-text(pair[1]) ++ "\"",pairs));
+  def fh-tag(name,attrs,children) = "<" ++ name ++ fh-attrs(attrs) ++ ">" ++ str-spans(children) ++ "</" ++ name ++ ">";
+  def fh-link(url,label) = fh-tag("a",[["href",url]],[fh-text(label)]);
+  def fh-detail(label,children) = fh-tag("details",[],cons(fh-tag("summary",[],[fh-text(label)]),children));
+  def fh-document(title,style,children) = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"dark light\"><title>" ++ fh-text(title) ++ " | Coherence Network</title><style>" ++ style ++ "</style></head><body>" ++ str-spans(children) ++ "</body></html>";
+ }
+}

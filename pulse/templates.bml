@@ -33,7 +33,7 @@ section [form.bml] {
    let cleared = host_path_remove(dir ++ "/request.out");
    let fed = write_file_text(dir ++ "/request.in", json-emit(request));
    let pid = host_spawn_at(["./fkwu", "../pulse/fetch.bml"], [dir ++ "/request.in", dir ++ "/request.out", dir ++ "/request.err"]);
-   [pid, request, dir, host_monotonic_ms()];
+   [pid, request, dir, host_monotonic_ms(),json-object-has?(request,"timeout_ms") ? wr-number(request,"timeout_ms") : 10000];
   }
   def wr-http-finish(row, status, receive) {
    let source = trim(read_file(row[2] ++ "/request.out") ?? "");
@@ -43,7 +43,7 @@ section [form.bml] {
   def wr-http-poll(rows, receive, pending) = nil?(rows) ? reverse(pending) : {
    let row = rows[0];
    let waited = row[0] < 0 ? 127 : host_wait([row[0], 1]);
-   let expired = nothing?(waited) && host_monotonic_ms() - row[3] > 10000;
+   let expired = nothing?(waited) && host_monotonic_ms() - row[3] > row[4];
    let stopped = expired ? host_signal(row[0], 9) : 0;
    let status = expired ? host_wait(row[0]) : waited;
    nothing?(status) ? wr-http-poll(rows[1:], receive, cons(row, pending)) : {
@@ -62,7 +62,13 @@ section [form.bml] {
    let found = filter(line => str_find(wr-lower(line), key ++ ":", 0) == 0, head);
    nil?(found) ? "" : trim(substring(found[0], len(key) + 1, len(found[0])));
   }
-  def wr-response(code, body, headers) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 404 ? " Not Found" : code == 422 ? " Unprocessable Entity" : " Error") ++ "\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\n" ++ headers ++ "\r\n" ++ body;
+  def wr-response(code, body, headers) = wr-response-as(code,body,headers,"application/json");
+  def wr-response-as(code, body, headers, media) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 404 ? " Not Found" : code == 422 ? " Unprocessable Entity" : " Error") ++ "\r\nContent-Type: " ++ media ++ "; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\n" ++ headers ++ "\r\n" ++ body;
+  def wr-query(target,key,fallback) {
+   let query = split-on(target,"?"); let pairs = len(query)<2 ? [] : split-on(query[1],"&");
+   let found = filter(pair => split-on(pair,"=")[0] == key,pairs);
+   nil?(found) ? fallback : { let pair = reverse(found)[0]; let at = str_find(pair,"=",0); at<0 ? "" : wr-decode(substring(pair,at+1,len(pair)),0,""); };
+  }
   def wr-send(conn, text, at) = at >= len(text) ? 0 : { let sent = socket_send(conn, substring(text, at, len(text))); sent <= 0 ? -1 : wr-send(conn, text, at + sent); };
   def wr-serve(listener, handle) {
    let conn = socket_accept(listener);
@@ -93,7 +99,7 @@ section [form.bml] {
    let location = wr-header(headers, "location");
    redirects > 0 && code >= 300 && code < 400 && len(location) > 0 ? wr-fetch(code == 303 ? "GET" : method, str_find(location, "/", 0) == 0 ? hch-join(take(3, split-on(url, "/")), "/") ++ location : location, code == 303 ? "" : body, redirects - 1) : {
     let payload = start < 0 ? "" : substring(raw, start, len(raw));
-    [code, wr-header(headers, "transfer-encoding") == "chunked" ? wr-unchunk(payload, 0, []) : payload, wr-header(headers, "x-form-router")];
+    [code, wr-header(headers, "transfer-encoding") == "chunked" ? wr-unchunk(payload, 0, []) : payload, wr-header(headers, "x-form-router"),start < 0 ? "" : substring(raw,0,start)];
    };
   }
   def wr-plain(method, url, body) {
@@ -105,10 +111,16 @@ section [form.bml] {
    let conn = socket_connect(parts[0],len(parts) > 1 ? str_to_int(parts[1]) : 80);
    conn < 0 ? "" : {
     let sent = http-send-all(conn,kh-render-request(method,path,hostport,body),0);
-    let response = http-recv-response-into(conn,"") ?? "";
+    let response = wr-receive(conn,[]);
     let closed = socket_close(conn);
     response;
    };
+  }
+  // HTTP/1.0 explicitly asks the peer to close. A header is not a complete
+  // response: header case and packet boundaries must never discard its body.
+  def wr-receive(conn,chunks) {
+   let chunk = socket_recv(conn,65536);
+   nothing?(chunk) ? form_error("native HTTP response ended with a transport error") : len(chunk) == 0 ? str-spans(reverse(chunks)) : wr-receive(conn,cons(chunk,chunks));
   }
  }
 }

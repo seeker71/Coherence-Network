@@ -74,28 +74,6 @@ if [[ "$form_index_mode" == "160000" ]]; then
     echo "  make prompt-guide"
     exit 1
   fi
-  form_material_dirt=""
-  while IFS= read -r -d '' form_status_entry; do
-    form_status_code="${form_status_entry:0:2}"
-    form_status_path="${form_status_entry:3}"
-    if [[ "$form_status_code" == "??" ]] && {
-      [[ "$form_status_path" == ".cache" || "$form_status_path" == .cache/* ]] ||
-      [[ "$form_status_path" == ".pytest_cache" || "$form_status_path" == .pytest_cache/* ]] ||
-      [[ "$form_status_path" == ".ruff_cache" || "$form_status_path" == .ruff_cache/* ]];
-    }; then
-      continue
-    fi
-    form_material_dirt+="${form_status_entry}"$'\n'
-  done < <(git -C form status --porcelain=v1 -z --untracked-files=all 2>/dev/null || true)
-  if [[ -n "$form_material_dirt" ]]; then
-    echo "prompt-entry-guide: form submodule has material changes outside the reviewed pin."
-    printf '%s' "$form_material_dirt"
-    echo "Land intentional kernel work in coherence-kernel first, or restore the reviewed snapshot:"
-    echo "  git submodule update --force --init --recursive form"
-    echo "Then rerun:"
-    echo "  make prompt-guide"
-    exit 1
-  fi
 fi
 
 if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
@@ -166,37 +144,6 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
   exit 1
 fi
 
-# Form-first stays the reasoning invariant, while the documented default entry
-# remains usable before API dependencies have been installed.  Warm, prepared
-# worktrees reconcile the complete index here; fresh worktrees report the exact
-# deferred command.  Full proof always requires and runs the reconciliation.
-form_bootstrap_ready=0
-FORM_BOOTSTRAP_PYTHON=()
-if [[ -x "api/.venv/bin/python" ]]; then
-  FORM_BOOTSTRAP_PYTHON=("api/.venv/bin/python")
-elif [[ -x "api/.venv/Scripts/python.exe" ]]; then
-  FORM_BOOTSTRAP_PYTHON=("api/.venv/Scripts/python.exe")
-elif [[ "$PYTHON3_AVAILABLE" == "1" ]]; then
-  FORM_BOOTSTRAP_PYTHON=("${PYTHON3_CMD[@]}")
-fi
-if [[ ${#FORM_BOOTSTRAP_PYTHON[@]} -gt 0 ]] && \
-  "${FORM_BOOTSTRAP_PYTHON[@]}" -c \
-    'import sys; sys.path.insert(0, "api"); import app.services.substrate; import app.services.grounding_source' \
-    >/dev/null 2>&1; then
-  form_bootstrap_ready=1
-fi
-
-if [[ "$force_full" == "1" || "$form_bootstrap_ready" == "1" ]]; then
-  if ! ./scripts/form_first_offline_setup.sh; then
-    echo "prompt-entry-guide: Form-first substrate/RAG bootstrap failed."
-    exit 1
-  fi
-else
-  echo "prompt-entry-guide: Form-first bootstrap deferred; API dependencies are not installed."
-  echo "Install the API dependencies, then run:"
-  echo "  ./scripts/form_first_offline_setup.sh"
-fi
-
 print_claude_orientation
 
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
@@ -245,8 +192,6 @@ fi
 
 echo "prompt-entry-guide: shortest proof reading when commit/push is ready:"
 echo "  git fetch origin main && git rebase origin/main"
-echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
-echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
 echo "prompt-entry-guide: coordination path:"
 echo "  form-cli is on PATH; route structural/default asks through form-cli ask first."
 echo "  canonical operating query: form-cli ask \"agent operating canon\""

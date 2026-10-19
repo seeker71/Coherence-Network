@@ -3,7 +3,8 @@
 Pulse runs reusable BML templates through the pinned fkwu native source/JIT door.
 It observes the public API and web origins, remembers every sample in native Form
 Recipe pages, derives silence receipts, and serves the existing read-only JSON API.
-Its process and storage stay independent of the API, PostgreSQL and Neo4j.
+Its process and storage stay independent of the API, PostgreSQL and Neo4j. The
+public `/pulse` page is served directly by the same native read owner.
 
 ## The living surface
 
@@ -12,6 +13,7 @@ Its process and storage stay independent of the API, PostgreSQL and Neo4j.
 - `GET /pulse/silences?days=N`: silence history and repair notes.
 - `GET /pulse/health`: native witness liveness and durable sample count.
 - `GET /`: service identity and endpoint discovery.
+- `GET /pulse?days=N`: native HTML with daily evidence and complete repair notes.
 
 History and silence windows accept every integer from 1 through 180; the default
 is 90. Organs and assertions live in `organs.json`. Shared upstreams are observed
@@ -25,11 +27,17 @@ The HTTP listener uses native sockets; neither curl nor a host web server is use
 `form-persistence.bml` carries typed snapshots, publication ownership, weighted
 histograms, balanced JSON spans and checksummed transaction frames.
 `native-store.bml` specializes them into replayable raw-page,
-daily histogram and silence indexes. `store.bml` owns query/repair templates; `probe.bml`
+daily histogram, exact range-summary, daily-card and silence indexes. `store.bml` owns query/repair templates; `probe.bml`
 specializes them from the organ catalog. `main.bml` owns cadence and the independent
 native HTTP child. `http.bml` owns the public boundary; `fetch.bml` owns a native
 network arrival. Persistence crosses only the existing native file resources;
 there is no database process, SQL interpreter or host-language business logic.
+`html.bml` supplies escaped document/disclosure templates; `web.bml` specializes
+them for Pulse. One coherent native snapshot replaces the three HTTP reads and
+React hydration path. Day links reveal full daily readings and every overlapping
+silence; the complete archive link has no thirty-record display cap. The page
+offers 7/30/90/180-day windows and accepts the API's existing 1–180-day range.
+The default page remains seven days. No JavaScript or external assets are needed.
 
 ## Configuration and running
 
@@ -56,6 +64,13 @@ Raw rows retain their original row IDs, fields, silence IDs and repair notes.
 Native daily counts and latency histograms retain exact percentile ranks;
 the sliding window's partial first day is read from raw samples. No history
 window, latency threshold or failure is hidden by a cache.
+Daily cards and aligned binary range summaries are durable derived indexes,
+not time-to-live response caches. Each transaction publishes changed leaves,
+cards and ancestor summaries before its checkpoint. Six levels describe physical
+fan-in: longer ranges use additional blocks, without a retention or read cap.
+Startup derives indexes once and reconciles changed raw-day sequence coordinates;
+an older writer's subsequent rows therefore remain visible at handoff. Native
+`index.bml` workers keep temporary index construction inside each organ's task.
 
 Three consecutive observed failures open a silence. Five minutes of unresolved
 silence escalates severity. Three observed successes close it at the first closing
@@ -102,6 +117,11 @@ Reuse existing grounding. When this application boundary changes, one
 three-sample silence repair and crash replay on a separate native store. A native network round and
 actual HTTP responses establish the running replacement. No kernel suite or
 sibling-kernel validation belongs to this application movement.
+For a changed web boundary, `web-observe.bml` reads the complete native HTML,
+checks escaping and weighted ranks, and reports its payload and elapsed time.
+`trace.bml` replaces the retired curl trace with one native parallel wave. Complete
+bodies and headers remain private; total time and the serving runtime header are
+reported separately. Unexposed TLS stage timestamps are not fabricated.
 
 Before replacing a running witness, retain its private consistent snapshot. Observe
 the replacement against that archive, then land and deploy with the original
