@@ -1,0 +1,25 @@
+{
+ "date":"2026-10-19",
+ "thread_branch":"codex/pulse-native-release-care-20261019",
+ "commit_scope":"Resume the native Pulse dispatch rollout by retiring Git enumeration from reusable Form private-build source care.",
+ "change_intent":"runtime_fix",
+ "idea_ids":["pipeline-reliability"],"spec_ids":["pulse-silence-boundary-repair"],"task_ids":["pulse-native-dispatch"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["native build source repair and release followthrough"]}],
+ "agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "files_owned":["form","docs/DEPLOY.md"],
+ "change_files":["form","docs/DEPLOY.md"],
+ "evidence_refs":[
+  "Application PR 4090 merged at 17eba839d45ad0a742dcfc653b1d66b8554ac295; the native dispatch and coherent read implementation is landed. Deploy runs 39232342888 and 39235284694 failed before activation. The running API revision remained c56a0bef921e0e67618c3652c8916612152e2248.",
+  "Exact failure: fatal: not a git repository: /build/form/../../../177737/fs/modules/form; build: the build inside the private body failed. fcb-private-run treated the refused external git ls-files result as its source set, then the empty private body lacked gate/form-cli-build-run.bml.",
+  "Kernel PR 608 merged at 19fd619ad1937de1cca6b5d8ed3e86b9baf6a6f0, replacing that enumeration with the existing source-tree.bml tracked-files() resource. All repair logic is Form/BML. Sealed source identity, attestations and publication care remain intact; no runtime change, new Python/Go/shell implementation or Docker-specific bypass is introduced.",
+  "A native snapshot selected and copied 2248 files. An intentionally unusable .git pointer retains the failed arrival shape. A remote attempt started before transfer finished and failed on missing runtime/fkwu-uni.c; it is retained as a transfer-order failure, not a build pass.",
+  "The completed snapshot passed native source-copy and reached recipe compilation. A rehearsal-only --shm-size=1g mount then reported SIGBUS (rc135) in bml-floor-compile.fk at resident_bytes 1291735040. The resumed observation matches deployment's /dev/shm tmpfs resource, without the artificial 1GiB rehearsal restriction. No compiler workaround or new kernel change is introduced for this resource mismatch.",
+  "The deployment-matching tmpfs run passed exit0: native startup, sealed recipe and form-cli-linux-amd64 bundle accepted; executable published at /build/form-cli with source identity 6d3c117149c6ef13. The original explicit out/force_link/cc request and unusable Git pointer remained. No broad kernel or sibling suite ran.",
+  "OpenAI supplied reasoning; exact runtime model and task token count are unavailable. The local form-cli executable was absent. Native source lookup established the existing source-tree resource; no sufficient router hit or native generation share is claimed. Full Pulse history and all latency thresholds are unchanged."
+ ],
+ "local_validation":{"status":"pass","summary":"Completed native snapshot build with unusable Git pointer; startup/recipe/bundle/executable publication accepted at source identity 6d3c117149c6ef13."},
+ "ci_validation":{"status":"pending","summary":"Read changed-source findings; no broad kernel suite."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "e2e_validation":{"status":"pending","expected_behavior_delta":"A Docker source snapshot builds through native source enumeration without usable Git metadata; the already-landed native Pulse dispatch reaches production.","public_endpoints":["https://coherencycoin.com/pulse","https://pulse.coherencycoin.com/pulse/health"],"test_flows":["Native source snapshot build","Immutable deployment","Affected public Pulse observation"]},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Native build and merged release observation are in progress."}
+}
