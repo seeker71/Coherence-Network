@@ -90,8 +90,15 @@ def _node_to_sensing(node: dict) -> SensingResponse:
     )
 
 
+def _node_property(node: dict, key: str):
+    value = node.get(key)
+    if value in (None, ""):
+        value = (node.get("properties") or {}).get(key)
+    return value
+
+
 def _is_sensing(node: dict) -> bool:
-    return node.get("type") == "event" and bool(node.get(_SENSING_MARKER_KEY))
+    return node.get("type") == "event" and bool(_node_property(node, _SENSING_MARKER_KEY))
 
 
 def _source_provenance_for_target(
@@ -239,14 +246,14 @@ async def list_sensings(
     except Exception:
         nodes = []
 
+    # graph_service flattens properties onto the node, so the kind and the observed time are
+    # read where _is_sensing and _node_to_sensing read them; a nested `properties` key is a fallback
     sensings = [n for n in nodes if _is_sensing(n)]
     if kind:
-        sensings = [
-            n for n in sensings if (n.get("properties") or {}).get(_SENSING_MARKER_KEY) == kind
-        ]
+        sensings = [n for n in sensings if _node_property(n, _SENSING_MARKER_KEY) == kind]
 
     sensings.sort(
-        key=lambda n: (n.get("properties") or {}).get("observed_at", ""),
+        key=lambda n: _node_property(n, "observed_at") or _node_property(n, "created_at") or "",
         reverse=True,
     )
     return [_node_to_sensing(n) for n in sensings[:limit]]
