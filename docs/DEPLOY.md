@@ -94,12 +94,26 @@ the same volume. Keep the volume and private recovery snapshot intact. All histo
 persists; public read windows do not delete records. Follow an actual persistence
 finding with its smallest fixture or archive-backed observation, not kernel suites.
 
+The `/pulse` web route belongs to that same native owner. Compose care gives its
+exact path on the two Coherence web hosts priority over the Next.js router,
+preserving the independent Pulse origin and unrelated web routes. Publish this
+file-backed route configuration without activation before the merged rollout;
+Compose activates it with the new Pulse image. The Next.js Pulse family and its
+cross-origin configuration are retired. Native HTML reads one coherent snapshot,
+discloses complete day/archive evidence, and sends no hydration payload.
+On the first indexed startup, native workers derive daily cards and exact range
+summaries from retained daily history. Later starts compare raw-day sequence
+coordinates and reconcile only changed sources, including writes from an older
+service during handoff. Keep the existing volume and recovery copies. This
+derivation is application startup, not a kernel validation run.
+
 Ordinary runtime telemetry invalidates its own event view, not provider facts.
 The retired cross-service flush took the provider-refresh lock on the API event
 loop, stalled `/api/ping`, and caused Docker/Traefik to withdraw the API route.
 Provider collection keeps its own refresh and invalidation. Follow a new latency
-finding with `pulse_latency_trace.bml`: one parallel HTTP wave retains private
-bodies/headers and separates network timing from the serving runtime header.
+finding with `pulse/trace.bml`: one native parallel HTTP wave retains private
+bodies/headers and reports total and serving runtime time separately. The curl
+trace is retired; unexposed DNS/connect/first-byte timestamps are not inferred.
 The retiring HTTP membrane gives synchronous readiness, contention, idea reads
 and vitality calls to its existing synchronous dispatch rather than claiming the
 event loop. No extra pool or second implementation sits beside Form. Native

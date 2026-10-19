@@ -7,7 +7,8 @@ section [form.bml] {
   def ws-empty(cfg) = nw-create(cfg);
   def ws-start(cfg) {
    let meta = whi-start(cfg);
-   let fresh = fp-set(meta,"started_at",now_unix_ms());
+   let indexed = nw-index-ensure(cfg,ws-organs());
+   let fresh = fp-set(indexed,"started_at",now_unix_ms());
    let saved = fp-write(nw-path(cfg,"state.fkb"),fresh);
    fresh;
   }
@@ -65,21 +66,23 @@ section [form.bml] {
    n == 0 ? [nothing(),nothing()] : [ws-rank(ordered,(n*50+99)/100,0),ws-rank(ordered,(n*95+99)/100,0)];
   }
   def ws-uptime(n,fail) = n == 0 ? 0.0 : round_ndigits(100.0*(n - fail)/n,2);
-  def ws-history(cfg,meta,organs,days) {
-   let now = now_unix_ms(); let since = (now/1000)*1000 - days*86400000;
+  def ws-history(cfg,meta,organs,days) = ws-history-at(cfg,meta,organs,days,now_unix_ms());
+  def ws-history-at(cfg,meta,organs,days,now) {
+   let since = (now/1000)*1000 - days*86400000;
    let dates = map(i => fp-day((now/86400000 - days+1+i)*86400000),range(0,days));
    let boundary = nw-raw-day(cfg,fp-day(since),since);
    let histories = map(organ => {
     let name = wr-text(organ,"name");
-    let loaded = map(day => [day,nw-stat(cfg,day,name)],dates);
+    let loaded = map(day => [day,nw-card(cfg,meta,day,name)],dates);
     let daily = map(page => {
      let day = page[0]; let s = page[1];
-     let p = ws-percentiles-ordered(s[3]);
-     fp-object([["date",day],["status",s[1] == 0 ? "unknown" : s[2]*2>s[1] ? "silent" : 100.0*(s[1]-s[2])/s[1]>=99.5 ? "breathing" : "strained"],["samples",s[1]],["failures",s[2]],["latency_p50_ms",p[0]],["latency_p95_ms",p[1]]]);
+     fp-object([["date",day],["status",s[1] == 0 ? "unknown" : s[2]*2>s[1] ? "silent" : 100.0*(s[1]-s[2])/s[1]>=99.5 ? "breathing" : "strained"],["samples",s[1]],["failures",s[2]],["latency_p50_ms",s[3]],["latency_p95_ms",s[4]]]);
     },loaded);
     let initial = nw-stats-rows([0,0,0,[]],filter(row => row[2] == name,boundary));
-    let total = foldl((s,page) => { let d = page[1]; [0,s[1]+d[1],s[2]+d[2],cons(d[3],s[3])]; },[0,initial[1],initial[2],[initial[3]]],loaded);
-    let percentiles = ws-percentiles-ordered(fp-histogram-chunks(total[3]));
+    let blocks = fp-range-cover(now/86400000 - days+1,now/86400000,6);
+    let summaries = map(block => nw-node(cfg,fp-get(meta,"days",[]),block[0],block[1],name),blocks);
+    let total = foldl((s,d) => [0,s[1]+d[1],s[2]+d[2],cons(d[3],s[3])],[0,initial[1],initial[2],[initial[3]]],summaries);
+    let percentiles = fp-weighted-percentiles(total[3],[50,95]);
     [total[1],fp-object([["name",name],["label",wr-text(organ,"label")],["description",wr-text(organ,"description")],["uptime_pct",ws-uptime(total[1],total[2])],["latency_p50_ms",percentiles[0]],["latency_p95_ms",percentiles[1]],["daily",daily]])];
    },organs);
    let observed = filter(h => h[0]>0,histories);
@@ -88,15 +91,19 @@ section [form.bml] {
    let avg = nil?(observed) ? 0.0 : round_ndigits(foldl((n,h) => n+node_value(json-object-get(h[1],"uptime_pct")),0.0,observed)/len(observed),2);
    fp-object([["days",days],["generated_at",fp-stamp(now)],["overall",fp-object([["uptime_pct",avg],["worst_uptime_pct",pct],["worst_organ",nothing?(worst) || pct>=100 ? nothing() : wr-text(worst[1],"name")]])],["organs",map(h => h[1],histories)]]);
   }
-  def ws-silences(cfg,meta,organs,days) {
+  def ws-silence-rows(cfg,meta,days) {
    let now = now_unix_ms(); let since = (now/1000)*1000 - days*86400000;
    let open = fp-get(meta,"open",[]);
    let buckets = filter(b => b[1]>=since || any?(r => r[0]/256 == b[0],open),fp-get(meta,"buckets",[]));
    let rows = foldl((out,b) => append(out,filter(r => fp-time(r[2])>=since || nothing?(r[3]),fp-required(nw-path(cfg,"silences/" ++ fp-pad(b[0],8) ++ ".fkb"))[1])),[],buckets);
+   sort-by(rows,r => 0 - fp-time(r[2]));
+  }
+  def ws-silences(cfg,meta,organs,days) {
+   let now = now_unix_ms();
    let output = map(r => {
     let organ = filter(o => wr-text(o,"name") == r[1],organs);
     fp-object([["id",r[0]],["organ",r[1]],["organ_label",nil?(organ) ? r[1] : wr-text(organ[0],"label")],["started_at",r[2]],["ended_at",r[3]],["duration_seconds",ws-duration(r[2],nothing?(r[3]) ? now : fp-time(r[3]))],["severity",r[4]],["note",r[5]]]);
-   },sort-by(rows,r => 0 - fp-time(r[2])));
+   },ws-silence-rows(cfg,meta,days));
    fp-object([["days",days],["generated_at",fp-stamp(now)],["silences",output]]);
   }
  }
