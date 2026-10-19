@@ -72,7 +72,6 @@ def list_events(
                     event.raw_endpoint = event.endpoint
                 if source_value and str(event.source).strip().lower() != source_value:
                     continue
-                event.endpoint = normalize_endpoint(event.endpoint, event.method)
                 if not event.origin_idea_id:
                     event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
                 out.append(event)
