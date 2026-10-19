@@ -19,11 +19,15 @@ History and silence windows accept every integer from 1 through 180; the default
 is 90. Organs and assertions live in `organs.json`. Shared upstreams are observed
 once per round, in parallel native workers. TLS verifies certificates through
 fkwu's existing TLS resource. Each sample carries its own observed completion time.
-The HTTP listener uses Form-emitted Linux socket/readiness operations through
-the existing CPU-image JIT. Neither curl nor a host web server is used. Private
+The HTTP listener uses reusable Form-emitted POSIX socket/readiness operations
+through the existing CPU-image JIT. Neither curl nor a host web server is used. Private
 copy-on-write request contexts retain admitted read cells and held request values;
 no request executable, JSON spool or nested read process is needed. Slow headers,
 archive rendering and output backpressure leave other peers free to progress.
+`fkwu.conf` selects `FK_STORE_PRIVATE` for the complete request context: values
+and JIT program pages. Completion pipes wake the owner at actual child exit;
+no Linux pidfd dependency or request bridge remains. Incremental framing holds
+split Content-Length bodies and chunk trailers until the first request is whole.
 
 ## Source owners
 

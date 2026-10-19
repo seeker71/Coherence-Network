@@ -33,10 +33,10 @@ section [form.bml] {
   def fp-coherent(source,view) {
    let before = source(); let observed = view(before[1]); let after = source();
    let stable = before[0] == after[0];
-   record_get(observed,"errors")>0 || (stable && !nothing?(record_get(observed,"stopped"))) ? {
+   !stable ? fp-coherent(source,view) : record_get(observed,"errors")>0 || !nothing?(record_get(observed,"stopped")) ? {
     print(["native-read-source",before[0],record_get(observed,"diag"),record_get(observed,"stopped")]);
     form_error("native coherent read failed at its retained source observation");
-   } : !stable ? fp-coherent(source,view) : record_get(observed,"value");
+   } : record_get(observed,"value");
   }
   // Compute a structural key once, rather than at every merge comparison.
   def fp-order(xs,key,before) = map(pair => pair[1],sort-with((a,b) => before(a[0],b[0]),nothing(),map(x => [key(x),x],xs)));

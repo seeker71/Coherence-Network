@@ -122,7 +122,9 @@ derivation is application startup, not a kernel validation run.
 Readiness dispatch is Form/BML emitted through fkwu's RAM-image JIT. Linux images
 carry their explicit ISA tag; an ARM image is never admitted as x86. The listener
 admits its read cells once and retains held values in private copy-on-write request
-contexts. Keep Pulse's private-node configuration with this ownership. No external
+contexts. Keep Pulse's `FK_STORE_PRIVATE` configuration with this ownership:
+both values and JIT program pages must stay private, not merely the global node
+field. A pre-fork completion pipe wakes the owner when the request exits. No external
 server, replica, request-file adapter or nested executable serves the route.
 Read views hold only brief checkpoint boundaries, not the writer lock through
 rendering. The ending boundary waits out in-flight publication and re-enters a
