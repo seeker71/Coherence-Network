@@ -1,0 +1,27 @@
+{
+ "date":"2026-10-19",
+ "thread_branch":"codex/pulse-document-read-boundary-20261019",
+ "commit_scope":"Keep native Pulse HTML intact across proxies and remove repeated archive decoding from page reads without changing history or thresholds.",
+ "change_intent":"runtime_fix",
+ "idea_ids":["pipeline-reliability"],"spec_ids":["pulse-silence-boundary-repair"],"task_ids":["pulse-document-read-boundary"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["native Pulse source repair and release follow-through"]}],
+ "agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "files_owned":["pulse/form-persistence.bml","pulse/native-store.bml","pulse/store.bml","pulse/http.bml","pulse/web.bml","pulse/web-observe.bml"],
+ "change_files":["docs/DEPLOY.md","pulse/README.md","pulse/form-persistence.bml","pulse/http.bml","pulse/native-store.bml","pulse/store.bml","pulse/web-observe.bml","pulse/web.bml"],
+ "evidence_refs":[
+  "Prior PR 4088 deployed successfully at 8c3a503369b99393389479bf596c854f894d81f8 in rollout 39222985519. The public native HTML observation then failed because Cloudflare appended a beacon script to both the independent Pulse and Hati documents. Complete private response captures remain in the Pulse data volume; public beacon tokens are not copied into artifacts.",
+  "Cloudflare documents automatic-injection suppression through Cache-Control no-transform: https://developers.cloudflare.com/web-analytics/faq/ . Pulse retains no-store freshness, adds no-transform on responses and script-src 'none'; object-src 'none'; base-uri 'none' on HTML. The public observation remains strict: complete native document, no script, range navigation and response policy. No account-wide proxy/security control is disabled.",
+  "Source-sequence-keyed silence projections retain sorted max(start,end) endpoints for closed intervals and an open count. Startup derives missing or older projections from original buckets; each changed bucket publishes its count page before the checkpoint. Default pages use exact counts; full day/archive disclosures retain original rows and notes without truncation. One native clock owns page status, history, interval rows and counts.",
+  "The rolling first day chooses the smaller estimated raw-page side. Exact observed-only daily counts and weighted latency bins subtract a prefix or include a suffix. A focused native fixture split the same ten source rows into valid 2/4/4-row pages, exercising both choices with a failure, repeated latency bins and an explicitly unobserved row. Both full histograms matched direct suffix authority: prefix choice 5 observed/1 failure; suffix choice 3 observed/0 failures.",
+  "The native overlap/handoff fixture reconstructed the projection after removal and counted exactly two intervals, matching the full read: old-start/recent-end and ongoing included, wholly pre-window closure excluded. Canonical web navigation and local Pulse links remained correct.",
+  "The private full archive observation compared all twelve organs for 180 days against direct daily histograms plus raw suffix authority: every daily sample/failure/rank, window uptime and p50/p95 matched. Indexed history took 3445 ms in this observation; sample count remained 6339890. Startup count derivation took 1529 ms. These are observations, not a controlled benchmark.",
+  "Private native HTTP observed default HTML 200 in 1374 ms, 55914 string bytes; selected-day HTML 200 in 1782 ms, 56158 string bytes. Both complete, script-free, escaped and policy-bearing. No latency thresholds were changed. Public proxy behavior follows deployment.",
+  "Exact local fixture failure: form-run ./fkwu ../.cache/pulse-boundary-read-observe.bml reported unresolved fp-value. The private observation was repaired to compare every histogram bin directly and rerun on a fresh store. Initial archive rehearsal exit 137 followed listener failure: retained request.err identified unresolved wr-url from a stale private templates.bml copy. Updating that rehearsal dependency restored the listener and completed the observation; deployed source was already coherent.",
+  "Kernel source and gitlink remain 0563230ff11ef60bef75cbd3444e69d40e75e679. No kernel suite ran. All implementation is Form/BML on fkwu. OpenAI frontier reasoning authored the change; exact model/task token counts are unavailable. form-cli ask returned unrelated teachings for portfolio ownership, not sufficient native grounding. The Python portfolio projection latency remains a separate source finding, not a repaired or accepted allowance."
+ ],
+ "local_validation":{"status":"pass","summary":"Focused native overlap/count and both boundary choices; one 180-day all-organ archive equivalence; default/day native HTTP and response policy."},
+ "ci_validation":{"status":"pending","summary":"Read changed-source review/check findings only."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "e2e_validation":{"status":"pass","expected_behavior_delta":"Pulse counts intervals exactly without decoding every note, reads the smaller exact rolling boundary and owns a script-free no-transform document.","public_endpoints":["https://coherencycoin.com/pulse","https://pulse.coherencycoin.com/pulse"],"test_flows":["Native count and rolling-boundary observations","Private archive equivalence and native document response"]},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Merged rollout and strict public document observation follow."}
+}

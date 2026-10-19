@@ -37,10 +37,12 @@ section [form.bml] {
    fh-tag("article",[["class","card"]],[fh-tag("div",[["class","row"]],[fh-tag("div",[],[fh-tag("h3",[],[pw-status(status)," · ",fh-text(wr-text(history,"label"))]),fh-tag("p",[["class","muted"]],[fh-text(wr-text(history,"description"))])]),fh-tag("div",[["class","percent"]],[observed ? fh-text(pw-value(history,"uptime_pct")) ++ "%" : "—"])]),fh-tag("div",[["class","bars"],["aria-label","Daily breath; select a day for all evidence"]],bars),fh-tag("div",[["class","row muted"]],[fh-tag("small",[],[fh-text(nil?(daily) ? "" : wr-text(daily[0],"date"))]),fh-tag("small",[],["today"])]),fh-tag("div",[["class","row"]],[pw-spark(daily),fh-tag("small",[],["Window latency: p50 ",fh-text(pw-value(history,"latency_p50_ms"))," ms · p95 ",fh-text(pw-value(history,"latency_p95_ms"))," ms"])]),len(wr-text(current,"detail")) == 0 ? "" : fh-tag("p",[["class","note"]],[fh-text(wr-text(current,"detail"))])]);
   }
   def pw-render(cfg,meta,organs,days) {
-   let now = ws-now(cfg,meta,organs); let history = ws-history(cfg,meta,organs,days);
-   pw-document(cfg,meta,organs,days,now,history,ws-silence-rows(cfg,meta,days));
+   let at = now_unix_ms(); let now = ws-now-at(cfg,meta,organs,at); let history = ws-history-at(cfg,meta,organs,days,at);
+   let detail = wr-text(cfg,"view") == "silences" || (len(wr-text(cfg,"organ"))>0 && len(wr-text(cfg,"date"))>0);
+   let rows = detail ? ws-silence-rows-at(cfg,meta,days,at) : [];
+   pw-document(cfg,meta,organs,days,now,history,rows,ws-silence-count-at(cfg,meta,days,at));
   }
-  def pw-document(cfg,meta,organs,days,now,history,rows) {
+  def pw-document(cfg,meta,organs,days,now,history,rows,total) {
    let name = wr-text(cfg,"organ"); let date = wr-text(cfg,"date"); let chosen = filter(o => wr-text(o,"name") == name,organs);
    let dates = wr-array(wr-array(history,"organs")[0],"daily");
    let day = filter(d => wr-text(d,"date") == date,dates);
@@ -58,7 +60,7 @@ section [form.bml] {
      fh-tag("div",[["class","row"]],[fh-tag("h1",[],["Pulse"]),range]),fh-tag("p",[["class","muted"]],["The breath of our living body, remembered. Every reading and repair stays with its source."]),
      fh-tag("section",[["class","card"]],[pw-status(wr-text(now,"overall")),fh-tag("h2",[],[pw-headline(wr-text(now,"overall"))]),fh-tag("p",[],[fh-text(pw-value(overall,"uptime_pct")),"% steady breath · ",days.str()," days · weakest organ: ",fh-text(pw-value(overall,"worst_organ"))]),fh-tag("small",[],["Listened at ",fh-text(wr-text(now,"checked_at"))]),nil?(open) ? "" : fh-detail("Ongoing silences",[fh-tag("ul",[],map(r => pw-silence(r,organs),open))])]),
      selected ? fh-tag("section",[["class","card"]],[fh-tag("h2",[],[fh-text(wr-text(chosen[0],"label"))," · ",fh-text(date)]),fh-tag("p",[],[pw-status(wr-text(day[0],"status"))," · ",wr-number(day[0],"samples").str()," samples · ",wr-number(day[0],"failures").str()," failures · p50 ",fh-text(pw-value(day[0],"latency_p50_ms"))," ms · p95 ",fh-text(pw-value(day[0],"latency_p95_ms"))," ms"]),fh-tag("p",[],["All overlapping silences: ",len(matching).str()]),fh-tag("ul",[],map(r => pw-silence(r,organs),matching))]) : ""
-    ],append(cards,[fh-tag("section",[["class","card"]],[fh-tag("h2",[],["Remembered silences"]),fh-tag("p",[],[len(rows).str()," in this window. Select a day bar for its full evidence, or ",fh-link("/pulse?days=" ++ days.str() ++ "&view=silences","read every silence and repair note"),"."]),archive ? fh-tag("ul",[],map(r => pw-silence(r,organs),rows)) : ""]),fh-tag("small",[],["Witness started ",fh-text(wr-text(now,"witness_started_at"))," · Form-native persistence · fkwu JIT"])]))),
+    ],append(cards,[fh-tag("section",[["class","card"]],[fh-tag("h2",[],["Remembered silences"]),fh-tag("p",[],[total.str()," in this window. Select a day bar for its full evidence, or ",fh-link("/pulse?days=" ++ days.str() ++ "&view=silences","read every silence and repair note"),"."]),archive ? fh-tag("ul",[],map(r => pw-silence(r,organs),rows)) : ""]),fh-tag("small",[],["Witness started ",fh-text(wr-text(now,"witness_started_at"))," · Form-native persistence · fkwu JIT"])]))),
     fh-tag("footer",[],[fh-tag("nav",[["aria-label","Related pages"]],map(p => fh-link(wr-url(wr-text(cfg,"web_base"),p[0]),p[1]),[["/vitality","Vitality"],["/identity/keys","Attribution"],["/api-health","API health"],["/diagnostics","Diagnostics"]]))])
    ]);
   }
