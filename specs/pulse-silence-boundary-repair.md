@@ -3,7 +3,11 @@ idea_id: pipeline-reliability
 status: done
 source:
   - file: pulse/store.bml
-    symbols: [ws-reconcile, ws-now, ws-history, ws-summary-schema]
+    symbols: [ws-changes, ws-now, ws-history]
+  - file: pulse/native-store.bml
+    symbols: [nw-commit, nw-recover]
+  - file: pulse/import-history.bml
+    symbols: [whi-import, whi-resume]
   - file: pulse/probe.bml
     symbols: [wp-round, wp-sample]
   - file: pulse/http.bml
@@ -17,7 +21,7 @@ requirements:
   - "R4: An unresolved silence keeps overall at least strained; a silent severity keeps it silent."
   - "R5: Existing sample history, silence IDs and notes persist through native deployment."
 done_when:
-  - "The focused native application observation witnesses opening, closure and exact percentile ranks on a separate database."
+  - "The focused native application observation witnesses opening, closure, exact percentile ranks and idempotent recovery on a separate native store."
   - "The running native HTTP boundary returns current organs, history and silence receipts with the existing public shapes."
 test: "cd form && ./fkwu ../pulse/observe.bml < a-private-fixture-config.json"
 constraints:
@@ -48,11 +52,14 @@ silent. Historical uptime and exact nearest-rank p50/p95 exclude unobserved
 samples. Additive daily counts and histograms accelerate those reads while raw
 samples and the original silence IDs remain authoritative.
 
-The focused application observation uses a separate database, witnesses opening
-and closure with their receipt, and reads 1/7/30/90/180-day histories. Deployment
-observes the real HTTP contract against a private online database snapshot before
-switching the independent witness onto its original volume. A changed application
-boundary does not call for kernel or sibling-kernel suites.
+The focused application observation uses a separate native store, witnesses opening
+and closure with their receipt, reads 1/7/30/90/180-day histories, and observes
+idempotent journal replay with a retained torn tail. Native file-format import keeps
+every raw row, original ID and note; startup completes the final live delta before
+archiving the legacy files. Native Recipe pages and transaction frames own ongoing
+persistence. Deployment observes the real HTTP contract against the private archive
+before switching onto the original volume. A changed application boundary does not
+call for kernel or sibling-kernel suites.
 
 See also: [pulse witness](../pulse/README.md),
 [boundary repair protocol](../docs/vision-kb/concepts/lc-boundary-repair-protocol.md).

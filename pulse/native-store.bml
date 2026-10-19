@@ -1,0 +1,122 @@
+// Form-owned indexed witness store. Typed pages are native Recipe snapshots;
+// complete transaction frames are the recovery authority, indexes are replayable.
+import ../pulse/form-persistence.bml;
+section [form.bml] {
+ class NativeWitnessStore {
+  def nw-unique(xs) = foldl((out,x) => any?(v => v == x,out) ? out : cons(x,out),[],xs);
+  def nw-root(cfg) = wr-text(cfg,"store_path");
+  def nw-path(cfg, tail) = nw-root(cfg) ++ "/" ++ tail;
+  def nw-meta(cfg) = fp-required(nw-path(cfg,"state.fkb"));
+  def nw-dir(cfg, tail) = hch-mkdirs(nw-path(cfg,tail));
+  def nw-blank() = [["format",1],["seq",0],["samples_total",0],["max_rowid",0],["max_silence",0],["started_at",now_unix_ms()],["tails",[]],["days",[]],["buckets",[]],["open",[]],["journal",0],["offset",0]];
+  def nw-key(s) = fp-hex(fp-bytes(s,len(s) - 1,[]));
+  def nw-observed(row) = nothing?(row[5]) || str_find(row[5],"unobserved: ",0) != 0;
+  def nw-sort-rows(rows) = fp-order(rows,row => [fp-time(row[1]),row[0]],(a,b) => a[0] == b[0] ? a[1]<=b[1] : a[0]<=b[0]);
+  def nw-tail(rows) { let sorted = nw-sort-rows(rows); drop(len(sorted)>20 ? len(sorted) - 20 : 0,sorted); }
+  def nw-tails(meta, rows) {
+   let names = nw-unique(map(row => row[2],rows));
+   foldl((tails,name) => fp-set(tails,name,nw-tail(append(fp-get(tails,name,[]),filter(row => row[2] == name,rows)))),fp-get(meta,"tails",[]),names);
+  }
+  def nw-stat-path(cfg,day,organ) = nw-path(cfg,"days/" ++ day ++ "/" ++ nw-key(organ) ++ ".fkb");
+  def nw-stat(cfg,day,organ) = fp-read(nw-stat-path(cfg,day,organ),[0,0,0,[]]);
+  def nw-stats-rows(stat,rows) {
+   let observed = filter(row => nw-observed(row),rows);
+   let latency = map(row => [row[4],1],filter(row => row[3] != 0 && !nothing?(row[4]),observed));
+   [stat[0],stat[1]+len(observed),stat[2]+len(filter(row => row[3] == 0,observed)),fp-histogram(append(stat[3],latency))];
+  }
+  def nw-raw(cfg,day,seq,rows) {
+   let dir = "raw/" ++ day;
+   let made = nw-dir(cfg,dir);
+   let indexpath = nw-path(cfg,dir ++ "/index.fkb");
+   let index = fp-read(indexpath,[0,[]]);
+   index[0] >= seq ? 0 : {
+    let parts = index[1];
+    let last = nil?(parts) ? [-1,0,0,0] : reverse(parts)[0];
+    let number = last[3]+len(rows) > 4096 ? last[0]+1 : last[0]<0 ? 0 : last[0];
+    let path = nw-path(cfg,dir ++ "/part-" ++ fp-pad(number,8) ++ ".fkb");
+    let prior = number == last[0] ? fp-required(path) : fp-read(path,[0,[]]);
+    let contents = prior[0] >= seq ? prior[1] : append(prior[1],rows);
+    let put = prior[0] >= seq ? 0 : fp-write(path,[seq,contents]);
+    let times = map(row => fp-time(row[1]),contents);
+    let entry = [number,foldl((n,v) => v<n ? v : n,times[0],times),foldl((n,v) => v>n ? v : n,times[0],times),len(contents)];
+    fp-write(indexpath,[seq,append(filter(p => p[0] != number,parts),[entry])]);
+   };
+  }
+  def nw-day(cfg,day,seq,rows) {
+   let raw = nw-raw(cfg,day,seq,rows);
+   let made = nw-dir(cfg,"days/" ++ day);
+   let pages = foldl((out,name) => {
+    let prior = nw-stat(cfg,day,name);
+    prior[0] >= seq ? out : cons([nw-stat-path(cfg,day,name),nw-stats-seq(nw-stats-rows(prior,filter(row => row[2] == name,rows)),seq)],out);
+   },[],nw-unique(map(row => row[2],rows)));
+   fp-write-batch(pages);
+  }
+  def nw-stats-seq(stat,seq) = [seq,stat[1],stat[2],stat[3]];
+  def nw-bucket(cfg,number) = fp-read(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"),[0,[]]);
+  def nw-buckets(cfg,meta,seq,changes) {
+   let made = nw-dir(cfg,"silences");
+   foldl((catalog,number) => {
+    let old = nw-bucket(cfg,number);
+    let changed = filter(row => row[0]/256 == number,changes);
+    let ids = map(row => row[0],changed);
+    let rows = old[0] >= seq ? old[1] : sort-by(append(filter(row => !any?(id => id == row[0],ids),old[1]),changed),row => row[0]);
+    let saved = old[0] >= seq ? 0 : fp-write(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"),[seq,rows]);
+    let max = foldl((n,row) => fp-time(row[2]) > n ? fp-time(row[2]) : n,0,rows);
+    fp-set(catalog,number,max);
+   },fp-get(meta,"buckets",[]),nw-unique(map(row => row[0]/256,changes)));
+  }
+  def nw-project(cfg,meta,txn,number,end) {
+   let seq = txn[0]; let rows = txn[1]; let changes = txn[2];
+   seq <= fp-get(meta,"seq",0) ? meta : {
+    let days = nw-unique(map(row => substring(row[1],0,10),rows));
+    let published = foldl((n,day) => nw-day(cfg,day,seq,filter(row => substring(row[1],0,10) == day,rows)),0,days);
+    let buckets = nw-buckets(cfg,meta,seq,changes);
+    let ids = map(row => row[0],changes);
+    let open = filter(row => nothing?(row[3]),append(filter(row => !any?(id => id == row[0],ids),fp-get(meta,"open",[])),changes));
+    let updates = [["seq",seq],["samples_total",fp-get(meta,"samples_total",0)+len(rows)],["max_rowid",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_rowid",0),rows)],["max_silence",foldl((n,row) => row[0]>n ? row[0] : n,fp-get(meta,"max_silence",0),changes)],["tails",nw-tails(meta,rows)],["days",sort-strs(nw-unique(append(fp-get(meta,"days",[]),days)))],["buckets",buckets],["open",open],["journal",number],["offset",end]];
+    let current = foldl((m,p) => fp-set(m,p[0],p[1]),meta,updates);
+    // Pages reach stable storage before their checkpoint can skip replay.
+    let stable = host_sync();
+    let saved = fp-write(nw-path(cfg,"state.fkb"),current);
+    current;
+   };
+  }
+  def nw-log(cfg,number) = nw-path(cfg,"transactions/" ++ fp-pad(number,8) ++ ".fpl");
+  def nw-recover-at(cfg,meta,number,offset) {
+   let path = nw-log(cfg,number);
+   file_size(path) < 0 ? meta : {
+    let box = record_new(0,"meta",meta);
+    let end = fp-replay(path,offset,(txn,at) => record_set(box,"meta",nw-project(cfg,record_get(box,"meta"),txn,number,at)));
+    let current = record_get(box,"meta");
+    end < file_size(path) ? {
+     let next = fp-set(fp-set(current,"journal",number+1),"offset",0);
+     let saved = fp-write(nw-path(cfg,"state.fkb"),next);
+     // The old log stays replayable until its replacement checkpoint is durable.
+     // A crash before archive leaves extra evidence, never a missing authority.
+     let checkpoint = host_sync();
+     let kept = host_path_rename(path,path ++ ".torn-" ++ now_unix_ms().str());
+     let moved = kept != 0 ? form_error("native recovery tail could not be retained: " ++ path) : host_sync();
+     next;
+    } : nw-recover-at(cfg,current,number+1,0);
+   };
+  }
+  def nw-recover(cfg) { let meta = nw-meta(cfg); let current = nw-recover-at(cfg,meta,fp-get(meta,"journal",0),fp-get(meta,"offset",0)); let stable = current == meta ? 0 : host_sync(); current; }
+  def nw-commit(cfg,meta,rows,changes) {
+   let seq = fp-get(meta,"seq",0)+1;
+   let made = nw-dir(cfg,"transactions");
+   let oldnum = fp-get(meta,"journal",0);
+   let number = file_size(nw-log(cfg,oldnum)) >= 67108864 ? oldnum+1 : oldnum;
+   let end = fp-frame(nw-log(cfg,number),[seq,rows,changes]);
+   let durable = host_sync();
+   let current = nw-project(cfg,meta,[seq,rows,changes],number,end);
+   let published = host_sync();
+   current;
+  }
+  def nw-locked(cfg,read) { let held = fp-lock(nw-root(cfg)); let meta = nw-recover(cfg); let value = read(meta); let released = fp-unlock(nw-root(cfg)); value; }
+  def nw-create(cfg) { let dir = hch-mkdirs(nw-root(cfg)); let present = file_size(nw-path(cfg,"state.fkb")) >= 0; present ? nw-meta(cfg) : { let m = nw-blank(); let written = fp-write(nw-path(cfg,"state.fkb"),m); m; }; }
+  def nw-raw-day(cfg,day,since) {
+   let index = fp-read(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"),[0,[]]);
+   foldl((rows,entry) => entry[2] < since ? rows : append(rows,filter(row => fp-time(row[1]) >= since,fp-required(nw-path(cfg,"raw/" ++ day ++ "/part-" ++ fp-pad(entry[0],8) ++ ".fkb"))[1])),[],index[1]);
+  }
+ }
+}

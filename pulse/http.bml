@@ -22,9 +22,7 @@ section [form.bml] {
    let days = ph-days(target);
    let known = any?(one => one == path,["/","/pulse/health","/pulse/now","/pulse/history","/pulse/silences"]);
    let code = !known ? 404 : method != "GET" && method != "OPTIONS" ? 405 : (path == "/pulse/history" || path == "/pulse/silences") && days == 0 ? 422 : 200;
-   let sql = path == "/pulse/health" ? ws-health() : path == "/pulse/now" ? ws-reconcile(organs) ++ ws-now(cfg,organs) : path == "/pulse/history" ? ws-history(organs,days) : ws-silences(organs,days);
-   let body = code != 200 ? (code == 422 ? "{\"detail\":\"days must be an integer from 1 to 180\"}" : "{\"detail\":\"Not Found or method not allowed\"}") : method == "OPTIONS" ? "{}" : path == "/" ? "{\"service\":\"pulse\",\"version\":\"1.0.0-form\",\"runtime\":\"fkwu\",\"endpoints\":[\"/pulse/now\",\"/pulse/history\",\"/pulse/silences\",\"/pulse/health\"]}" : wr-sql(cfg,"request",sql);
-   let released = wr-release(cfg,"request");
+   let body = code != 200 ? (code == 422 ? "{\"detail\":\"days must be an integer from 1 to 180\"}" : "{\"detail\":\"Not Found or method not allowed\"}") : method == "OPTIONS" ? "{}" : path == "/" ? "{\"service\":\"pulse\",\"version\":\"1.1.0-form\",\"runtime\":\"fkwu\",\"endpoints\":[\"/pulse/now\",\"/pulse/history\",\"/pulse/silences\",\"/pulse/health\"]}" : fp-task(cfg,"../pulse/read.bml",wr-overlay(cfg,fp-object([["path",path],["days",days]])));
    wr-response(code,body,ph-cors(cfg,raw) ++ "X-Form-Router: fkwu\r\n");
   }
  }
