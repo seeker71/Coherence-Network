@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The kernel steward's launchd tick keeps the host's seed kernel checkout on main (fast-forward only, only when clean) and lets the door's own errors reach its log; observed live after install.",
+  "files_owned": [
+    "scripts/install_kernel_steward.sh"
+  ],
+  "change_intent": "process_only",
+  "idea_ids": [
+    "external-presence"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "kernel-steward-carrier"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "carrier"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Observed 2026-10-19: ~/source/coherence-kernel had no puller any more (com.coherence-network.runner sits disabled, launchd knows no such service) and stood seven commits behind origin/main, so the first steward tick found no observe/kernel-steward-run.bml; its error went to /dev/null.",
+    "The tick now fast-forwards the checkout only when `git status --porcelain` is empty (a dirty tree is left untouched; a fast-forward never rewrites work), rebuilds fkwu when runtime/fkwu-uni.c is newer, and lets stderr reach the launchd error log (organ-health lines filtered).",
+    "After reinstall the first tick logged: [kernels] 11 running; orphans 0 (stopped 0); heavy without a lease 0; leased 1; glass published \u2014 and receipts/kernel-steward-ledger.jsonl in the seed checkout carries the row {kernels:11, orphans:0, heavy:0, leased:1, stopped:0, mode:act}.",
+    "The kernel organ itself landed as coherence-kernel PR 611 (band 15); the scheduled walks call ks-tend(1) in their heal stage."
+  ],
+  "change_files": [
+    "scripts/install_kernel_steward.sh",
+    "docs/system_audit/commit_evidence_2026-10-19_kernel_steward_tick_follows_main.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "bash -n on the script; launchd service com.coherence.kernel-steward bootstrapped and its first tick observed in ~/Library/Logs/CoherenceSense/kernel-steward.log."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "A host launchd carrier has no CI surface; CI is unchanged by this commit."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "host",
+    "summary": "Installed on the authoring Mac by hand (bash scripts/install_kernel_steward.sh); no production deploy phase."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Every two minutes the host's kernels are read; an orphan (source file gone) is stopped; the seed checkout follows main.",
+    "public_endpoints": [],
+    "test_flows": [
+      "tail ~/Library/Logs/CoherenceSense/kernel-steward.log"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Host-only carrier: there is no CI or production deploy phase to pass; the live observation is the launchd log."
+  }
+}

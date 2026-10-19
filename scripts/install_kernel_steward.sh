@@ -31,8 +31,10 @@ cat >"$RUNNER" <<EOF
 #!/bin/sh
 # one tick of the body's kernel steward (installed by install_kernel_steward.sh)
 cd "$KERNEL" || exit 0
+# the checkout is a seed, never an editing surface: a clean tree follows main by fast-forward only; a dirty tree is left as it is
+if git diff --quiet 2>/dev/null && [ -z "\$(git status --porcelain 2>/dev/null)" ]; then git pull -q --ff-only origin main 2>/dev/null || true; fi
 if [ ! -x fkwu ] || [ runtime/fkwu-uni.c -nt fkwu ]; then cc -O2 -o fkwu runtime/fkwu-uni.c || exit 0; fi
-printf 'act 1\n' | ./fkwu observe/kernel-steward-run.bml 2>/dev/null | head -20
+printf 'act 1\n' | ./fkwu observe/kernel-steward-run.bml 2>&1 | grep -v 'organ health' | head -20
 EOF
 chmod +x "$RUNNER"
 
