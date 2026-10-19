@@ -1,3 +1,6 @@
 .gitattributes text eol=lf
 *.sh text eol=lf
 bin/form-cli text eol=lf
+
+# ledgers are append-only rows: a merge is the union of both sides, never a conflict (as form/.gitattributes)
+docs/system_audit/*.jsonl merge=union
