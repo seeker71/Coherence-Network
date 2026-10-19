@@ -7,8 +7,11 @@ import hashlib
 import re
 from urllib.parse import urlparse
 
+from sqlalchemy import text
+
 from app.models.graph import Node
 from app.services import unified_db as _udb
+from app.services.form_kernel_bridge import serve_text_via_kernel
 
 
 _ANONYMOUS_MEETING_TRACE = "anonymous_meeting_trace"
@@ -204,14 +207,9 @@ def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None
 
 
 def _anonymous_trace_nodes(s, source_point_id: str | None = None) -> list[Node]:
-    nodes = s.query(Node).filter(Node.type == "event").order_by(Node.updated_at.desc()).all()
+    query, _ = serve_text_via_kernel("anonymous_trace_query.bml", {})
+    nodes = s.query(Node).from_statement(text(query)).params(source_point_id=source_point_id).all()
     traces = [node for node in nodes if _is_anonymous_trace(node)]
-    if source_point_id:
-        traces = [
-            node
-            for node in traces
-            if dict(node.properties or {}).get("source_point_id") == source_point_id
-        ]
     return traces
 
 

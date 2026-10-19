@@ -92,6 +92,13 @@ event loop. No extra pool or second implementation sits beside Form. Native
 `runtime_read_care.bml` declares the worker-history source/time access path and
 builds its PostgreSQL index online; a fresh store or changed read shape gives
 that schema care work, not a recurring full-table scan on every release.
+Anonymous meeting summaries follow the same shape: `anonymous_trace_query.bml`
+owns the ordered, source-point-bound read; the existing Form/SQL membrane only
+passes bound values and rows. The matching native schema blueprint indexes the
+source expression and update order. This retains full same-browser history and
+the global view without loading every event for each meeting write. The source
+carrier enters fkwu normally so its native grammar discovery carries BML; the
+obsolete raw-reader forcing flag has retired.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
