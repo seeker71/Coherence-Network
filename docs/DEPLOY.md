@@ -162,9 +162,12 @@ the immutable image's service initialization, then bind the source point at the
 database door. Repeated source staging/compilation is not per-request work; a
 changed image/source activates a new native template, not a wall-clock expiry.
 
-The native build enumerates its private source copy with Form's
-`source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
-reads the serving container's immutable revision label. A failed build may
+The native build and form-cli private-body flow enumerate source copies with
+Form's `source-tree.bml`. Docker snapshots need no usable Git metadata: actual
+files own the source set, and the existing sealed closure owns build identity.
+The retired `git ls-files` call mistook a refused snapshot pointer for an empty
+body. Keep that finding at the source reader, not a Docker-specific bypass.
+Build scope reads the serving container's immutable revision label. A failed build may
 advance the VPS checkout without advancing the running image, so the checkout
 alone does not establish the deployed comparison base.
 
