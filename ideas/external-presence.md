@@ -7,6 +7,7 @@ pillar: foundation
 specs:
   - [external-presence-bots-and-news](../specs/external-presence-bots-and-news.md)
   - [multilingual-web](../specs/multilingual-web.md)
+  - [transmuted-field-surfaces](../specs/transmuted-field-surfaces.md)
 ---
 
 # External Presence and Ecosystem
