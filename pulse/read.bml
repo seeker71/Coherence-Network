@@ -1,10 +1,11 @@
 // One coherent read owns its native temporary nodes through its response.
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/web.bml
 section [form.bml] {
- let cfg = wr-overlay(wr-config(),parse-json("pulse-read",stdin-text()));
- let organs = ws-organs(); let path = wr-text(cfg,"path"); let days = wr-number(cfg,"days");
- path == "/pulse/health" ? fp-emit(ws-health(nw-meta(cfg))) : nw-locked(cfg,meta => {
-  let current = path == "/pulse/now" || path == "/pulse" ? ws-care(cfg,meta,organs) : meta;
-  path == "/pulse" ? pw-render(cfg,current,organs,days) : fp-emit(path == "/pulse/now" ? ws-now(cfg,current,organs) : path == "/pulse/history" ? ws-history(cfg,current,organs,days) : ws-silences(cfg,current,organs,days));
- });
+ let offered = cell_input();
+ let cfg = nothing?(offered) ? wr-overlay(wr-config(),parse-json("pulse-read",stdin-text())) : offered;
+ let organs = ws-organs(); let path = wr-text(cfg,"path");
+ // Each boundary lock waits out a writer, even during page publication before
+ // checkpoint. All rendering runs outside it in the same admitted native cell.
+ let source = () => nw-locked(cfg,meta => { let current = path == "/pulse/now" || path == "/pulse" ? ws-care(cfg,meta,organs) : meta; [fp-get(current,"seq",0),current]; });
+ path == "/pulse/health" ? fp-emit(ws-health(nw-meta(cfg))) : fp-coherent(source,meta => cell_call("../pulse/read-view.bml",[cfg,meta,organs],nothing()));
 }
