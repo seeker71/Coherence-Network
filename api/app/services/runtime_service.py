@@ -412,15 +412,6 @@ def _invalidate_runtime_events_cache() -> None:
     _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
     _RUNTIME_EVENTS_CACHE["rows"] = []
 
-    try:
-        from app.services import automation_usage_service
-
-        automation_usage_service.invalidate_cache()
-    except (ImportError, Exception):
-        pass
-
-    _RUNTIME_EVENTS_CACHE["rows"] = []
-
 
 def _ensure_events_store() -> None:
     if runtime_event_store.enabled():
@@ -674,7 +665,6 @@ def list_events(
                     continue
                 if prefix_value and not str(event.endpoint or "").startswith(prefix_value):
                     continue
-                event.endpoint = normalize_endpoint(event.endpoint, event.method)
                 if not event.origin_idea_id:
                     event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
                 out.append(event)

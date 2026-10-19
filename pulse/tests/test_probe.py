@@ -256,7 +256,7 @@ async def test_all_healthy():
     by = await _run(_handler())
     expected = {
         "db_contention",
-        "api", "web", "postgres", "neo4j", "schema", "audit_integrity",
+        "api", "web", "postgres", "neo4j",
         "page_pulse", "page_vitality", "endpoint_ideas", "endpoint_vitality",
         "substrate_badge", "substrate_form", "substrate_offer",
     }
@@ -514,37 +514,6 @@ async def test_api_status_not_ok():
     bad = {**HEALTHY_HEALTH, "status": "degraded"}
     by = await _run(_handler(api_health_body=bad))
     assert by["api"].ok is False
-    assert by["schema"].ok is True
-    assert by["audit_integrity"].ok is True
-
-
-@pytest.mark.asyncio
-async def test_integrity_compromised_flags_audit_only():
-    bad = {**HEALTHY_HEALTH, "integrity_compromised": True}
-    by = await _run(_handler(api_health_body=bad))
-    assert by["api"].ok is True
-    assert by["audit_integrity"].ok is False
-    assert "integrity" in (by["audit_integrity"].detail or "")
-
-
-@pytest.mark.asyncio
-async def test_integrity_unverified_is_unknown_on_bounded_pulse():
-    bad = {**HEALTHY_HEALTH, "integrity_verified": False}
-    by = await _run(_handler(api_health_body=bad))
-    assert by["api"].ok is True
-    assert by["audit_integrity"].ok is True
-    assert (by["audit_integrity"].detail or "").startswith("unobserved: ")
-    assert status_from_last_sample(by["audit_integrity"]) == "unknown"
-
-
-@pytest.mark.asyncio
-async def test_schema_unverified_is_unknown_on_bounded_pulse():
-    bad = {**HEALTHY_HEALTH, "schema_ok": False}
-    by = await _run(_handler(api_health_body=bad))
-    assert by["schema"].ok is True
-    assert (by["schema"].detail or "").startswith("unobserved: ")
-    assert status_from_last_sample(by["schema"]) == "unknown"
-    assert by["api"].ok is True
 
 
 @pytest.mark.asyncio
@@ -798,39 +767,6 @@ async def test_slow_probe_flags_strained_not_silent(monkeypatch):
     assert api_sample.detail.startswith("slow: ")
     assert "3500ms" in api_sample.detail
     assert "2000ms" in api_sample.detail
-
-
-@pytest.mark.asyncio
-async def test_slow_bounded_proof_preserves_unobserved_state(monkeypatch):
-    from pulse_app import probe
-
-    original = probe._probe_upstream
-
-    async def slow_probe(client, url, kind, method="GET", json_body=None):
-        result = await original(client, url, kind, method=method, json_body=json_body)
-        if url.endswith("/api/health/pulse"):
-            return probe.UpstreamResult(
-                status=result.status,
-                body=result.body,
-                text=result.text,
-                latency_ms=3500,
-                error=None,
-            )
-        return result
-
-    monkeypatch.setattr(probe, "_probe_upstream", slow_probe)
-    bounded = {
-        **HEALTHY_HEALTH,
-        "schema_ok": False,
-        "integrity_verified": False,
-    }
-
-    by = await _run(_handler(api_health_body=bounded))
-
-    for name in ("schema", "audit_integrity"):
-        assert by[name].ok is True
-        assert (by[name].detail or "").startswith("unobserved: ")
-        assert status_from_last_sample(by[name]) == "unknown"
 
 
 @pytest.mark.asyncio

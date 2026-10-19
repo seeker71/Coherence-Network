@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-18",
+  "thread_branch": "codex/native-observation-reuse-20261018",
+  "commit_scope": "Reuse unchanged native observations, restore the shared history marker, and retire released owners from persisted Compose through Form care.",
+  "files_owned": ["api/app/services/native_runtime_observation.py", "api/app/form_recipes/deployment_compose_care.bml", "pulse/pulse_app/organs.py", "docs/DEPLOY.md"],
+  "change_intent": "process_only",
+  "idea_ids": ["native-delivery-care"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["land-596-4068-and-deploy"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["delivery care"]}],
+  "agent": {"name": "OpenAI Codex", "version": "exact-runtime-model-id-not-exposed"},
+  "evidence_refs": [
+    "The existing observe_native_runtime cache expired after _CACHE_SECONDS = 15.0, causing ordinary health requests to repeat native challenge execution despite unchanged carrier bytes.",
+    "Removed elapsed-time expiry, its clock import and timestamp state. Existing digest invalidation and explicit force/reset care remain; no native runtime, JIT, fallback or new host business implementation was added.",
+    "Run 39133633297 passed its narrowed public release read for 0925e72b08df70ff1272dd17b43d9b501c6851b7 in 3m5s. Its native kernel-builder COPY and compilation/link layer were CACHED; no second native build ran.",
+    "Pulse startup exposed ImportError: cannot import name UNOBSERVED_DETAIL_PREFIX from pulse_app.organs. Restored that existing declaration because historical-sample analysis still consumes it; retired proof probes stay removed. No new Python business logic was added.",
+    "Service recovery also exposed failed to read dockerfile: open Dockerfile.kernel-router: no such file or directory. The running containers were retired but the host Compose service remained configured.",
+    "Executed deployment_compose_care.bml directly through fkwu with private host/key/config/backup/stage input. Form edits the Compose JSON model without environment resolution, then uses the existing Compose YAML carrier for the retiring line-oriented deployment bridge. Private backup and atomic publication preserve the source and its consumers. Exit 0; native care reports released service owners retired and other services preserved.",
+    "Observed live Compose services: neo4j, postgres, api, discord-bot, libretranslate, web, pulse. Released router owners are absent. Generated local BML carrier copies are released.",
+    "No kernel or application suite ran. Actual native care and structural diff reads are the evidence."
+  ],
+  "change_files": ["api/app/services/native_runtime_observation.py", "api/app/form_recipes/deployment_compose_care.bml", "pulse/pulse_app/organs.py", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Native Compose care completed and structural diff read; no kernel challenge or suite."},
+  "ci_validation": {"status": "pending", "summary": "Public release identity follows source landing; no periodic kernel gate."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}

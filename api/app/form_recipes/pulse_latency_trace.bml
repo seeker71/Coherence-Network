@@ -1,0 +1,54 @@
+// One source-owned observation wave: preserve response bodies/headers privately,
+// and separate client/network elapsed time from the serving runtime's own time.
+// stdin: {"base":"https://api.example","web":"https://example"}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+section [form.bml] {
+ class PulseLatencyTrace {
+  def plt-text(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
+  def plt-requests(doc) = [
+   ["ready", plt-text(doc, "base") ++ "/api/ready"],
+   ["contention", plt-text(doc, "base") ++ "/api/health/db-contention"],
+   ["ideas", plt-text(doc, "base") ++ "/api/ideas?limit=1&offset=0&sort=marginal_cc"],
+   ["vitality", plt-text(doc, "base") ++ "/api/workspaces/coherence-network/vitality"],
+   ["web", plt-text(doc, "web") ++ "/"],
+   ["pulse", plt-text(doc, "web") ++ "/pulse"]
+  ];
+  def plt-config(dir, row) = "url = " ++ json-quote-string(row[1]) ++ "\noutput = " ++ json-quote-string(dir ++ "/" ++ row[0] ++ ".body") ++ "\ndump-header = " ++ json-quote-string(dir ++ "/" ++ row[0] ++ ".headers") ++ "\nwrite-out = \"%{json}\\n\"\n";
+  def plt-header(headers, key) {
+   let rows = filter(line => str_find(line, key ++ ":", 0) == 0, split-on(headers, "\n"));
+   len(rows) == 0 ? "" : trim(substring(rows[0], len(key) + 1, len(rows[0])));
+  }
+  def plt-row(dir, request, meta) {
+   let headers = read_file(dir ++ "/" ++ request[0] ++ ".headers") ?? "";
+   let runtime = plt-header(headers, "x-coherence-runtime-ms");
+   json-node-object([
+    json-node-pair("name", json-node-string(request[0])),
+    json-node-pair("url", json-node-string(request[1])),
+    json-node-pair("http_code", json-object-get(meta, "http_code")),
+    json-node-pair("total_seconds", json-object-get(meta, "time_total")),
+    json-node-pair("first_byte_seconds", json-object-get(meta, "time_starttransfer")),
+    json-node-pair("dns_seconds", json-object-get(meta, "time_namelookup")),
+    json-node-pair("connect_seconds", json-object-get(meta, "time_connect")),
+    json-node-pair("tls_seconds", json-object-get(meta, "time_appconnect")),
+    json-node-pair("serving_runtime_ms", len(runtime) == 0 ? json-node-null() : json-node-float-text(runtime))
+   ]);
+  }
+  def plt-wave(doc) {
+   let dir = host_temp_dir() ++ "/pulse-latency-" ++ host_pid().str() ++ "-" ++ now_unix_ms().str();
+   let requests = plt-requests(doc);
+   let config = hch-join(map(row => plt-config(dir, row), requests), "next\n");
+   let began = host_monotonic_ms();
+   let run = hch-run-with(dir, "pulse-latency", ["curl", "--silent", "--show-error", "--location", "--parallel", "--parallel-immediate", "--max-time", "30", "--config", "-"], config, hch-by(35000), dir ++ "/transport.err");
+   let elapsed = host_monotonic_ms() - began;
+   let rows = map(line => parse-json("pulse-latency", line), filter(line => str_find(line, "{", 0) == 0, split-on(run[1], "\n")));
+   let observations = map(request => {
+    let found = filter(meta => plt-text(meta, "url_effective") == request[1], rows);
+    len(found) == 0 ? json-node-object([json-node-pair("name", json-node-string(request[0])), json-node-pair("missing", json-node-bool(true))]) : plt-row(dir, request, found[0]);
+   }, requests);
+   json-node-object([json-node-pair("transport_exit", nothing?(run[0]) ? json-node-null() : json-node-int(run[0])), json-node-pair("transport_error", json-node-string((read_file(dir ++ "/transport.err") ?? "") ++ run[2])), json-node-pair("elapsed_ms", json-node-int(elapsed)), json-node-pair("evidence_directory", json-node-string(dir)), json-node-pair("observations", json-node-array(observations))]);
+  }
+ }
+ let doc = parse-json("pulse-latency-input", stdin-text());
+ print_str(json-emit(plt-wave(doc)));
+ 0;
+}

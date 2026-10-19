@@ -1,7 +1,7 @@
 # fkwu/Form floor — 2026-10-18
 
-This reading follows the current parent `origin/main` and coherence-kernel
-`d44d40ce4`. It treats fkwu as the only kernel. Retired carriers are bootstrap
+This reading follows release `296bfa2a0728` and coherence-kernel
+`0563230ff11e`. It treats fkwu as the only kernel. Retired carriers are bootstrap
 history, not runtime choices, fallbacks, or recurring validation targets.
 
 ## Executable floor
@@ -20,11 +20,15 @@ history, not runtime choices, fallbacks, or recurring validation targets.
 - Direct native CLI arguments now enter the same Form REPL as piped commands.
   Form source and image paths remain fkwu runtime inputs; verbs are staged as
   one bounded Form turn. The focused bundle build published source identity
-  `3da690398f53f7c4`.
-- Deployment observation now reads that v3 bundle directly and compares its
-  carrier challenge with an independently rebuilt carrier. The deleted
-  bootstrap table, stamp, and source-digest files no longer participate in
-  runtime identity.
+  `c835bb8d8cee24f8` after the native source-copy repair.
+- The image reads that v3 bundle directly. Independent carrier reproduction
+  remains a separately requested observation, not a recurring deployment gate;
+  this release does not claim it ran. The deleted bootstrap table, stamp, and
+  source-digest files no longer participate in runtime identity.
+- Private build copies use the existing Form source-tree organ and its ignore
+  rules, without Git metadata or an arbitrary traversal-depth cutoff. Docker
+  provides shared-memory storage for the native build; the parent revision no
+  longer invalidates the pinned kernel's builder layer.
 - fkwu already carries native cells, sockets, HTTP client operations, crypto,
   and host I/O. The Form stdlib carries JSON and kernel HTTP composition.
 - The current Coherence Network application catalog is
@@ -74,6 +78,11 @@ floor reading.
 - Routine bootstrap and platform-comparison workflows have been released.
   Validation is now claimed only by the changed
   surface; fkwu validation is required when fkwu changes.
+- Delivery guidance and the native `delivery_care.bml` recipe replace recurring
+  procedural gates. Main retains deletion/non-fast-forward protection; approval,
+  resolved-thread, and linear-history requirements no longer block useful work.
+  Repeated deployment schedules have been retired. Host carrier files publish
+  atomically so an executing release retains its original file.
 - The production API remains a Python compatibility host around routes that
   have not yet moved behind the native Form application host. This is current
   location, not destination authority.
@@ -102,8 +111,9 @@ above. Repository edits receive structural checks.
 ## Trust trace
 
 Exact source locations and runtime surfaces were read through the native fkwu
-Form lookup path. `form-cli ask` did not return within its bounded attempt, so
-it supplied no grounded answer and was not retried unchanged. Architecture
+Form lookup path. The later `form-cli ask` returned dictionary/source references,
+but no NodeID or sufficiency receipt; it is a partial native lookup, not a fully
+trusted answer. Architecture
 synthesis and this prose used the rented OpenAI Codex reasoning lane and are
 grounded here in the cited live source paths rather than reported as native
 generation.

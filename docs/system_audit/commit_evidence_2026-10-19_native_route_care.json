@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "codex/pulse-route-care-20261019",
+  "commit_scope": "Resolve remaining pulse latency at native route/access-path ownership and retire incorrect host event-loop ownership.",
+  "files_owned": ["api/app/form_recipes/deployment_compose_care.bml", "api/app/form_recipes/runtime_read_care.bml", "api/app/routers/health.py", "api/app/routers/ideas.py", "api/app/routers/vitality.py", "docs/DEPLOY.md"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["native-delivery-care"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["pulse-latency-source"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["native route care"]}],
+  "agent": {"name": "OpenAI Codex", "version": "exact-runtime-model-id-not-exposed"},
+  "evidence_refs": [
+    "During pulse latency diagnosis, Traefik repeatedly reported Router coherence-web cannot be linked automatically with multiple Services: coherence-web and coherence-web-hati. Both declared the same container port 3000; the www router had no explicit owner. A superseded two-host Hati router duplicated the current five-host route.",
+    "Extended existing BML Compose care with reusable model field replacement, array/map label normalization, and service-alias rehoming. All current Hati hosts and the root/www routes remain; duplicate port ownership and the older two-host router retire. Native publication preserves a private backup and uses same-directory rename.",
+    "First care attempt found Compose preserves labels as KEY=value arrays under --no-interpolate (str_find received a non-string). Added the native presentation lens. An incorrect node_tag spelling was corrected to the existing node_category/node_eq door; no kernel or lowering fallback was introduced. Failures retained by form-run and host-child; neither published a partial document.",
+    "Resumed native action successfully. The live model now has one coherence-web service port, all three current routers explicitly select it, and the five-host Hati rule is unchanged. No kernel or application suite ran.",
+    "Deploy guidance releases the obsolete manual sed deployment path and redundant recurring reads. It carries the observed provider-lock lesson beside the native latency trace and current source ownership.",
+    "After the lock repair, pulse exposed a separate transaction over 100 seconds: SELECT runtime_events WHERE source=$1 ORDER BY recorded_at DESC LIMIT $2. The live table lacked a source/time index. Native runtime_read_care.bml declares reusable ordered-read blueprints, builds the missing index concurrently, and returns PostgreSQL validity and the actual worker-query plan. Index valid=true and ready=true; EXPLAIN now uses runtime_events_source_recorded_at rather than the parallel full scan. No row deletion, shorter history or query-limit reduction.",
+    "Native schema care's first compilation named an unavailable str-replace-all helper; identifier quoting was composed from existing split/join string resources instead. No kernel or fallback change. Online index care completed successfully; no active long transaction remained in the following source observation.",
+    "A focused 20-second live profile found synchronous idea loading/copying, repeated route-registry reads, vitality SQL and a blocking native-kernel call on MainThread. Released five incorrect async declarations at the retiring HTTP membrane (ready, contention, idea list/detail, vitality). Existing synchronous framework dispatch owns these bodies; no new Python business logic, background workaround, pool, threshold or timeout was added.",
+    "Native Compose care activated web without rebuilding or touching dependencies. The running www and five-host Hati routers both name coherence-web; the duplicate port owner is absent; public www returned 200. The earlier lock repair deployment completed successfully in run 39184717055."
+  ],
+  "change_files": ["api/app/form_recipes/deployment_compose_care.bml", "api/app/form_recipes/runtime_read_care.bml", "api/app/routers/health.py", "api/app/routers/ideas.py", "api/app/routers/vitality.py", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Native route/index care, selected live model/query plan and source profile; no suite."},
+  "ci_validation": {"status": "pending", "summary": "Existing delivery guidance remains advisory."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}

@@ -71,16 +71,23 @@ The image builds fkwu from the pinned submodule and builds `form-cli` through
 - `form-cli.native.attestation`
 - `form-cli.source.id`
 
-The deployment observer rebuilds that bundle from the pinned kernel source and
-compares its v3 carrier identity and challenge with both the deployed container
-and the public health projection. Deleted bootstrap table, stamp, and source
-digest files are not identity authorities.
+The release image publishes this bundle's identity alongside the parent and
+kernel revisions. The separately requested deployment observer can rebuild
+the bundle and compare its carrier challenge with the container and public
+projection; ordinary deployment does not run that independent-reproduction
+claim. Deleted bootstrap table, stamp, and source digest files are not identity
+authorities.
+
+Release `296bfa2a0728` pins kernel `0563230ff11e`; its native build published
+source identity `c835bb8d8cee24f8`. Its production receipt lives in
+`docs/system_audit/commit_evidence_2026-10-18_deployed_floor.json`.
 
 ## Verification boundary
 
-For an ordinary application release, use the repository deployment checks and
-public API/web verification. fkwu itself receives focused validation only when
-its source changes. Sibling kernels are never routine release gates.
+For an ordinary application release, reuse the rollout's public identity and
+API/web readings. Read an affected claim again only when changed inputs or a
+new finding give it work. fkwu itself receives focused validation only when
+its runtime changes. Sibling kernels are never routine release gates.
 
 ```bash
 ./scripts/verify_web_api_deploy.sh
