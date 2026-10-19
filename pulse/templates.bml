@@ -1,0 +1,125 @@
+// Reusable resource templates: native Form HTTP, one SQLite resource boundary.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/host-child.bml
+import form-stdlib/http-client.bml;
+section [form.bml] {
+ class WitnessResources {
+  def wr-text(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
+  def wr-number(doc, key) = str_to_int(json-emit(json-object-get(doc, key)));
+  def wr-lower-at(text, at, out) = at >= len(text) ? out : { let n = str_byte_at(text, at); wr-lower-at(text, at + 1, out ++ byte_to_str(n >= 65 && n <= 90 ? n + 32 : n)); };
+  def wr-lower(text) = wr-lower-at(text, 0, "");
+  def wr-array(doc, key) = node_children(json-object-get(doc, key));
+  def wr-overlay(base, overrides) = json-node-object(append(filter(pair => !json-object-has?(overrides,json-pair-key(pair)),node_children(base)),node_children(overrides)));
+  def wr-config() = parse-json("pulse-config", read_file("../pulse/config.local.json") ?? read_file("../pulse/config.json"));
+  def wr-quote(text) = "'" ++ hch-join(split-on(text, "'"), "''") ++ "'";
+  def wr-path(doc, path) = nil?(path) ? doc : wr-path(json-object-get(doc, json-string-value(path[0])), path[1:]);
+  def wr-io(cfg, name) = wr-text(cfg, "work_path") ++ "/" ++ host_pid().str() ++ "-" ++ name;
+  def wr-release(cfg, name) {
+   let dir = wr-io(cfg, name);
+   let removed = foldl((n, ext) => host_path_remove(dir ++ "/sqlite" ++ ext), 0, [".in",".out",".err",".exit",".prev.in",".prev.out",".prev.err",".prev.exit"]);
+   host_dir_rmdir(dir);
+  }
+  def wr-sql(cfg, name, sql) {
+   let run = hch-run-in(wr-io(cfg, name), "sqlite", ["sqlite3", "-batch", "-bail", "-cmd", ".timeout 5000", wr-text(cfg, "db_path")], sql, nothing());
+   (Comparable) run[0] == 0 ? trim(run[1]) : form_error("pulse SQLite " ++ name ++ ": " ++ run[1] ++ run[2]);
+  }
+  def wr-json-sql(cfg, name, sql) = parse-json(name, wr-sql(cfg, name, sql));
+  def wr-rules(doc, text, rules) = filter(rule => !wr-rule(doc, text, rule), rules);
+  def wr-rule(doc, text, rule) {
+   let value = wr-path(doc, wr-array(rule, "path"));
+   let op = wr-text(rule, "op");
+   let wanted = json-object-get(rule, "value");
+   op == "equals" ? node_eq(value, wanted) : op == "true" ? json-emit(value) == "true" : op == "not-true" ? json-emit(value) != "true"
+   : op == "truthy" ? json-emit(value) != "null" && json-emit(value) != "false" && json-emit(value) != "0" && json-emit(value) != "\"\""
+   : op == "array" ? node_eq(node_category(value), JSON-ARRAY()) : op == "object" ? node_eq(node_category(value), JSON-OBJECT())
+   : op == "has" ? json-object-has?(value, json-string-value(wanted))
+   : op == "text-contains" ? str_find(text, json-string-value(wanted), 0) >= 0
+   : op == "text-absent" ? str_find(text, json-string-value(wanted), 0) < 0 : false;
+  }
+  // Parallel native workers share each upstream. No curl process or TLS shell.
+  // callback(request, observation, exit) owns interpretation and persistence.
+  def wr-http-begin(cfg, request) {
+   let dir = wr-io(cfg, "http-" ++ wr-text(request, "name"));
+   let made = hch-mkdirs(dir);
+   let rotated = hch-rotate(dir, "request");
+   let cleared = host_path_remove(dir ++ "/request.out");
+   let fed = write_file_text(dir ++ "/request.in", json-emit(request));
+   let pid = host_spawn_at(["./fkwu", "../pulse/fetch.bml"], [dir ++ "/request.in", dir ++ "/request.out", dir ++ "/request.err"]);
+   [pid, request, dir, host_monotonic_ms()];
+  }
+  def wr-http-finish(row, status, receive) {
+   let source = trim(read_file(row[2] ++ "/request.out") ?? "");
+   let meta = parse-json("native-http-result", status != 0 || len(source) == 0 ? "{}" : source);
+   receive(row[1], meta, status);
+  }
+  def wr-http-poll(rows, receive, pending) = nil?(rows) ? reverse(pending) : {
+   let row = rows[0];
+   let waited = row[0] < 0 ? 127 : host_wait([row[0], 1]);
+   let expired = nothing?(waited) && host_monotonic_ms() - row[3] > 10000;
+   let stopped = expired ? host_signal(row[0], 9) : 0;
+   let status = expired ? host_wait(row[0]) : waited;
+   nothing?(status) ? wr-http-poll(rows[1:], receive, cons(row, pending)) : {
+    let delivered = wr-http-finish(row, status, receive);
+    wr-http-poll(rows[1:], receive, pending);
+   };
+  };
+  def wr-http-await(rows, receive) = nil?(rows) ? 0 : {
+   let pending = wr-http-poll(rows, receive, []);
+   let rested = nil?(pending) ? 0 : host_sleep_ms(20);
+   wr-http-await(pending, receive);
+  };
+  def wr-http-wave(cfg, requests, receive) = wr-http-await(map(request => wr-http-begin(cfg, request), requests), receive);
+  def wr-http-head(conn, acc) = str_find(acc, "\r\n\r\n", 0) >= 0 ? acc : { let chunk = socket_recv(conn, 65536); nothing?(chunk) || len(chunk) == 0 ? acc : wr-http-head(conn, acc ++ chunk); };
+  def wr-header(head, key) {
+   let found = filter(line => str_find(wr-lower(line), key ++ ":", 0) == 0, head);
+   nil?(found) ? "" : trim(substring(found[0], len(key) + 1, len(found[0])));
+  }
+  def wr-response(code, body, headers) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 404 ? " Not Found" : code == 422 ? " Unprocessable Entity" : " Error") ++ "\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\n" ++ headers ++ "\r\n" ++ body;
+  def wr-send(conn, text, at) = at >= len(text) ? 0 : { let sent = socket_send(conn, substring(text, at, len(text))); sent <= 0 ? -1 : wr-send(conn, text, at + sent); };
+  def wr-serve(listener, handle) {
+   let conn = socket_accept(listener);
+   let raw = conn < 0 ? "" : wr-http-head(conn, "");
+   let response = len(raw) == 0 ? "" : handle(raw);
+   let sent = len(response) == 0 ? 0 : wr-send(conn, response, 0);
+   let closed = conn < 0 ? 0 : socket_close(conn);
+   wr-serve(listener, handle);
+  }
+  def wr-hex(text, at, n) = at >= len(text) ? n : { let b = str_byte_at(wr-lower(text), at); wr-hex(text, at + 1, n * 16 + (b <= 57 ? b - 48 : b - 87)); };
+  def wr-decode(text, at, out) = at >= len(text) ? out : {
+   let ch = substring(text,at,at+1);
+   ch == "%" && at+2 < len(text) ? wr-decode(text,at+3,out ++ byte_to_str(wr-hex(substring(text,at+1,at+3),0,0))) : wr-decode(text,at+1,out ++ (ch == "+" ? " " : ch));
+  };
+  def wr-digits?(text, at) = at >= len(text) ? len(text) > 0 : str_byte_at(text,at) >= 48 && str_byte_at(text,at) <= 57 && wr-digits?(text,at+1);
+  def wr-unchunk(text, at, chunks) {
+   let end = str_find(text, "\r\n", at);
+   end < 0 ? hch-join(reverse(chunks), "") : {
+    let n = wr-hex(split-on(substring(text, at, end), ";")[0], 0, 0);
+    n == 0 ? hch-join(reverse(chunks), "") : wr-unchunk(text, end + 2 + n + 2, cons(substring(text, end + 2, end + 2 + n), chunks));
+   };
+  }
+  def wr-fetch(method, url, body, redirects) {
+   let raw = str_find(url,"https://",0) == 0 ? http-fetch(method,url,body) : wr-plain(method,url,body);
+   let code = kh-status-of(raw);
+   let start = http-body-offset(raw);
+   let headers = split-on(start < 0 ? "" : substring(raw, 0, start), "\r\n");
+   let location = wr-header(headers, "location");
+   redirects > 0 && code >= 300 && code < 400 && len(location) > 0 ? wr-fetch(code == 303 ? "GET" : method, str_find(location, "/", 0) == 0 ? hch-join(take(3, split-on(url, "/")), "/") ++ location : location, code == 303 ? "" : body, redirects - 1) : {
+    let payload = start < 0 ? "" : substring(raw, start, len(raw));
+    [code, wr-header(headers, "transfer-encoding") == "chunked" ? wr-unchunk(payload, 0, []) : payload, wr-header(headers, "x-form-router")];
+   };
+  }
+  def wr-plain(method, url, body) {
+   let after = substring(url,7,len(url));
+   let slash = str_find(after,"/",0);
+   let hostport = slash < 0 ? after : substring(after,0,slash);
+   let path = slash < 0 ? "/" : substring(after,slash,len(after));
+   let parts = split-on(hostport,":");
+   let conn = socket_connect(parts[0],len(parts) > 1 ? str_to_int(parts[1]) : 80);
+   conn < 0 ? "" : {
+    let sent = http-send-all(conn,kh-render-request(method,path,hostport,body),0);
+    let response = http-recv-response-into(conn,"") ?? "";
+    let closed = socket_close(conn);
+    response;
+   };
+  }
+ }
+}

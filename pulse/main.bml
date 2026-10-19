@@ -1,0 +1,28 @@
+// The independent witness: native service owner, parallel native observations,
+// one SQLite transaction per round. A failed child leaves its own trace.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk ../pulse/probe.bml
+section [form.bml] {
+ class PulseService {
+  def ps-listener(cfg) {
+   let io = wr-io(cfg,"listener");
+   let made = hch-mkdirs(io);
+   host_spawn_at(["./fkwu","../pulse/http.bml"],["/dev/null",io ++ "/stdout",io ++ "/stderr"]);
+  }
+  def ps-loop(cfg, organs, listener, next-care) {
+   let began = host_monotonic_ms();
+   let round = wp-round(cfg,organs);
+   let due = host_monotonic_ms() >= next-care;
+   let retained = due ? ws-retain(cfg) : "";
+   let waited = listener > 0 ? host_wait([listener,1]) : 127;
+   let owner = nothing?(waited) ? listener : ps-listener(cfg);
+   let left = wr-number(cfg,"interval_seconds") * 1000 - (host_monotonic_ms()-began);
+   let rest = left > 0 ? host_sleep_ms(left) : 0;
+   ps-loop(cfg,organs,owner,due ? host_monotonic_ms()+86400000 : next-care);
+  }
+ }
+ let cfg = wr-config();
+ let started = ws-start(cfg);
+ let retained = ws-retain(cfg);
+ let listener = ps-listener(cfg);
+ ps-loop(cfg,ws-organs(),listener,host_monotonic_ms()+86400000);
+}
