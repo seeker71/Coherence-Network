@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "codex/native-meeting-read-20261019",
+  "commit_scope": "Lift anonymous trace reads into a generic native BML query and its matching physical access path; retire the forced raw-reader entry.",
+  "files_owned": ["api/app/form_recipes/anonymous_trace_query.bml", "api/app/form_recipes/runtime_read_care.bml", "api/app/services/anonymous_meeting_trace_service.py", "api/app/routers/meetings.py", "scripts/fkwu_run.sh", "docs/DEPLOY.md"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["coherence-network-api-runtime"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["pulse-latency-source"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["native query lift"]}],
+  "agent": {"name": "OpenAI Codex", "version": "exact-runtime-model-id-not-exposed"},
+  "evidence_refs": [
+    "The final native trace after fe09b5faa4f13e7f5d127dc3927fc8181605f73e retained 24.7-26.3 second serving runtimes; a preceding clear pulse snapshot was not accepted as completion. A new 25-second source profile found 101 samples in anonymous meeting trace reads: every page meeting loaded all event nodes, then filtered the current source point in Python on MainThread.",
+    "New query selection is authored as the reusable OrderedTraceRead BML template. Source point stays a database-bound value; null/empty retains the global view. Existing trace marker filtering, same-browser history, folding, durations, privacy hashing and response shapes remain. Retired the Python post-read source filter and two incorrect async declarations. Added only transport wiring through the existing Form bridge and SQLAlchemy resource, not a Python query algorithm or alternate implementation.",
+    "Extended native ordered-read schema blueprints with expression columns and partial predicates. Online graph_nodes_trace_source_updated_at is valid and ready. PostgreSQL now selects that index for the source-point lookup; no data was removed or shortened.",
+    "The retiring source wrapper failed on BML with unbound-name // because it forced the raw --src reader after staging source. Removed that forcing flag, entering fkwu's normal grammar-discovery/JIT door instead. Exact command bash scripts/fkwu_run.sh --src api/app/form_recipes/anonymous_trace_query.bml now exits 0 and emits the bound SQL from BML. No kernel change, separate lowering command or fallback.",
+    "Minimal source and native query/access-path observations only; no kernel or application suite. Public serving identity and the affected route/pulse observations follow the superseding rollout."
+  ],
+  "change_files": ["api/app/form_recipes/anonymous_trace_query.bml", "api/app/form_recipes/runtime_read_care.bml", "api/app/services/anonymous_meeting_trace_service.py", "api/app/routers/meetings.py", "scripts/fkwu_run.sh", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Native query through actual source runner; online index validity/query plan and source profile; no suite."},
+  "ci_validation": {"status": "pending", "summary": "Existing delivery guidance remains advisory."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}

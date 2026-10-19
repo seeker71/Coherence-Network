@@ -2,8 +2,9 @@
 # fkwu_run.sh — enter the c-bootstrapped fkwu runtime.
 #
 # Production/source lane: `--src` compiles the pinned c-bootstrap when needed,
-# prepends the pinned Form stdlib core, and executes source directly. No sibling
-# kernel and no flattening enters this lane.
+# prepends the pinned Form stdlib core, and enters fkwu's Form/BML source door.
+# The native entry owns grammar discovery and JIT execution; no sibling kernel
+# or separate flattening path enters this lane.
 #
 # Usage:
 #   fkwu_run.sh --src <module.fk>...
@@ -66,7 +67,7 @@ if [ "${1:-}" = "--src" ]; then
         printf '\n' >> "$source_file"
         sed 's/\r$//' "$recipe" >> "$source_file"
     done
-    "$FKWU" --src "$source_file"
+    "$FKWU" "$source_file"
     exit "$?"
 fi
 
