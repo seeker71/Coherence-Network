@@ -40,8 +40,12 @@ keeps ordinary site navigation on the configured canonical web origin, including
 when it is read at the independent Pulse origin. Silence windows use interval
 overlap, retaining closed receipts that began before the cutoff and ended within it.
 The bucket's source-sequence-keyed end bound keeps that read exact and bounded.
+Sorted closed-interval endpoints and open counts supply the page's exact archive
+count without loading every note. Full interval rows are read when disclosed.
 The page offers 7/30/90/180-day windows and accepts the API's existing 1–180-day range.
 The default page remains seven days. No JavaScript or external assets are needed.
+HTML carries `Cache-Control: no-store, no-transform` and `script-src 'none'`:
+fresh native evidence stays intact across proxies rather than acquiring analytics.
 
 ## Configuration and running
 
@@ -66,7 +70,9 @@ preserving routing, volumes and unrelated operator settings.
 
 Raw rows retain their original row IDs, fields, silence IDs and repair notes.
 Native daily counts and latency histograms retain exact percentile ranks;
-the sliding window's partial first day is read from raw samples. No history
+the sliding window's partial first day reads the smaller raw-page side of its
+cutoff. A prefix is subtracted from the exact daily count/histogram; a suffix is
+used directly. Both preserve observed-only rows and nearest-rank weights. No history
 window, latency threshold or failure is hidden by a cache.
 Daily cards and aligned binary range summaries are durable derived indexes,
 not time-to-live response caches. Each transaction publishes changed leaves,

@@ -45,18 +45,20 @@ section [form.bml] {
    nw-commit(cfg,meta,rows,ws-changes(tails,organs));
   });
   def ws-health(meta) = fp-object([["status","ok"],["version","1.1.0-form"],["runtime","fkwu"],["persistence","form-recipes"],["started_at",fp-stamp(fp-get(meta,"started_at",0))],["uptime_seconds",(now_unix_ms() - fp-get(meta,"started_at",0))/1000],["samples_total",fp-get(meta,"samples_total",0)]]);
-  def ws-status(cfg,last) = nothing?(last) ? "unknown" : !nw-observed(last) || now_unix_ms() - fp-time(last[1]) > wr-number(cfg,"interval_seconds")*3000 ? "unknown" : last[3] == 0 ? "silent" : !nothing?(last[5]) && (str_find(last[5],"slow: ",0) == 0 || str_find(last[5],"fell back: ",0) == 0) ? "strained" : "breathing";
-  def ws-now(cfg,meta,organs) {
+  def ws-status(cfg,last) = ws-status-at(cfg,last,now_unix_ms());
+  def ws-status-at(cfg,last,now) = nothing?(last) ? "unknown" : !nw-observed(last) || now - fp-time(last[1]) > wr-number(cfg,"interval_seconds")*3000 ? "unknown" : last[3] == 0 ? "silent" : !nothing?(last[5]) && (str_find(last[5],"slow: ",0) == 0 || str_find(last[5],"fell back: ",0) == 0) ? "strained" : "breathing";
+  def ws-now(cfg,meta,organs) = ws-now-at(cfg,meta,organs,now_unix_ms());
+  def ws-now-at(cfg,meta,organs,now) {
    let rows = map(organ => {
     let tail = fp-get(fp-get(meta,"tails",[]),wr-text(organ,"name"),[]);
     let last = nil?(tail) ? nothing() : reverse(tail)[0];
-    let status = ws-status(cfg,last);
+    let status = ws-status-at(cfg,last,now);
     fp-object([["name",wr-text(organ,"name")],["label",wr-text(organ,"label")],["description",wr-text(organ,"description")],["status",status],["latency_ms",nothing?(last) ? nothing() : last[4]],["last_sample_at",nothing?(last) ? nothing() : last[1]],["detail",nothing?(last) || (status != "strained" && status != "silent") ? nothing() : last[5]]]);
    },organs);
    let open = fp-get(meta,"open",[]);
    let statuses = map(row => wr-text(row,"status"),rows);
    let overall = any?(s => s == "silent",statuses) || any?(r => r[4] == "silent",open) ? "silent" : !nil?(open) || any?(s => s == "strained",statuses) ? "strained" : all?(s => s == "unknown",statuses) ? "unknown" : "breathing";
-   fp-object([["overall",overall],["checked_at",fp-stamp(now_unix_ms())],["witness_started_at",fp-stamp(fp-get(meta,"started_at",0))],["organs",rows],["ongoing_silences",map(r => fp-object([["id",r[0]],["organ",r[1]],["started_at",r[2]],["severity",r[4]],["duration_seconds",ws-duration(r[2],now_unix_ms())]]),sort-by(open,r => fp-time(r[2])))]]);
+   fp-object([["overall",overall],["checked_at",fp-stamp(now)],["witness_started_at",fp-stamp(fp-get(meta,"started_at",0))],["organs",rows],["ongoing_silences",map(r => fp-object([["id",r[0]],["organ",r[1]],["started_at",r[2]],["severity",r[4]],["duration_seconds",ws-duration(r[2],now)]]),sort-by(open,r => fp-time(r[2])))]]);
   }
   def ws-duration(start,end) { let d = (end - fp-time(start))/1000; d<0 ? 0 : d; }
   def ws-rank(hist, rank, n) = nil?(hist) ? nothing() : n+hist[0][1] >= rank ? hist[0][0] : ws-rank(hist[1:],rank,n+hist[0][1]);
@@ -66,11 +68,18 @@ section [form.bml] {
    n == 0 ? [nothing(),nothing()] : [ws-rank(ordered,(n*50+99)/100,0),ws-rank(ordered,(n*95+99)/100,0)];
   }
   def ws-uptime(n,fail) = n == 0 ? 0.0 : round_ndigits(100.0*(n - fail)/n,2);
+  def ws-boundary-stat(cfg,day,boundary,name) {
+   let partial = nw-stats-rows([0,0,0,[]],filter(row => row[2] == name,boundary[1]));
+   !boundary[0] ? partial : {
+    let full = nw-stat(cfg,day,name);
+    full[1]<partial[1] || full[2]<partial[2] ? form_error("native boundary subtraction exceeds its source") : [0,full[1] - partial[1],full[2] - partial[2],fp-histogram-difference(full[3],partial[3])];
+   };
+  }
   def ws-history(cfg,meta,organs,days) = ws-history-at(cfg,meta,organs,days,now_unix_ms());
   def ws-history-at(cfg,meta,organs,days,now) {
    let since = (now/1000)*1000 - days*86400000;
    let dates = map(i => fp-day((now/86400000 - days+1+i)*86400000),range(0,days));
-   let boundary = nw-raw-day(cfg,fp-day(since),since);
+   let boundary = nw-boundary(cfg,fp-day(since),since);
    let histories = map(organ => {
     let name = wr-text(organ,"name");
     let loaded = map(day => [day,nw-card(cfg,meta,day,name)],dates);
@@ -78,7 +87,7 @@ section [form.bml] {
      let day = page[0]; let s = page[1];
      fp-object([["date",day],["status",s[1] == 0 ? "unknown" : s[2]*2>s[1] ? "silent" : 100.0*(s[1]-s[2])/s[1]>=99.5 ? "breathing" : "strained"],["samples",s[1]],["failures",s[2]],["latency_p50_ms",s[3]],["latency_p95_ms",s[4]]]);
     },loaded);
-    let initial = nw-stats-rows([0,0,0,[]],filter(row => row[2] == name,boundary));
+    let initial = ws-boundary-stat(cfg,fp-day(since),boundary,name);
     let blocks = fp-range-cover(now/86400000 - days+1,now/86400000,6);
     let summaries = map(block => nw-node(cfg,fp-get(meta,"days",[]),block[0],block[1],name),blocks);
     let total = foldl((s,d) => [0,s[1]+d[1],s[2]+d[2],cons(d[3],s[3])],[0,initial[1],initial[2],[initial[3]]],summaries);
@@ -91,11 +100,25 @@ section [form.bml] {
    let avg = nil?(observed) ? 0.0 : round_ndigits(foldl((n,h) => n+node_value(json-object-get(h[1],"uptime_pct")),0.0,observed)/len(observed),2);
    fp-object([["days",days],["generated_at",fp-stamp(now)],["overall",fp-object([["uptime_pct",avg],["worst_uptime_pct",pct],["worst_organ",nothing?(worst) || pct>=100 ? nothing() : wr-text(worst[1],"name")]])],["organs",map(h => h[1],histories)]]);
   }
-  def ws-silence-rows(cfg,meta,days) {
-   let now = now_unix_ms(); let since = (now/1000)*1000 - days*86400000;
+  def ws-silence-buckets(meta,since) {
    let open = fp-get(meta,"open",[]);
    let ends = fp-get(meta,"silence_ends",[]);
-   let buckets = filter(b => b[1]>=since || fp-get(ends,b[0],[-1,0])[1]>=since || any?(r => r[0]/256 == b[0],open),fp-get(meta,"buckets",[]));
+   filter(b => b[1]>=since || fp-get(ends,b[0],[-1,0])[1]>=since || any?(r => r[0]/256 == b[0],open),fp-get(meta,"buckets",[]));
+  }
+  def ws-silence-count-at(cfg,meta,days,now) {
+   let since = (now/1000)*1000 - days*86400000; let ends = fp-get(meta,"silence_ends",[]);
+   foldl((total,b) => {
+    let entry = fp-get(ends,b[0],[]);
+    len(entry)<5 ? form_error("native silence count projection needs source care") : entry[3] == 0 || entry[2]>=since ? total+entry[3]+entry[4] : {
+     let page = fp-required(nw-count-path(cfg,b[0]));
+     page[0] != entry[0] ? form_error("native silence count projection differs from its source sequence") : total+entry[4]+len(page[1]) - fp-lower-bound(page[1],since,0,len(page[1]));
+    };
+   },0,ws-silence-buckets(meta,since));
+  }
+  def ws-silence-rows(cfg,meta,days) = ws-silence-rows-at(cfg,meta,days,now_unix_ms());
+  def ws-silence-rows-at(cfg,meta,days,now) {
+   let since = (now/1000)*1000 - days*86400000;
+   let buckets = ws-silence-buckets(meta,since);
    let rows = foldl((out,b) => append(out,filter(r => fp-time(r[2])>=since || nothing?(r[3]) || fp-time(r[3])>=since,fp-required(nw-path(cfg,"silences/" ++ fp-pad(b[0],8) ++ ".fkb"))[1])),[],buckets);
    sort-by(rows,r => 0 - fp-time(r[2]));
   }

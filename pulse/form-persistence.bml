@@ -39,6 +39,14 @@ section [form.bml] {
    },0,chunk),0,chunks);
    sort-by(map(key => record_get(bins,key),record_keys(bins)),pair => pair[0]);
   }
+  def fp-histogram-difference(whole,removed) {
+   let result = fp-histogram-chunks([whole,map(p => [p[0],0 - p[1]],removed)]);
+   any?(p => p[1]<0,result) ? form_error("native histogram subtraction exceeds its source") : filter(p => p[1]>0,result);
+  }
+  def fp-lower-bound(ordered,value,first,last) = first>=last ? first : {
+   let middle = (first+last)/2;
+   ordered[middle]<value ? fp-lower-bound(ordered,value,middle+1,last) : fp-lower-bound(ordered,value,first,middle);
+  };
   def fp-ordered-rank(hist,rank,n) = nil?(hist) ? nothing() : n+hist[0][1]>=rank ? hist[0][0] : fp-ordered-rank(hist[1:],rank,n+hist[0][1]);
   def fp-weighted-percentiles(chunks,percentages) {
    fp-ordered-percentiles(fp-histogram-chunks(chunks),percentages);

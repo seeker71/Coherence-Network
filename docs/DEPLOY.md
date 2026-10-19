@@ -109,6 +109,11 @@ Compose derives the host expression from its existing web routers rather than
 holding a second host list, and activates it with the new Pulse image. The Next.js Pulse family and its
 cross-origin configuration are retired. Native HTML reads one coherent snapshot,
 discloses complete day/archive evidence, and sends no hydration payload.
+Its response forbids proxy transformations and scripts while retaining no-store
+freshness. Observe the public HTML, not just the origin response: an injected
+analytics beacon is a boundary finding, not native page code. Source-keyed
+closed-endpoint indexes provide exact silence counts without decoding the archive
+on every page; disclosure still reads every matching original receipt and note.
 On the first indexed startup, native workers derive daily cards and exact range
 summaries from retained daily history. Later starts compare raw-day sequence
 coordinates and reconcile only changed sources, including writes from an older

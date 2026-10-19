@@ -88,14 +88,23 @@ section [form.bml] {
   def nw-source-days(cfg,days) = map(day => [day,fp-required(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"))[0]],days);
   // Closed intervals can begin before the requested window. Their end bound
   // belongs beside the start bound, keyed by the source bucket's own sequence.
-  def nw-end-index(cfg,meta,numbers) = foldl((out,number) => {
-   let page = fp-required(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"));
-   let prior = fp-get(out,number,[-1,0]);
-   prior[0] == page[0] ? out : {
-    let end = foldl((n,row) => nothing?(row[3]) ? n : { let at = fp-time(row[3]); at>n ? at : n; },0,page[1]);
-    fp-set(out,number,[page[0],end]);
-   };
-  },fp-get(meta,"silence_ends",[]),numbers);
+  def nw-count-path(cfg,number) = nw-path(cfg,"silence-counts/" ++ fp-pad(number,8) ++ ".fkb");
+  def nw-end-index(cfg,meta,numbers) {
+   let pending = record_new(0,"pages",[]);
+   let index = foldl((out,number) => {
+    let page = fp-required(nw-path(cfg,"silences/" ++ fp-pad(number,8) ++ ".fkb"));
+    let prior = fp-get(out,number,[-1,0]); let path = nw-count-path(cfg,number);
+    prior[0] == page[0] && len(prior)>=5 && file_size(path)>=0 ? out : {
+     let closed = filter(row => !nothing?(row[3]),page[1]);
+     let end = foldl((n,row) => { let at = fp-time(row[3]); at>n ? at : n; },0,closed);
+     let points = sort-by(map(row => { let a = fp-time(row[2]); let b = fp-time(row[3]); a>b ? a : b; },closed),point => point);
+     let staged = record_set(pending,"pages",cons([path,[page[0],points]],record_get(pending,"pages")));
+     fp-set(out,number,[page[0],end,nil?(points) ? 0 : points[0],len(points),len(page[1]) - len(closed)]);
+    };
+   },fp-get(meta,"silence_ends",[]),numbers);
+   let pages = record_get(pending,"pages"); let made = nil?(pages) ? 0 : nw-dir(cfg,"silence-counts");
+   let saved = fp-write-batch(pages); index;
+  }
   def nw-index-ensure(cfg,organs) = nw-locked(cfg,meta => {
    let sources = nw-source-days(cfg,fp-get(meta,"days",[])); let prior = fp-get(meta,"query_days",[]);
    let changed = map(p => p[0],filter(p => fp-get(meta,"query_index",0) != 1 || fp-get(prior,p[0],-1) != p[1],sources));
@@ -177,13 +186,22 @@ section [form.bml] {
   }
   def nw-locked(cfg,read) { let held = fp-lock(nw-root(cfg)); let meta = nw-recover(cfg); let value = read(meta); let released = fp-unlock(nw-root(cfg)); value; }
   def nw-create(cfg) { let dir = hch-mkdirs(nw-root(cfg)); let present = file_size(nw-path(cfg,"state.fkb")) >= 0; present ? nw-meta(cfg) : { let m = nw-blank(); let written = fp-write(nw-path(cfg,"state.fkb"),m); m; }; }
-  def nw-raw-day(cfg,day,since) {
+  def nw-boundary(cfg,day,since) {
+   let index = fp-read(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"),[0,[]])[1];
+   let before = foldl((n,p) => n+(p[1]<since ? p[3] : 0),0,index);
+   let after = foldl((n,p) => n+(p[2]>=since ? p[3] : 0),0,index);
+   let prefix = before<after;
+   [prefix,nw-raw-window(cfg,day,since,prefix)];
+  }
+  def nw-raw-day(cfg,day,since) = nw-raw-window(cfg,day,since,false);
+  def nw-raw-window(cfg,day,since,prefix) {
    let index = fp-read(nw-path(cfg,"raw/" ++ day ++ "/index.fkb"),[0,[]]);
-   foldl((rows,entry) => entry[2] < since ? rows : {
+   foldl((rows,entry) => (prefix ? entry[1]>=since : entry[2]<since) ? rows : {
     let page = fp-required(nw-path(cfg,"raw/" ++ day ++ "/part-" ++ fp-pad(entry[0],8) ++ ".fkb"))[1];
     // The committed page bounds already prove whole-page inclusion. Parse
     // individual timestamps only in a page that straddles the moving cutoff.
-    append(rows,entry[1]>=since ? page : filter(row => fp-time(row[1])>=since,page));
+    let whole = prefix ? entry[2]<since : entry[1]>=since;
+    append(rows,whole ? page : filter(row => prefix ? fp-time(row[1])<since : fp-time(row[1])>=since,page));
    },[],index[1]);
   }
  }

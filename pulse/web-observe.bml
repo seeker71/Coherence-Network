@@ -15,7 +15,8 @@ section [form.bml] {
   let elapsed = host_monotonic_ms()-began;
   let page = response[1]; let valid = response[0] == 200 && str_find(page,"<!doctype html>",0) == 0 && str_find(page,"</body></html>",0) == len(page)-14 && str_find(page,"<script",0)<0 && str_find(page,"/pulse?days=180",0)>0;
   let captured = len(wr-text(cfg,"html_path")) == 0 ? 0 : write_file_text(wr-text(cfg,"html_path"),page);
-  !valid ? form_error("native pulse page incomplete: " ++ request[0]) : fp-object([["surface",request[0]],["status",response[0]],["latency_ms",elapsed],["html_bytes",len(page)],["hydration_bytes",0]]);
+  let policy = str_find(response[3],"no-transform",0)>=0 && str_find(response[3],"script-src 'none'",0)>=0;
+  !valid || !policy ? form_error("native pulse page or response boundary incomplete: " ++ request[0]) : fp-object([["surface",request[0]],["status",response[0]],["latency_ms",elapsed],["html_bytes",len(page)],["hydration_bytes",0],["response_policy","no-transform; script-src none"]]);
  },requests);
  !exact || !escaped ? form_error("weighted rank or HTML escaping observation failed") : fp-emit(fp-object([["native","fkwu"],["weighted_ranks","exact"],["html_escaping","observed"],["observations",rows]]));
 }
