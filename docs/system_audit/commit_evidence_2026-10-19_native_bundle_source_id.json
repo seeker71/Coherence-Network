@@ -1,0 +1,18 @@
+{
+ "date":"2026-10-19","thread_branch":"codex/pulse-bundle-source-id-20261019",
+ "commit_scope":"Complete native bundle source-ID publication so the admitted Pulse release reaches runtime image assembly.","change_intent":"runtime_fix",
+ "idea_ids":["pipeline-reliability"],"spec_ids":["coherence-kernel-submodule-consumer"],"task_ids":["pulse-native-dispatch"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["native bundle publisher source repair"]}],"agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "files_owned":["form","docs/DEPLOY.md"],"change_files":["form","docs/DEPLOY.md"],
+ "evidence_refs":[
+  "The immutable9b43f07 build passed native compilation and bundle publication, then runtime assembly failed at COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id: source not found. This is a newly reached publisher contract gap, not successful deployment evidence.",
+  "Kernel PR613 merged efe62bb598d2de3a10baad987f31aef562b2cf5a. The existing fcb-copy-out Form/BML flow now stages its already-verified want-id and publishes the source-ID derivative before the executable final rename. No Docker-specific synthesis, new host-language path, runtime change or weakened source seal is added.",
+  "One focused native publisher observation retained exact bytes for source ID with newline, recipe, symbols, attestation and artifact. Its inert fixture was never executed; this is publication evidence, not a native executable integration claim. The immutable deployment build supplies that integration observation. No private full rebuild or broad kernel/sibling suite is repeated.",
+  "All current parent work and the kernel descendant carrying event, native dispatch, framing, private contexts, native source enumeration and the retired depth cutoff are retained. The consumer explicitly tracks main and pins this exact source revision. No history, threshold or retention change occurs.",
+  "OpenAI supplied reasoning; exact model/task tokens unavailable. Form performed source reading, publication and the focused observation."
+ ],
+ "local_validation":{"status":"pass","summary":"Focused native bundle publication retained all five exact artifacts; no runtime suite."},"ci_validation":{"status":"pending","summary":"Read actual changed-source findings."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "e2e_validation":{"status":"pending","expected_behavior_delta":"The immutable runtime image receives the source-ID artifact expected by its existing bundle contract, allowing the already-admitted native Pulse dispatch to activate.","public_endpoints":["https://pulse.coherencycoin.com/pulse/health","https://coherencycoin.com/pulse"],"test_flows":["Native bundle publication","Immutable runtime image assembly","Affected public Pulse routes"]},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Merged immutable runtime build and public activation remain to be observed."}
+}
