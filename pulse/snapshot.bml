@@ -1,0 +1,18 @@
+// Generic private online snapshot: immutable receipt plus a separate writable
+// rehearsal database. No sample, silence ID or historical note is rewritten.
+// stdin: {host,key,db,directory,backup,stage}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/templates.bml
+section [form.bml] {
+ class WitnessSnapshot {
+  def wsn-run(doc, name, argv, input) {
+   let result = hch-run(name,append(["ssh","-i",wr-text(doc,"key"),"-o","BatchMode=yes","-o","ConnectTimeout=15",wr-text(doc,"host")],argv),input,hch-by(120000));
+   (Comparable) result[0] == 0 ? result[1] : form_error("pulse snapshot " ++ name ++ ": retained exact resource trace");
+  }
+  def wsn-save(doc) {
+   let private = wsn-run(doc,"snapshot-private-directory",["install","-d","-m","0700",wr-text(doc,"directory")],"");
+   let stage = wsn-run(doc,"snapshot-stage-directory",["install","-d","-m","0700",wr-text(doc,"stage")],"");
+   wsn-run(doc,"snapshot-online",["sqlite3","-batch","-bail",wr-text(doc,"db")],".timeout 5000\n.backup " ++ wr-quote(wr-text(doc,"backup")) ++ "\n.open " ++ wr-quote(wr-text(doc,"backup")) ++ "\n.backup " ++ wr-quote(wr-text(doc,"stage") ++ "/pulse.db") ++ "\nSELECT json_object('samples',count(*),'first_sample',min(ts),'last_sample',max(ts),'silences',(SELECT count(*) FROM silences),'last_silence_id',(SELECT max(id) FROM silences),'repair_notes',(SELECT count(*) FROM silences WHERE note IS NOT NULL)) FROM samples;\n");
+  }
+ }
+ wsn-save(parse-json("pulse-snapshot",stdin-text()));
+}

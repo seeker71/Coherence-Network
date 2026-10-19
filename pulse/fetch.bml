@@ -1,0 +1,14 @@
+// One native network arrival. The parent owns its deadline and records failures.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/templates.bml
+section [form.bml] {
+ let request = parse-json("pulse-fetch", stdin-text());
+ let began = host_monotonic_ms();
+ let response = wr-fetch(wr-text(request,"method"), wr-text(request,"url"), wr-text(request,"payload"), 20);
+ json-emit(json-node-object([
+  json-node-pair("status",json-node-int(response[0])),
+  json-node-pair("body",json-node-string(response[1])),
+  json-node-pair("router",json-node-string(response[2])),
+  json-node-pair("latency_ms",json-node-int(host_monotonic_ms()-began)),
+  json-node-pair("observed_ms",json-node-int(now_unix_ms()))
+ ]));
+}

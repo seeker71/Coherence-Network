@@ -36,9 +36,21 @@ section [form.bml] {
    dcc-set(service, "labels", dcc-set(current, "traefik.http.routers.coherence-web.service", json-node-string("coherence-web")));
   }
   def dcc-owners(body) = node_children(json-object-get(body, "services"));
+  def dcc-pulse(service) {
+   let build = json-object-get(service,"build");
+   let context = dcc-get(build,"context");
+   let root = str_find(context,".git#",0) >= 0 ? split-on(context,":pulse")[0] : "/docker/coherence-network/repo";
+   let current = dcc-set(dcc-set(build,"context",json-node-string(root)),"dockerfile",json-node-string("pulse/Dockerfile"));
+   let args = json-node-object([json-node-pair("COHERENCE_SOURCE_SHA",json-node-string("${DEPLOYED_SHA}")),json-node-pair("COHERENCE_FORM_SHA",json-node-string("${COHERENCE_FORM_SHA}"))]);
+   let native = dcc-set(service,"build",dcc-set(current,"args",args));
+   // pulse/config.json owns application configuration; keep unrelated settings.
+   let environment = dcc-labels(json-object-get(native,"environment"));
+   let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"PULSE_",0) != 0,node_children(environment)));
+   dcc-set(native,"environment",kept);
+  }
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {
-   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
+   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
    json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
   }
   def dcc-apply(doc, body) {

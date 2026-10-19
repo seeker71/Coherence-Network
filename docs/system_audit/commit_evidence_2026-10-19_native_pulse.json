@@ -1,0 +1,23 @@
+{
+ "date":"2026-10-19",
+ "thread_branch":"codex/native-pulse-20261019",
+ "commit_scope":"Lift the independent pulse service into reusable application-owned BML templates on unchanged fkwu, retiring Python and repeated host transports.",
+ "change_intent":"runtime_feature",
+ "idea_ids":["pipeline-reliability"],
+ "spec_ids":["pulse-silence-boundary-repair"],
+ "task_ids":["native-pulse"],
+ "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["BML pulse migration"]}],
+ "agent":{"name":"OpenAI Codex","version":"exact-runtime-model-id-not-exposed"},
+ "evidence_refs":[
+  "Native form-cli lookup returned insufficient pulse-specific grounding; source inspection supplied the contracts. The initial native application fixture exposed a missing record blueprint; the first native network round exposed an ambiguous unparenthesized BML comparison. Both source expressions were repaired in place; no kernel source or submodule pin changed.",
+  "cd form && ./fkwu ../pulse/observe.bml with private fixture configuration returned fixture=observed, exact nearest-rank [20,30], three failures opening and three successes closing with the existing repair receipt, and windows [1,7,30,90,180]. No kernel or sibling suite ran.",
+  "Native TLS fetched the existing public pulse health endpoint. The running native local HTTP listener returned 200 with X-Form-Router=fkwu and all twelve public organ shapes; native workers observed actual public surfaces with the original thresholds, including real slow signals rather than hiding them.",
+  "The native container health entry returned 0 against the actual local listener. git diff --check passed; the kernel worktree stayed clean. Deployment continues through a private online SQLite snapshot, snapshot-backed native service observation, landing, and public immutable-image verification.",
+  "BML owns transport, assertions, scheduler, public HTTP, SQL/rollup and repair templates. Native TLS and socket resources replace curl and the proposed host HTTP carrier. The sole external application resource is the existing SQLite file engine: one call per probe round and one per public database read; retention runs daily. Existing samples and silence IDs/notes remain authoritative, with additive exact summaries maintained at the write boundary.",
+  "Retired the Python service, its dependencies and framework-specific tests. Replaced the obsolete two-ID proof-retirement action with a reusable private snapshot template. Retired source remains recoverable in git. Analysis and prose are rented OpenAI frontier output; exact model identity and token counters are not exposed. Native execution observations are attributed as such, not claimed as fully grounded native reasoning."
+ ],
+ "local_validation":{"status":"pass","summary":"One focused native application fixture and actual local/native network boundaries; no suites."},
+ "ci_validation":{"status":"pending","summary":"Existing delivery guidance remains advisory; actual rollout observation follows."},
+ "deploy_validation":{"status":"pending","environment":"Hostinger"},
+ "phase_gate":{"can_move_next_phase":false,"blocked_reason":"Continue the authorized snapshot-backed native rollout and public observation."}
+}
