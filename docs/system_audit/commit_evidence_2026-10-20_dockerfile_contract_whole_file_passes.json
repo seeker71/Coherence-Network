@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The two remaining Dockerfile-contract failures on main are healed: the staged-runner test stages the image's actual layout and kernel call, and the retired sidecar-ingest test is replaced by the current contract (the release runs no substrate maintenance; source_maintenance.bml owns changed-source work).",
+  "files_owned": ["api/tests/test_api_dockerfile_contract.py"],
+  "change_intent": "test_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["dockerfile-contract-source-home"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["test"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "test_staged_form_runner_executes_with_the_flattened_image_stdlib: since #4083 fkwu_run.sh reads the runtime source at <source root>/../runtime (the image's /app/runtime) and folds core.fk plus the offered recipes into one program file handed to the kernel as its single argument; the staged image now has that layout and the kernel stub reads $1.",
+    "test_deploy_grounding_runs_in_resource_bounded_sidecars described the shell ingest/heal gate #4088 retired from the release (four maintenance-compose sidecar runs, coh_substrate.py bootstrap); it is replaced by test_release_runs_no_substrate_maintenance_and_form_owns_changed_source_work, which holds the release script to carrying no ingest, bootstrap or RAG heal and names api/app/form_recipes/source_maintenance.bml as the owner that runs ingest-paths and the heal inside the serving container on request.",
+    "cd api && pytest -q tests/test_api_dockerfile_contract.py: 12 passed (pytest's exit code read directly, not through a pipe).",
+    "The prior evidence record (commit_evidence_2026-10-20_dockerfile_contract_follows_source_home.json) is corrected in this commit: its chain hid pytest's exit code and claimed 2 passed while the file held 2 failures."
+  ],
+  "change_files": ["api/tests/test_api_dockerfile_contract.py", "docs/system_audit/commit_evidence_2026-10-20_dockerfile_contract_follows_source_home.json", "docs/system_audit/commit_evidence_2026-10-20_dockerfile_contract_whole_file_passes.json"],
+  "local_validation": {"status": "pass", "summary": "pytest -q tests/test_api_dockerfile_contract.py: 12 passed."},
+  "ci_validation": {"status": "pending", "summary": "The PR's Test workflow runs the suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Test-only; the healed image (79cd36862) is rolling forward on the VPS as this is written."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The Dockerfile contract file passes whole on main.", "public_endpoints": [], "test_flows": ["cd api && pytest -q tests/test_api_dockerfile_contract.py"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Test-only; nothing to deploy."}
+}
