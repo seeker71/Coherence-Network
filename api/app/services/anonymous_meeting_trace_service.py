@@ -15,6 +15,7 @@ from app.services.form_kernel_bridge import serve_text_via_kernel
 
 
 _ANONYMOUS_MEETING_TRACE = "anonymous_meeting_trace"
+_ANONYMOUS_TRACE_QUERY, _ = serve_text_via_kernel("anonymous_trace_query.bml", {})
 
 
 def _iso_now() -> str:
@@ -207,8 +208,7 @@ def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None
 
 
 def _anonymous_trace_nodes(s, source_point_id: str | None = None) -> list[Node]:
-    query, _ = serve_text_via_kernel("anonymous_trace_query.bml", {})
-    nodes = s.query(Node).from_statement(text(query)).params(source_point_id=source_point_id).all()
+    nodes = s.query(Node).from_statement(text(_ANONYMOUS_TRACE_QUERY)).params(source_point_id=source_point_id).all()
     traces = [node for node in nodes if _is_anonymous_trace(node)]
     return traces
 

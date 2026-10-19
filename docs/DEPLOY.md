@@ -99,6 +99,16 @@ source expression and update order. This retains full same-browser history and
 the global view without loading every event for each meeting write. The source
 carrier enters fkwu normally so its native grammar discovery carries BML; the
 obsolete raw-reader forcing flag has retired.
+Keep the image's native source home coherent: `/app/form/form-stdlib` pairs
+with `/app/runtime`, just as the checkout's `form/form/form-stdlib` pairs with
+`form/runtime`. The carrier derives runtime resources from that stdlib home.
+`native_image_layout_care.bml` can publish the unchanged pinned resources at the
+canonical live path while the corrected image assembles; the image retires the
+former location rather than keeping a duplicate path or adding a kernel patch.
+The query template has no runtime inputs: materialize it through fkwu once at
+the immutable image's service initialization, then bind the source point at the
+database door. Repeated source staging/compilation is not per-request work; a
+changed image/source activates a new native template, not a wall-clock expiry.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope

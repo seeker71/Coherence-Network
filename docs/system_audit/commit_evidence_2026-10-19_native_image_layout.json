@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-19",
+  "thread_branch": "codex/native-image-layout-20261019",
+  "commit_scope": "Resolve the deployed BML compiler resource-home gap without changing the kernel or introducing a fallback.",
+  "files_owned": ["Dockerfile.api", "scripts/fkwu_run.sh", "api/app/form_recipes/native_image_layout_care.bml", "api/app/services/anonymous_meeting_trace_service.py", "docs/DEPLOY.md"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["coherence-network-api-runtime"],
+  "spec_ids": ["fkwu-only-kernel-collapse"],
+  "task_ids": ["pulse-latency-source"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["native source-home care"]}],
+  "agent": {"name": "OpenAI Codex", "version": "exact-runtime-model-id-not-exposed"},
+  "evidence_refs": [
+    "Read-only GET /api/meetings/anonymous-traces?source_point_id=anon:native-observation&limit=1 returned 500 after image 4015f6f4b0c571238e4be2307cea82f25437be40 deployed. Exact native error: native call-head table unavailable, in fsc-bml-home-open. Kernel source inspection showed the image's /app/form/form-stdlib/home-index.txt resolves its table at /app/runtime/fkwu-optable.h; the image had instead placed runtime resources at /app/form/runtime.",
+    "Moved the image's unchanged pinned runtime resources to /app/runtime and replaced the carrier's divergent hard-coded runtime path with the sibling of its resolved stdlib home. Source checkouts and flattened images now express the same relationship. No kernel or compiler implementation changed.",
+    "Native BML image-layout care published the same pinned resource bytes at the canonical live path so the existing BML/SQL route could resume while the corrected image assembles. Copying directory contents makes the movement repeatable. The corrected image removes the old location rather than retaining a duplicate authority or alias.",
+    "The exact source-runner command for anonymous_trace_query.bml exits 0 with the derived runtime path. Pulse subsequently reported every organ breathing and zero open silences at 2026-10-19T01:41:50Z. Final functional boundary and immutable-image observations remain part of this corrected rollout.",
+    "The restored read returned 200 with the existing empty-summary shape in 12.266 seconds, exposing the retiring bridge staging/compiling the same input-free BML query per request. Moved this native template materialization to service initialization for the immutable image. Runtime source-point values still bind only at the database door; no TTL, query result cache, parallel implementation, limiter or kernel change. The host membrane only holds the native template and transports bound values.",
+    "No kernel or application suite ran. Native query execution, concrete HTTP failure/trace, resource movement and current pulse readings only."
+  ],
+  "change_files": ["Dockerfile.api", "scripts/fkwu_run.sh", "api/app/form_recipes/native_image_layout_care.bml", "api/app/services/anonymous_meeting_trace_service.py", "docs/DEPLOY.md"],
+  "local_validation": {"status": "pass", "summary": "Actual source runner, compiler resource lookup and native live movement; no suite."},
+  "ci_validation": {"status": "pending", "summary": "Existing delivery guidance remains advisory."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger"},
+  "phase_gate": {"can_move_next_phase": true, "blocked_reason": null}
+}

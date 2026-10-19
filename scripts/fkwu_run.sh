@@ -16,8 +16,8 @@ FORM_SOURCE_ROOT="$ROOT/form"
 if [ "${1:-}" = "--src" ]; then
     shift
     [ "$#" -ge 1 ] || { echo "fkwu_run: --src needs at least one .fk source" >&2; exit 2; }
-    runtime_source="$ROOT/form/runtime/fkwu-uni.c"
-    runtime_header="$ROOT/form/runtime/fkwu-optable.h"
+    runtime_source="$FORM_SOURCE_ROOT/../runtime/fkwu-uni.c"
+    runtime_header="$FORM_SOURCE_ROOT/../runtime/fkwu-optable.h"
     [ -f "$runtime_source" ] && [ -f "$runtime_header" ] || {
         echo "fkwu_run: pinned c-bootstrap source is absent from form/runtime" >&2
         exit 3
