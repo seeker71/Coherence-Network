@@ -75,6 +75,23 @@ configuration, preserved by the native model edit. The retired line-oriented
 Python writer dropped mount targets from canonical YAML; it no longer rewrites
 or gates this model on every release. Changes to those fields belong in native
 configuration care, with their current inputs and owner.
+The same care action moves web routers onto one service owner before releasing
+duplicate port declarations and the superseded two-host Hati router. The current
+five-host Hati route stays intact; `www.coherencycoin.com` names its service
+explicitly. Compose label arrays and maps share one native editable model.
+
+Ordinary runtime telemetry invalidates its own event view, not provider facts.
+The retired cross-service flush took the provider-refresh lock on the API event
+loop, stalled `/api/ping`, and caused Docker/Traefik to withdraw the API route.
+Provider collection keeps its own refresh and invalidation. Follow a new latency
+finding with `pulse_latency_trace.bml`: one parallel HTTP wave retains private
+bodies/headers and separates network timing from the serving runtime header.
+The retiring HTTP membrane gives synchronous readiness, contention, idea reads
+and vitality calls to its existing synchronous dispatch rather than claiming the
+event loop. No extra pool or second implementation sits beside Form. Native
+`runtime_read_care.bml` declares the worker-history source/time access path and
+builds its PostgreSQL index online; a fresh store or changed read shape gives
+that schema care work, not a recurring full-table scan on every release.
 
 The native build enumerates its private source copy with Form's
 `source-tree.bml`; Docker snapshots need no usable Git metadata. Build scope
@@ -102,33 +119,19 @@ when a second runner synced the carrier at 13:23:51 UTC on 2026-10-18.
 context: https://github.com/seeker71/Coherence-Network.git#<sha>
 ```
 
-`git pull` in `/docker/coherence-network/repo` alone deploys nothing (a real
-hour was nearly lost to this on 2026-07-01 — the container rebuilt cleanly and
-still served the old code). After merge to `main`:
-
-```bash
-NEW_SHA=$(git rev-parse origin/main)   # run in a Coherence-Network checkout — NOT another repo
-ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
-  "cd /docker/coherence-network && \
-   cp docker-compose.yml docker-compose.yml.bak && \
-   sed -i \"s|Coherence-Network.git#[0-9a-f]\\{40\\}|Coherence-Network.git#$NEW_SHA|g\" docker-compose.yml && \
-   docker compose build api web && docker compose up -d api web"
-```
+`git pull` in `/docker/coherence-network/repo` alone deploys nothing. The merged
+release triggers Hostinger Auto Deploy; its explicit dispatch accepts a commit
+SHA when a release needs resuming. The deploy carrier advances the pinned image
+contexts. The former manual text-rewrite path has retired; persistent model
+changes belong to native Compose care.
 
 Note: the SHA pin is shared across services (api, web, pulse);
 updating it moves them all, and `up -d` recreates containers whose config
 changed even if their image did not rebuild. Verify the SHA is a commit in
 *this* repo before patching — `git branch --contains $NEW_SHA` should answer.
 
-Verify:
-
-```bash
-curl -fsS https://api.coherencycoin.com/api/health | jq .
-curl -fsS https://coherencycoin.com/api/health-proxy | jq .
-./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
-```
-
-After deploy, also read the witness:
+The deploy action reads public API/web revision parity, root and CORS. For a
+pulse finding, also read the affected witness state:
 
 ```bash
 curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now \

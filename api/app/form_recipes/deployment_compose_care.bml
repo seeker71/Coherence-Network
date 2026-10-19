@@ -1,7 +1,7 @@
 // Retire released service owners in the host's live Compose document.
 // Compose supplies its JSON model without resolving environment values;
 // Form edits that model, preserves a private backup and publishes atomically.
-// stdin: {"host":"root@host","key":"/local/key","compose":"/host/docker-compose.yml","backup":"/host/private-backup.yml","stage":"/host/docker-compose.incoming.yml"}
+// stdin: {"host":"root@host","key":"/local/key","compose":"/host/docker-compose.yml","backup":"/host/private-backup.yml","stage":"/host/docker-compose.incoming.yml","activate":["web"]}
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
 section [form.bml] {
  class DeploymentComposeCare {
@@ -13,10 +13,32 @@ section [form.bml] {
   }
   def dcc-read(doc) = parse-json("deployment-compose", dcc-run(doc, "compose-model-read", ["docker", "compose", "-f", dcc-get(doc, "compose"), "config", "--format", "json", "--no-interpolate", "--no-env-resolution"], ""));
   def dcc-retired?(name) = (Comparable) name == "kernel-router" || (Comparable) name == "kernel-router-bml-front-door";
+  def dcc-set(doc, key, value) = json-node-object(append(filter(pair => json-pair-key(pair) != key, node_children(doc)), [json-node-pair(key, value)]));
+  // Compose keeps KEY=value rows in --no-interpolate models and may return a
+  // map elsewhere. Both presentations become the same editable label model.
+  def dcc-label-pair(row) {
+   let text = json-string-value(row);
+   let at = str_find(text, "=", 0);
+   at < 0 ? json-node-pair(text, json-node-string("")) : json-node-pair(substring(text, 0, at), json-node-string(substring(text, at + 1, len(text))));
+  }
+  def dcc-labels(labels) = node_eq(node_category(labels), JSON-ARRAY()) ? json-node-object(map(row => dcc-label-pair(row), node_children(labels))) : labels;
+  // A service alias has one owner. Move every router reference before releasing
+  // its duplicate port declaration; unrelated hosts and routes stay intact.
+  def dcc-service-alias(labels, old, owner) = json-node-object(map(pair => {
+   let key = json-pair-key(pair);
+   let value = json-pair-value(pair);
+   str_find(key, "traefik.http.routers.", 0) == 0 && json-string-value(value) == old ? json-node-pair(key, json-node-string(owner)) : pair;
+  }, filter(pair => str_find(json-pair-key(pair), "traefik.http.services." ++ old ++ ".", 0) != 0, node_children(labels))));
+  def dcc-web(service) {
+   let labels = dcc-labels(json-object-get(service, "labels"));
+   let moved = dcc-service-alias(labels, "coherence-web-hati", "coherence-web");
+   let current = json-node-object(filter(pair => str_find(json-pair-key(pair), "traefik.http.routers.hati-web.", 0) != 0, node_children(moved)));
+   dcc-set(service, "labels", dcc-set(current, "traefik.http.routers.coherence-web.service", json-node-string("coherence-web")));
+  }
   def dcc-owners(body) = node_children(json-object-get(body, "services"));
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {
-   let services = json-node-object(filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body)));
+   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
    json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
   }
   def dcc-apply(doc, body) {
@@ -28,7 +50,12 @@ section [form.bml] {
    let private-stage = dcc-run(doc, "compose-stage-private", ["chmod", "600", dcc-get(doc, "stage")], "");
    let accepted = dcc-run(doc, "compose-model-accept", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--quiet", "--no-interpolate", "--no-env-resolution"], "");
    let published = dcc-run(doc, "compose-source-publish", ["mv", dcc-get(doc, "stage"), dcc-get(doc, "compose")], "");
-   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Released service owners retired from live Compose; private source backup retained; other services preserved.";
+   let activated = dcc-activate(doc);
+   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Released owners retired from live Compose; web routes share one service; private source backup retained; requested services activated.";
+  }
+  def dcc-activate(doc) {
+   let owners = map(row => json-string-value(row), node_children(json-object-get(doc, "activate")));
+   len(owners) == 0 ? "" : dcc-run(doc, "compose-owner-activate", append(["docker", "compose", "-f", dcc-get(doc, "compose"), "up", "-d", "--no-build", "--no-deps"], owners), "");
   }
   def dcc-care(doc) {
    let body = dcc-read(doc);

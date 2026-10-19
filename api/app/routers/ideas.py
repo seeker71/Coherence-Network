@@ -57,7 +57,7 @@ router = APIRouter()
 
 @router.get("/ideas", response_model=IdeaPortfolioResponse, summary="List Ideas")
 @traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
-async def list_ideas(
+def list_ideas(
     request: Request,
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
     include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
@@ -846,7 +846,7 @@ async def get_idea_breath(idea_id: str) -> dict:
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore, summary="Get Idea")
-async def get_idea(
+def get_idea(
     idea_id: str,
     request: Request,
     lang: str | None = Query(None, description="Target language view. When set and a canonical idea view exists, name/description come from the view."),
