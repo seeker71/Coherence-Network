@@ -167,6 +167,11 @@ Form's `source-tree.bml`. Docker snapshots need no usable Git metadata: actual
 files own the source set, and the existing sealed closure owns build identity.
 The retired `git ls-files` call mistook a refused snapshot pointer for an empty
 body. Keep that finding at the source reader, not a Docker-specific bypass.
+This consumer pins immutable fkwu source commits from kernel `main`; `.gitmodules`
+tracks that same authority. The optional curated distribution is not a second
+place to author fixes or a release gate. The accepted source seal and observed
+image establish the deployed revision. Keep retired limitations retired on main
+as well as in any distribution carry.
 Build scope reads the serving container's immutable revision label. A failed build may
 advance the VPS checkout without advancing the running image, so the checkout
 alone does not establish the deployed comparison base.
