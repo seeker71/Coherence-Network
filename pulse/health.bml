@@ -1,0 +1,7 @@
+// Container liveness observes the public service boundary, not merely a PID.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk ../pulse/templates.bml
+section [form.bml] {
+ let cfg = wr-config();
+ let reply = wr-fetch("GET","http://127.0.0.1:" ++ wr-number(cfg,"port").str() ++ "/pulse/health","",0);
+ reply[0] == 200 ? 0 : form_error("pulse native HTTP health did not answer 200");
+}
