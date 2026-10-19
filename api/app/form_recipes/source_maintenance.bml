@@ -1,0 +1,29 @@
+// Explicit changed-source maintenance, not a release gate or periodic bootstrap.
+// Form owns the sequence, inputs, care and retained trace. The existing Python
+// database/ARTIFACT projection and RAG coordinator are retiring migration doors;
+// no host implementation is added. Native fkwu still owns embedding execution.
+// stdin: {host,key,container,paths:[repo-relative changed sources]}
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
+import remote_task.bml;
+section [form.bml] {
+ class SourceMaintenance {
+  def sm-text(doc,key) = json-string-value(json-object-get(doc,key)) ?? "";
+  def sm-step(doc,name,args) {
+   let argv = rmt-argv(doc,append(["docker","exec","-i",sm-text(doc,"container")],args));
+   // Each child receives its own empty input file. It cannot consume the
+   // parent's remaining changed-source list through inherited loop stdin.
+   let result = hch-run(name,argv,"",hch-by(300000));
+   hch-ok?(result) ? result[1] : form_error("source maintenance: " ++ name ++ " failed; exact native host-child trace retained");
+  }
+  def sm-relative?(path) = len(path)>0 && str_find(path,"/",0) != 0 && !any?(part => part == "..",split-on(path,"/"));
+  def sm-care(doc) {
+   let paths = map(v => json-string-value(v),node_children(json-object-get(doc,"paths")));
+   !all?(path => sm-relative?(path),paths) ? form_error("source maintenance needs repository-relative source coordinates") : {
+    let projected = map(path => sm-step(doc,"source-" ++ hch-join(split-on(path,"/"),"-"),["python3","scripts/coh_substrate.py","ingest-paths","/app/" ++ path]),paths);
+    let healed = nil?(paths) ? "No changed sources requested; no maintenance ran." : sm-step(doc,"source-native-rag-heal",["python3","scripts/form_cli_rag.py","heal"]);
+    hch-join(append(projected,[healed]),"\n");
+   };
+  }
+ }
+ sm-care(parse-json("source-maintenance",stdin-text()));
+}

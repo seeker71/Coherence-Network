@@ -36,7 +36,11 @@ there is no database process, SQL interpreter or host-language business logic.
 them for Pulse. One coherent native snapshot replaces the three HTTP reads and
 React hydration path. Day links reveal full daily readings and every overlapping
 silence; the complete archive link has no thirty-record display cap. The page
-offers 7/30/90/180-day windows and accepts the API's existing 1–180-day range.
+keeps ordinary site navigation on the configured canonical web origin, including
+when it is read at the independent Pulse origin. Silence windows use interval
+overlap, retaining closed receipts that began before the cutoff and ended within it.
+The bucket's source-sequence-keyed end bound keeps that read exact and bounded.
+The page offers 7/30/90/180-day windows and accepts the API's existing 1–180-day range.
 The default page remains seven days. No JavaScript or external assets are needed.
 
 ## Configuration and running

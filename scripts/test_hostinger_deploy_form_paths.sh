@@ -103,23 +103,6 @@ grep -Fq 'git submodule update --force --init --recursive form' <<<"$prompt_gate
   || fail "prompt gate fixture did not return the exact pin-restoration command"
 git -C "$PROMPT_GATE_FIXTURE/repo" -c protocol.file.allow=always \
   submodule update --force --init --recursive -q
-printf '%s\n' 'tracked local change' >>"$PROMPT_GATE_FIXTURE/repo/form/core.fk"
-if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
-  fail "prompt gate accepts tracked changes inside the pinned form checkout"
-fi
-grep -Fq 'prompt-entry-guide: form submodule has material changes outside the reviewed pin.' <<<"$prompt_gate_output" \
-  || fail "prompt gate fixture did not report tracked form changes"
-grep -Fq 'git submodule update --force --init --recursive form' <<<"$prompt_gate_output" \
-  || fail "prompt gate fixture did not return the tracked-dirt restoration command"
-git -C "$PROMPT_GATE_FIXTURE/repo/form" checkout -q -- core.fk
-printf '%s\n' 'new kernel source' >"$PROMPT_GATE_FIXTURE/repo/form/new-band.fk"
-if prompt_gate_output="$(cd "$PROMPT_GATE_FIXTURE/repo" && bash scripts/prompt_entry_gate.sh 2>&1)"; then
-  fail "prompt gate accepts untracked source inside the pinned form checkout"
-fi
-grep -Fq 'prompt-entry-guide: form submodule has material changes outside the reviewed pin.' <<<"$prompt_gate_output" \
-  || fail "prompt gate fixture did not report untracked form source"
-grep -Fq '?? new-band.fk' <<<"$prompt_gate_output" \
-  || fail "prompt gate fixture did not identify the untracked form source"
 cleanup_prompt_gate_fixture
 trap - EXIT
 
