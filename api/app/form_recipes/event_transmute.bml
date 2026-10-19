@@ -32,7 +32,9 @@ section [form.bml] {
    let answer = (String) asked[0] == "answered" ? trim(asked[1]) : "";
    let served = tm-served(answer, seeds);
    let ids = map(s => tm-sid(s), served);
-   let said = print_str("[event] source=" ++ ((Comparable) len(source) == 0 ? "(none)" : source) ++ " · seeds " ++ len(seeds).str() ++ " · resonant " ++ len(resonant).str() ++ " · ideas served " ++ len(served).str() ++ ((Comparable) len(served) == 0 ? "" : " (" ++ et-join(ids) ++ ")") ++ " · register " ++ tm-register(event).str() ++ " -> " ++ tm-register(answer).str() ++ " · voice=" ++ asked[0] ++ "\n");
+   // a voice that did not answer says why: the admission's own word (model-queued, held by the memory governor, ...)
+   let why = (String) asked[0] == "answered" ? "" : len(asked) > 7 && (String) value_kind(asked[7]) == "string" && len(asked[7]) > 0 ? " (" ++ asked[7] ++ ")" : "";
+   let said = print_str("[event] source=" ++ ((Comparable) len(source) == 0 ? "(none)" : source) ++ " · seeds " ++ len(seeds).str() ++ " · resonant " ++ len(resonant).str() ++ " · ideas served " ++ len(served).str() ++ ((Comparable) len(served) == 0 ? "" : " (" ++ et-join(ids) ++ ")") ++ " · register " ++ tm-register(event).str() ++ " -> " ++ tm-register(answer).str() ++ " · voice=" ++ asked[0] ++ why ++ "\n");
    let resonated = nil?(resonant) ? 0 : print_str("the body's resonance read:\n" ++ tm-resonant-lines(tm-take(resonant, 8)));
    let told = len(answer) > 0 ? print_str("\n" ++ answer ++ "\n") : 0;
    let kept = ledger-append(et-ledger(), EventTransmuteRow{at_unix_ms: now_unix_ms(), source: source, bytes_in: len(event), bytes_out: len(answer), seeds: len(seeds), resonant: len(resonant), ideas_served: ids, register_before: tm-register(event), register_after: tm-register(answer), voice: asked[0]});

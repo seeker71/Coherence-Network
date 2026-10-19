@@ -7,6 +7,7 @@ empty source list rather than carrying hidden feed data in code.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -212,37 +213,78 @@ def _parse_rss(xml_text: str, source_name: str) -> list[NewsItem]:
     return items
 
 
-async def fetch_feeds(force_refresh: bool = False) -> list[NewsItem]:
-    """Fetch all active RSS feeds, using cache if fresh."""
+_refresh_task: "asyncio.Task | None" = None
+
+
+async def _fetch_one(client: "httpx.AsyncClient", source: dict, user_agent: str) -> list[NewsItem]:
+    name = source.get("name", source["id"])
+    try:
+        resp = await client.get(source["url"], headers={"User-Agent": user_agent})
+        resp.raise_for_status()
+        parsed = _parse_rss(resp.text, name)
+        logger.info("Fetched %d items from %s", len(parsed), name)
+        return parsed
+    except Exception as exc:
+        logger.warning("Failed to fetch %s: %s", name, exc)
+        return []
+
+
+async def _refresh_cache() -> list[NewsItem]:
+    """Fetch every active source at once, each bounded on its own, and replace the cache with what arrived."""
     global _cached_items, _cache_timestamp
 
-    now = time.time()
-    if not force_refresh and _cached_items and (now - _cache_timestamp) < CACHE_TTL_SECONDS:
-        return list(_cached_items)
-
     active_sources = [s for s in _sources if s.get("is_active", True) and s.get("type") == "rss"]
-    all_items: list[NewsItem] = []
-    timeout = get_float("news", "fetch_timeout_seconds", default=15.0)
+    timeout = get_float("news", "fetch_timeout_seconds", default=5.0)
     user_agent = get_str("news", "user_agent", default="CoherenceNetwork/1.0")
+    all_items: list[NewsItem] = []
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        for source in active_sources:
-            try:
-                resp = await client.get(source["url"], headers={"User-Agent": user_agent})
-                resp.raise_for_status()
-                parsed = _parse_rss(resp.text, source.get("name", source["id"]))
-                all_items.extend(parsed)
-                logger.info("Fetched %d items from %s", len(parsed), source.get("name", source["id"]))
-            except Exception as exc:
-                logger.warning("Failed to fetch %s: %s", source.get("name", source["id"]), exc)
+        results = await asyncio.gather(*(_fetch_one(client, s, user_agent) for s in active_sources))
+    for parsed in results:
+        all_items.extend(parsed)
 
     # Sort by published_at descending (items without dates go last)
     all_items.sort(
         key=lambda x: x.published_at or "0000-00-00",
         reverse=True,
     )
-
     _cached_items = all_items
-    _cache_timestamp = now
+    _cache_timestamp = time.time()
+    return list(_cached_items)
+
+
+def _refresh_in_background() -> "asyncio.Task":
+    """One refresh at a time; a refresh already running is the one every caller shares."""
+    global _refresh_task
+    if _refresh_task is None or _refresh_task.done():
+        _refresh_task = asyncio.create_task(_refresh_cache())
+    return _refresh_task
+
+
+async def fetch_feeds(force_refresh: bool = False) -> list[NewsItem]:
+    """Items from the active RSS feeds, never blocking a request on the network for long.
+
+    A fresh cache answers at once. A stale cache answers at once too, and a refresh runs behind it.
+    An empty cache (or a forced refresh) waits for the refresh only up to a short bound
+    (`news.first_fetch_wait_seconds`, default 6 s) and then answers with whatever arrived, while
+    the refresh finishes behind the request. Until 2026-10-19 this awaited every source one after
+    another at 15 s each inside the request, and the production route timed out.
+    """
+    now = time.time()
+    fresh = bool(_cached_items) and (now - _cache_timestamp) < CACHE_TTL_SECONDS
+    if fresh and not force_refresh:
+        return list(_cached_items)
+
+    task = _refresh_in_background()
+    if _cached_items and not force_refresh:
+        return list(_cached_items)
+
+    bound = get_float("news", "first_fetch_wait_seconds", default=6.0)
+    try:
+        await asyncio.wait_for(asyncio.shield(task), timeout=bound)
+    except asyncio.TimeoutError:
+        logger.warning("News refresh still running after %.1fs; answering with the cache so far", bound)
+    except Exception as exc:
+        logger.warning("News refresh failed: %s", exc)
     return list(_cached_items)
 
 
