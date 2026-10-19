@@ -665,7 +665,6 @@ def list_events(
                     continue
                 if prefix_value and not str(event.endpoint or "").startswith(prefix_value):
                     continue
-                event.endpoint = normalize_endpoint(event.endpoint, event.method)
                 if not event.origin_idea_id:
                     event.origin_idea_id = resolve_origin_idea_id(event.idea_id)
                 out.append(event)
