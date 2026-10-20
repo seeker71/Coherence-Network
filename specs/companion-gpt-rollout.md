@@ -35,7 +35,7 @@ waves, preserving the owner's existing public identity and actual tool scope.
   only the affected check; distinguish case evidence from broad reliability.
 - [x] R4: Prepare and validate the missing directory metadata/assets as a new
   skills-only plugin version, keeping optional MCP separate.
-- [ ] R5: Inspect publishing access; publish/submit where authorized and available.
+- [x] R5: Inspect publishing access; publish/submit where authorized and available.
   Keep npm, directory, GPT, server and migration outcomes distinct.
 
 ## Implementation Plan
@@ -103,10 +103,17 @@ are separate. A skills-only directory listing cannot currently add MCP later.
 
 ## Known Gaps and Follow-up Tasks
 
+- Completed this round: existing GPT publication and exact readback; three live
+  waves and a checked teaching retry; source PR4116 and kernel PR620 merged;
+  public version0.6.1 package downloaded and matched to the reviewed checksum.
+  Recipients use their own host accounts; no publisher API credentials or
+  funded inference service are offered.
 - Follow-up task: complete npm account authentication before package publication;
   owner is the authenticated package maintainer, with registry integrity read-back.
-- Follow-up task: complete directory identity verification or required account
-  approvals if absent, then retain the portal's review/publication receipt.
+- Follow-up task: directory upload remains behind publisher verification.
+  Public GitHub sharing is already available; keep account/billing changes
+  outside this rollout and resume only through a verification path the owner
+  chooses. No directory submission or approval is claimed.
 - Follow-up task: prove native Action-equivalent remote MCP lifecycle before any
   GPT migration; preserve private memory as a separately authenticated capability.
 
