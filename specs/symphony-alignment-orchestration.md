@@ -4,8 +4,6 @@ status: active
 source:
   - file: api/app/services/agent_service.py
     symbols: [task state, task creation, task updates]
-  - file: api/scripts/project_manager.py
-    symbols: [spec/impl/test/review orchestration]
   - file: api/scripts/agent_runner.py
     symbols: [executor dispatch, task claim, task completion]
   - file: api/app/services/agent_service_pipeline_status.py
@@ -28,7 +26,6 @@ done_when:
   - 'symbol_in_file("api/app/services/agent_service.py", "task")'
   - 'symbol_in_file("api/app/services/agent_service.py", "task")'
   - 'symbol_in_file("api/app/services/agent_service.py", "task")'
-  - 'file_exists("api/scripts/project_manager.py")'
   - 'file_exists("api/scripts/agent_runner.py")'
   - 'symbol_in_file("api/scripts/agent_runner.py", "executor")'
   - 'symbol_in_file("api/scripts/agent_runner.py", "task")'
@@ -89,7 +86,7 @@ This spec digests Symphony into Coherence's architecture without replacing the e
 |---|---|---|
 | Workflow loader | `AGENTS.md`, task-card contract, deploy contract | Add a machine-readable workflow policy while preserving `AGENTS.md` authority |
 | Tracker client | `/api/agent/tasks`, backlog specs, ROI-generated tasks | Introduce tracker adapters that normalize all work into one task shape |
-| Orchestrator | `project_manager.py`, pipeline advance/status services | Centralize eligibility, dispatch, retry, and reconciliation policy |
+| Orchestrator | pipeline advance/status services (the retired `project_manager.py` lane left 2026-10-20) | Centralize eligibility, dispatch, retry, and reconciliation policy |
 | Workspace manager | Mandatory `~/.claude-worktrees/...` flow | Make branch/worktree lifecycle explicit per task |
 | Agent runner | `agent_runner.py`, local runner, executor policy | Keep executor-neutral runner boundary; add app-server mode later if useful |
 | Logging | task logs, runtime events, evidence JSON | Attach execution proof and state transitions to each task |
@@ -214,7 +211,6 @@ Status surface
 - `api/app/models/agent.py` - normalized control-plane task model or compatibility wrapper.
 - `api/app/services/agent_service.py` - task normalization and state transitions.
 - `api/app/services/agent_service_pipeline_status.py` - grouped orchestration status.
-- `api/scripts/project_manager.py` - dispatcher/reconciler policy.
 - `api/scripts/agent_runner.py` - proof attachment and workspace metadata.
 - `api/tests/test_agent_control_plane.py` - model, eligibility, and reconciliation tests.
 - `docs/system_audit/commit_evidence_<date>_symphony_alignment.json` - proof for implementation commits.

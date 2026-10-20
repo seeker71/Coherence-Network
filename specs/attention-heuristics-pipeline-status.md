@@ -153,7 +153,7 @@ When metrics are unavailable (e.g. no metrics_service), `low_success_rate` remai
 ## See also
 
 - [Agent Orchestration API](agent-orchestration-api.md) — pipeline-status response shape.
-- [PIPELINE-ATTENTION](../docs/PIPELINE-ATTENTION.md) — operational checklist.
+- [PIPELINE-ATTENTION](../docs/retired/PIPELINE-ATTENTION.md) — operational checklist.
 
 ## Concurrency Behavior
 

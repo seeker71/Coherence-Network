@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 202
+**Total files**: 201
 
 | File | Purpose |
 |---|---|
@@ -44,7 +44,6 @@
 | [check_traceability.py](check_traceability.py) | CI gate: check that new/modified specs have idea_id and code files have spec refs. |
 | [check_web_docker_context.py](check_web_docker_context.py) | Catch web imports reaching outside the source copied into the image. |
 | [claude_corpus.py](claude_corpus.py) | claude_corpus.py — CARRIER (data prep only). Taps Claude Code session transcripts |
-| [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
 | [code_tool_learning_receipt.py](code_tool_learning_receipt.py) | Emit a bounded code-tool-learning coding-act receipt for a committed turn. |
 | [codex_corpus.py](codex_corpus.py) | codex_corpus.py — tap the local Codex session logs into (task -> response) pairs. |

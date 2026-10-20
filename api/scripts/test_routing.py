@@ -24,7 +24,7 @@ import httpx
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("AGENT_API_BASE", "http://localhost:8000")
 
-# Expected per MODEL-ROUTING.md
+# Expected per api/config/model_routing.json
 EXPECTED = {
     "spec": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),
     "test": ("local", "ollama", "glm-4.7-flash", "qwen3-coder", "granite", "nemotron"),

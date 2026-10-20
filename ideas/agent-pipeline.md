@@ -6,7 +6,7 @@ work_type: feature
 pillar: pipeline
 specs:
   - [agent-orchestration-api](../specs/agent-orchestration-api.md)
-  - [project-manager-pipeline](../specs/project-manager-pipeline.md)
+  - [project-manager-pipeline](../specs/retired/project-manager-pipeline.md)
   - [coherence-network-agent-pipeline](../specs/coherence-network-agent-pipeline.md)
   - [pipeline-observability-and-auto-review](../specs/pipeline-observability-and-auto-review.md)
   - [attention-heuristics-pipeline-status](../specs/attention-heuristics-pipeline-status.md)

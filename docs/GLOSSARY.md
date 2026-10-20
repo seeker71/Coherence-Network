@@ -1,6 +1,6 @@
 # Glossary — Coherence Network
 
-Canonical definitions for pipeline, backlog, agent orchestration, and spec-driven workflow. See AGENTS.md, CLAUDE.md, and MODEL-ROUTING.md for usage.
+Canonical definitions for pipeline, backlog, agent orchestration, and spec-driven workflow. See AGENTS.md and CLAUDE.md for usage; routing lives as data in `api/config/model_routing.json`.
 
 | Term | Definition |
 |------|------------|
@@ -16,5 +16,5 @@ Canonical definitions for pipeline, backlog, agent orchestration, and spec-drive
 | **Spec-driven** | Workflow: spec defines requirements → tests written → implementation makes tests pass. |
 | **Heal** | Task type for fixing failures (e.g. after tests fail); may create follow-up spec/impl tasks. |
 | **Status** | Task lifecycle state: pending, running, completed, failed, needs_decision (see agent API). |
-| **Resource exhausted** | API or LLM quota/rate limit exceeded (e.g. gRPC RESOURCE_EXHAUSTED). Retry with backoff or switch model/tier (see MODEL-ROUTING.md). |
-| **Connection stalled** | HTTP connection established but no (or incomplete) response — often ReadTimeout/ConnectTimeout. Fix: ensure API is running (`uvicorn app.main:app --port 8000`), check firewall/proxy; use shorter timeouts in scripts (see RUNBOOK.md, AGENT-DEBUGGING.md). |
+| **Resource exhausted** | API or LLM quota/rate limit exceeded (e.g. gRPC RESOURCE_EXHAUSTED). Retry with backoff or switch model/tier (`api/config/model_routing.json`). |
+| **Connection stalled** | HTTP connection established but no (or incomplete) response — often ReadTimeout/ConnectTimeout. Fix: ensure API is running (`uvicorn app.main:app --port 8000`), check firewall/proxy; use shorter timeouts in scripts (see DEPLOY.md). |

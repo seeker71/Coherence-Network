@@ -14,12 +14,6 @@ assert _spec and _spec.loader
 agent_runner = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(agent_runner)
 
-_MONITOR_PATH = Path(__file__).resolve().parents[1] / "scripts" / "monitor_pipeline.py"
-_mspec = importlib.util.spec_from_file_location("monitor_pipeline", _MONITOR_PATH)
-assert _mspec and _mspec.loader
-monitor_pipeline = importlib.util.module_from_spec(_mspec)
-_mspec.loader.exec_module(monitor_pipeline)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -314,120 +308,6 @@ def test_suspicious_zero_output_creates_friction(monkeypatch, tmp_path):
     assert len(friction_posts) == 1
     f = friction_posts[0][1]
     assert f["block_type"] == "tool_failure"
-
-
-# ---------------------------------------------------------------------------
-# R3: Monitor detects expensive_failed_task from metrics.jsonl
-# ---------------------------------------------------------------------------
-
-
-def test_monitor_detects_expensive_failed_task(tmp_path):
-    from datetime import datetime, timezone
-
-    # Write metrics.jsonl with failed tasks exceeding threshold.
-    metrics_file = tmp_path / "metrics.jsonl"
-    now = datetime.now(timezone.utc)
-    records = [
-        {
-            "task_id": "task_expensive_1",
-            "task_type": "impl",
-            "model": "test",
-            "duration_seconds": 300.0,
-            "status": "failed",
-            "created_at": now.isoformat(),
-        },
-        {
-            "task_id": "task_expensive_2",
-            "task_type": "impl",
-            "model": "test",
-            "duration_seconds": 200.0,
-            "status": "failed",
-            "created_at": now.isoformat(),
-        },
-        {
-            "task_id": "task_cheap_ok",
-            "task_type": "impl",
-            "model": "test",
-            "duration_seconds": 10.0,
-            "status": "completed",
-            "created_at": now.isoformat(),
-        },
-    ]
-    with open(metrics_file, "w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
-
-    # Patch LOG_DIR to point to tmp_path so _load_recent_failed_task_durations finds it.
-    original_log_dir = monitor_pipeline.LOG_DIR
-    monitor_pipeline.LOG_DIR = str(tmp_path)
-    try:
-        failed = monitor_pipeline._load_recent_failed_task_durations(now)
-        # Should find 2 failed tasks (not the completed one).
-        assert len(failed) == 2
-        assert failed[0]["task_id"] == "task_expensive_1"  # sorted by duration desc
-        assert failed[0]["duration_seconds"] == 300.0
-        assert failed[1]["task_id"] == "task_expensive_2"
-        assert failed[1]["duration_seconds"] == 200.0
-
-        # Verify threshold filtering: both above default 120s threshold.
-        threshold = float(monitor_pipeline.EXPENSIVE_FAIL_THRESHOLD_SEC)
-        expensive = [r for r in failed if r["duration_seconds"] >= threshold]
-        assert len(expensive) == 2
-    finally:
-        monitor_pipeline.LOG_DIR = original_log_dir
-
-
-def test_monitor_expensive_failed_task_issue_includes_wasted_seconds(tmp_path):
-    """The _add_issue for expensive_failed_task includes wasted_seconds and top_failing_task_ids."""
-    from datetime import datetime, timezone
-
-    now = datetime.now(timezone.utc)
-    metrics_file = tmp_path / "metrics.jsonl"
-    records = [
-        {
-            "task_id": f"task_exp_{i}",
-            "task_type": "impl",
-            "model": "test",
-            "duration_seconds": 150.0 + i * 50,
-            "status": "failed",
-            "created_at": now.isoformat(),
-        }
-        for i in range(4)
-    ]
-    with open(metrics_file, "w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
-
-    original_log_dir = monitor_pipeline.LOG_DIR
-    monitor_pipeline.LOG_DIR = str(tmp_path)
-    try:
-        failed = monitor_pipeline._load_recent_failed_task_durations(now)
-        threshold = float(monitor_pipeline.EXPENSIVE_FAIL_THRESHOLD_SEC)
-        expensive = [r for r in failed if r["duration_seconds"] >= threshold]
-        assert len(expensive) == 4  # all >= 150s, threshold default 120s
-
-        # Simulate what the detection loop does.
-        data = {"issues": [], "history": []}
-        if expensive:
-            top = expensive[:3]
-            wasted_seconds = round(sum(r["duration_seconds"] for r in expensive), 1)
-            top_ids = [r["task_id"] for r in top]
-            msg = (
-                f"Recent failed tasks wasted {wasted_seconds}s total: "
-                + ", ".join(f"{r['task_id']}({r['duration_seconds']}s)" for r in top)
-            )
-            monitor_pipeline._add_issue(data, "expensive_failed_task", "high", msg, "Fix root cause.")
-            data["issues"][-1]["wasted_seconds"] = wasted_seconds
-            data["issues"][-1]["top_failing_task_ids"] = top_ids
-
-        assert len(data["issues"]) == 1
-        issue = data["issues"][0]
-        assert issue["condition"] == "expensive_failed_task"
-        assert issue["severity"] == "high"
-        assert issue["wasted_seconds"] > 0
-        assert len(issue["top_failing_task_ids"]) == 3
-    finally:
-        monitor_pipeline.LOG_DIR = original_log_dir
 
 
 def test_agent_runner_fresh_checkout_clones_recursive_submodules(monkeypatch, tmp_path):
