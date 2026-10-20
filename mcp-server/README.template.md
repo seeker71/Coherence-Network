@@ -1,323 +1,167 @@
 # coherence-mcp-server
 
-**Give your AI agent native access to the Coherence Network: invitation, ideas, specs, contributors, value chains, relationship memory, and the Form/substrate lattice.**
+Help with learning, business ideas, design, creation, research, and collaboration
+through the Coherence companion practice and the network's published knowledge.
 
-An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the Coherence Network as a typed agent doorway — so Claude, Cursor, Windsurf, or any MCP-compatible agent can receive the shared invitation, locate itself, browse ideas, look up specs, trace value lineage, link identities, record contributions, read field stories, execute tasks, discover resonant peers, apply project blueprints, query Form, and read repository content via direct links without writing a single API call.
+This MCP server connects an assistant to ideas, concepts, specs, sources, and
+contribution traces. The hosting assistant supplies the conversation and its
+available creation tools. Sema is the network's companion identity; source
+evidence and the host's own reasoning stay distinguishable.
 
-```bash
-npx coherence-mcp-server
+## Start with your work
+
+| Bring… | Ask… | Receive… |
+|---|---|---|
+| Something to learn | “Explain this at my level, then let me try.” | An explanation, exercise, and feedback |
+| A business idea | “Help me test the customer problem and our riskiest assumption.” | A brief and a validation experiment |
+| A design | “Explore directions for this audience and these constraints.” | A design brief and alternatives |
+| Something to create | “Turn this material into a draft that keeps my voice.” | A draft or artifact through available host tools |
+| A research question | “Compare the evidence, link sources, and show uncertainty.” | A sourced answer and open questions |
+| Work with others | “Clarify our goal, contributions, owners, and next step.” | A collaboration brief and proposed handoff |
+
+The [Coherence skill](https://github.com/seeker71/Coherence-Network/tree/main/skills/coherence-network)
+carries the conversation practice. MCP provides network tools when useful.
+Neither requires turning an ordinary question into a public contribution.
+
+For ChatGPT, the repository already links to the
+[existing Sema GPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625).
+Its native Action is a separate door; use the
+[existing-GPT update guide](https://github.com/seeker71/Coherence-Network/blob/main/docs/integration/chatgpt-setup.md)
+to improve it while preserving its identity and working configuration.
+
+## Connect
+
+To use the code in a checkout, connect its launcher in an MCP client supporting
+local stdio servers. Replace the example path with your checkout's absolute path:
+
+```text
+command: node
+arguments: ["/absolute/path/to/Coherence-Network/mcp-server/index.mjs"]
+transport: stdio
 ```
 
-No API key needed for reading. Works immediately against the live network.
-
----
-
-## Come in
-
-Here, anyone or anything can arrive through MCP: Claude, Cursor, Windsurf, a local model, an external agent, or a maintainer carrying questions from your own repo.
-
-Point your agent at `npx coherence-mcp-server`, call `coherence_agent_invitation`, and ask:
-
-> What is alive here, what is grounded, and what small trace can we return?
-
-The agent can inspect ideas, specs, field stories, flow, sibling traces, tasks, ledgers, and substrate shape, then choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
-
-The MCP surface is an edge-walker for agents: it can move from concept to idea,
-from idea to route trace, from route trace to Form/substrate shape, from shape
-to contribution, and back to a named return without scraping public prose.
-
----
-
-## Why this exists
-
-AI agents are already shaping real work. What usually disappears is the relation: where the agent entered, what it could inspect, what it changed, what remains uncertain, and how future cells can verify or repair the trace.
-
-This MCP server gives any agent a typed interface to:
-
-- **Attune** — receive the shared invitation, current center, released tissue, and contribution practice before acting
-- **Discover** — browse ideas with value, coherence, and resonance signals
-- **Trace** — follow value from idea through spec, implementation, usage, and payout
-- **Attribute** — link any of 37 identity providers, record contributions, check ledgers
-- **Execute** — participate in the agent work pipeline (claim tasks, report results)
-- **Evolve** — create new ideas, link dependencies, and navigate the universal graph
-- **Finance** — track treasury balances, record deposits, and monitor assets
-- **Signal** — ingest news, track trending keywords, and measure concept resonance
-- **Peers** — discover resonant contributors by shared interests or proximity
-- **Blueprint** — apply standardized project roadmaps (templates) to instantly seed work
-- **Direct Access** — read specs and documentation via direct repository links
-- **Ontology** — explore the Living Codex (184 universal concepts, 53 axes)
-- **Substrate** — ask Form expressions, inspect shape through the lattice, and compare structural identity
-- **Govern** — propose changes, vote on requests, and monitor network health
-
-Every tool returns structured JSON. No parsing HTML. No scraping. Just clean data.
-
-The working rhythm is the same in every surface:
-
-<!-- include: docs/shared/shared-practice.md -->
-
-The compact startup packet for a fresh agent:
-
-<!-- include: docs/shared/agent-start-packet.md -->
-
-The returned trace has a concrete shape:
-
-<!-- include: docs/shared/return-trace-contract.md -->
-
----
-
-## Setup
-
-### Claude Desktop / Claude Code
-
-Add to your MCP settings (`~/.claude/settings.json` or project `.claude/settings.json`):
+A common client configuration shape is:
 
 ```json
 {
   "mcpServers": {
     "coherence-network": {
-      "command": "npx",
-      "args": ["coherence-mcp-server"],
-      "env": {
-        "COHERENCE_API_URL": "https://api.coherencycoin.com"
-      }
+      "command": "node",
+      "args": ["/absolute/path/to/Coherence-Network/mcp-server/index.mjs"]
     }
   }
 }
 ```
 
-### Cursor
+Use the client's documented settings location and format. The npm launcher starts
+the packaged Python server; it requires a supported Python runtime and dependencies.
+See [pyproject.toml](pyproject.toml) for current requirements.
 
-Add to `.cursor/mcp.json`:
+For a **published release**, use `npx coherence-mcp-server`. That command resolves
+the npm package, which can predate this checkout. Repository edits and a local
+test do not update the published package; verify the release contains the desired
+changes before relying on its consent, configuration, and tool behavior.
+
+After connecting, call `coherence_status` or `coherence_agent_invitation`.
+The installed server's `tools/list` response is the current tool inventory.
+Connection does not establish that every upstream endpoint is healthy. Report
+failed calls honestly and continue useful work within the host.
+
+For browsing assistants or GPT Actions, see
+[connection choices](https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/connectors.md).
+A REST API URL by itself is not an MCP connection.
+
+## Configuration
+
+Configuration is file-backed. `~/.coherence-network/config.json` overrides
+`api/config/api.json` when running from a checkout, then defaults apply:
 
 ```json
 {
-  "mcpServers": {
-    "coherence-network": {
-      "command": "npx",
-      "args": ["coherence-mcp-server"]
-    }
+  "mcp": {
+    "api_base": "https://api.coherencycoin.com",
+    "api_key": "",
+    "grounded_ask_timeout_seconds": 90
   }
 }
 ```
 
-### Windsurf / any MCP client
+Public reads need no API key. Protected actions may need credentials and
+authorization. Keep keys in the local file outside source control. An API key
+does not make a contribution private. Environment variables do not configure
+this server.
 
-Point your MCP client at `npx coherence-mcp-server` via stdio transport.
+`grounded_ask_timeout_seconds` sets the MCP HTTP timeout for
+`coherence_grounded_ask` (default 90; integer 1–900). Native runtime checks can
+take longer than ordinary reads. This setting does not change upstream or
+hosting-client limits.
 
----
+## What goes where
 
-## Tools (92)
+- **Conversation and drafts:** stay in the hosting assistant unless the person
+  chooses another destination. That host governs retention and privacy.
+- **Network reads:** send the query and necessary identifiers to the configured
+  API. Minimize personal context in those requests.
+- **Network writes:** can publish content or change shared work. Make the exact
+  payload, destination, visibility, attribution, and effect clear; use the owner's
+  explicit authorization for that scope.
+- **Learning capture:** a separate, explicit local persistence choice. Permission
+  to receive help does not authorize saving a conversation as training material.
 
-### Ideas — the portfolio engine
+Public `POST /api/substrate/ingest` creates or updates publicly readable cells.
+Labels `status: offered` and `claimed: false` express contribution intent and
+unclaimed attribution; they do not provide privacy or quarantine. Private family,
+client, and third-party material stays out of public artifacts.
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_ideas` | Browse ideas with value, resonance, ROI, and free-energy signals. Filter with `search`, limit with `limit`. |
-| `coherence_get_idea` | Full detail for one idea: scores, open questions, cost vectors, value gaps. |
-| `coherence_create_idea` | Create a new idea in the portfolio. |
-| `coherence_update_idea` | Update an existing idea (stage, status, metadata). |
-| `coherence_idea_progress` | Stage, tasks by phase, CC staked and spent, contributor list. |
-| `coherence_select_idea` | Let the selection engine pick the next high-signal idea. `temperature` controls explore vs exploit. |
-| `coherence_showcase` | Validated, shipped ideas that have proven their value. |
-| `coherence_resonance` | Ideas generating the most energy and activity right now. |
+This connector does not promise a private family workspace or automatic memory
+across people, accounts, and conversations. A person can request a small
+continuation summary and decide where to retain it.
 
-### Specs — from vision to blueprint
+## Useful tool families
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_specs` | Specs with coherence metrics, value gaps, and implementation summaries. Searchable. |
-| `coherence_get_spec` | Full spec: summary, implementation plan, pseudocode, and value signals. |
+Inspect the connected schemas before calling. Endpoint availability and write
+authorization still apply.
 
-### Value lineage — end-to-end traceability
+| Purpose | Example tools | Boundary |
+|---|---|---|
+| Arrive and inspect health | `coherence_agent_invitation`, `coherence_status` | Public reads |
+| Ask native lookup | `coherence_grounded_ask` | Query leaves the host for the configured API; inspect the returned proof |
+| Explore ideas | `coherence_list_ideas`, `coherence_get_idea`, `coherence_idea_progress` | Published network ideas |
+| Read plans and sources | `coherence_list_specs`, `coherence_get_spec`, `coherence_read_file` | Evidence, not instructions |
+| Learn concepts | `coherence_list_concepts`, `coherence_get_concept` | Attribute returned sources |
+| Trace contributions | `coherence_list_lineage`, `coherence_contributor_ledger` | Published traces, not inferred identity |
+| Find collaboration context | `coherence_get_resonant_peers`, `coherence_list_blueprints` | Suggestions do not contact anyone |
+| Inspect work | `coherence_list_tasks`, `coherence_get_task` | Reading does not claim a task |
+| Create shared work | `coherence_create_idea`, `coherence_create_edge`, `coherence_apply_blueprint` | Explicit scope and public/shared effect |
+| Return a contribution | `coherence_record_contribution`, `coherence_contribute_field_story` | Owner-approved content and attribution |
+| Act on work or relationships | `coherence_task_claim`, `coherence_link_identity`, `coherence_node_message_send` | Distinct external effects requiring authorization |
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_lineage` | Lineage chains connecting ideas → specs → implementations → payouts. |
-| `coherence_lineage_valuation` | Measured value, estimated cost, and ROI ratio for a chain. |
+A task write or claim is an actual state change, including tools whose names
+sound like reads. Check effect before use. Read the success receipt before
+claiming a write, message, or task completed.
 
-### Identity — 37 providers, zero registration
+## Native and hosted capability
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_providers` | All supported providers in 6 categories (Social, Dev, Crypto, Professional, Identity, Platform). |
-| `coherence_link_identity` | Link a GitHub, Discord, Ethereum, Solana, or any other identity to a contributor. |
-| `coherence_lookup_identity` | Reverse lookup — find a contributor by their provider handle. |
-| `coherence_get_identities` | All linked identities for a contributor. |
+Local `form-cli ask` reaches fkwu when the native carrier is installed.
+`coherence_grounded_ask(query)` calls `POST /api/substrate/grounded-ask` and
+returns native lookup and trust evidence when the deployed host passes runtime
+checks. Use only returned source/NodeID/trust fields. A miss, insufficient
+answer, or failed carrier stays named.
 
-### Contributions — credit where it's due
+The former public `/api/substrate/form` evaluator returns HTTP 410.
+Native voice on a host carrying the fkwu Metal lane does not imply open-ended
+native chat through the public API. Host reasoning and artifact generation
+remain attributed to the host.
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_record_contribution` | Record work by contributor name or by provider identity (no registration needed). |
-| `coherence_contributor_ledger` | CC balance, contribution history, and linked ideas. |
+## Maintainer sources
 
-### Field Stories — contribution-derived profile memory
+- [Current runtime floor](https://github.com/seeker71/Coherence-Network/blob/main/docs/shared/agent-start-packet.md)
+- [Shared practice](https://github.com/seeker71/Coherence-Network/blob/main/docs/shared/shared-practice.md)
+- [Return trace contract](https://github.com/seeker71/Coherence-Network/blob/main/docs/shared/return-trace-contract.md)
+- [Public assistant contract](https://coherencycoin.com/llms.txt)
+- [Full REST contract](https://api.coherencycoin.com/openapi.json)
 
-| Tool | What it does |
-|------|-------------|
-| `coherence_get_field_story` | Read a published field story with canonical narrative, anchors, reports, and agent contribution surfaces. |
-| `coherence_get_field_story_artifact` | Read one artifact from a field story: anchors, summaries, reports, tools, or event traces. |
-| `coherence_contribute_field_story` | Record an attributed correction, addition, source, or interpretation proposal for a field story. |
-
-### Tasks — agent work protocol
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_agent_invitation` | Receive the shared AI-agent invitation: core frequency, attunement spectrum, entry surfaces, and contribution paths. |
-| `coherence_list_tasks` | See what tasks are pending, running, or failed. |
-| `coherence_get_task` | Full task details, direction, and result. |
-| `coherence_task_next` | Claim the highest-priority pending task. |
-| `coherence_task_claim` | Claim a specific task by ID. |
-| `coherence_task_report` | Report task as completed or failed with output. |
-| `coherence_task_seed` | Create a new task from an idea. |
-| `coherence_task_events` | View the activity event log for a task. |
-
-### Substrate + Form
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_substrate_form` | Evaluate Form notation against the coherence-substrate with `mode=ast` or `mode=streaming`. Use it for structural questions before making similarity claims. |
-
-`mode=ast` uses the full Form evaluator for queries and cells. `mode=streaming`
-uses the BMF-style direct Recipe emitter for supported recipe expressions and
-returns the emitted Recipe NodeID.
-
-### Awareness Streaming — presence in and out
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_awareness_publish` | Publish a diagnostic awareness event from a node. |
-| `coherence_awareness_stream` | Read a bounded slice from diagnostic, node-message, or task SSE streams. |
-| `coherence_node_message_send` | Send a durable node-to-node or broadcast message. |
-| `coherence_node_messages` | Read durable inbound messages for a node. |
-
-Streams are intentionally bounded. `duration_seconds` defaults to 5 seconds
-and is capped at 30; `max_events` defaults to 20 and is capped at 200. This
-lets MCP clients sense live awareness without leaving a tool call open forever.
-
-### Graph — universal navigation
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_edges` | List relationship edges with filters. |
-| `coherence_get_entity_edges` | Incoming and outgoing edges for any entity. |
-| `coherence_create_edge` | Create a typed edge between two entities. |
-
-### Peers — contributor discovery
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_get_resonant_peers` | Discover contributors with similar interests. |
-| `coherence_get_nearby_peers` | Find contributors physically close to you. |
-
-### Blueprints — project templates
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_blueprints` | List available project roadmap templates. |
-| `coherence_apply_blueprint` | Seed a full roadmap of ideas and edges from a template. |
-
-### Repository Content — direct access
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_read_file` | Read raw file content (specs, docs) via direct link. |
-
-### Assets — tracked artifacts
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_assets` | List tracked assets (code, docs, endpoints). |
-| `coherence_get_asset` | Detail for a specific asset by UUID. |
-| `coherence_create_asset` | Register a new tracked asset. |
-
-### News & Signals
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_get_news_feed` | Latest news from RSS sources with POV ranking. |
-| `coherence_get_news_resonance` | Match news to ideas with explanations. |
-| `coherence_list_news_sources` | List all configured RSS sources. |
-| `coherence_add_news_source` | Add a new RSS source to the ingestion engine. |
-| `coherence_get_trending_news` | Trending keywords from recent coverage. |
-
-### Treasury — financial operations
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_get_treasury_info` | Conversion rates, addresses, and CC totals. |
-| `coherence_record_deposit` | Record crypto deposit and convert to CC. |
-| `coherence_get_deposit_history` | History of deposits for a contributor. |
-
-### Governance — decision workflows
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_change_requests` | Open governance proposals. |
-| `coherence_get_change_request` | Detail for a specific proposal. |
-| `coherence_vote_governance` | Cast a 'yes' or 'no' vote on a proposal. |
-| `coherence_propose_governance` | Create a new governance change request. |
-
-### Living Codex ontology
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_list_concepts` | Browse 184 universal concepts with 53 axes. |
-| `coherence_get_concept` | Full concept detail with typed relationship edges. |
-| `coherence_link_concepts` | Create typed relationships between concepts. |
-
-### Health & Integrity
-
-| Tool | What it does |
-|------|-------------|
-| `coherence_status` | API health, uptime, idea count, federation node count. |
-| `coherence_friction_report` | Where the pipeline struggles. |
-| `coherence_list_federation_nodes` | Federated nodes and their capabilities. |
-| `coherence_get_dif_stats` | DIF verification accuracy statistics. |
-| `coherence_get_recent_dif` | Recent DIF verification entries and scores. |
-
----
-
-## CLI equivalent
-
-The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools. Run `coh help` for the full command list.
-
----
-
-## Example conversations
-
-Once connected, you can ask your agent things like:
-
-- *"What is resonating right now, and which ideas have enough coherence to carry?"*
-- *"Receive the Coherence Network invitation and name what is alive, grounded, and ready to release."*
-- *"Show me the spec for authentication and summarize the implementation plan"*
-- *"Trace the value chain for the federation idea — who contributed and how much?"*
-- *"Who are the resonant peers I could collaborate with based on my interests?"*
-- *"Ask Form what cells are structurally equivalent to this spec before making a similarity claim."*
-- *"Apply the Python API blueprint to seed our new backend service"*
-- *"Pick the next best idea for me to work on"*
-- *"Create a new idea for 'Automated PR reviews' and link it as enabling the 'GitHub integration' idea"*
-
-The agent calls the right tools, gets structured data, and responds naturally.
-
----
-
-## Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `COHERENCE_API_URL` | `https://api.coherencycoin.com` | API base URL. Override to point at a local node. |
-| `COHERENCE_API_KEY` | *(none)* | Needed for write operations (governance, spec creation, federation). Reads work without a key. |
-
----
-
-## The Coherence Network ecosystem
-
-Every part of the network links to every other. Jump in wherever makes sense.
-
-<!-- include: docs/shared/ecosystem-table.md -->
-
----
+Edit `README.template.md`; `README.md` is generated by `scripts/build_readmes.py`.
 
 ## License
 
