@@ -44,9 +44,10 @@ def test_api_kernel_builder_compiles_only_the_pinned_fkwu_runtime() -> None:
     assert "cc -O2 -o fkwu runtime/fkwu-uni.c" in dockerfile
     assert "COPY --from=kernel-builder /build/form/fkwu /app/form/fkwu" in dockerfile
     assert "gate/form-cli-build-run.bml" in dockerfile
-    # the image's source home is /app (its stdlib is /app/form/form-stdlib), so the runtime
-    # source rides along at /app/runtime, where source-compiler resolves runtime/fkwu-optable.h
-    assert "COPY form/runtime /app/runtime" in dockerfile
+    # the image keeps the pinned source home whole (#4117): the kernel root is /app/form, with
+    # form/form-stdlib, runtime/ and control/ beside each other as in the checkout's form/
+    assert "COPY form/runtime /app/form/runtime" in dockerfile
+    assert "COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-stdlib/" in dockerfile
     assert "COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id" in dockerfile
     assert "cargo build" not in dockerfile
     assert "form-kernel-rust" not in dockerfile
@@ -250,3 +251,28 @@ def test_dockerfile_copies_app_endpoint_recipes_with_api_tree() -> None:
     assert re.search(r"^COPY api/ \./$", dockerfile, re.MULTILINE) is not None
     for name in _APP_ENDPOINT_RECIPES:
         assert (REPO_ROOT / _APP_RECIPE_DIR_REL / name).is_file()
+
+
+def test_kernel_bridge_runs_fkwu_from_the_image_kernel_root(tmp_path, monkeypatch) -> None:
+    # the image keeps the pinned source home whole: /app/form/form/form-stdlib, /app/form/runtime; the
+    # module lives at /app/app/services, so "four parents up" is `/` there, not the repo root. The bridge
+    # must still find the kernel root to run fkwu from — on 2026-10-20 it ran from `/` and the API died at import
+    from app.services import form_kernel_bridge as bridge
+
+    image = tmp_path / "app"
+    (image / "form" / "form" / "form-stdlib").mkdir(parents=True)
+    (image / "form" / "runtime").mkdir(parents=True)
+    monkeypatch.setattr(bridge, "_IMAGE_ROOT", image)
+    monkeypatch.setattr(bridge, "_REPO_ROOT", tmp_path / "nowhere")
+    assert bridge._form_source_parent() == image / "form"
+
+    flat = tmp_path / "flat"
+    (flat / "form" / "form-stdlib").mkdir(parents=True)
+    monkeypatch.setattr(bridge, "_IMAGE_ROOT", flat)
+    assert bridge._form_source_parent() == flat
+
+    checkout = tmp_path / "checkout"
+    (checkout / "form" / "form" / "form-stdlib").mkdir(parents=True)
+    monkeypatch.setattr(bridge, "_IMAGE_ROOT", tmp_path / "no-image")
+    monkeypatch.setattr(bridge, "_REPO_ROOT", checkout)
+    assert bridge._form_source_parent() == checkout / "form"

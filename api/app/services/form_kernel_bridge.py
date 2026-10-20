@@ -218,11 +218,17 @@ def _form_source_parent() -> Path:
     """The directory fkwu must run in for `; preludes:` and BML source composition.
 
     fkwu reads `form/form-stdlib/...` relative to its working directory when a
-    staged /tmp source names a prelude; the image lays the kernel flat under
-    /app/form, a checkout nests it under form/form. Both answer the same probe:
-    the parent whose `form/form-stdlib` exists.
+    staged /tmp source names a prelude. The kernel's own root is the directory
+    whose `form/form-stdlib` exists: a checkout's `<repo>/form`, the image's
+    `/app/form` (the pinned source home kept whole since #4117; before it the
+    image laid the stdlib flat at /app/form/form-stdlib, answered by /app).
+    `_REPO_ROOT` is four parents above this module — the repo root in a
+    checkout, but `/` inside the image, where the module sits at
+    /app/app/services — so the image's kernel root is named on its own.
+    On 2026-10-20 every candidate missed in the image and fkwu ran from `/`;
+    the API died at import for ten hours.
     """
-    for candidate in (_IMAGE_ROOT, _REPO_ROOT, _REPO_ROOT / "form"):
+    for candidate in (_IMAGE_ROOT, _IMAGE_ROOT / "form", _REPO_ROOT, _REPO_ROOT / "form"):
         if (candidate / "form" / "form-stdlib").is_dir():
             return candidate
     return _REPO_ROOT

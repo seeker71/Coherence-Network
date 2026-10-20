@@ -285,18 +285,6 @@ Coherence-Network/
 └── scripts/              # Repository-level scripts
 ```
 
-## 📚 Key Documentation
-
-Before contributing, review:
-
-- [CLAUDE.md](CLAUDE.md) — Project configuration and conventions
-- [AGENTS.md](AGENTS.md) — Agent workflow, proof contract, and task-card shape
-- [docs/SETUP.md](docs/SETUP.md) — Development setup
-- [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) — Current runtime floor and destination
-- [form/NORTH_STAR.md](form/NORTH_STAR.md) — Who we are and where we go
-- [docs/DEPLOY.md](docs/DEPLOY.md) — Deployment guide
-- [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) — Deployed topology and live persistence
-
 ## 🐛 Reporting Issues
 
 Found a bug? Please [create an issue](https://github.com/seeker71/Coherence-Network/issues/new) with:

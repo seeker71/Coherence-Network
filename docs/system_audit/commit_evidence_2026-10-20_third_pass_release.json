@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Third alignment pass: CONTRIBUTING loses its link list; seventeen top-level docs no file reads and the doc of a removed workflow move to docs/retired; five workflows whose scripts are gone, whose runner is disabled, or whose audit parses shell words as tools are removed; the asset-modularity audit's missing import is healed.",
+  "files_owned": ["CONTRIBUTING.md", "docs/retired/README.md", ".github/workflows", "config/start_gate_workflow_owners.json", "api/app/services/inventory_service.py"],
+  "change_intent": "process_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["arrival-who-we-are"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["observe", "release", "heal"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "CONTRIBUTING.md: every link resolved (the compost session had already pointed them at living doors); the Key Documentation list is removed as asked — the arrival surfaces are the doors; the issue-tracker link stays.",
+    "docs/*.md inventoried by last touch and inbound links (git grep over code, docs, web and scripts, excluding audits, ledgers, lineage and generated indexes): seventeen pages had zero readers and dates from February to July 2026 (WORKBOOK, SITE_MAP, SOCIAL-LAUNCH, PROMPTS-AND-AB, WORKER-SERVICE, MVP-TARGET-LIST, PIPELINE_DESIGN, LOCAL-TOOL-GUARD, spec-proof-shapes, OLLAMA-CLAUDE-LOCAL, DEPLOYMENT-CHECKLIST, doorway-comprehension, TELEGRAM-CARD-CONTRACT, MVP-PILOT-ONBOARDING-CHECKLIST, WORKTREE-CONSOLIDATION-2026-03-06, two provider smoke task cards); they move to docs/retired/ with the reason appended to its README. PR-GATES-AND-PUBLIC-VALIDATION.md follows: it documents the change-contract workflow removed here and only retired or lineage pages named it.",
+    "Workflows read against the tree and their last runs: asset_value_update.yml (both scripts absent, schedule already disabled, last run April), auto-heal-deploy-gates.yml (script absent, dispatch-only, last run February), change-contract.yml (script absent, push trigger already disabled, last run March), hostinger-api-native-deploy.yml (dispatch-only, last run June, nothing names it), claude-code-host-runner-task.yml (dispatch-only, last run February, the host runner it needs is disabled on the Mac) — removed. external-tools-audit.yml with scripts/audit_external_tools.py and its registry: failing twice a week since 2026-10-16 because it takes the first word of every workflow run line as a tool (PY, REMOTE, [[, import, print …) and needs a hand-kept registry on every dependabot bump; removed, with its entry in config/start_gate_workflow_owners.json.",
+    "asset-modularity-drift.yml failed daily since 2026-10-19 with NameError: name 'ast' is not defined in api/app/services/inventory_service.py (line 4157 uses ast.parse without the import); `import ast` added; `python scripts/run_asset_modularity_audit.py` runs to its reading (blocking_assets 128 by category implementation) and exits 0.",
+    "Named, not changed: test.yml carries `if: false` since March ('re-enable after resolving CI-only ModuleNotFoundError'), so no workflow runs the API suite on a PR; run locally today the suite's first failure is /api/health 404 from the Python host, which #4117 moved to the native container. Whether to run the suite in CI again is a cost decision for the body, proposed separately.",
+    "Indexes regenerated (scripts/INDEX.md, MANIFEST.md, specs/INDEX.md, api/tests/INDEX.md, api/app/routers/INDEX.md); tests exercising inventory_service and the meeting traces: 20 passed."
+  ],
+  "change_files": ["CONTRIBUTING.md", "docs/retired/README.md", "config/start_gate_workflow_owners.json", "api/app/services/inventory_service.py", "MANIFEST.md", "scripts/INDEX.md", "specs/INDEX.md", "api/tests/INDEX.md", "api/app/routers/INDEX.md", "docs/system_audit/commit_evidence_2026-10-20_third_pass_release.json"],
+  "local_validation": {"status": "pass", "summary": "Every CONTRIBUTING link resolves; the modularity audit runs to its reading; 20 tests pass; indexes regenerated."},
+  "ci_validation": {"status": "pending", "summary": "The PR's checks run; the removed workflows had no living readers."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "The merge deploys main after the outage heal (#4122) has rolled forward; this change touches one import in the API."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The asset-modularity audit runs green again; no workflow calls a script that does not exist; no top-level doc without a reader sits in the living tree.", "public_endpoints": [], "test_flows": ["cd api && python scripts/run_asset_modularity_audit.py", "for w in .github/workflows/*.yml; do grep -oE '(scripts|api/scripts)/[A-Za-z0-9_./-]+\\.(py|sh)' $w | while read p; do [ -e $p ] || echo MISSING $w $p; done; done"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Merged after the outage heal's rollout verifies."}
+}
