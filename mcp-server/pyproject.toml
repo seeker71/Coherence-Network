@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "coherence-mcp-server"
-version = "0.5.6"
-description = "Unified MCP server for the Coherence Network — typed tool surface for AI agents to browse ideas, read field stories, manage tasks, link identities, and navigate the universal graph."
+version = "0.6.0"
+description = "Coherence companion tools for grounded help, ideas, and creation, with an optional advanced network profile."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [{ name = "Coherence Network Contributors" }]
 keywords = [
   "mcp",
@@ -23,7 +23,7 @@ keywords = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -48,6 +48,7 @@ coherence-mcp-server = "coherence_mcp_server.__main__:main"
 include = [
   "/coherence_mcp_server",
   "/README.md",
+  "/LICENSE",
 ]
 
 [tool.hatch.build.targets.wheel]

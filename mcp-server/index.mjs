@@ -9,15 +9,19 @@ import { constants } from "node:os";
 const packageDirectory = dirname(fileURLToPath(import.meta.url));
 let child;
 let stopping = false;
+const pythonRuntimes = process.platform === "win32"
+  ? [["py", ["-3"]], ["python", []], ["python3", []]]
+  : [["python3", []]];
 
-function start(command, args, canFallback = false) {
+function start(command, args, remaining = []) {
   child = spawn(command, args, { stdio: "inherit", cwd: packageDirectory, shell: false });
   let failedToSpawn = false;
   child.once("error", (error) => {
     failedToSpawn = true;
-    if (canFallback && error.code === "ENOENT" && !stopping) {
-      console.error("Coherence MCP: uv is unavailable; using python3 with installed MCP dependencies.");
-      start("python3", ["-m", "coherence_mcp_server"]);
+    if (remaining.length && error.code === "ENOENT" && !stopping) {
+      const [[next, prefix], ...rest] = remaining;
+      console.error(`Coherence MCP: ${command} is unavailable; trying ${next} with installed MCP dependencies.`);
+      start(next, [...prefix, "-m", "coherence_mcp_server"], rest);
       return;
     }
     console.error(`Coherence MCP could not start ${command} (${error.code || "spawn error"}). Install uv or Python with coherence-mcp-server dependencies.`);
@@ -36,4 +40,4 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   });
 }
 
-start("uv", ["run", "--project", packageDirectory, "coherence-mcp-server"], true);
+start("uv", ["run", "--locked", "--project", packageDirectory, "coherence-mcp-server"], pythonRuntimes);
