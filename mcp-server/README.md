@@ -32,6 +32,11 @@ to improve it while preserving its identity and working configuration.
 
 ## Connect
 
+The free [companion plugin](https://github.com/seeker71/Coherence-Network/tree/main/plugins/coherence-companion)
+provides the everyday workflows without installing a local server. Add this MCP
+connection when you want typed network reads. The plugin adds no charge; your
+chosen assistant's plans, tools and usage rules still apply.
+
 To use the code in a checkout, connect its launcher in an MCP client supporting
 local stdio servers. Replace the example path with your checkout's absolute path:
 
@@ -58,12 +63,22 @@ Use the client's documented settings location and format. The npm launcher start
 the packaged Python server; it requires a supported Python runtime and dependencies.
 See [pyproject.toml](pyproject.toml) for current requirements.
 
-For a **published release**, use `npx coherence-mcp-server`. That command resolves
-the npm package, which can predate this checkout. Repository edits and a local
-test do not update the published package; verify the release contains the desired
-changes before relying on its consent, configuration, and tool behavior.
+The reviewed 0.6.0 package is also distributed as a GitHub release archive. Download
+`coherence-mcp-server-0.6.0.tgz` and `SHA256SUMS` from
+[the companion release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0),
+verify the checksum, extract it, and point the same `node` command at the extracted
+`package/index.mjs`. No repository clone is needed. Node 18+ and `uv` are the
+recommended prerequisites; `uv` resolves the locked Python dependencies.
 
-After connecting, call `coherence_status` or `coherence_agent_invitation`.
+If `uv` is absent, the launcher tries an installed Python with this package's
+dependencies (`python3` on Unix; `py -3`, then `python`, then `python3` on Windows).
+It never retries a server that successfully started and then failed.
+
+`npx coherence-mcp-server` resolves the separately published npm package. On
+2026-10-20 the registry served 0.5.5; that version lacks these changes. Use the
+reviewed GitHub archive until a matching npm release is observed.
+
+After connecting, call `coherence_agent_invitation`.
 The installed server's `tools/list` response is the current tool inventory.
 Connection does not establish that every upstream endpoint is healthy. Report
 failed calls honestly and continue useful work within the host.
@@ -82,6 +97,7 @@ Configuration is file-backed. `~/.coherence-network/config.json` overrides
   "mcp": {
     "api_base": "https://api.coherencycoin.com",
     "api_key": "",
+    "capability_profile": "companion",
     "grounded_ask_timeout_seconds": 90
   }
 }
@@ -91,6 +107,16 @@ Public reads need no API key. Protected actions may need credentials and
 authorization. Keep keys in the local file outside source control. An API key
 does not make a contribution private. Environment variables do not configure
 this server.
+
+`companion` is the default profile: ten public-read/current-chat tools. Publishing,
+messaging, identity changes, local learning and administrative tools are absent
+and direct calls to them are denied before side effects. To deliberately expose
+the full existing network tool set, set `"capability_profile": "advanced"` in
+your local config and restart the server. A model-supplied argument cannot change
+the profile. Advanced exposure is not authorization for any particular action.
+Unknown profile values fail startup. Explicit local learning capture additionally
+requires secure file primitives; it fails before saving on unsupported hosts
+(including the current Windows capture path). Ordinary companion use is unaffected.
 
 `grounded_ask_timeout_seconds` sets the MCP HTTP timeout for
 `coherence_grounded_ask` (default 90; integer 1–900). Native runtime checks can
@@ -120,8 +146,14 @@ continuation summary and decide where to retain it.
 
 ## Useful tool families
 
-Inspect the connected schemas before calling. Endpoint availability and write
-authorization still apply.
+The default profile exposes `coherence_transmute`, `coherence_agent_invitation`,
+`coherence_list_ideas`, `coherence_get_idea`, `coherence_idea_progress`,
+`coherence_showcase`, `coherence_list_specs`, `coherence_get_spec`,
+`coherence_list_blueprints`, and `coherence_grounded_ask`. Inspect the connected
+schemas and results; upstream availability still applies.
+
+The following broader families require the **advanced** profile where they are
+outside that default list. Write authorization remains necessary.
 
 | Purpose | Example tools | Boundary |
 |---|---|---|
@@ -154,6 +186,11 @@ Native voice on a host carrying the fkwu Metal lane does not imply open-ended
 native chat through the public API. Host reasoning and artifact generation
 remain attributed to the host.
 
+Registry manifests are submission sources, not proof of registry publication.
+Their tool inventory comes from the running server. The Smithery source points
+to the versioned GitHub archive; the npm registry manifest awaits a matching
+package publication.
+
 ## Maintainer sources
 
 - [Current runtime floor](https://github.com/seeker71/Coherence-Network/blob/main/docs/shared/agent-start-packet.md)
@@ -166,4 +203,4 @@ Edit `README.template.md`; `README.md` is generated by `scripts/build_readmes.py
 
 ## License
 
-MIT
+Apache-2.0. The license text ships in the package.
