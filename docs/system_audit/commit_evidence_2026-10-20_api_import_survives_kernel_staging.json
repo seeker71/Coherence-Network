@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Production was down ten hours (07:15–09:21 UTC): the API process died at import because anonymous_meeting_trace_service asked the kernel for its BML query while the module loaded, and inside the b9527a577 image that run failed (BML contract source unavailable: form/form-stdlib/core.fk). Production was rolled back by hand to 26057a5e3 and breathes; the query is now read on first use, so one recipe's staging cannot take every route down.",
+  "files_owned": ["api/app/services/anonymous_meeting_trace_service.py"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["api-import-time-kernel-call"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["observe", "restore", "heal"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Observed 2026-10-20 17:1x WITA: https://api.coherencycoin.com/api/health answered a Traefik `404 page not found`; on the VPS coherence-network-api-1 was `Restarting (1)` with 119 restarts since 07:16 UTC, image revision b9527a577; the Hostinger Auto Deploy run 39384013694 had ended `FAIL: API did not remain locally and publicly stable after one bounded repair` and no later deploy ran. Nothing had moved for ten hours.",
+    "The container's log: ImportError chain from app/main.py → app.routers.meetings → app.services.anonymous_meeting_trace_service line 18 `_ANONYMOUS_TRACE_QUERY, _ = serve_text_via_kernel(\"anonymous_trace_query.bml\", {})` → form_kernel_bridge._run_staged_source → `RuntimeError: fkwu failed (exit 2): … BML contract source unavailable: form/form-stdlib/core.fk`. The import-time call was introduced by #4082 (2026-10-19); the image layout it died on came with #4117 (962549a32, 2026-10-20), which nests the stdlib at /app/form/form/form-stdlib and no longer provides /app/form/form-stdlib.",
+    "Restored at 09:20 UTC: `bash /docker/coherence-network/auto-deploy.sh 26057a5e3…` (the last revision whose rollout verified) — api `Up (healthy)`, edge /api/health 200 at 09:21:40Z. The native-api, pulse and web containers came back with it.",
+    "The heal here: the trace query is read once, on first use (functools.lru_cache), and a failure to serve it stays the trace route's own error with the kernel's words intact. The API imports; api/tests/test_anonymous_meeting_traces.py, test_graph_layer.py and test_agent_task_claims.py: 20 passed. A grep of api/app finds no other module-level kernel call.",
+    "Why the kernel refuses the prelude inside that image is being reproduced in a probe build of b9527a577 on the VPS (tag probe-b95, not deployed) and is the next commit; locally the image-shaped layout resolves the prelude from /app/form, writable or read-only, so the remaining cause lives in what the real image holds.",
+    "Main also no longer serves /api/health from the Python host (#4117 moved health to the native container, Traefik native-api router priority 300 over coherence-api 100); /api/ping remains Python-served and is the public endpoint named here."
+  ],
+  "change_files": ["api/app/services/anonymous_meeting_trace_service.py", "docs/system_audit/commit_evidence_2026-10-20_api_import_survives_kernel_staging.json"],
+  "local_validation": {"status": "pass", "summary": "The service imports and answers its query locally; 20 tests across the three files that exercise it pass."},
+  "ci_validation": {"status": "pending", "summary": "The PR's checks run; the deploy that follows the merge is the observation."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Merging deploys main; the api container must start and the roll-forward verify must pass. Production currently serves 26057a5e3 by manual rollback."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The API container of the next main image starts; routes answer; the trace route raises the kernel's error if staging still fails there.", "public_endpoints": ["https://api.coherencycoin.com/api/ping"], "test_flows": ["curl -s https://api.coherencycoin.com/api/ping", "docker logs coherence-network-api-1 | grep -c Traceback"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The deploy after merge is the live check; the prelude cause follows from the probe build."}
+}
