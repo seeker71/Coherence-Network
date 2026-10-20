@@ -1,7 +1,0 @@
-// Native one-time history handoff. Source stays read-only; destination is resumable.
-// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml ../pulse/import-history.bml
-section [form.bml] {
- let cfg = wr-overlay(wr-config(),parse-json("native-history-import",stdin-text()));
- let path = wr-text(cfg,"source");
- wr-text(cfg,"mode") == "part" ? whi-part(cfg,path,wr-number(cfg,"after"),wr-number(cfg,"through")) : wr-text(cfg,"mode") == "statistics" ? json-emit(fp-json(whi-statistics(cfg,sfi-open(path),wr-text(cfg,"organ")))) : json-emit(fp-object(whi-import(cfg,path)));
-}

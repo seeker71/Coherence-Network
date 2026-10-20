@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
 from app.middleware.traceability import traces_to
-from app.services.locale_projection import resolve_caller_lang
 
 from app.models.idea import (
     GovernanceHealth,
@@ -19,7 +18,6 @@ from app.models.idea import (
     IdeaCreate,
     IdeaShowcaseResponse,
     IdeaStage,
-    IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestionAnswerUpdate,
     IdeaSelectionResult,
@@ -53,140 +51,6 @@ from app.services.translate_service import TranslateLens
 from app.models.lens_translation import TranslationRegenerateBody
 
 router = APIRouter()
-
-
-@router.get("/ideas", response_model=IdeaPortfolioResponse, summary="List Ideas")
-@traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
-def list_ideas(
-    request: Request,
-    only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
-    include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
-    limit: int = Query(200, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-    read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
-    sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
-    tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
-    curated_only: bool = Query(False, description="When true, only return the 16 curated super-ideas from ideas/*.md."),
-    pillar: str | None = Query(None, description="Filter by pillar: realization|pipeline|economics|surfaces|network|foundation."),
-    workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
-    lang: str | None = Query(None, description="Target language view. When set and a canonical idea view exists, name/description come from the view."),
-) -> IdeaPortfolioResponse:
-    raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
-    parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
-    resp = idea_service.list_ideas(
-        only_unvalidated=only_unvalidated,
-        include_internal=include_internal,
-        limit=limit,
-        offset=offset,
-        read_only_guard=read_only_guard,
-        sort_method=sort,
-        tags_filter=parsed_tags,
-        curated_only=curated_only,
-        pillar=pillar,
-        workspace_id=workspace_id,
-    )
-    return _apply_lang_views(resp, resolve_caller_lang(request, lang))
-
-
-def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPortfolioResponse:
-    """When a language is requested, substitute each idea's name/description
-    with the canonical view for that lang (if one exists). Ideas without a
-    view in the target language keep the anchor content — the caller can tell
-    which is which via a separate view fetch.
-    """
-    from app.services import translator_service
-    from app.services import translation_cache_service as _tcache
-
-    if not lang or not translator_service.is_supported(lang):
-        return resp
-    # One batched query for the whole listing's canonical views, instead of one
-    # SELECT per idea — the N+1 that made /api/ideas?lang=xx fire up to ~200
-    # queries (limit defaults to 200). Each idea resolves to the SAME record the
-    # per-idea canonical_view returned; the per-idea translate_snippet fallback
-    # below (for ideas without a canonical view) is in-process cached, unchanged.
-    canon = _tcache.canonical_views("idea", [idea.id for idea in resp.ideas], lang)
-    for idea in resp.ideas:
-        rec = canon.get(idea.id)
-        if rec and rec.content_hash:
-            if rec.content_title:
-                idea.name = rec.content_title
-            if rec.content_description and hasattr(idea, "description"):
-                try:
-                    idea.description = rec.content_description
-                except Exception:
-                    pass
-            continue
-        if lang == translator_service.DEFAULT_LOCALE:
-            continue
-        # No canonical view — fall back to live snippet translation so
-        # the listing speaks the viewer's language. Cached in-process.
-        src_title = idea.name or ""
-        src_desc = getattr(idea, "description", "") or ""
-        if src_title or src_desc:
-            t_title, t_desc = translator_service.translate_snippet(
-                src_title, src_desc, source_lang="en", target_lang=lang,
-            )
-            if t_title:
-                idea.name = t_title
-            if t_desc and hasattr(idea, "description"):
-                try:
-                    idea.description = t_desc
-                except Exception:
-                    pass
-    return resp
-
-
-def _reaction_resonance(positive: int, negative: int, excited: int) -> int:
-    """Compose the community's reactions into a felt sense — how warmly the field
-    holds a question (discord-membrane.form: compose). On the Form kernel
-    (endpoint_reaction_resonance.fk)."""
-    from app.services.form_kernel_bridge import serve_via_kernel
-    val, _runtime = serve_via_kernel(
-        "endpoint_reaction_resonance.fk",
-        bindings={"p": positive, "n": negative, "e": excited},
-        parse=int,
-    )
-    return int(val)
-
-
-def _attach_question_votes(idea: IdeaWithScore) -> None:
-    """Let the community's reactions be HEARD on the idea-cell: for each open
-    question, read its stored vote-edges and surface them + the resonance.
-    Without this the votes land in memory and are never heard.
-    (discord-membrane.form: listen → compose → reaches the idea-cell.)"""
-    from app.services import discord_vote_service
-    questions = getattr(idea, "open_questions", None) or []
-    for idx, q in enumerate(questions):
-        try:
-            counts = discord_vote_service.get_counts(idea.id, idx)
-        except Exception:
-            continue
-        if counts.positive or counts.negative or counts.excited:
-            q.votes = {
-                "positive": counts.positive,
-                "negative": counts.negative,
-                "excited": counts.excited,
-            }
-            q.resonance = _reaction_resonance(counts.positive, counts.negative, counts.excited)
-
-
-def _apply_idea_view(idea: IdeaWithScore, lang: str | None) -> IdeaWithScore:
-    """Project a single idea from its canonical entity view when present."""
-    from app.services import translator_service
-    from app.services import translation_cache_service as _tcache
-
-    if not lang or not translator_service.is_supported(lang):
-        return idea
-    rec = _tcache.canonical_view("idea", idea.id, lang)
-    if not rec or not rec.content_hash:
-        return idea
-    if rec.content_title:
-        idea.name = rec.content_title
-    if rec.content_description:
-        idea.description = rec.content_description
-    if rec.content_markdown:
-        idea.content_markdown = rec.content_markdown
-    return idea
 
 
 @router.get("/ideas/tags", response_model=IdeaTagCatalogResponse, summary="Return the normalized idea tag catalog with idea counts (spec 129)")
@@ -327,51 +191,6 @@ async def get_right_sizing_history(
 async def list_ideas_showcase() -> IdeaShowcaseResponse:
     """Funder-facing idea summaries with ask, budget, proof, and status."""
     return idea_service.list_showcase_ideas()
-
-
-@router.get("/ideas/resonance", summary="Return ideas with recent activity, sorted by most-recent-activity-first")
-async def get_resonance(
-    window_hours: int = Query(24, ge=1, le=720),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0, description="Number of items to skip"),
-    lang: str | None = Query(None, description="Target language view — when set, idea names come from canonical views for that lang where available."),
-) -> dict:
-    """Return ideas with recent activity, sorted by most-recent-activity-first."""
-    from app.services import translator_service
-    from app.services import translation_cache_service as _tcache
-    from app.services.idea_views import get_resonance_feed_page
-
-    items, total = get_resonance_feed_page(window_hours=window_hours, limit=limit, offset=offset)
-    if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
-        # One batched query for the whole feed's canonical views instead of one
-        # SELECT per idea — the same N+1 shape /api/ideas?lang=xx had. Each idea
-        # resolves to the SAME record the per-idea canonical_view returned.
-        canon = _tcache.canonical_views(
-            "idea", [it.get("idea_id") or it.get("id") for it in items if (it.get("idea_id") or it.get("id"))], lang
-        )
-        for it in items:
-            iid = it.get("idea_id") or it.get("id")
-            if not iid:
-                continue
-            rec = canon.get(iid)
-            if rec and rec.content_title:
-                it["name"] = rec.content_title
-                if rec.content_description and "description" in it:
-                    it["description"] = rec.content_description
-                continue
-            # Fall through to live snippet translation so the resonance
-            # feed reads in the viewer's tongue.
-            src_title = it.get("name", "")
-            src_desc = it.get("description", "") or ""
-            if src_title or src_desc:
-                t_title, t_desc = translator_service.translate_snippet(
-                    src_title, src_desc, source_lang="en", target_lang=lang,
-                )
-                if t_title:
-                    it["name"] = t_title
-                if t_desc and "description" in it:
-                    it["description"] = t_desc
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse, summary="Return conceptually related ideas, preferring matches from different domains")
@@ -843,19 +662,6 @@ async def get_idea_breath(idea_id: str) -> dict:
     if idea is None:
         raise HTTPException(status_code=404, detail="Idea not found")
     return breath_service.compute_idea_breath(idea_id)
-
-
-@router.get("/ideas/{idea_id}", response_model=IdeaWithScore, summary="Get Idea")
-def get_idea(
-    idea_id: str,
-    request: Request,
-    lang: str | None = Query(None, description="Target language view. When set and a canonical idea view exists, name/description come from the view."),
-) -> IdeaWithScore:
-    idea = idea_service.get_idea(idea_id)
-    if idea is None:
-        raise HTTPException(status_code=404, detail="Idea not found")
-    _attach_question_votes(idea)        # the community's reactions, heard on the idea-cell
-    return _apply_idea_view(idea, resolve_caller_lang(request, lang))
 
 
 @router.post("/ideas", response_model=IdeaWithScore, status_code=201, summary="Create Idea")
