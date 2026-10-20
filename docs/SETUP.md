@@ -4,7 +4,7 @@
 
 - Python 3.13 recommended for compatibility API/tooling; 3.9+ minimum supported
 - Node.js 20+
-- Docker (optional for local Neo4j/Postgres)
+- Docker (optional for local Postgres)
 
 ## Compatibility API Setup
 
@@ -66,7 +66,6 @@ Use the managed-hosting baseline from `docs/DEPLOY.md`:
 - API on Hostinger VPS at `https://api.coherencycoin.com`
 - Web on Hostinger VPS at `https://coherencycoin.com`
 - PostgreSQL as the internal Docker Compose service on the VPS
-- Neo4j on AuraDB Free
 
 For credential carriers and native-kernel DB probes, read
 [`PRODUCTION-SUBSTRATE.md`](PRODUCTION-SUBSTRATE.md).

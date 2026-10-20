@@ -35,7 +35,6 @@ from app.routers import (
     gates,
     governance,
     health,
-    pulse,
     ideas,
     inventory,
     lenses,
@@ -900,7 +899,6 @@ app.include_router(field_relay_router.router, prefix="/api", tags=["field-relay"
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
-app.include_router(pulse.router, prefix="/api", tags=["pulse"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])

@@ -1,0 +1,36 @@
+// One instance breath from current native request and persistence observations.
+// Peer snapshots remain the exact stored observations made by federation polling.
+import native_health.bml;
+section [form.bml] {
+ class NativeInstancePulse {
+  def nip-result(status,body) = record_new(0,"status",status,"body",body);
+  def nip-config(settings) = json-object-get(json-object-has?(settings,"application_config") ? json-object-get(settings,"application_config") : ncf-load(),"federation");
+  def nip-admission(settings) {
+   let cfg = nip-config(settings); let offered = json-emit(json-object-get(cfg,"pulse_enabled"));
+   offered != "true" && offered != "false" ? nip-result(503,"{\"detail\":\"Instance pulse privacy needs its file-backed resource\"}")
+    : offered == "false" ? nip-result(404,"{\"detail\":\"Not Found\"}")
+    : len(trim(ncf-string(cfg,"instance_id"))) == 0 ? nip-result(503,"{\"detail\":\"Instance pulse identity needs its file-backed resource\"}") : nothing();
+  }
+  def nip-self-sql() = nh-sql("ok","jsonb_build_object('resources',jsonb_build_object('native_value_present',EXISTS(SELECT 1 FROM form_values LIMIT 1),'public_native_cell_present',EXISTS(SELECT 1 FROM form_named_values WHERE visibility='public' LIMIT 1),'legacy_cell_present',EXISTS(SELECT 1 FROM substrate_named_cells LIMIT 1)))","");
+  def nip-organ(name,at) = json-node-object([json-node-pair("name",json-node-string(name)),json-node-pair("status",json-node-string("breathing")),json-node-pair("last_breath_at",at),json-node-pair("score",json-node-int(1)),json-node-pair("detail",json-node-null())]);
+  def nip-self(conn,settings,instance) {
+   let began = host_monotonic_ms(); let health = parse-json("native-instance-pulse",nh-observe(conn,nip-self-sql(),nh-parameters(settings))); let stamp = json-object-get(health,"timestamp");
+   json-emit(ncf-merge(health,json-node-object([json-node-pair("instance_id",json-node-string(instance)),json-node-pair("overall",json-node-string("breathing")),json-node-pair("organs",json-node-array(map(name => nip-organ(name,stamp),["api","postgres","substrate"]))),json-node-pair("silences",json-node-int(0)),json-node-pair("as_of",stamp),json-node-pair("sample_duration_ms",json-node-int(host_monotonic_ms() - began))])));
+  }
+  def nip-peer(row) {
+   let value = attempt(parse-json("stored-peer-pulse",row[2]));
+   json-node-object([json-node-pair("peer_instance_id",json-node-string(row[0])),json-node-pair("observed_at",nothing?(row[1]) ? json-node-null() : json-node-string(row[1])),json-node-pair("pulse",nothing?(value) ? json-node-null() : value),json-node-pair("care",json-node-string(nothing?(value) ? "Stored peer pulse needs a readable JSON observation" : ""))]);
+  }
+  def nip-peers(conn,instance) {
+   let rows = npg-query(conn,"SELECT peer_instance_id,to_char(observed_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'),last_pulse_json FROM peer_pulse_records ORDER BY observed_at DESC,peer_instance_id",[])[1];
+   json-emit(json-node-object([json-node-pair("instance_id",json-node-string(instance)),json-node-pair("runtime",json-node-string("fkwu")),json-node-pair("persistence",json-node-string("native-postgres")),json-node-pair("peers",json-node-array(map(row => nip-peer(row),rows))),json-node-pair("count",json-node-int(len(rows)))]));
+  }
+  def nip-project(conn,name,settings) {
+   let admitted = nip-admission(settings);
+   !nothing?(admitted) ? admitted : {
+    let instance = ncf-string(nip-config(settings),"instance_id");
+    name == "instance-pulse" ? nip-result(200,nip-self(conn,settings,instance)) : name == "peer-pulses" ? nip-result(200,nip-peers(conn,instance)) : form_error("native instance pulse has no source owner: " ++ name);
+   };
+  }
+ }
+}

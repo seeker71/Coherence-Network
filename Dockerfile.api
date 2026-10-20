@@ -69,7 +69,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# OS deps for PostgreSQL drivers, neo4j, healthchecks, and shell utilities.
+# OS deps for PostgreSQL drivers, healthchecks, and shell utilities.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl \
@@ -91,10 +91,11 @@ COPY --from=kernel-builder /build/form-cli.sym /app/form/form-cli.sym
 COPY --from=kernel-builder /build/form-cli.native.attestation /app/form/form-cli.native.attestation
 COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id
 COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
-# The image's stdlib is /app/form/form-stdlib, so its source home is /app:
-# source-compiler resolves runtime/fkwu-optable.h beside that form/ directory.
-COPY form/runtime /app/runtime
-COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form-stdlib/
+# Preserve the pinned source home's native layout. Reusable workspace modules
+# reach control/ and both stdlib spellings without aliases or duplicated trees.
+COPY form/runtime /app/form/runtime
+COPY form/control /app/form/control
+COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-stdlib/
 RUN mkdir -p /app/bin \
  && ln /app/form/form-cli /app/bin/form-cli \
  && ln /app/form/form-cli.fkb /app/bin/form-cli.fkb \
@@ -107,6 +108,8 @@ RUN mkdir -p /app/bin \
 # API source. The api/ dir is the package root inside the container; the
 # Procfile uses `app.main:app` so /app needs to BE the api directory contents.
 COPY api/ ./
+# Runtime identity is immutable image data, separate from live operator config.
+RUN printf '{"deployed_sha":"%s","form_sha":"%s"}\n' "$COHERENCE_SOURCE_SHA" "$COHERENCE_FORM_SHA" > /app/config/image_identity.json
 # The native owner loads immutable images in its own file-backed runtime context.
 RUN --mount=type=tmpfs,target=/dev/shm cd /app/form \
  && cp /app/config/fkwu.conf ./fkwu.conf \

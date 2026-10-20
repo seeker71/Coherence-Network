@@ -1,8 +1,10 @@
 // Persistence care for the live projection shapes, not a request-time discovery pass.
 import postgres.bml;
+import native_substrate.bml;
 section [form.bml] {
  class NativeApiPreparation {
   def nap-prepare(conn) {
+   let values = nsub-prepare(conn);
    let indexes = map(sql => npg-query(conn,sql,[]),[
    "CREATE INDEX CONCURRENTLY IF NOT EXISTS graph_nodes_native_recent ON graph_nodes (updated_at DESC,id)",
    "CREATE INDEX CONCURRENTLY IF NOT EXISTS graph_nodes_native_workspace_kind ON graph_nodes ((COALESCE(properties->>'workspace_id','coherence-network')),type,updated_at DESC,id)"

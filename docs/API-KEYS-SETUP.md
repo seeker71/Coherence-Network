@@ -153,9 +153,6 @@ OLLAMA_BASE_URL=http://localhost:11434
 # PERPLEXITY_API_KEY=
 
 # Database (when needed)
-# NEO4J_URI=
-# NEO4J_USER=
-# NEO4J_PASSWORD=
 # DATABASE_URL=
 ```
 
