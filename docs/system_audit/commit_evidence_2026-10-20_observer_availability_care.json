@@ -1,0 +1,23 @@
+{
+  "date":"2026-10-20",
+  "thread_branch":"codex/native-probe-owners-20261020",
+  "commit_scope":"Retire historical audit assertions from the explicitly requested deployment observation workflow before pinning its native probe owner.",
+  "change_intent":"runtime_fix",
+  "idea_ids":["pipeline-reliability"],
+  "spec_ids":["fkwu-native-host-resources"],
+  "task_ids":["native-probe-owner-observer-prerequisite"],
+  "contributors":[{"contributor_id":"openai-codex","contributor_type":"machine","roles":["source repair"]}],
+  "agent":{"name":"OpenAI Codex","version":"exact-serving-model-variant-not-exposed"},
+  "files_owned":[".github/workflows/public-deployment-observer.yml"],
+  "change_files":[".github/workflows/public-deployment-observer.yml"],
+  "evidence_refs":[
+    "Only six obsolete integrity_verified/integrity_compromised/schema_ok projection fields are deleted from the explicit workflow. OIDC identity, immutable workflow source, exact target SHA, one-use nonce and actual native kernel/CLI artifact challenge remain.",
+    "This is a source prerequisite: its merged workflow revision is pinned by the following application release. No routine observer or kernel validation is run. Normal deployment does not call this independent reproduction workflow.",
+    "Source/diff observation establishes the deletion. No host implementation is added. OpenAI supplied reasoning; native runtime observations belong the subsequent changed application claim, not this deletion."
+  ],
+  "local_validation":{"status":"pass","summary":"Exact six-field deletion; source/diff read, no new host-language implementation."},
+  "ci_validation":{"status":"pending","summary":"Read relevant review/check findings on this exact source."},
+  "deploy_validation":{"status":"pending","environment":"Hostinger","summary":"Workflow-only prerequisite has no application deployment; next native release pins its merged source."},
+  "e2e_validation":{"status":"pending","expected_behavior_delta":"Explicit reproduction compares current native carrier evidence, without requiring routine historical audit assertions.","public_endpoints":["https://api.coherencycoin.com/api/health"],"test_flows":["Source identity retained; native owner pin follows"]},
+  "phase_gate":{"can_move_next_phase":false,"blocked_reason":"This source prerequisite is not the completed native application rollout; the following release supplies that observation."}
+}
