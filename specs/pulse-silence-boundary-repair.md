@@ -6,8 +6,6 @@ source:
     symbols: [ws-changes, ws-now, ws-history]
   - file: pulse/native-store.bml
     symbols: [nw-commit, nw-recover]
-  - file: pulse/import-history.bml
-    symbols: [whi-import, whi-resume]
   - file: pulse/probe.bml
     symbols: [wp-round, wp-sample]
   - file: pulse/http.bml
@@ -24,12 +22,12 @@ requirements:
   - "R2: Closure preserves the re_enter choice, evidence count and window in silences.note."
   - "R3: GET /pulse/now reconciles durable evidence before returning unresolved silences."
   - "R4: An unresolved silence keeps overall at least strained; a silent severity keeps it silent."
-  - "R5: Existing sample history, silence IDs and notes persist through native deployment."
+  - "R5: Native Recipe pages and journals own persistence and startup recovery."
   - "R6: Native HTML carries the current snapshot, daily evidence and complete silence/repair disclosures without a host web renderer or hydration payload."
   - "R7: Durable daily cards and exact range summaries retain direct-history counts and nearest-rank percentiles through publication and recovery."
 done_when:
   - "The focused native application observation witnesses opening, closure, exact percentile ranks and idempotent recovery on a separate native store."
-  - "The running native HTTP boundary returns current organs, history and silence receipts with the existing public shapes."
+  - "The running native HTTP boundary returns current organs and their native evidence."
 test: "cd form && ./fkwu ../pulse/observe.bml < a-private-fixture-config.json"
 constraints:
   - "Implementation stays in application-owned Form/BML on the unchanged pinned fkwu."
@@ -61,11 +59,10 @@ samples and the original silence IDs remain authoritative.
 
 The focused application observation uses a separate native store, witnesses opening
 and closure with their receipt, reads 1/7/30/90/180-day histories, and observes
-idempotent journal replay with a retained torn tail. Native file-format import keeps
-every raw row, original ID and note; startup completes the final live delta before
-archiving the legacy files. Native Recipe pages and transaction frames own ongoing
-persistence. Deployment observes the real HTTP contract against the private archive
-before switching onto the original volume. A changed application boundary does not
+idempotent journal replay with a retained torn tail. The completed SQLite import
+path is retired. Native Recipe pages and transaction frames own persistence;
+startup opens and recovers them directly. Deployment observes the changed native
+boundary without a legacy contract or routine archive-parity gate. A changed application boundary does not
 call for kernel or sibling-kernel suites.
 
 The public web page is a Form/BML read over that same checkpoint. Native escaped

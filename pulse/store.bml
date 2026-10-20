@@ -1,12 +1,12 @@
 // Pulse specializes the native persistence, repair and weighted-history templates.
 import ../pulse/native-store.bml;
-import ../pulse/import-history.bml;
 section [form.bml] {
  class WitnessStore {
   def ws-organs() = node_children(parse-json("pulse-organs",read_file("../pulse/organs.json")));
   def ws-empty(cfg) = nw-create(cfg);
   def ws-start(cfg) {
-   let meta = whi-start(cfg);
+   let opened = nw-create(cfg);
+   let recovered = nw-recover(cfg);
    let indexed = nw-index-ensure(cfg,ws-organs());
    let fresh = fp-set(indexed,"started_at",now_unix_ms());
    let saved = fp-write(nw-path(cfg,"state.fkb"),fresh);

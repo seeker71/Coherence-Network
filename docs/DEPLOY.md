@@ -120,12 +120,10 @@ supplies the fkwu shared-memory resource. Image assembly realizes application BM
 once on native tmpfs, and requests reuse those images. Pulse's socket listener,
 TLS probes, cadence, persistence and query/repair templates are BML on the pinned
 fkwu. Native Recipe pages and checksummed transaction logs replace the SQLite
-engine. For a legacy volume, prepare its immutable base snapshot with
-`pulse/migrate.bml` while the old witness stays live. Startup imports the final
-row-ID delta and refreshed silence receipts, then archives the legacy files in
-the same volume. Keep the volume and private recovery snapshot intact. All history
-persists; public read windows do not delete records. Follow an actual persistence
-finding with its smallest fixture or archive-backed observation, not kernel suites.
+engine. The completed SQLite importer and its startup/configuration path are
+retired. Startup opens and recovers native pages directly. Private snapshots are
+available recovery resources, not routine release gates. Follow an actual
+persistence finding with its smallest native observation, not kernel suites.
 
 The `/pulse` web route belongs to that same native owner. Compose care gives its
 exact path on the existing web hosts priority over the Next.js router,

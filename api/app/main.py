@@ -106,7 +106,6 @@ from app.routers import investments as investments_router
 from app.routers import gatherings as gatherings_router
 from app.routers import presence_resonance as presence_resonance_router
 from app.routers import places as places_router
-from app.routers import vitality as vitality_router
 from app.middleware.attribution import AttributionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.read_tracking import ReadTrackingMiddleware
@@ -982,8 +981,6 @@ app.include_router(models_router.router, prefix="/api", tags=["models"])
 # Constellation view — network graph visualization data
 app.include_router(constellation_router.router, prefix="/api", tags=["constellation"])
 
-# Workspace vitality — living-system health metrics
-app.include_router(vitality_router.router, prefix="/api", tags=["vitality"])
 
 # Cross-domain resonance (CRK) endpoints
 from app.routers import resonance as resonance_router  # noqa: E402
