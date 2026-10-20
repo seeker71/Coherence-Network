@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The root cause of today's outage, reproduced in a probe build of b9527a577 and healed: the kernel bridge's candidate list did not name the image's kernel root, so with #4117's whole source home (/app/form/form/form-stdlib) every candidate missed and fkwu ran from `/`; the bridge now names /app/form, and the contract test holds the image's layout and the three layouts the bridge must answer.",
+  "files_owned": ["api/app/services/form_kernel_bridge.py", "api/tests/test_api_dockerfile_contract.py"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["api-import-time-kernel-call"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["reproduce", "root cause", "heal"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Probe on the VPS (image of b9527a577 built under the tag probe-b95, never deployed): inside it `/app/form/form-stdlib` is absent and `/app/form/form/form-stdlib/core.fk` present; from /app/form a BML program with `// preludes: form/form-stdlib/core.fk` answers 0 and `scripts/fkwu_run.sh --src anonymous_trace_query.bml` prints the SQL; `python -c 'import app.services.anonymous_meeting_trace_service'` still fails with `BML contract source unavailable: form/form-stdlib/core.fk`. So the bridge was not running fkwu from /app/form.",
+    "Read in api/app/services/form_kernel_bridge.py: `_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent` — the repo root in a checkout (api/app/services → repo), but `/` inside the image, where the module sits at /app/app/services. `_form_source_parent()` tried /app, / and /form for a `form/form-stdlib` child; before #4117 /app matched (the stdlib lay flat at /app/form/form-stdlib); after it nothing matched and the function fell back to `/`, so fkwu resolved the prelude as /form/form-stdlib/core.fk.",
+    "Heal: `/app/form` (the image's kernel root) is named among the candidates; the docstring says why the repo-root arithmetic cannot stand for it. test_kernel_bridge_runs_fkwu_from_the_image_kernel_root stages the whole source home, the earlier flat layout and a checkout under tmp_path and asserts the bridge's answer for each; the Dockerfile assertions follow #4117's layout (form/runtime → /app/form/runtime, the stdlib under /app/form/form/form-stdlib). tests/test_api_dockerfile_contract.py: 13 passed.",
+    "Live between the two heals: after #4122 rolled out (api healthy, 0 tracebacks) /api/health and /api/ready answered 404 — #4117 moved them to the native container and left the route published pending. Applied the body's own door from a clean checkout of main: deployment_compose_care.bml, mode observe (plan idempotent, native rule carries /api/health, /api/ready, /api/pulse/*, /api/substrate/*, /api/ideas, /api/graph/nodes), then activate [\"native-api\"] → status applied. Edge after: /api/health 200 and /api/ready 200 from runtime fkwu, /api/ping 200, /api/news/feed 200, witness with every organ breathing (09:49 UTC).",
+    "The Hostinger run for #4122 reports failure only because its post-rollout public check hit /api/health during the window before the native route was activated; the VPS log reads `Deploy complete (3181b92eec42)`."
+  ],
+  "change_files": ["api/app/services/form_kernel_bridge.py", "api/tests/test_api_dockerfile_contract.py", "docs/system_audit/commit_evidence_2026-10-20_bridge_names_the_image_kernel_root.json"],
+  "local_validation": {"status": "pass", "summary": "13 contract tests pass including the three-layout bridge claim; the probe image reproduced the failure and the reading of the bridge explains it exactly."},
+  "ci_validation": {"status": "pending", "summary": "The PR's checks run; the rollout that follows is the observation."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Production serves 3181b92ee with the native health route active; this merge rolls the bridge fix forward."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "The trace route serves its kernel-authored query inside the image; a module-level kernel call would no longer run from `/`.", "public_endpoints": ["https://api.coherencycoin.com/api/ping", "https://api.coherencycoin.com/api/health"], "test_flows": ["curl -s https://api.coherencycoin.com/api/ping", "docker exec coherence-network-api-1 python -c 'from app.services.anonymous_meeting_trace_service import _anonymous_trace_query; print(_anonymous_trace_query()[:40])'"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The rollout after merge is the live check."}
+}
