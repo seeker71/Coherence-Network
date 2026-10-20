@@ -37,6 +37,11 @@ waves, preserving the owner's existing public identity and actual tool scope.
   skills-only plugin version, keeping optional MCP separate.
 - [x] R5: Inspect publishing access; publish/submit where authorized and available.
   Keep npm, directory, GPT, server and migration outcomes distinct.
+- [ ] R6: Carry the existing portable session-brief practice into the GPT.
+  Observe a handoff of the actual creative artifact into a fresh chat, a changed
+  constraint and a revised brief without false memory or erasure claims.
+  Publication and supervised recovery are complete; first-pass fidelity and
+  retention explanations failed in the observed wave, so this remains open.
 
 ## Implementation Plan
 
@@ -50,6 +55,10 @@ waves, preserving the owner's existing public identity and actual tool scope.
 4. Record observed outcomes, merge source/profile/evidence, release the reviewed
    versioned bundle and verify downloads. Keep external account verification or
    required owner action as a concrete continuation.
+5. Reuse the existing session-brief contract for user-controlled continuity.
+   Publish and read back the narrow instruction change, then check the current
+   flyer through a fresh-chat continuation. Preserve the original artifact and
+   record any excess or failure without claiming general superiority.
 
 ## Files to Create/Modify
 
@@ -60,6 +69,8 @@ waves, preserving the owner's existing public identity and actual tool scope.
 - `docs/front-door/connectors.md`: easy existing-GPT entry and release guidance.
 - `specs/companion-gpt-rollout.md`: the bounded rollout and observed waves.
 - `docs/system_audit/`: minimal fictional results, publication evidence and ledger.
+- `form` gitlink: landed canonical GPT instructions, with kernel dependencies
+  merged before the parent pin.
 
 ## Acceptance Tests
 
@@ -74,6 +85,9 @@ waves, preserving the owner's existing public identity and actual tool scope.
   published chat, source-only review and independent recipient access.
 - Directory lengths/icon formats meet current official requirements and archive
   bytes match source; a public release is not directory approval.
+- A portable brief carries the supplied current artifact and useful settled
+  constraints into a fresh conversation. A changed request is incorporated;
+  removing a detail from the brief does not imply erasing chat history.
 
 ## Verification
 
@@ -116,6 +130,11 @@ are separate. A skills-only directory listing cannot currently add MCP later.
   chooses. No directory submission or approval is claimed.
 - Follow-up task: prove native Action-equivalent remote MCP lifecycle before any
   GPT migration; preserve private memory as a separately authenticated capability.
+- Continuity wave completed as a bounded observation: kernel PR621 published and
+  read back at 6,867 characters; corrected handoff matched the actual flyer and
+  enabled fresh-chat revision. First handoff reordered content, and an unverified
+  retention explanation required correction. First-pass reliability and use by
+  an independent recipient remain unproved; see the observation record.
 
 ## See also
 

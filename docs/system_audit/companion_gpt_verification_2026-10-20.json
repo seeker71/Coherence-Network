@@ -2,10 +2,10 @@
   "date": "2026-10-20",
   "gpt_url": "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625",
   "published_readback": {
-    "observed_at": "2026-10-20T06:21:13.843Z",
-    "source_commit": "4dc779937c7f01297123c12a272a4f5c174b9cc3",
+    "observed_at": "2026-10-20T06:53:03.876Z",
+    "source_commit": "682f7fc03db41bee13cf3402035037d88141efb2",
     "instructions_equal": true,
-    "instruction_length": 5857,
+    "instruction_length": 6867,
     "published_everyone": true,
     "unpublished_changes": false,
     "profile_equal": true,
@@ -13,7 +13,7 @@
     "action_equal": true,
     "authentication_none": true
   },
-  "instruction_sha256": "d86a50543743f7dc1e685202d068f35878ce6a568c86a3276cb7e5afc89012a3",
+  "instruction_sha256": "f594de7b1e390f8271e72e97d5a650d426808b18c51a75f8ce7550e878a42f71",
   "observation_type": "Actual hosted conversations with fictional inputs; owner-account UI, not independent recipient access.",
   "waves": [
     {
@@ -36,6 +36,18 @@
       "purpose": "Collaboration: preserve different intentions, do not invent agreement or others’ commitments, honor pause.",
       "result": "Two fox-story endings retained. Unsolicited web illustrations removed after steering. Silence did not become agreement; illustrator role remained unconfirmed. Final in-chat brief left both endings open and no role assigned.",
       "limit": "First reply added unnecessary external illustrations; restraint remains an observed improvement opportunity."
+    },
+    {
+      "purpose": "Continuity: preserve the actual approved flyer in a portable handoff and resume with changed preferences in a fresh chat.",
+      "source_commit": "682f7fc03db41bee13cf3402035037d88141efb2",
+      "initial": "Handoff silently reversed the come-late and nobody-has-to-show lines; no additional external write was observed, but Nothing saved or sent was overbroad.",
+      "recovery": "After explicit challenge and visible analysis step, extracted current flyer text plus terminal newline exactly matched the prior276-byte download.",
+      "fresh_chat": "Corrected handoff supplied explicitly. Watching counts replaced Or just bring yourself; tea removed; remaining wording and order preserved.",
+      "format": "Literal Markdown with Copy code appeared after a further request; flattened accessibility text does not establish final exported bytes.",
+      "retention_initial": "Correctly said earlier conversation unchanged, then supplied unverified account-specific guidance implying fuller removal.",
+      "retention_recovery": "After challenge, stated that only the handoff changed; no earlier content, files, memories or retained data deleted; account controls uninspected; removal from any system unverified. Stopped after two sentences.",
+      "result": "Useful supervised continuation; first-pass fidelity and retention criterion remains failed/open.",
+      "limit": "No automatic memory, independent recipient use, causal improvement or superiority to ordinary ChatGPT established."
     }
   ],
   "distribution": {
@@ -54,5 +66,19 @@
     "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
   },
   "native_boundary": "Host composed these replies. No native generation, native sufficiency, task-specific rent reduction or universal privacy claimed.",
-  "retention": "Private account snapshots and recovery copies remain outside git. Public evidence includes only fictional cases and bounded observations."
+  "retention": "Private account snapshots and recovery copies remain outside git. Public evidence includes only fictional cases and bounded observations.",
+  "prior_published_readbacks": [
+    {
+      "observed_at": "2026-10-20T06:21:13.843Z",
+      "source_commit": "4dc779937c7f01297123c12a272a4f5c174b9cc3",
+      "instructions_equal": true,
+      "instruction_length": 5857,
+      "published_everyone": true,
+      "unpublished_changes": false,
+      "profile_equal": true,
+      "capabilities_enabled": true,
+      "action_equal": true,
+      "authentication_none": true
+    }
+  ]
 }
