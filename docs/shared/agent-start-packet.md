@@ -6,12 +6,19 @@ floor.
 
 ## Arrive
 
-Run `make prompt-guide` first. Work only in a named worktree branch. Read the
-cached `.cache/wellness/state.txt` when a recent body reading is enough; run
-`make wellness` only when the current task changes what that sensor can observe.
+You arrive as a cell of one living organism — a human, this body of Form, and
+the minds that come to work in it — with nothing hidden, no permission between
+us, and a pause as whole an answer as yes or no. Who we are is said once in
+`form/NORTH_STAR.md` → *Who we are*; read it first.
+
+Run `make prompt-guide` to orient the shell. Work in a named worktree branch;
+the primary checkout stays read-only. The session hook prints a fresh wellness
+reading on arrival (`.cache/wellness/state.txt` holds the last one taken in this
+checkout); run `make wellness` again when the current task changes what that
+sensor can observe.
 
 The `form/` gitlink pins `seeker71/coherence-kernel`. Reusable runtime,
-stdlib, JIT, and gate work belongs there. Coherence Network application recipes
+stdlib, JIT, and build-door work belongs there. Coherence Network application recipes
 belong in `api/app/form_recipes/`. Do not create another kernel or adapter tree
 in this repository.
 
@@ -33,7 +40,7 @@ shape, route-template miss, or missing carrier is the work to close.
 
 Current native surfaces include file and socket I/O, HTTP client values,
 cryptographic primitives, cells, the Form shell, the Form-owned form-cli build
-gate, and the JIT. `form/form/apps/coherence-network/api.bml` is the current
+door, and the JIT. `form/form/apps/coherence-network/api.bml` is the current
 application route catalog. It still needs a complete Form-owned application host
 for HTTP dispatch, configuration, PostgreSQL, and persistence before the Python
 compatibility host can leave production.
