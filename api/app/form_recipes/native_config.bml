@@ -1,0 +1,31 @@
+// File-backed resource descriptions; credentials remain values inside the owner.
+import form-stdlib/json.fk;
+import form-stdlib/line-grammar.fk;
+section [form.bml] {
+ class NativeConfig {
+  def ncf-string(doc,key) = json-string-value(json-object-get(doc,key)) ?? "";
+  def ncf-merge(base,over) = json-node-object(append(map(pair => {
+   let key = json-pair-key(pair); let old = json-pair-value(pair); let next = json-object-get(over,key);
+   !json-object-has?(over,key) ? pair : json-node-pair(key,node_eq(node_category(old),JSON-OBJECT()) && node_eq(node_category(next),JSON-OBJECT()) ? ncf-merge(old,next) : next);
+  },node_children(base)),filter(pair => !json-object-has?(base,json-pair-key(pair)),node_children(over))));
+  def ncf-file(path) = parse-json(path,read_file(path) ?? "{}");
+  def ncf-load() = ncf-merge(ncf-file("../config/api.json"),ncf-file("/root/.coherence-network/config.json"));
+  def ncf-unhex(b) = b>=48 && b<=57 ? b - 48 : b>=65 && b<=70 ? b - 55 : b>=97 && b<=102 ? b - 87 : form_error("resource URI has an invalid escape");
+  def ncf-decode(s,at,parts) = at>=len(s) ? str-spans(reverse(parts)) : substring(s,at,at+1) != "%" ? ncf-decode(s,at+1,cons(substring(s,at,at+1),parts)) : at+2>=len(s) ? form_error("resource URI has an incomplete escape") : ncf-decode(s,at+3,cons(byte_to_str(ncf-unhex(str_byte_at(s,at+1))*16+ncf-unhex(str_byte_at(s,at+2))),parts));
+  def ncf-uri(s) = ncf-decode(s,0,[]);
+  def ncf-postgres(doc) {
+   let url = ncf-string(json-object-get(doc,"database"),"url"); let scheme = str_find(url,"://",0);
+   scheme<0 ? form_error("database resource URI is absent") : {
+    let rest = substring(url,scheme+3,len(url)); let slash = str_find(rest,"/",0); let authority = substring(rest,0,slash); let ats = split-on(authority,"@");
+    len(ats)<2 || slash<0 ? form_error("database resource URI is incomplete") : {
+     let endpoint = reverse(ats)[0]; let identity = substring(authority,0,len(authority) - len(endpoint) - 1); let colon = str_find(identity,":",0);
+     let ipv6 = str_find(endpoint,"[",0) == 0; let end = ipv6 ? str_find(endpoint,"]",0) : str_find(endpoint,":",0);
+     let host = end<0 ? endpoint : substring(endpoint,ipv6 ? 1 : 0,end); let port_at = end<0 ? -1 : end+(ipv6 ? 1 : 0);
+     let port = port_at>=0 && substring(endpoint,port_at,port_at+1) == ":" ? str_to_int(substring(endpoint,port_at+1,len(endpoint))) : 5432;
+     let database = ncf-uri(split-on(substring(rest,slash+1,len(rest)),"?")[0]);
+     colon<0 ? form_error("database resource identity is incomplete") : json-node-object([json-node-pair("host",json-node-string(host)),json-node-pair("port",json-node-int(port)),json-node-pair("user",json-node-string(ncf-uri(substring(identity,0,colon)))),json-node-pair("password",json-node-string(ncf-uri(substring(identity,colon+1,len(identity))))),json-node-pair("database",json-node-string(database))]);
+    };
+   };
+  }
+ }
+}
