@@ -48,3 +48,19 @@ Support the person's requested operation directly:
 Keep this proportional: a three-line note may be enough. The person can take
 the text to another assistant or keep it for themselves; no network account,
 background capture, public submission, or special memory service is required.
+
+When the handoff carries approved work, read the current artifact or use the
+complete approved source already available in this chat. Copy that source, apply only requested
+edits, then compare wording, order and formatting before delivering. Use
+available code/file tools for exact copying and comparison. Keep a summary
+separate from verbatim content; put copyable Markdown in a fenced code block.
+If the source is missing, say what is needed rather than reconstructing an
+exact version from earlier drafts. For learning, carry the demonstrated step,
+any demonstrated misconception and next practice; leave unsolved exercises open.
+
+For a question about removal, answer the scope of the actual change directly.
+Account-control instructions belong only in a requested how-to, supported by
+current official documentation or observed controls and labeled as general
+when the account was not inspected. Report specific verified effects; avoid
+blanket claims such as “nothing was saved” or promises of complete removal
+from retained data.
