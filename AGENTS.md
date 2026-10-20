@@ -48,7 +48,7 @@ The operational guide below gives the next-command shape for shipping safely. Th
 
 ## Project Summary
 
-Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → `fkwu` JIT realization → observed route/runtime proof. Retired carriers are bootstrap history, not siblings or validation authorities. The current application still includes Next.js, PostgreSQL, Neo4j, and a Python compatibility host while their live seams move into Form/BML.
+Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → `fkwu` JIT realization → observed route/runtime proof. Retired carriers are bootstrap history, not siblings or validation authorities. The current application still includes Next.js, PostgreSQL, and a Python compatibility host while their live seams move into Form/BML.
 
 ## Workflow
 
@@ -326,7 +326,7 @@ Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying
 - Repo `.sh` scripts run through Git Bash at `C:\Program Files\Git\bin\bash.exe`; the Makefile startup targets call it automatically.
 - `ruff` is not listed in `pyproject.toml` dev dependencies and `make lint` needs it in the API venv.
 - `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
-- No external databases (PostgreSQL, Neo4j) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
+- No external databases (PostgreSQL) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
 - Lint runs with: `cd api && .venv/bin/ruff check .`
 - The API reads `~/.coherence-network/config.json` → `api/config/api.json` (provider keys, Telegram, executors, costs); `api/.env.example` only feeds external CLIs such as Cursor. The web carrier takes `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` for a local API.

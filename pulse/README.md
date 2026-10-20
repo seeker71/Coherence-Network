@@ -3,7 +3,7 @@
 Pulse runs reusable BML templates through the pinned fkwu native source/JIT door.
 It observes the public API and web origins, remembers every sample in native Form
 Recipe pages, derives silence receipts, and serves the existing read-only JSON API.
-Its process and storage stay independent of the API, PostgreSQL and Neo4j. The
+Its process and storage stay independent of the API and PostgreSQL. The
 public `/pulse` page is served directly by the same native read owner.
 
 ## The living surface

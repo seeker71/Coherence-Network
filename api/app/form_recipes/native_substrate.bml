@@ -1,0 +1,102 @@
+// Public source meaning and substrate observation on the native application
+// owner. Legacy lattice rows are read projections, never a second live writer.
+import native_named_persistence.bml;
+import native_http.bml;
+section [form.bml] {
+ let NSUB-PAGES = ncf-file("../app/data/web_routes.json");
+ class NativeSubstrate {
+  def nsub-prepare(conn) = nnp-prepare(conn);
+  def nsub-parts(path) = filter(part => len(part)>0,split-on(split-on(split-on(path,"?")[0],"#")[0],"/"));
+  def nsub-dynamic(part) = len(part)>2 && substring(part,0,1) == "[" && substring(part,len(part) - 1,len(part)) == "]";
+  def nsub-optional(part) = str_find(part,"[[...",0) == 0;
+  def nsub-catchall(part) = str_find(part,"[...",0) == 0 || nsub-optional(part);
+  def nsub-matches(pattern,actual) = nil?(pattern) ? nil?(actual) : nil?(actual) ? nsub-optional(pattern[0]) && len(pattern) == 1 : nsub-catchall(pattern[0]) ? len(pattern) == 1 : (nsub-dynamic(pattern[0]) || pattern[0] == actual[0]) && nsub-matches(pattern[1:],actual[1:]);
+  def nsub-preferred(left,right) = nil?(right) ? !nil?(left) : nil?(left) ? false : nsub-dynamic(left[0]) != nsub-dynamic(right[0]) ? !nsub-dynamic(left[0]) : nsub-catchall(left[0]) != nsub-catchall(right[0]) ? !nsub-catchall(left[0]) : nsub-preferred(left[1:],right[1:]);
+  def nsub-source(manifest,route) {
+   let routes = json-object-get(manifest,"routes"); let parts = nsub-parts(route);
+   let matches = filter(pair => nsub-matches(nsub-parts(json-pair-key(pair)),parts),node_children(routes));
+   nil?(matches) ? nothing() : json-string-value(json-pair-value(foldl((best,next) => nsub-preferred(nsub-parts(json-pair-key(next)),nsub-parts(json-pair-key(best))) ? next : best,matches[0],matches[1:])));
+  }
+  def nsub-manifest() = NSUB-PAGES;
+  def nsub-node-sql(alias) = "CASE WHEN " ++ alias ++ ".node_id IS NULL THEN NULL ELSE jsonb_build_object('package'," ++ alias ++ ".package,'level'," ++ alias ++ ".level,'type'," ++ alias ++ ".type,'instance'," ++ alias ++ ".instance) END";
+  def nsub-cell-select() = "SELECT c.cell_id,c.name,c.domain,c.source_path,c.blueprint_node_id,jsonb_build_object('cell_id',c.cell_id,'name',c.name,'domain',c.domain,'source_path',c.source_path,'blueprint'," ++ nsub-node-sql("bp") ++ ",'base'," ++ nsub-node-sql("base") ++ ",'access'," ++ nsub-node-sql("access") ++ ",'ctor'," ++ nsub-node-sql("ctor") ++ ") AS value FROM substrate_named_cells c JOIN substrate_nodes bp ON bp.node_id=c.blueprint_node_id LEFT JOIN substrate_nodes base ON base.node_id=c.base_node_id LEFT JOIN substrate_nodes access ON access.node_id=c.access_recipe_node_id LEFT JOIN substrate_nodes ctor ON ctor.node_id=c.ctor_recipe_node_id";
+  def nsub-legacy-open() = "NOT EXISTS(SELECT 1 FROM form_named_values n WHERE n.domain=c.domain AND n.name=c.name)";
+  def nsub-page-sql() = "WITH source AS MATERIALIZED (" ++ nsub-cell-select() ++ " WHERE (c.source_path=$1 OR (c.domain='artifact' AND c.name=$1)) AND " ++ nsub-legacy-open() ++ " ORDER BY (c.domain='artifact') DESC,c.cell_id LIMIT 1), cohort AS (SELECT value,name FROM (" ++ nsub-cell-select() ++ " WHERE c.domain='artifact' AND right(c.name,4)='.tsx' AND c.name<>$1 AND " ++ nsub-legacy-open() ++ " AND EXISTS(SELECT 1 FROM source) ORDER BY c.name LIMIT NULLIF($3::bigint,0)) c) SELECT jsonb_build_object('route',$2::text,'source_path',$1::text,'in_substrate',EXISTS(SELECT 1 FROM source),'source',(SELECT value FROM source),'twins',COALESCE((SELECT jsonb_agg(value ORDER BY name) FROM cohort),'[]'::jsonb),'twins_count',(SELECT count(*) FROM cohort),'twins_kind','tsx','kind','tsx','note',CASE WHEN EXISTS(SELECT 1 FROM source) THEN NULL ELSE 'Page source is available; its artifact has not been placed in the substrate' END,'runtime','fkwu')::text";
+  def nsub-page(conn,request,settings) {
+   let route = nha-value(request,"route","/"); let path = nsub-source(nsub-manifest(),route);
+   nothing?(path) ? json-emit(json-node-object([json-node-pair("route",json-node-string(route)),json-node-pair("source_path",json-node-null()),json-node-pair("in_substrate",json-node-bool(false)),json-node-pair("note",json-node-string("No page source resolves for this route")),json-node-pair("runtime",json-node-string("fkwu"))])) : npg-query(conn,nsub-page-sql(),[path,route,nha-number(request,"limit",24)])[1][0][0];
+  }
+  def nsub-kernel-status() {
+   let process = host_process(host_pid()); let binary = "/app/form/fkwu"; let mode = host_file_mode(binary);
+   let exists = mode>=0; let executable = exists && ((mode%2) == 1 || ((mode/8)%2) == 1 || ((mode/64)%2) == 1);
+   let identity = ncf-file("../config/image_identity.json");
+   json-emit(json-node-object([json-node-pair("active",json-node-string("fkwu")),json-node-pair("execution",json-node-string("page-jit")),json-node-pair("binary_available",json-node-bool(executable)),json-node-pair("available",json-node-bool(executable)),json-node-pair("binary_path",json-node-string(binary)),json-node-pair("pid",json-node-int(host_pid())),json-node-pair("process_observed",json-node-bool(value_kind(process) == "list")),json-node-pair("deployed_sha",json-node-string(ncf-string(identity,"deployed_sha"))),json-node-pair("form_sha",json-node-string(ncf-string(identity,"form_sha")))]));
+  }
+  def nsub-public-name(text) = len(trim(text))>0 && all?(i => str_byte_at(text,i)>=32 && str_byte_at(text,i) != 127,range(0,len(text)));
+  def nsub-frontmatter(content) {
+   let lines = split-on(content,"\n"); let ends = filter(i => i>0 && (trim(lines[i]) == "---" || trim(lines[i]) == "..."),range(0,len(lines)));
+   nil?(lines) || trim(lines[0]) != "---" || nil?(ends) ? [] : map(line => { let at = str_find(line,":",0); at<0 ? ["",""] : [trim(substring(line,0,at)),trim(substring(line,at+1,len(line)))]; },take(ends[0] - 1,drop(1,lines)));
+  }
+  def nsub-comment-at(text,at) = at>=len(text) ? len(text) : str_byte_at(text,at) == 35 && (at == 0 || is-ws-cp(str_byte_at(text,at - 1))) ? at : nsub-comment-at(text,at+1);
+  def nsub-quote-end(text,at,quote) = at>=len(text) ? -1 : str_byte_at(text,at) == quote ? (quote == 39 && at+1<len(text) && str_byte_at(text,at+1) == quote ? nsub-quote-end(text,at+2,quote) : at) : quote == 34 && str_byte_at(text,at) == 92 ? nsub-quote-end(text,at+2,quote) : nsub-quote-end(text,at+1,quote);
+  // Frontmatter scalars have one meaning for identity and public discernment:
+  // quoted '#' is data, an unquoted whitespace '#' begins a comment, and an
+  // unfinished/structured declaration remains unknown instead of becoming yes.
+  def nsub-scalar(value) {
+   let text = trim(value); let quote = str_byte_at(text,0);
+   len(text) == 0 ? nothing() : quote == 34 || quote == 39 ? {
+    let end = nsub-quote-end(text,1,quote); let tail = end<0 ? "invalid" : trim(substring(text,end+1,len(text)));
+    end<0 || (len(tail)>0 && substring(tail,0,1) != "#") ? nothing() : quote == 34 ? json-string-value(attempt(parse-json("frontmatter-scalar",substring(text,0,end+1)))) : str-join-with(split-on(substring(text,1,end),"''"),"'");
+   } : { let scalar = trim(substring(text,0,nsub-comment-at(text,0))); len(scalar) == 0 ? nothing() : scalar; };
+  }
+  def nsub-unquote(value) = nsub-scalar(value) ?? "";
+  def nsub-field-key(pair) = nsd-lower(nsub-unquote(pair[0]));
+  def nsub-public-scalar(value) {
+   let scalar = nsub-scalar(value);
+   !nothing?(scalar) && nsd-lower(trim(scalar)) == "public";
+  }
+  def nsub-name(body,content) {
+   let explicit = ncf-string(body,"name"); let fields = nsub-frontmatter(content); let domain = ncf-string(body,"domain");
+   let preferred = domain == "concept" ? "id" : domain == "idea" ? "idea_id" : "name";
+   let names = filter(pair => nsub-field-key(pair) == preferred && len(pair[1])>0,fields);
+   len(explicit)>0 ? explicit : !nil?(names) ? nsub-unquote(names[0][1]) : nnp-identity(nnp-pack(content));
+  }
+  def nsub-ingest-need(body) {
+   let content = ncf-string(body,"content"); let fields = nsub-frontmatter(content);
+   let nonpublic = any?(key => json-object-has?(body,key) && nsd-lower(trim(ncf-string(body,key))) != "public",["visibility","access"]) || any?(pair => (nsub-field-key(pair) == "visibility" || nsub-field-key(pair) == "access") && !nsub-public-scalar(pair[1]),fields);
+   !nsub-public-name(ncf-string(body,"domain")) || len(content) == 0 ? "Public source ingestion needs a domain and nonempty content" : nonpublic ? "Private or unknown source visibility stays outside the public ingestion door" : "";
+  }
+  def nsub-ingest(conn,body,settings) {
+   let domain = trim(ncf-string(body,"domain")); let content = ncf-string(body,"content"); let source = ncf-string(body,"source_label");
+   let needed = nsub-ingest-need(body);
+   len(needed)>0 ? nnp-detail(400,needed) : {
+    let name = nsub-name(body,content);
+    !nsub-public-name(name) ? nnp-detail(400,"Source name needs a visible value") : {
+     let value = record_new(0,"format","markdown","content",content,"visibility","public","attribution",record_new(0,"claimed",0));
+     nnp-put(conn,domain,name,value,source);
+    };
+   };
+  }
+  def nsub-cell(conn,request,settings) {
+   let params = record_get(request,"parameters"); let domain = len(ncf-string(params,"domain"))>0 ? ncf-string(params,"domain") : nha-value(request,"domain",""); let name = len(ncf-string(params,"name"))>0 ? ncf-string(params,"name") : nha-value(request,"name","");
+   let native = nnp-lookup(conn,domain,name);
+   !nothing?(native) ? json-emit(native) : {
+    let legacy = npg-query(conn,nsub-cell-select() ++ " WHERE c.domain=$1 AND c.name=$2 AND " ++ nsub-legacy-open(),[domain,name]);
+    nil?(legacy[1]) ? nothing() : legacy[1][0][5];
+   };
+  }
+  def nsub-value(conn,request,settings) {
+   let value = nnp-by-identity(conn,ncf-string(record_get(request,"parameters"),"identity"));
+   nothing?(value) ? nothing() : json-emit(value);
+  }
+  def nsub-cells(conn,request,settings) {
+   let domain = nha-value(request,"domain",""); let search = nha-value(request,"q",nha-value(request,"name_contains","")); let limit = nha-number(request,"limit",50); let offset = nha-number(request,"offset",0);
+   let sql = "WITH candidates AS NOT MATERIALIZED (SELECT domain,name,'native'::text AS owner,NULL::integer AS legacy_id FROM form_named_values WHERE visibility='public' UNION ALL SELECT c.domain,c.name,'legacy',c.cell_id FROM substrate_named_cells c WHERE " ++ nsub-legacy-open() ++ "), filtered AS NOT MATERIALIZED (SELECT * FROM candidates WHERE ($1::text='' OR domain=$1) AND ($2::text='' OR name ILIKE '%'||$2||'%')), page AS MATERIALIZED (SELECT * FROM filtered ORDER BY domain,name LIMIT NULLIF($3::bigint,0) OFFSET $4::bigint) SELECT p.owner,p.domain,p.name,n.identity,v.wire,n.source_label,n.updated_at::text,legacy.value::text,totals.count FROM (SELECT count(*) FROM filtered) totals LEFT JOIN page p ON true LEFT JOIN form_named_values n ON p.owner='native' AND n.domain=p.domain AND n.name=p.name LEFT JOIN form_values v ON v.identity=n.identity LEFT JOIN LATERAL (" ++ nsub-cell-select() ++ " WHERE c.cell_id=p.legacy_id) legacy ON p.owner='legacy' ORDER BY p.domain,p.name";
+   let result = npg-query(conn,sql,[domain,search,limit,offset]); let rows = filter(row => !nothing?(row[0]),result[1]);
+   let items = map(row => row[0] == "native" ? nnp-row([row[1],row[2],row[3],row[4],row[5],row[6]]) : parse-json("legacy-substrate-read",row[7]),rows);
+   json-emit(json-node-object([json-node-pair("items",json-node-array(items)),json-node-pair("total",json-node-int(str_to_int(result[1][0][8]))),json-node-pair("limit",json-node-int(limit)),json-node-pair("offset",json-node-int(offset)),json-node-pair("runtime",json-node-string("fkwu"))]));
+  }
+  def nsub-stats-sql() = "WITH legacy_shapes AS (SELECT count(*) FILTER (WHERE domain='blueprint') AS blueprints_total,count(*) FILTER (WHERE domain='recipe') AS recipes_total FROM substrate_nodes), legacy_names AS (SELECT count(*) AS cells_total FROM substrate_named_cells c WHERE " ++ nsub-legacy-open() ++ "), public_native AS MATERIALIZED (SELECT n.identity,v.wire FROM form_named_values n JOIN form_values v ON v.identity=n.identity WHERE n.visibility='public'), native_shapes AS (SELECT count(*) AS cells_total,count(DISTINCT identity) AS values_total,count(DISTINCT (wire::jsonb->>'bp')) AS blueprints_total FROM public_native) SELECT jsonb_build_object('cells_total',l.cells_total+n.cells_total,'blueprints_total',s.blueprints_total+n.blueprints_total,'recipes_total',s.recipes_total+n.values_total,'native_values',n.values_total,'native_cells',n.cells_total,'native_blueprints',n.blueprints_total,'legacy_projection',jsonb_build_object('blueprints_total',s.blueprints_total,'recipes_total',s.recipes_total,'cells_total',l.cells_total),'scope','public named compositions and legacy projection','runtime','fkwu')::text FROM legacy_shapes s CROSS JOIN legacy_names l CROSS JOIN native_shapes n";
+  def nsub-stats(conn,request,settings) = npg-query(conn,nsub-stats-sql(),[])[1][0][0];
+ }
+}

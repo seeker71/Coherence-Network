@@ -1,11 +1,5 @@
 """Coherence-substrate REST API.
 
-Read endpoints for agent reasoning + one write endpoint (POST /ingest)
-so a visiting body can place markdown content into the lattice without
-a repo clone. The substrate is also built by the ingestion frontends
-(markdown_frontend, etc.) running on disk content; the consumed surfaces
-include these endpoints + the Form notation parser (POST /form).
-
 See docs/coherence-substrate/ for usage; see api/app/services/substrate/
 for the implementation.
 """
@@ -23,22 +17,17 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from sqlalchemy.exc import OperationalError
-
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.substrate import (
     DOMAIN_RECIPE_SHAPE,
-    CellView,
     NamedCell,
     NodeID,
     annotate_path,
     canonical_shape_names,
     find_cells_compatible_with,
     find_equivalent_cells,
-    ingest_markdown_text,
-    lattice_stats,
     lookup_cell,
     lookup_node,
     view_cell_through_blueprint,
@@ -177,12 +166,6 @@ class EquivalentResponse(BaseModel):
     count: int
 
 
-class LatticeStatsOut(BaseModel):
-    blueprints_total: int
-    recipes_total: int
-    cells_total: int
-
-
 class HistogramEntry(BaseModel):
     blueprint: NodeIDOut
     count: int
@@ -197,24 +180,6 @@ class HistogramOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-
-
-@router.get("/lattice/stats", response_model=LatticeStatsOut, tags=["substrate"])
-def get_lattice_stats() -> LatticeStatsOut:
-    """Return per-domain counts (blueprints, recipes, cells)."""
-    with session_scope() as session:
-        s = lattice_stats(session)
-        return LatticeStatsOut(**s)
-
-
-@router.get("/cell/{domain}/{name:path}", response_model=CellOut, tags=["substrate"])
-def get_cell(domain: str, name: str) -> CellOut:
-    """Look up a cell by (domain, name)."""
-    with session_scope() as session:
-        cell = lookup_cell(session, domain, name)
-        if cell is None:
-            raise HTTPException(status_code=404, detail=f"cell ({domain}, {name}) not found")
-        return CellOut.from_cell(cell)
 
 
 @router.get("/node/{package}/{level}/{type_}/{instance}", response_model=NodeOut, tags=["substrate"])
@@ -782,24 +747,6 @@ def get_equivalent(domain: str, name: str) -> EquivalentResponse:
         )
 
 
-@router.get("/cells", tags=["substrate"])
-def list_cells(
-    domain: str | None = Query(None, description="Filter by domain"),
-    limit: int = Query(50, ge=1, le=500),
-    offset: int = Query(0, ge=0, description="Number of items to skip"),
-) -> dict[str, Any]:
-    """List cells (optionally filtered by domain)."""
-    with session_scope() as session:
-        base = session.query(SubstrateNamedCellORM)
-        if domain is not None:
-            base = base.filter_by(domain=domain)
-        total = base.count()
-        rows = base.offset(offset).limit(limit).all()
-        from app.services.substrate.kernel import _orm_to_cell  # internal helper
-        items = [CellOut.from_cell(_orm_to_cell(session, r)) for r in rows]
-        return {"items": items, "total": total, "limit": limit, "offset": offset}
-
-
 # ---------------------------------------------------------------------------
 # Cross-modal canonical shapes (recipe-shape domain)
 # ---------------------------------------------------------------------------
@@ -1008,221 +955,6 @@ def get_annotation(path: str = Query(..., description="File path to annotate")) 
             equivalents_count=len(ann.equivalents),
             in_substrate=ann.cell is not None,
         )
-
-
-class PageSubstrateOut(BaseModel):
-    """Substrate footprint for a web route — what cells compose this page.
-
-    Twins here are the *kind cohort*: artifacts that share this file's
-    harmonic band (.tsx with .tsx, .py with .py). Blueprint-equivalence
-    is not a useful discriminator across artifacts — every ARTIFACT cell
-    today shares the same Blueprint shape `(path, kind, hash, size, mtime)`;
-    the per-cell identity lives in the CTOR (which carries content_hash).
-    The kind cohort is the meaningful structural neighborhood — a Recipe
-    over surface form rather than over content.
-    """
-
-    route: str
-    source_path: str | None = None
-    in_substrate: bool = False
-    source: CellOut | None = None
-    twins: list[CellOut] = Field(default_factory=list)
-    twins_count: int = 0
-    twins_kind: str | None = None
-    kind: str | None = None
-    note: str | None = None
-
-
-def _normalize_route(route: str) -> list[str]:
-    """Strip query string + fragment + trailing slash; return path segments."""
-    route = route.split("?", 1)[0].split("#", 1)[0].rstrip("/")
-    return [s for s in route.split("/") if s]
-
-
-def _resolve_via_filesystem(segments: list[str], app_dir, repo_root) -> str | None:
-    """Walk `web/app/` from the repo root. Used in dev where the repo is
-    whole. Static segments match exactly; dynamic segments try `[*]` dirs."""
-    current = app_dir
-    for seg in segments:
-        direct = current / seg
-        if direct.is_dir():
-            current = direct
-            continue
-        match = None
-        if current.is_dir():
-            for child in current.iterdir():
-                if child.is_dir() and child.name.startswith("[") and child.name.endswith("]"):
-                    match = child
-                    break
-        if match is None:
-            return None
-        current = match
-
-    page_file = current / "page.tsx"
-    if not page_file.is_file():
-        return None
-    try:
-        rel = page_file.resolve().relative_to(repo_root)
-    except ValueError:
-        return None
-    return str(rel).replace("\\", "/")
-
-
-_ROUTE_MANIFEST_CACHE: dict[str, str] | None = None
-
-
-def _load_route_manifest() -> dict[str, str]:
-    """Read `api/app/data/web_routes.json` once and cache it.
-
-    The manifest is generated by `scripts/generate_repo_indexes.py` and
-    committed so the API container — which ships `api/` but not `web/` —
-    can still resolve any page route. Keys are Next.js route patterns
-    (e.g. `/ideas/[idea_id]`); values are repo-relative page paths.
-    """
-    global _ROUTE_MANIFEST_CACHE
-    if _ROUTE_MANIFEST_CACHE is not None:
-        return _ROUTE_MANIFEST_CACHE
-    import json
-    from pathlib import Path
-
-    # __file__ = api/app/routers/substrate.py → parents[1] = api/app
-    manifest_path = Path(__file__).resolve().parents[1] / "data" / "web_routes.json"
-    try:
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-        routes = payload.get("routes", {})
-        if isinstance(routes, dict):
-            _ROUTE_MANIFEST_CACHE = {str(k): str(v) for k, v in routes.items()}
-            return _ROUTE_MANIFEST_CACHE
-    except (OSError, ValueError):
-        pass
-    _ROUTE_MANIFEST_CACHE = {}
-    return _ROUTE_MANIFEST_CACHE
-
-
-def _resolve_via_manifest(segments: list[str]) -> str | None:
-    """Match the request segments against the committed route manifest.
-
-    Builds a trie at first call (lazy) so static segments win over
-    dynamic ones at every depth, matching Next.js routing semantics and
-    the prior filesystem-walking behavior. Used in production where the
-    `web/app/` tree isn't present in the API container.
-    """
-    routes = _load_route_manifest()
-    if not routes:
-        return None
-
-    trie: dict = {}
-    for pattern, source in routes.items():
-        node = trie
-        parts = [p for p in pattern.split("/") if p]
-        for part in parts:
-            node = node.setdefault("_children", {}).setdefault(part, {})
-        node["_source"] = source
-
-    node = trie
-    for seg in segments:
-        children = node.get("_children", {})
-        if seg in children:
-            node = children[seg]
-            continue
-        dyn_key = next(
-            (k for k in children if k.startswith("[") and k.endswith("]")),
-            None,
-        )
-        if dyn_key is None:
-            return None
-        node = children[dyn_key]
-
-    return node.get("_source")
-
-
-def _resolve_route_to_page_path(route: str) -> str | None:
-    """Map a Next.js route like `/resonance` → `web/app/resonance/page.tsx`.
-
-    Prefers filesystem walking when `web/app/` is on disk (dev), and
-    falls back to the committed JSON manifest in `api/app/data/` when it
-    isn't (the API container ships `api/` only). Returns the
-    repo-relative path (POSIX separators) or None if no page matches.
-    """
-    from pathlib import Path
-
-    segments = _normalize_route(route)
-    repo_root = Path(__file__).resolve().parents[3]
-    app_dir = repo_root / "web" / "app"
-    if app_dir.is_dir():
-        return _resolve_via_filesystem(segments, app_dir, repo_root)
-    return _resolve_via_manifest(segments)
-
-
-@router.get("/page", response_model=PageSubstrateOut, tags=["substrate"])
-def get_page_substrate(
-    route: str = Query(..., description="Web route, e.g. /resonance or /ideas/foo"),
-) -> PageSubstrateOut:
-    """Substrate footprint for a web route.
-
-    Maps the route to its page.tsx, annotates it as an ARTIFACT cell, and
-    returns structural twins — other pages whose Blueprint matches. The
-    badge in the web layout calls this so any page can reveal what cells
-    compose it and which other pages share its shape.
-
-    Returns `in_substrate=False` with a `note` when the page file resolves
-    but its ARTIFACT cell hasn't been ingested yet. Callers render the
-    note quietly rather than treating it as an error.
-    """
-    path = _resolve_route_to_page_path(route)
-    if path is None:
-        return PageSubstrateOut(
-            route=route,
-            source_path=None,
-            in_substrate=False,
-            note="no page.tsx resolves for this route",
-        )
-    kind = path.rsplit(".", 1)[-1] if "." in path else None
-    with session_scope() as session:
-        ann = annotate_path(session, path)
-        if ann.cell is None:
-            return PageSubstrateOut(
-                route=route,
-                source_path=path,
-                in_substrate=False,
-                kind=kind,
-                note="page found on disk but not yet ingested as an ARTIFACT cell",
-            )
-        twin_cells = _kind_cohort_for(session, path, kind, limit=24)
-        return PageSubstrateOut(
-            route=route,
-            source_path=path,
-            in_substrate=True,
-            source=CellOut.from_cell(ann.cell),
-            twins=[CellOut.from_cell(c) for c in twin_cells],
-            twins_count=len(twin_cells),
-            twins_kind=kind,
-            kind=kind,
-        )
-
-
-def _kind_cohort_for(session, source_path: str, kind: str | None, *, limit: int):
-    """Return up to `limit` other artifact cells sharing this kind.
-
-    The kind cohort is the meaningful "structural neighborhood" for an
-    artifact: cells whose file suffix matches. Excludes the source cell
-    itself. Sorted by path for stability across calls.
-    """
-    from app.services.substrate.kernel import _orm_to_cell
-
-    if not kind:
-        return []
-    suffix = f".{kind}"
-    rows = (
-        session.query(SubstrateNamedCellORM)
-        .filter_by(domain="artifact")
-        .filter(SubstrateNamedCellORM.name.endswith(suffix))
-        .filter(SubstrateNamedCellORM.name != source_path)
-        .order_by(SubstrateNamedCellORM.name)
-        .limit(limit)
-        .all()
-    )
-    return [_orm_to_cell(session, r) for r in rows]
 
 
 class CellViewOut(BaseModel):
@@ -1475,52 +1207,6 @@ def get_shape_health() -> ShapeHealthOut:
         return ShapeHealthOut(overall=overall, domains=domains, flags=flags)
 
 
-# ---------------------------------------------------------------------------
-# Form-language evaluation — the substrate-native query DSL
-# ---------------------------------------------------------------------------
-
-
-class FormRequest(BaseModel):
-    expression: str = Field(
-        ...,
-        min_length=1,
-        description=(
-            "Form-notation expression. Examples: '?equivalent @spec(agent-pipeline)', "
-            "'@memory(presences_of_the_field)', '?cells where domain == \"spec\"'. "
-            "Grammar: docs/coherence-substrate/form-language.md."
-        ),
-    )
-    mode: str = Field(
-        default="ast",
-        pattern="^(ast|streaming|run)$",
-        description=(
-            "Evaluation path. 'ast' uses the structural Form evaluator; 'streaming' "
-            "uses the BMF-style direct Recipe emitter for its supported recipe subset; "
-            "'run' executes Form through the runtime and returns the computed value."
-        ),
-    )
-
-
-class FormResultOut(BaseModel):
-    """Discriminated union of Form evaluation outcomes.
-
-    `kind` names which field carries the result. Other fields are null.
-    Kinds: node_id, recipe, cell, view, cells, views, lattice, keywords,
-    vocabulary, value.
-    """
-
-    kind: str
-    node_id: NodeIDOut | None = None
-    cell: CellOut | None = None
-    view: CellViewOut | None = None
-    cells: list[CellOut] | None = None
-    views: list[CellViewOut] | None = None
-    lattice: dict[str, int] | None = None
-    keywords: list[str] | None = None
-    vocabulary: dict[str, dict[str, int]] | None = None
-    value: Any | None = None
-
-
 class KernelImageProposalRequest(BaseModel):
     expression: str = Field(
         ...,
@@ -1592,47 +1278,6 @@ class KernelImageProposalOut(BaseModel):
     proof_trace: list[KernelImageProofStepOut]
     trust_envelope: dict[str, Any]
     mutation: KernelImageMutationGateOut
-
-
-def _cell_view_out(v: CellView) -> CellViewOut:
-    return CellViewOut(
-        cell=CellOut.from_cell(v.cell),
-        view_blueprint=NodeIDOut.from_node_id(v.view_blueprint),
-        compatible=v.compatible,
-        reason=v.reason,
-    )
-
-
-def _runtime_value_out(value: Any) -> Any:
-    """Render Form runtime values into JSON-safe response payloads."""
-    if isinstance(value, NodeID):
-        node = NodeIDOut.from_node_id(value)
-        return node.model_dump(by_alias=True) if node else None
-    if isinstance(value, NamedCell):
-        return CellOut.from_cell(value).model_dump(by_alias=True)
-    if isinstance(value, CellView):
-        return _cell_view_out(value).model_dump(by_alias=True)
-    if isinstance(value, list):
-        return [_runtime_value_out(item) for item in value]
-    if isinstance(value, dict):
-        return {str(key): _runtime_value_out(item) for key, item in value.items()}
-    return value
-
-
-def _form_result_from_runtime_value(value: Any) -> FormResultOut:
-    """Render runtime fallback values with the same shape as AST results."""
-    if isinstance(value, NodeID):
-        return FormResultOut(kind="node_id", node_id=NodeIDOut.from_node_id(value))
-    if isinstance(value, NamedCell):
-        return FormResultOut(kind="cell", cell=CellOut.from_cell(value))
-    if isinstance(value, CellView):
-        return FormResultOut(kind="view", view=_cell_view_out(value))
-    if isinstance(value, list):
-        if value and all(isinstance(item, NamedCell) for item in value):
-            return FormResultOut(kind="cells", cells=[CellOut.from_cell(item) for item in value])
-        if value and all(isinstance(item, CellView) for item in value):
-            return FormResultOut(kind="views", views=[_cell_view_out(item) for item in value])
-    return FormResultOut(kind="value", value=_runtime_value_out(value))
 
 
 def _sha256_text(value: str) -> str:
@@ -1821,87 +1466,6 @@ def _kernel_image_trust_envelope(
     }
 
 
-def _is_access_bootstrap_gap(exc: TypeError) -> bool:
-    text = str(exc)
-    return (
-        "Form: cannot evaluate Access" in text
-        or "Form: cannot evaluate MethodCall" in text
-    )
-
-
-def _guard_public_form_expression(expression: str) -> None:
-    """The retired Python evaluator never receives public expressions."""
-    del expression
-    raise HTTPException(
-        status_code=410,
-        detail=(
-            "the consumer-side Python Form evaluator was removed; use "
-            "POST /api/substrate/grounded-ask or the native form-cli carrier"
-        ),
-    )
-
-
-@router.get("/form", response_model=FormResultOut, tags=["substrate"])
-def evaluate_form_get(
-    expression: str = Query(
-        ...,
-        min_length=1,
-        max_length=2000,
-        description=(
-            "Form-notation expression, URL-encoded. Examples: "
-            "'@concept(living-axioms)', '?equivalent @concept(lc-trust-over-fear)', "
-            "'?lattice'. Grammar: docs/coherence-substrate/form-language.md."
-        ),
-    ),
-    mode: str = Query(
-        "ast",
-        pattern="^(ast|run)$",
-        description=(
-            "'ast' (default) answers structural queries — @cell, ?lattice, "
-            "?equivalent. 'run' executes Form and returns the computed value, "
-            "so a guest can run any code they know the grammar for "
-            "(e.g. 'defn fib (n) = ...; fib 10' -> 55). 'streaming' (Recipe "
-            "emission) stays POST-only. Host-effect verbs are refused on "
-            "either mode."
-        ),
-    ),
-) -> FormResultOut:
-    """GET lane of the Form door — form-cli for guests who cannot POST.
-
-    Chat assistants (Grok, ChatGPT browsing, Gemini) can usually only fetch
-    URLs, so the POST-only Form door was structurally invisible to them — a
-    guest could read every cell's metadata but never speak, or run, the
-    substrate's own language. This lane evaluates the same expressions through
-    the same evaluators. 'ast' and 'run' are both offered (compute is the
-    point); only 'streaming' Recipe emission is held to POST. Every expression
-    passes the host-effect guard first (enforced in the shared handler below).
-    """
-    return evaluate_form(FormRequest(expression=expression, mode=mode))
-
-
-@router.post("/form", response_model=FormResultOut, tags=["substrate"])
-def evaluate_form(req: FormRequest) -> FormResultOut:
-    """Evaluate a Form-notation expression against the substrate.
-
-    The substrate's native query language. Lets an outside caller ask
-    structural questions the body knows how to answer — without composing
-    multiple lookup calls.
-
-    Returns a discriminated result: the `kind` field names which payload
-    field carries the value (node_id / recipe / cell / view / cells /
-    views). `mode="streaming"` routes supported recipe expressions through
-    the direct-emission parser and returns the emitted Recipe NodeID.
-    `mode="run"` executes Form and returns the runtime value. Host-machine
-    verbs (`pytest_passes`, `file_*`, `symbol_in_file`) are refused on this
-    public door — they run only in in-process spec-proving. Parse and
-    evaluation errors return HTTP 400 with the failure reason.
-
-    Grammar lives in docs/coherence-substrate/form-language.md.
-    """
-    _guard_public_form_expression(req.expression)
-    raise AssertionError("unreachable")
-
-
 @router.post(
     "/kernel-image/proposals",
     response_model=KernelImageProposalOut,
@@ -1957,120 +1521,3 @@ def propose_kernel_image(req: KernelImageProposalRequest) -> KernelImageProposal
             next_gate="commit evidence -> PR -> CI -> deploy -> public SHA verification",
         ),
     )
-
-
-# ---------------------------------------------------------------------------
-# Ingest — let a visiting body place markdown content into the lattice
-# ---------------------------------------------------------------------------
-
-
-_INGEST_DOMAINS = {"memory", "spec", "idea", "concept", "presence"}
-_MAX_INGEST_CHARS = 64 * 1024  # 64KB — generous for memory/spec/idea/concept content
-
-# Retry an ingest that the DB canceled due to lock_timeout (transient
-# contention). Interning is idempotent, so a fresh-session retry is safe.
-_INGEST_LOCK_RETRIES = 3
-_INGEST_LOCK_BACKOFF_S = 0.1
-
-
-def _is_lock_timeout(exc: Exception) -> bool:
-    """True when a DB error is a lock_timeout cancellation (psycopg
-    LockNotAvailable, surfaced as sqlalchemy OperationalError) — the fast-fail
-    the 2026-07-02 DB timeouts produce for a lock-waiter."""
-    orig = getattr(exc, "orig", None)
-    if orig is not None and "LockNotAvailable" in type(orig).__name__:
-        return True
-    return "lock timeout" in str(exc).lower()
-
-
-class IngestRequest(BaseModel):
-    domain: str = Field(
-        ...,
-        description=(
-            "Domain blueprint to ingest under. One of: memory, spec, idea, "
-            "concept, presence."
-        ),
-    )
-    content: str = Field(
-        ...,
-        min_length=1,
-        max_length=_MAX_INGEST_CHARS,
-        description=(
-            "Raw markdown content. If a frontmatter block is present, the "
-            "domain's expected name field (e.g. 'name' for memory, 'id' for "
-            "concept) is preferred; otherwise the body is hashed for identity."
-        ),
-    )
-    source_label: str | None = Field(
-        default=None,
-        max_length=512,
-        description=(
-            "Provenance hint stored on the cell. Honest description of where "
-            "this content came from (e.g. 'web:contributor:abc123')."
-        ),
-    )
-
-
-class IngestResponse(BaseModel):
-    cell: CellOut
-    blueprint: NodeIDOut
-    ctor: NodeIDOut | None = None
-
-
-@router.post("/ingest", response_model=IngestResponse, tags=["substrate"])
-def ingest_content(req: IngestRequest) -> IngestResponse:
-    """Place markdown content into the lattice from outside the repo.
-
-    The body-reads-itself practice still holds: this endpoint creates or
-    updates a NamedCell keyed by the frontmatter name field (or body hash
-    when no name is present). Cross-references in the content do *not*
-    auto-bind to existing cells — equivalence in the substrate is
-    structural, not lexical. Two ingested cells with the same shape
-    converge automatically; two with different shapes stay distinct.
-    """
-    if req.domain not in _INGEST_DOMAINS:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"unknown domain '{req.domain}'; expected one of "
-                f"{sorted(_INGEST_DOMAINS)}"
-            ),
-        )
-    # Retry on lock-timeout. Since 2026-07-02 the DB cancels a lock-waiter fast
-    # (lock_timeout=5s) instead of letting it hang for hours — good, but the
-    # canceled waiter surfaced to the client as a 500. Content-addressed
-    # interning is IDEMPOTENT (same content -> same NodeID, no duplication), so
-    # a fresh-session retry is safe: it absorbs transient contention into a
-    # transparent success rather than a user-facing error. Bounded so a genuine
-    # long-holder still fails fast (that case is the separate txn-shortening
-    # fix, task_6a93acdd), never an unbounded spin.
-    last_exc: Exception | None = None
-    for attempt in range(_INGEST_LOCK_RETRIES):
-        try:
-            with session_scope() as session:
-                try:
-                    cell, blueprint_id, ctor_id = ingest_markdown_text(
-                        session,
-                        req.domain,
-                        req.content,
-                        source_label=req.source_label,
-                    )
-                except ValueError as exc:
-                    raise HTTPException(status_code=400, detail=str(exc)) from exc
-                return IngestResponse(
-                    cell=CellOut.from_cell(cell),
-                    blueprint=NodeIDOut.from_node_id(blueprint_id),
-                    ctor=NodeIDOut.from_node_id(ctor_id) if ctor_id else None,
-                )
-        except OperationalError as exc:
-            if not _is_lock_timeout(exc):
-                raise
-            last_exc = exc
-            if attempt < _INGEST_LOCK_RETRIES - 1:
-                time.sleep(_INGEST_LOCK_BACKOFF_S * (attempt + 1))
-    # Exhausted retries against sustained contention — a long holder, not a
-    # transient. Fail honestly (503, retryable) rather than a bare 500.
-    raise HTTPException(
-        status_code=503,
-        detail="write lane busy (lock contention); please retry",
-    ) from last_exc

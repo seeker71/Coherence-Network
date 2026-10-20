@@ -3,7 +3,10 @@
 import native_api_handlers.bml;
 import native_api_prepare.bml;
 section [form.bml] {
- let server = ncf-file("../config/native_api.json"); let database = ncf-postgres(ncf-load());
+ let configured = ncf-file("../config/native_api.json");
+ let resources = ncf-load();
+ let server = ncf-merge(configured,json-node-object([json-node-pair("application_config",resources),json-node-pair("started_unix_ms",json-node-int(now_unix_ms())),json-node-pair("allowed_methods",json-node-string(nha-methods(node_children(json-object-get(configured,"routes")))))]));
+ let database = ncf-postgres(resources);
  let first = npg-open(database,nothing()); let credential = record_get(first,"credential"); let prepared = nap-prepare(first); let closed = npg-close(first);
  let port = str_to_int(json-emit(json-object-get(server,"port")));
  nsd-serve(nsd-open(port,raw => nap-handle(database,credential,server,raw)));

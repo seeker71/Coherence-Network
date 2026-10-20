@@ -1,0 +1,33 @@
+// Runtime probes read their live dependency, not historical audit or kernel proof.
+// Immutable image identity stays distinct from the host's next queued release.
+import postgres.bml;
+import native_config.bml;
+section [form.bml] {
+ class NativeHealth {
+  def nh-handles?(name) = any?(one => one == name,["health","ready","persistence","db-contention"]);
+  def nh-started(settings) = json-object-has?(settings,"started_unix_ms") ? str_to_int(json-emit(json-object-get(settings,"started_unix_ms"))) : nothing();
+  def nh-parameters(settings) {
+   let identity = ncf-file("../config/image_identity.json");
+   [ncf-string(identity,"deployed_sha"),ncf-string(identity,"form_sha"),nh-started(settings)];
+  }
+  def nh-sql(status,extra,source) = "SELECT (jsonb_build_object('status','" ++ status ++ "','runtime','fkwu','kernel_runtime','fkwu','persistence','native-postgres','db_connected',true,'timestamp',to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'),'deployed_sha',NULLIF($1::text,''),'deployed_sha_source','image:config/image_identity.json','form_sha',NULLIF($2::text,''),'started_at',CASE WHEN $3::bigint IS NULL THEN NULL ELSE to_char(to_timestamp($3::bigint/1000.0) AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') END,'uptime_seconds',CASE WHEN $3::bigint IS NULL THEN NULL ELSE GREATEST(0,FLOOR(EXTRACT(EPOCH FROM clock_timestamp())-$3::bigint/1000.0)) END) || " ++ extra ++ ")::text" ++ source;
+  def nh-observe(conn,sql,parameters) {
+   let result = npg-query(conn,sql,parameters);
+   nil?(result[1]) ? form_error("native probe returned no observation") : result[1][0][0];
+  }
+  def nh-tables() = "jsonb_build_object('schema_ok',bool_and(present),'tables',jsonb_object_agg(name,present),'care',CASE WHEN bool_and(present) THEN '' ELSE concat('native persistence attention: missing ',string_agg(name,', ' ORDER BY name) FILTER (WHERE NOT present)) END)";
+  def nh-table-source() = " FROM (SELECT name,to_regclass(name) IS NOT NULL AS present FROM (VALUES ('graph_nodes'),('graph_edges'),('substrate_nodes'),('form_values'),('form_named_values')) AS required(name)) AS observed";
+  def nh-care(settings,key) {
+   let care = json-object-get(settings,"contention_care");
+   json-object-has?(care,key) ? str_to_int(json-emit(json-object-get(care,key))) : nothing();
+  }
+  def nh-contention(conn,settings,parameters) = nh-observe(conn,nh-sql("observed","jsonb_build_object('backend','postgresql','max_txn_age_seconds',ROUND(max_age,2),'lock_waiters',lock_waiters,'care',CASE WHEN ($4::double precision IS NOT NULL AND max_age>=$4::double precision) OR ($5::bigint IS NOT NULL AND lock_waiters>$5::bigint) THEN concat('write-lane attention: oldest txn ',ROUND(max_age,2),'s, ',lock_waiters,' lock-waiter(s)') ELSE '' END)"," FROM (SELECT COALESCE(EXTRACT(EPOCH FROM (clock_timestamp()-min(xact_start))),0) AS max_age,COUNT(*) FILTER (WHERE wait_event_type='Lock') AS lock_waiters FROM pg_stat_activity WHERE datname=current_database() AND xact_start IS NOT NULL AND pid<>pg_backend_pid()) AS observed"),append(parameters,[nh-care(settings,"transaction_attention_seconds"),nh-care(settings,"lock_waiter_attention_count")]));
+  def nh-project(conn,name,settings) {
+   let parameters = nh-parameters(settings);
+   name == "db-contention" ? nh-contention(conn,settings,parameters)
+    : name == "persistence" ? nh-observe(conn,nh-sql("observed",nh-tables(),nh-table-source()),parameters)
+    : name == "health" || name == "ready" ? nh-observe(conn,nh-sql(name == "ready" ? "ready" : "ok","'{}'::jsonb",""),parameters)
+    : form_error("native health has no source owner: " ++ name);
+  }
+ }
+}
