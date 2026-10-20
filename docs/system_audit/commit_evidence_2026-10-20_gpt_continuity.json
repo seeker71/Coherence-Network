@@ -21,14 +21,24 @@
     "specs/companion-gpt-rollout.md"
   ],
   "change_intent": "runtime_feature",
-  "idea_ids": ["trusted-everyday-companion"],
-  "spec_ids": ["companion-gpt-rollout"],
-  "task_ids": ["gpt-portable-continuity-20261020"],
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "gpt-portable-continuity-20261020"
+  ],
   "contributors": [
     {
       "contributor_id": "openai-codex",
       "contributor_type": "machine",
-      "roles": ["implement", "review", "verify"]
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
     }
   ],
   "agent": {
@@ -47,13 +57,15 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Kernel PR621 merged at682f7fc03db41bee13cf3402035037d88141efb2 with successful GitGuardian check and independent source review. Parent receipt/pin check pending."
+    "status": "pass",
+    "summary": "Kernel PR621 merged with successful GitGuardian check. Parent PR4119 head03a57e62418ec816be3ca42aa8c02bf94da4e8ae passed GitGuardian at2026-10-20T07:01:48Z; independent current-source review found no actionable findings. This receipt update records those observations without changing the failed behavioral criterion."
   },
   "e2e_validation": {
     "status": "fail",
     "expected_behavior_delta": "Portable continuity preserves the approved artifact and enables a changed request in a fresh chat with truthful retention boundaries.",
-    "public_endpoints": ["https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"],
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ],
     "test_flows": [
       "Published editor reload: exact6867-character instructions; Everyone; profile/capabilities and Action unchanged.",
       "Existing creative conversation: first handoff reordered two approved lines. Corrected handoff matched actual276-byte downloaded flyer exactly.",
@@ -74,7 +86,8 @@
     "docs/integration/companion-gpt-observations.md",
     "docs/system_audit/companion_gpt_verification_2026-10-20.json",
     "skills/coherence-network/references/session-brief.md",
-    "https://github.com/seeker71/coherence-kernel/pull/621"
+    "https://github.com/seeker71/coherence-kernel/pull/621",
+    "https://github.com/seeker71/Coherence-Network/pull/4119"
   ],
   "sovereignty_receipt": {
     "reasoning": "Rented OpenAI Codex and hosted GPT responses; exact serving variants and task token counts unavailable.",
