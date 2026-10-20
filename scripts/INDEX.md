@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 201
+**Total files**: 198
 
 | File | Purpose |
 |---|---|
@@ -18,7 +18,6 @@
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
 | [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | assemblage_shift_recipe_proof.py — the modality round-trip, walking. |
-| [audit_external_tools.py](audit_external_tools.py) | Audit external tooling usage and detect untracked additions. |
 | [audit_stranded_work.py](audit_stranded_work.py) | Find work that may have been stranded on abandoned branches. |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | Audit regenerated vision image candidates before production promotion. |
 | [auto_heal_start_gate.sh](auto_heal_start_gate.sh) | _no top-of-file purpose_ |
