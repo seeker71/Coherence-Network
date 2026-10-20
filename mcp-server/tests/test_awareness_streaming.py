@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from coherence_mcp_server import server as mcp_server  # noqa: E402
+from coherence_mcp_server import server as mcp_server
 
 
 def test_awareness_tools_are_registered() -> None:
@@ -16,7 +16,7 @@ def test_awareness_tools_are_registered() -> None:
         "coherence_awareness_stream",
         "coherence_node_message_send",
         "coherence_node_messages",
-        "coherence_substrate_form",
+        "coherence_grounded_ask",
         "coherence_get_field_story",
         "coherence_get_field_story_artifact",
         "coherence_contribute_field_story",
@@ -90,35 +90,47 @@ def test_agent_invitation_dispatch_routes_to_api(monkeypatch) -> None:
     assert calls == [("/api/agent/invitation", None)]
 
 
-def test_substrate_form_dispatch_routes_to_api(monkeypatch) -> None:
-    calls: list[tuple[str, dict]] = []
+def test_grounded_ask_dispatch_and_retired_evaluator(monkeypatch) -> None:
+    calls: list[tuple[str, dict, float]] = []
 
-    def fake_post(path: str, body: dict) -> dict:
-        calls.append((path, body))
-        return {"kind": "lattice", "lattice": {"nodes": 1}}
+    def fake_post(path: str, body: dict, *, timeout: float) -> dict:
+        calls.append((path, body, timeout))
+        return {"path": "native", "sufficient": False, "answer": ""}
 
     monkeypatch.setattr(mcp_server, "api_post", fake_post)
+    monkeypatch.setitem(mcp_server._SETTINGS, "grounded_ask_timeout_seconds", 90)
 
     result = mcp_server.dispatch(
+        "coherence_grounded_ask",
+        {"query": "What is grounded trust?"},
+    )
+    retired = mcp_server.dispatch(
         "coherence_substrate_form",
         {"expression": "?lattice"},
     )
-    streaming_result = mcp_server.dispatch(
-        "coherence_substrate_form",
-        {"expression": "1 + 2", "mode": "streaming"},
-    )
-    bad_mode = mcp_server.dispatch(
-        "coherence_substrate_form",
-        {"expression": "1 + 2", "mode": "direct"},
-    )
-
-    assert result == {"kind": "lattice", "lattice": {"nodes": 1}}
-    assert streaming_result == {"kind": "lattice", "lattice": {"nodes": 1}}
-    assert bad_mode == {"error": "mode must be one of: ast, streaming"}
+    assert result == {"path": "native", "sufficient": False, "answer": ""}
+    assert "Unknown tool" in retired["error"]
+    assert "coherence_substrate_form" not in mcp_server.TOOL_MAP
+    for query in ("", "  ", None, 42):
+        assert "error" in mcp_server.dispatch("coherence_grounded_ask", {"query": query})
     assert calls == [
-        ("/api/substrate/form", {"expression": "?lattice", "mode": "ast"}),
-        ("/api/substrate/form", {"expression": "1 + 2", "mode": "streaming"}),
+        ("/api/substrate/grounded-ask", {"query": "What is grounded trust?"}, 90),
     ]
+
+
+def test_post_forwards_selected_timeout(monkeypatch) -> None:
+    import httpx
+
+    calls = []
+
+    def fake_post(url, **kwargs):
+        calls.append(kwargs["timeout"])
+        return httpx.Response(200, json={"answer": "observed"}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(mcp_server.httpx, "post", fake_post)
+    assert mcp_server.api_post("/api/substrate/grounded-ask", {}, timeout=90) == {"answer": "observed"}
+    mcp_server.api_post("/api/other", {})
+    assert calls == [90, 15.0]
 
 
 def test_decode_sse_events_handles_json_keepalive_and_raw_text() -> None:

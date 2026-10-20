@@ -1,5 +1,11 @@
 {
   "_doc": "API server configuration. Phase 1: core runtime (database, auth, telegram, CORS).",
+  "mcp": {
+    "_doc": "Existing MCP carrier. Personal overrides live under mcp in ~/.coherence-network/config.json; no environment fallbacks.",
+    "api_base": "https://api.coherencycoin.com",
+    "api_key": "",
+    "grounded_ask_timeout_seconds": 90
+  },
   "database": {
     "_doc": "Primary database. Used by graph_nodes, graph_edges, specs, ideas, etc.",
     "url": "sqlite:///data/coherence.db",

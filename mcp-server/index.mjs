@@ -1,46 +1,39 @@
 #!/usr/bin/env node
 
-/**
- * Coherence Network MCP Server — Bridge
- * 
- * This is a lightweight Node.js wrapper that executes the Python-based 
- * MCP server. It ensures that 'npx coherence-mcp-server' continues to 
- * work while the primary implementation is centralized in Python.
- */
-
+// Existing npm-to-Python MCP carrier: preserve stdio, termination and failure.
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+import { constants } from "node:os";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const packageDirectory = dirname(fileURLToPath(import.meta.url));
+let child;
+let stopping = false;
 
-function main() {
-  // Use uvx if available, otherwise fallback to python3
-  const args = ["run", "coherence-mcp-server"];
-  const options = {
-    stdio: "inherit",
-    shell: true,
-    cwd: __dirname
-  };
-
-  // Check if we are running in a context where we should use the local package
-  // instead of 'uvx' (which fetches from PyPI).
-  const pythonServer = spawn("uv", args, options);
-
-  pythonServer.on("error", (err) => {
-    if (err.code === 'ENOENT') {
-      // Fallback to python3 if 'uv' is not installed
-      console.error("Warning: 'uv' not found. Falling back to 'python3'.");
-      spawn("python3", ["-m", "coherence_mcp_server"], options);
-    } else {
-      console.error("Failed to start Python MCP server:", err);
-      process.exit(1);
+function start(command, args, canFallback = false) {
+  child = spawn(command, args, { stdio: "inherit", cwd: packageDirectory, shell: false });
+  let failedToSpawn = false;
+  child.once("error", (error) => {
+    failedToSpawn = true;
+    if (canFallback && error.code === "ENOENT" && !stopping) {
+      console.error("Coherence MCP: uv is unavailable; using python3 with installed MCP dependencies.");
+      start("python3", ["-m", "coherence_mcp_server"]);
+      return;
     }
+    console.error(`Coherence MCP could not start ${command} (${error.code || "spawn error"}). Install uv or Python with coherence-mcp-server dependencies.`);
+    process.exitCode = 1;
   });
-
-  // Handle termination
-  process.on("SIGINT", () => pythonServer.kill("SIGINT"));
-  process.on("SIGTERM", () => pythonServer.kill("SIGTERM"));
+  child.once("close", (code, signal) => {
+    if (!failedToSpawn) process.exitCode = code ?? (128 + (constants.signals[signal] || 1));
+  });
 }
 
-main();
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    stopping = true;
+    if (child?.pid) child.kill(signal);
+    else process.exitCode = 128 + constants.signals[signal];
+  });
+}
+
+start("uv", ["run", "--project", packageDirectory, "coherence-mcp-server"], true);

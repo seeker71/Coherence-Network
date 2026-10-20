@@ -114,7 +114,6 @@
     "/projects": "web/app/projects/page.tsx",
     "/projects/[id]": "web/app/projects/[id]/page.tsx",
     "/propose": "web/app/propose/page.tsx",
-    "/pulse": "web/app/pulse/page.tsx",
     "/remote-ops": "web/app/remote-ops/page.tsx",
     "/resonance": "web/app/resonance/page.tsx",
     "/runtime": "web/app/runtime/page.tsx",
