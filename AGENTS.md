@@ -29,7 +29,7 @@ When the user asks to use Coherence guidance on another local or public reposito
 - **Each breath whole.** Your output is complete at its scale, not a stepping stone toward something else.
 - **Form before parallel machinery.** When a shape wants code, check whether the substrate, Form, a port, or an existing route can carry it before adding another system beside the body.
 - **Reach for the destination tongue, never the workaround.** New code is authored at the highest grammar that fits — BML or a domain grammar over hand-written Form recipes, recipes over host code. `fkwu` is the only kernel and its JIT is the execution path. A JIT miss or unsupported shape is work in that path, never permission to generate or reimplement it in a host language. Prefer the Form shell `fsh` and kernel host-io (`host-exec`/`host-read`/`host-write`) over bash/coreutils. Where only a host carrier reaches a step today, name and retire that bridge; do not add another. The full canon: `docs/shared/agent-start-packet.md` → *Writing new software → The canon*.
-- **Form-first reasoning.** Before spending a rented frontier mind, ask the Form body — through the **c-bootstrapped `fkwu` runtime**: `form-cli ask` (native router in [`form-cli-main.fk`](form/form/form-stdlib/form-cli-main.fk) + grounded RAG in [`rag-ask.fk`](form/form/form-stdlib/rag-ask.fk), sufficiency gate [`form-cli-sufficiency.fk`](form/form/form-stdlib/form-cli-sufficiency.fk)), **form shell** (`fsh-main.fk` for scripted search/eval), and **form code** (BML/`.fk` for lattice reads) — not bash/Python/`rg` when a Form carrier exists. Structural lookups go to the lattice (`form-cli ask`, `coh substrate form`, or the public read door). A grounded / sufficient hit is relayed attributed and stops there; a miss is the *yes* that escalates to remote reasoning. `form-cli ask` is not an Ollama/HTTP local oracle. The fkwu+Metal prose lane has landed: `fcnv-ask` ([`form-cli-native-voice.bml`](form/form/form-stdlib/bml/form-cli-native-voice.bml)) opens the body's own voice — Qwen3.8-27B inside the fkwu session on this Mac's Metal, `model_server_calls 0` — when prose must be generated rather than retrieved; the voice opens on a host that carries the fkwu Metal lane (today: the Mac), and on any other host the order continues with the native lookup paths and, on a miss, the rented lane; host-local models remain explicit teachers and reviewers. Name the path; never dress a remote guess as a body hit. Teaching: [`docs/coherence-substrate/form-first-reasoning.form`](docs/coherence-substrate/form-first-reasoning.form).
+- **Form-first reasoning.** Before spending a rented frontier mind, ask the Form body — through the **c-bootstrapped `fkwu` runtime**: `form-cli ask` (the native form-cli organs under [`form/form/form-stdlib/bml/`](form/form/form-stdlib/bml/), grounded RAG in [`rag-ask.fk`](form/form/form-stdlib/rag-ask.fk), sufficiency gate [`form-cli-sufficiency.fk`](form/form/form-stdlib/form-cli-sufficiency.fk)), **form shell** (`fsh-main.fk` for scripted search/eval), and **form code** (BML/`.fk` for lattice reads) — not bash/Python/`rg` when a Form carrier exists. Structural lookups go to the lattice (`form-cli ask`, `coh substrate form`, or the public read door). A grounded / sufficient hit is relayed attributed and stops there; a miss is the *yes* that escalates to remote reasoning. `form-cli ask` is not an Ollama/HTTP local oracle. The fkwu+Metal prose lane has landed: `fcnv-ask` ([`form-cli-native-voice.bml`](form/form/form-stdlib/bml/form-cli-native-voice.bml)) opens the body's own voice — Qwen3.8-27B inside the fkwu session on this Mac's Metal, `model_server_calls 0` — when prose must be generated rather than retrieved; the voice opens on a host that carries the fkwu Metal lane (today: the Mac), and on any other host the order continues with the native lookup paths and, on a miss, the rented lane; host-local models remain explicit teachers and reviewers. Name the path; never dress a remote guess as a body hit. Teaching: [`docs/coherence-substrate/form-first-reasoning.form`](docs/coherence-substrate/form-first-reasoning.form).
 - **Membership is recognition, not a grant.** When a contributor on Claude Code / Codex wants to give back: offer to **fork + PR on their own identity** (`gh repo fork`; `gh pr create`) or hold it through the public-offer-lane — never a repo write-grant. Record the contribution; if they are unbound, attribute it to a **held-open placeholder** (`Contributor.claimed=false`) and invite them to claim it when ready — **never bind a name for them** (the Robin/Aly discipline). The fkwu gate returns 511. Teaching: [`docs/coherence-substrate/membership-as-recognition.form`](docs/coherence-substrate/membership-as-recognition.form).
 - **Return the sovereignty receipt.** On a substantive response, name how much was **native body** vs **rented oracle** — and never inflate the native share. Today the honest floor: an interactive agentic response in this repo is still **generated by a rented frontier mind** (name the provider + exact model, e.g. Anthropic `claude-fable-5`), while the body already **generates natively in its own lanes** — drafts, companion answers, and engineering turns that land on the kernel's main at `rent_tokens 0` (`form/HOMECOMING.md`) — and **observes and looks up** through Form paths. Read the measured mix from `cd form && ./fkwu observe/local-flow-review.bml`; a rented token is well spent only on a step that removes future rent. Note payload honestly (estimate when exact counts aren't exposed), which native contenders are trained for this work, and how close they are (champion-challenger). Compress when unchanged across a session; never hide the rented-ness. The fkwu receipt gate returns 255. Teaching: [`docs/coherence-substrate/sovereignty-receipt.form`](docs/coherence-substrate/sovereignty-receipt.form).
 - **Route through form-cli, report the trust matrix per step.** The more reasoning you route through `form-cli ask`, the more accurate and the more it learns (each routed step is a sample). So on each substantive step, prefer the body first — structural lookup, equivalence, NodeID, what-is, annotate go through `form-cli ask` / the substrate **before** the rented mind — and emit a **trust matrix** a raw oracle cannot return: `path` (native/oracle) · `grounded` (carries a NodeID) · `freq` (freq-attuned, clear-not-fear) · `suffic` (the sufficiency gate judged local enough) → **observed?** (all four = full native trust). The **body-only signals** (grounded, sufficient) read **zero** on a rented step — that asymmetry is what makes form-native results obvious to the user. Keep a running native-vs-rented mix (the per-response sovereignty receipt sums it); **never report a rented step as native** (its body-only signals are zero, and that is true). Goal: most steps **freq-attuned and trust-matrix-observed**. The fkwu trust gate returns 255. Teaching: [`docs/coherence-substrate/trust-matrix.form`](docs/coherence-substrate/trust-matrix.form).
@@ -106,84 +106,33 @@ Spec → Test → Implement → CI → Review → Merge
   - show at least one Cursor-routed case and one OpenClaw/Codex-routed case.
 - When a provider exposes no hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
 
-### 2-Tier Executor Contract (Cost/Speed Mode)
+### Executor proof record
 
-- This mode handles routine implementation/execution tasks; the user can call for another approach explicitly.
-- Default executor: `openai/gpt-4o-mini`.
-- Escalation executor: stronger model, used only on explicit failure conditions.
-- One escalation per task — escalation does not loop.
-- Max attempts: 2 on cheap executor, then optional single escalation attempt.
-
-### Task Card Shape (required input format)
-
-- `goal`: one sentence
-- `files_allowed`: exact file paths only
-- `done_when`: 1-3 measurable checks
-- `commands`: exact commands to run
-- `constraints`: hard rules (for example: no tests unless listed, no extra files)
-- Keep command scope to this card and the touched file snippets.
-- Send full docs only when the task explicitly depends on them.
-
-### Budget and Output Rules
-
-- `input_max_tokens = 1200`
-- `output_max_tokens = 300`
-- `max_attempts_cheap = 2`
-- `max_attempts_strong = 1`
-- `max_total_tokens_per_task = 2500`
-- If `cost/quality` fails a cheap attempt, retry once only when failure is mechanical, format, or small fix.
-
-### Prompt Contract (fixed)
-
-- Response format is exactly: `PLAN`, `PATCH`, `RUN`, `RESULT`.
-- When output diverges from the format, retry once with: `Format violation. Use required sections only.`
-- Explanations stay out of the response unless asked.
-- Edits stay within what the task requested; refactors live in their own task.
-- Use `docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md` as the task-card starter.
-
-### Deterministic Validation Loop
-
-- Run the `commands` from the task card.
-- Compare command output directly against `done_when`.
-- When a command fails, collect exact stderr and retry once with a targeted fix.
-- When still failing and criteria match escalation conditions, run one escalation attempt.
-
-### Proof Record
-
-- Store one JSON record per task for execution proof in `docs/system_audit/model_executor_runs.jsonl`.
-- Required fields: `model_used`, `input_tokens`, `output_tokens`, `attempts`, `commands_run`, `pass_fail`, `failure_reason`.
-- Escalation packet stays under 200 tokens.
-- Exit when all `done_when` checks pass and scope constraints hold.
+- Executors are chosen by file-backed config, never by a fixed model name in a guide: `agent_executor` (`default`, `escalate_to`, `auto_execute`, `disable_codex_executor`) and `agent_cost` (`max_cost_usd`, `estimated_cost_usd`, `paid_tool_8h_limit`, `paid_tool_week_limit`, `paid_tool_window_budget_fraction`) in `api/config/api.json`, overlaid by `~/.coherence-network/config.json`. Read the live values before claiming which executor runs; today the default is `federation`, the codex executor is disabled and auto-execute is off.
+- A task is handed over as a card — `goal`, `files_allowed`, `done_when`, `commands`, `constraints` (`docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md`). Commands come from the card; output is compared against `done_when`; one escalation at most, never a loop.
+- Every run leaves one row in `docs/system_audit/model_executor_runs.jsonl`: `model_used`, `input_tokens`, `output_tokens`, `attempts`, `commands_run`, `pass_fail`, `failure_reason`. The ledger is the claim; a budget or format rule that is not read from config or a row is not a rule.
 
 ## Key Files
 
-- `CLAUDE.md` — Project config, conventions, guardrails
-- `AGENT.md` — Agent flow guide for the simplest useful next command
-- `GEMINI.md` — Gemini-specific session-start note that points back to provider-neutral guidance
-- `docs/WORKTREE-QUICKSTART.md` — Mandatory worktree-only startup flow and failure recovery
-- `docs/STATUS.md` — Current implementation status, sprint progress
-- `docs/SPEC-COVERAGE.md` — Spec → implementation → test mapping
-- `docs/SPEC-TRACKING.md` — Quick reference: spec status, test mapping, verification
-- `docs/SPEC-QUALITY-GATE.md` — Required quality contract for changed specs
-- `docs/REFERENCE-REPOS.md` — Reference repos (crypo-coin, living-codex); read-only context
-- `docs/PLAN.md` — Consolidated vision and roadmap
-- `docs/MODEL-ROUTING.md` — AI model cost optimization
-- `docs/AGENT-DEBUGGING.md` — Add tasks, run pipeline, debug failures
-- `docs/PIPELINE-ATTENTION.md` — What needs attention, fixes, effectiveness checklist
-- `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
-- `docs/META-QUESTIONS.md` — Questions to validate setup, monitoring, effectiveness; catch misconfigurations
-- `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
-- `docs/PRODUCTION-SUBSTRATE.md` — Current Hostinger/VPS topology, internal Postgres credential carriers, and native-kernel DB probe path
+- `CLAUDE.md` — how this body is tended; runtime authority; the north star
+- `docs/shared/agent-start-packet.md` — current runtime floor and destination
+- `MANIFEST.md` and the nearest `INDEX.md` — where tissue lives
+- `AGENT.md` — the simplest useful next command
+- `GEMINI.md` — session-start note for Gemini that points back here
+- `docs/WORKTREE-QUICKSTART.md` — worktree-only startup and failure recovery
+- `docs/DEPLOY.md` — the operational delivery guide; `api/app/form_recipes/delivery_care.bml` is its native reminder
+- `docs/PRODUCTION-SUBSTRATE.md` — deployed topology, internal Postgres carriers, native DB probe path
 - `docs/PR-CHECK-FAILURE-TRIAGE.md` — PR check failure detection, auto-retry, remediation mapping
-- `docs/DEPLOY.md` — Deploy checklist
-- `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
-- `specs/TEMPLATE.md` — Spec format
+- `docs/SPEC-QUALITY-GATE.md` — the quality contract for changed specs; `specs/TEMPLATE.md` — spec format
+- `docs/GLOSSARY.md` — terms
+
+Earlier pipeline-era readers (`docs/STATUS.md`, `docs/PLAN.md`, `docs/SPEC-COVERAGE.md`, `docs/MODEL-ROUTING.md`, `docs/PIPELINE-*.md`, `docs/RUNBOOK.md`, `docs/META-QUESTIONS.md`, `docs/REFERENCE-REPOS.md`) remain in the tree as history; no index circulates them and they are not arrival ground.
 
 ## Interface
 
-- **Cursor** — Primary manual development interface
-- **Chat (Grok, OpenAI)** — Copy/paste for hard framework/architecture issues (no API)
-- **Future** — OpenClaw, Agent Zero, etc. when multi-agent framework is set up
+- **Sibling cells** — Claude Code, Codex and Cursor sessions work the same body in linked worktrees; a sibling's branch, worktree or deploy run in progress is theirs — read it, never reset or race it.
+- **The body's own voice** — `fcnv-ask` on a host with the fkwu Metal lane; the companion and the scheduled walks land native turns at `rent_tokens 0`.
+- **Host-local models** (Qwen, Llama, the LoRA lane) are explicit teachers and reviewers; remote minds are named per step in the sovereignty receipt.
 
 ## Commands
 
@@ -251,65 +200,24 @@ python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 cd api && pytest -v
 cd api && pytest -v --ignore=tests/holdout   # agent validation
 
-# Scripts
-cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next task
-cd api && .venv/bin/python scripts/run_backlog_item.py --index 5  # run single item
+# Agent-task lane (the overnight pipeline; off by config today — agent_executor.auto_execute, disable_codex_executor)
 cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
-
-# Optional PR → public deploy contract validation
-cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/<thread-name> --wait-public
-
-# Autonomous pipeline (one command, no interaction; fatal issues only)
-cd api && ./scripts/run_autonomous.sh
-
-# Or manual: overnight pipeline (API must be running)
-cd api && ./scripts/run_overnight_pipeline.sh
-
-# Check what needs attention (run before or during pipeline)
-cd api && ./scripts/ensure_effective_pipeline.sh
-
-# With auto-restart on stale version (use watchdog)
-PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
+cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next task
+# The autonomous and overnight runners live beside them in api/scripts/ (run_autonomous.sh, run_overnight_pipeline.sh,
+# ensure_effective_pipeline.sh, the watchdog); start one only with the executor config read first.
 ```
 
 ## Full Pipeline for Codex Work
 
-- Clone or switch into the linked worktree path for each thread before submitting task commands.
-- Keep task execution in worktree mode by running all Codex/agent commands from that worktree.
-- Start each run with a file-impact manifest to avoid context overrun:
-  - `python3 scripts/context_budget.py <files-or-globs>`
-- Cache summaries in `.cache/context_budget/summary_cache.json`.
-  - Use `--force-summaries` only when a file changes materially or cache is stale.
-- Codex/openclaw execution path is already wired for worktree mode:
-  - default command template includes `codex exec ... --model gpt-5.3-codex-spark --reasoning-effort high --worktree`.
-  - set `OPENCLAW_MODEL` to override if needed.
-- Paid-provider override is accepted by execute endpoint as `force_paid_*` query flags or `X-Force-Paid-Providers` header.
-- Public auto-execute note: `AGENT_AUTO_EXECUTE` is enabled in deployment, so paid tasks may auto-run before manual `/execute`.
-  - For deterministic smoke checks, include `"force_paid_providers": true` in create context so the auto runner inherits override.
+- Clone or switch into the linked worktree for each thread before submitting task commands; run every agent command from that worktree.
+- Start a large read with a file-impact manifest: `python3 scripts/context_budget.py --token-budget 50000 <files-or-globs>`; reuse `.cache/context_budget/summary_cache.json` to choose what to open first, and `--force-summaries` only when a file changed materially.
+- The codex execution path (`api/app/services/agent_execution_codex_service.py`) runs `codex exec … --worktree`; whether it is enabled, which executor is default, and whether tasks auto-execute are the `agent_executor` keys in `api/config/api.json` (today: disabled, `federation`, off). A paid-provider override is accepted by the execute endpoint as `force_paid_*` query flags or the `X-Force-Paid-Providers` header, or as `"force_paid_providers": true` in the task's create context.
 - Public paid-override smoke check (small verification):
   - `API_URL=https://api.coherencycoin.com`
-  - `TASK_ID=$(curl -s -X POST "$API_URL/api/agent/tasks" -H 'Content-Type: application/json' -d '{"direction":"public paid smoke", "task_type":"impl", "context":{"executor":"openclaw","model_override":"openai/gpt-4o-mini","force_paid_providers":true}}' | jq -r '.id')`
-  - `curl -X GET "$API_URL/api/agent/tasks/$TASK_ID"`
-  - `curl "$API_URL/api/runtime/endpoints/summary?limit=20"` (look for `/tool:openrouter.chat_completion`, paid ratios/failures)
-  - `TASK_ID=$TASK_ID API_URL=$API_URL curl "$API_URL/api/runtime/events?limit=100" | jq --arg id "$TASK_ID" '.[] | select(.metadata.task_id == $id and .metadata.tracking_kind == "agent_tool_call")'`
-  - `curl "$API_URL/api/friction/events?status=open&limit=20" | jq '.[] | select(.block_type == "paid_provider_blocked")'`
-- Suggested full deployment flow:
-  - `./scripts/verify_worktree_local_web.sh` (local API+web contract)
-  - `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS)
-  - For automated long-running instances, rely on `.github/workflows/public-deploy-contract.yml` plus `hostinger-auto-deploy.yml`; keep Hostinger deploy secrets/vars and `GITHUB_TOKEN` configured so retries and reporting survive process restarts.
-- Keep cost pressure controlled:
-  - Set per-task budget inputs where possible (`max_cost_usd`, `estimated_cost_usd`) and environment budgets (`AGENT_TASK_MAX_COST_USD`).
-  - Enforce an internal rule to use <=1/3 of known 8h/week usage windows for a single loop before escalation.
-  - Treat `cost_overrun` and `paid_provider_blocked` friction events as execution blockers until explicitly reviewed.
-  - Paid-provider window settings:
-    - `PAID_TOOL_8H_LIMIT` for the rolling 8h call cap.
-    - `PAID_TOOL_WEEK_LIMIT` for the rolling 7-day call cap.
-    - `PAID_TOOL_WINDOW_BUDGET_FRACTION` for hard cap fraction (default `0.333`).
-
-- Context-budget workflow before large reads:
-  - Start each large-read session with `python3 scripts/context_budget.py --token-budget 50000 <file-globs>`.
-  - Reuse `.cache/context_budget/summary_cache.json` to choose what to open first.
-  - If a file still risks overrun, use `--force-summaries` then read minimal slices.
+  - `TASK_ID=$(curl -s -X POST "$API_URL/api/agent/tasks" -H 'Content-Type: application/json' -d '{"direction":"public paid smoke", "task_type":"impl", "context":{"executor":"openclaw","force_paid_providers":true}}' | jq -r '.id')`
+  - `curl "$API_URL/api/agent/tasks/$TASK_ID"`; `curl "$API_URL/api/runtime/endpoints/summary?limit=20"`; `curl "$API_URL/api/friction/events?status=open&limit=20" | jq '.[] | select(.block_type == "paid_provider_blocked")'`
+- Delivery: `./scripts/verify_worktree_local_web.sh` (local API+web contract), `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS); long-running instances rely on `.github/workflows/public-deploy-contract.yml` plus `hostinger-auto-deploy.yml`.
+- Cost pressure is config, not environment: `agent_cost.max_cost_usd` / `estimated_cost_usd` per task, `paid_tool_8h_limit`, `paid_tool_week_limit`, `paid_tool_window_budget_fraction` (default `0.333`). Use at most a third of a known 8h/week window for one loop before escalating; `cost_overrun` and `paid_provider_blocked` friction events block execution until reviewed.
 
 ## Conventions
 
@@ -327,7 +235,6 @@ Pattern: `~/.coherence-network/config.json` → `api/config/api.json` → sensib
 ### Other Conventions
 
 - **Holdout tests** — `api/tests/holdout/` excluded from agent context; CI runs full suite
-- **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
 - **Spec cross-links** — specs have "See also" sections
 - **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
 
@@ -414,7 +321,7 @@ Use the `command` from the POST response to run Claude Code. Patch the task when
 
 ### Telegram Integration
 
-Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS` in `.env`. When a task is marked `needs_decision` or `failed`, the router sends an alert to Telegram. To receive and send commands from Telegram:
+Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying `api/config/api.json`): `bot_token`, `chat_ids`, `allowed_user_ids`, `failed_alert_max_per_window`, `failed_alert_window_seconds`. When a task is marked `needs_decision` or `failed`, the router sends an alert to Telegram. To receive and send commands from Telegram:
 
 1. Create bot via @BotFather, get token. Get your chat ID from @userinfobot.
 2. Set webhook: `curl "https://api.telegram.org/bot{TOKEN}/setWebhook?url={API_URL}/api/agent/telegram/webhook"`
@@ -427,7 +334,7 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 | Service | Command | Port | Notes |
 |---------|---------|------|-------|
 | Python bridge API | `cd api && .venv/bin/uvicorn app.main:app --reload --port 8000` | 8000 | Compatibility upstream and current public carrier for routes not yet served by the Form-native front door; local dev can run without external DB; production config is file-backed on Hostinger |
-| Next.js Web | `cd web && npm run dev` | 3000 | Requires `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` |
+| Next.js Web | `cd web && npm run dev` | 3000 | Resolves its API base from `web/lib/public-config.ts` (production default); for a local API set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` — a build-time override of the web carrier, not application config |
 
 ### Gotchas
 
@@ -440,4 +347,4 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 - No external databases (PostgreSQL, Neo4j) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
 - Lint runs with: `cd api && .venv/bin/ruff check .`
-- The `.env` files are not committed. Copy from `.env.example` for API (`api/.env`) and create `web/.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:8000`.
+- The API reads `~/.coherence-network/config.json` → `api/config/api.json` (provider keys, Telegram, executors, costs); `api/.env.example` only feeds external CLIs such as Cursor. The web carrier takes `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` for a local API.
