@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/hungry-kare-8878d5",
+  "commit_scope": "Compost the pipeline-era docs and the overnight agent-task lane that read them: eleven docs plus three orphans move to docs/retired/ with a README, the dead orchestrators (monitor, project manager, meta-questions, improvement plan, overnight wrappers, spec-coverage updater) leave with their tests and CI step, every living pointer resolves to a living door, and the spec whose source left steps into specs/retired/.",
+  "files_owned": [
+    "docs/retired/README.md",
+    "specs/retired/README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    ".github/workflows/test.yml",
+    "api/scripts/local_runner.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "specs/symphony-alignment-orchestration.md",
+    "docs/system_audit/commit_evidence_2026-10-20_pipeline_era_docs_and_lane_compost.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git grep over the eleven doc names and every lane script name across living surfaces (history under docs/lineage, docs/planning, docs/system_audit, kernels left as record)",
+      "python3 scripts/generate_repo_indexes.py && python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/build_readmes.py",
+      "python3 scripts/validate_workflow_references.py",
+      "git diff --check",
+      "python3 scripts/wellness_check.py",
+      "cd form && cc -O2 -o fkwu runtime/fkwu-uni.c && ./fkwu observe/local-flow-review.bml",
+      "cd api && uv run --with pytest --with pytest-asyncio python -m pytest -q tests/test_agent_runner_tool_failure_telemetry.py tests/test_api_dockerfile_contract.py tests/test_agent_monitor_helpers.py tests/test_runner_spec_gate_guidance.py tests/test_cursor_fact_report_routing.py tests/test_monitor_pipeline_stale_running.py",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD"
+    ],
+    "notes": "Executor config (agent_executor.auto_execute false, disable_codex_executor true, executors []) and docs/system_audit/model_executor_runs.jsonl (623 rows, no run of monitor_pipeline or project_manager, one build_ai_agent_improvement_plan run on 2026-03-02 whose output stays under docs/system_audit) grounded the dead-lane call. The six touched test files pass: 47 passed. Wellness reads proprioception aligned (153 specs, 18 super-ideas, 196 concepts) and circulation clear at root; its source-map sense names 7 kernel-stdlib paths missing under form/form/form-stdlib/ for satsang-mac-guidance-app and trusted-phone-presence, and 7 symbol claims drifting in 4 untouched specs — both read against the kernel pin main already carries, not against this change. scripts/validate_workflow_references.py reports one pre-existing miss, form/form/build-android-form-cli.sh in sema-companion-apk.yml, absent from the pinned kernel. The only api/app/ edits are two routing docstrings now pointing at api/config/model_routing.json. The inventory spec-gap lane (api/app/services/inventory_service.py, inventory/spec_discovery.py) still parses docs/SPEC-COVERAGE.md and now reads an absent file as no gaps; re-sourcing it from specs/ frontmatter is named as the next breath."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push and PR checks; the spec-coverage CI step is removed with its script."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No runtime behavior ships beyond two docstrings; deploy proof reuses the current production revision."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI pending on the PR."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "symphony-alignment-orchestration",
+    "project-manager-pipeline"
+  ],
+  "task_ids": [
+    "pipeline-era-docs-and-lane-compost-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Fable 5.1",
+    "version": "claude-fable-5-1"
+  },
+  "evidence_refs": [
+    "docs/retired/README.md names the fourteen docs and the ten scripts that left with them and the living doors that carry what they pointed at.",
+    "AGENTS.md, CONTRIBUTING.md, docs/GLOSSARY.md, docs/EXECUTION-PLAN.md, docs/COMMUNITY-RESEARCH-PRIORITIES.md, docs/PIPELINE-EFFICIENCY-PLAN.md, .cursor/rules/spec-driven.mdc and references/README.md point at form/NORTH_STAR.md, docs/shared/agent-start-packet.md, docs/DEPLOY.md, docs/PRODUCTION-SUBSTRATE.md, api/config/model_routing.json or references/README.md instead of the retired docs.",
+    ".github/workflows/test.yml no longer runs api/scripts/update_spec_coverage.py; api/pyproject.toml and .codex/environments/environment.toml drop their lane entries.",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py keeps its runner tests and drops the two that loaded monitor_pipeline.py; api/tests/test_monitor_resolution.py leaves with the monitor.",
+    "specs/symphony-alignment-orchestration.md no longer claims api/scripts/project_manager.py as source or check; specs/project-manager-pipeline.md stands under specs/retired/ and specs/INDEX.md, ideas/agent-pipeline.md follow.",
+    "Done specs that cite the retired docs in their body link to docs/retired/ so their record still resolves.",
+    "wellness: specs/INDEX.md aligned (153 specs); root is clear; every .md has circulation. Touched tests: 47 passed."
+  ],
+  "change_files": [
+    ".codex/environments/environment.toml",
+    ".cursor/rules/spec-driven.mdc",
+    ".github/workflows/test.yml",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "MANIFEST.md",
+    "api/app/services/agent_routing/model_config.py",
+    "api/app/services/agent_routing/routing_config.py",
+    "api/pyproject.toml",
+    "api/scripts/local_runner.py",
+    "api/scripts/test_routing.py",
+    "api/tests/INDEX.md",
+    "api/tests/holdout/README.md",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/COMMUNITY-RESEARCH-PRIORITIES.md",
+    "docs/EXECUTION-PLAN.md",
+    "docs/GLOSSARY.md",
+    "docs/PIPELINE-EFFICIENCY-PLAN.md",
+    "docs/concepts/COHERENCE-ALGORITHM-SKETCH.md",
+    "docs/retired/AGENT-ARCHITECTURE.md",
+    "docs/retired/AGENT-DEBUGGING.md",
+    "docs/retired/AGENT-PIPELINE-RUN-REPORT-2026-03-06.md",
+    "docs/retired/CURSOR-CLI.md",
+    "docs/retired/META-QUESTIONS.md",
+    "docs/retired/MODEL-ROUTING.md",
+    "docs/retired/PIPELINE-ATTENTION.md",
+    "docs/retired/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/retired/PLAN.md",
+    "docs/retired/README.md",
+    "docs/retired/REFERENCE-REPOS.md",
+    "docs/retired/RUNBOOK.md",
+    "docs/retired/SPEC-COVERAGE.md",
+    "docs/retired/SPEC-TRACKING.md",
+    "docs/retired/STATUS.md",
+    "docs/system_audit/commit_evidence_2026-10-20_pipeline_era_docs_and_lane_compost.json",
+    "ideas/agent-pipeline.md",
+    "references/README.md",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "specs/agent-orchestration-api.md",
+    "specs/attention-heuristics-pipeline-status.md",
+    "specs/data-driven-timeout-resume.md",
+    "specs/heal-completion-issue-resolution.md",
+    "specs/pipeline-observability-and-auto-review.md",
+    "specs/postgresql-migration.md",
+    "specs/retired/README.md",
+    "specs/retired/project-manager-pipeline.md",
+    "specs/symphony-alignment-orchestration.md",
+    "specs/unified-agent-cli-flow-patch-on-fail.md",
+    "specs/verification-first-task-execution.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "No public behavior changes. Two routing docstrings point at api/config/model_routing.json; the API's spec-gap candidate sync reads an absent docs/SPEC-COVERAGE.md and reports no_spec_implementation_gaps; CI no longer runs the spec-coverage updater.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml"
+    ],
+    "test_flows": [
+      "After push, confirm the test workflow passes without the removed spec-coverage step.",
+      "After merge and deploy, confirm /api/health answers 200 on the deployed revision."
+    ]
+  }
+}

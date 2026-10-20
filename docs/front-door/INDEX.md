@@ -23,8 +23,7 @@ draft can still be completed in the conversation.
 Public structural reads include cells, equivalent shapes, and lattice statistics.
 `POST /api/substrate/grounded-ask` carries deployed native lookup when its host
 passes runtime checks; a miss or unavailable carrier is an honest result.
-Local `form-cli ask` enters the fkwu body. The former public
-`/api/substrate/form` evaluator returns HTTP 410 and is absent from the Action schema.
+Local `form-cli ask` enters the fkwu body.
 
 ## What sharing means
 

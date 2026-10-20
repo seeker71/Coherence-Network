@@ -67,9 +67,7 @@ def compose_recall(
     recency_window_hours: int = 72,
 ) -> MemoryRecall:
     """Compose a recall from graph + semantic + recency into one
-    synthesis shape. This implementation uses the in-process stores;
-    when graph-backed sensings land, the same shape can be computed
-    from Neo4j + Postgres full-text instead.
+    synthesis shape. This implementation uses the in-process stores.
 
     Never returns raw moment rows. The caller's context never sees
     timestamps or transcripts — only synthesis, felt_sense, open

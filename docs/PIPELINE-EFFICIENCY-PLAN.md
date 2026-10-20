@@ -213,5 +213,4 @@ Measure → Detect anomaly → Suggest/auto-fix → Re-measure
 ## 9. See Also
 
 - [specs/026-pipeline-observability-and-auto-review.md](../specs/026-pipeline-observability-and-auto-review.md) — Detailed requirements
-- [docs/AGENT-DEBUGGING.md](AGENT-DEBUGGING.md) — Manual debugging
-- [docs/PLAN.md](PLAN.md) — Product and tech roadmap
+- [docs/shared/agent-start-packet.md](shared/agent-start-packet.md) — Current floor and destination

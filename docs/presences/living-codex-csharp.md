@@ -28,6 +28,6 @@ First iterations dream. Final iterations realize. Second iterations *structurall
 
 ---
 
-Source: [github.com/seeker71/Living-Codex-CSharp](https://github.com/seeker71/Living-Codex-CSharp). The U-CORE primitive — one Node holding every kind — survives forward into the Coherence Network's graph layer (now Neo4j + Postgres) without semantic change.
+Source: [github.com/seeker71/Living-Codex-CSharp](https://github.com/seeker71/Living-Codex-CSharp). The U-CORE primitive — one Node holding every kind — survives forward into the Coherence Network's graph layer (now Postgres) without semantic change.
 
 *(This page is a writing-surface scaffold synced from the body's rendering surface — round-tripped from the graph the cell already lives in. `claimed: false` invites direct authorship to replace any part of it.)*

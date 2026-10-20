@@ -54,8 +54,5 @@ Run one continuous loop that improves both product delivery and delivery mechani
 
 ## Related Documents
 
-- [PLAN](PLAN.md)
-- [STATUS](STATUS.md)
-- [PIPELINE-ATTENTION](PIPELINE-ATTENTION.md)
-- [PIPELINE-MONITORING-AUTOMATED](PIPELINE-MONITORING-AUTOMATED.md)
-- [RUNBOOK](RUNBOOK.md)
+- [Agent start packet](shared/agent-start-packet.md) — current floor and destination
+- [DEPLOY](DEPLOY.md) — how the body is delivered

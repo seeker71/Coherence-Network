@@ -7,4 +7,4 @@ CI runs them to prevent implementations that "game" tests (e.g. returning true w
 - Exclude via pytest: `pytest --ignore=tests/holdout/` for agent runs
 - CI runs full suite including holdout: `pytest -v`
 
-See docs/PLAN.md Risk Register: "Test swapping" mitigation.
+See docs/retired/PLAN.md Risk Register: "Test swapping" mitigation.

@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/companion-gpt-release-proof-20261020",
+  "commit_scope": "Record merged GPT source and public0.6.1 package readback; clarify recipient account use without publisher API-credit sharing.",
+  "files_owned": [
+    "docs/front-door/connectors.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_files": [
+    "docs/front-door/connectors.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "companion-gpt-rollout-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Exact saved instruction/profile/Action readback; three live waves plus one fresh retry; actual artifact bytes;4bundle tests reused; generator/spec checks. Initial diagram error and remaining limits retained.",
+    "commands": [
+      "Saved GPT full-field readback through Chrome accessibility UI; Action JSON equality before/after",
+      "Actual hosted mentorship3turns + same-prompt fresh retry; creation2turns; collaboration3turns",
+      "Download and inspect half-made-night.md; shasum -a256",
+      "form-run uv run --locked --with pytest pytest -q tests/test_companion_plugin.py (mcp-server):4passed; reused unchanged source proof",
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+      "form-run git diff --check",
+      "gh release view companion-v0.6.1 --json tagName,targetCommitish,url,assets",
+      "curl -fL -sS public0.6.1 ZIP; shasum -a256:8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d"
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "summary": "Source PR4116 merged at26057a5e30d1065725a184c46dced593717afd93 with successful GitGuardian check and independent reviews; kernelPR620 merged first. This follow-up changes documentation only."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The existing GPT supports requested task depth, honest provenance, bounded creative revision and sovereign collaboration. The observed visual error led to explicit quantity verification; the checked retry was accurate, with broad reliability still open.",
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ],
+    "test_flows": [
+      "Reload published editor: exact 5857-character instructions, profile and capabilities; unchanged imported Action JSON.",
+      "Mentorship: observe initial visual error, correct it in conversation, then inspect the identical prompt's fresh response after the published refinement.",
+      "Creation: revise and download actual 276-byte Markdown file; inspect requested exact words and placeholders.",
+      "Collaboration: preserve both endings, refuse invented agreement from silence, leave roles unconfirmed and honor stopping."
+    ],
+    "limits": "Owner-account observations and fictional inputs; no universal success, causal improvement, native generation or separate recipient access claimed."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Existing GPT5857-character saved readback verified; companion-v0.6.1 released from merged source and downloaded without credentials, matching reviewed SHA256. Directory, npm and migration remain separate and incomplete."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_reason": null
+  },
+  "evidence_refs": [
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/integration/companion-gpt-observations.md",
+    "https://github.com/seeker71/coherence-kernel/pull/620",
+    "https://github.com/seeker71/Coherence-Network/pull/4116",
+    "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1"
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex; GPT-host outputs also rented; exact serving variants and task costs unavailable.",
+    "native": "fkwu orientation/local-flow completed; prior form-cli lookup supplied no sufficient answer. Historical mixed-session telemetry does not establish this task’s native share.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent, qualitative review",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Practical help at the existing shared GPT link with inspectable published settings.",
+    "tight": "Directory publisher verification, npm authentication, native task ownership and broad visual reliability remain separate; public sharing already works without exposing publisher credentials.",
+    "surprise": "Correct explanation accompanied an incorrect picture; the artifact itself needed inspection.",
+    "friction_to_lesson": "User confusion redirected mechanical checks into observed mentorship, authorship and sovereign collaboration."
+  }
+}

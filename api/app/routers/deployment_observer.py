@@ -20,7 +20,7 @@ from app.services.deployment_observer_service import (
 
 
 router = APIRouter()
-_LOOPBACK_BASE = "http://127.0.0.1:8000"
+_LOOPBACK_BASE = "http://native-api:8110"
 
 
 class ChallengeRequest(BaseModel):

@@ -24,6 +24,7 @@ def load_settings(*, repo: Path | None = None, home: Path | None = None) -> dict
     result = {
         "api_base": "https://api.coherencycoin.com",
         "api_key": "",
+        "capability_profile": "companion",
         "grounded_ask_timeout_seconds": 90,
         "catalog_path": str(personal / ".coherence-network" / "form-cli-catalog.jsonl"),
         "kernel_path": str(root / "form" / "fkwu"),
@@ -41,6 +42,8 @@ def load_settings(*, repo: Path | None = None, home: Path | None = None) -> dict
         result.update({key: value for key, value in document.get("mcp", {}).items() if key in result})
     if any(not isinstance(value, str) for key, value in result.items() if key != "grounded_ask_timeout_seconds"):
         raise SettingsError("MCP connection and path configuration fields must be strings.")
+    if result["capability_profile"] not in {"companion", "advanced"}:
+        raise SettingsError("mcp.capability_profile must be companion or advanced.")
     timeout = result["grounded_ask_timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 900:
         raise SettingsError("mcp.grounded_ask_timeout_seconds must be an integer from 1 to 900.")

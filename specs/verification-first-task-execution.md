@@ -103,7 +103,7 @@ fix), then **reuse** (one playbook serves every task type).
 - `api/app/routers/agent_diagnostics_routes.py` — add `GET /api/agent/unblock/{category}`.
 - `api/tests/test_task_proof_gate.py` — **new**: proof classification + retry-on-missing.
 - `api/tests/test_unblock_playbook.py` — **new**: every category resolves; endpoint contract.
-- `docs/RUNBOOK.md` — add "Unblock Playbook" section mirroring the service table.
+- `docs/retired/RUNBOOK.md` — add "Unblock Playbook" section mirroring the service table.
 
 ## Execution Protocol (PLAN / PATCH / RUN / RESULT)
 

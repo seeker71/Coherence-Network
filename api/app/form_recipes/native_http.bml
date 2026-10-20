@@ -4,16 +4,22 @@ import form-stdlib/bml/native-socket-dispatch.bml;
 section [form.bml] {
  class NativeHttp {
   def nha-variable(part) = len(part)>2 && substring(part,0,1) == "{" && substring(part,len(part) - 1,len(part)) == "}";
+  def nha-key(part) = split-on(substring(part,1,len(part) - 1),":")[0];
+  def nha-tail(part) = nha-variable(part) && str_find(part,":path}",0)>0;
+  def nha-join(parts) = nil?(parts) ? "" : parts[0] ++ str-spans(map(part => "/" ++ part,parts[1:]));
+  def nha-match-parts(wanted,actual) = nil?(wanted) ? nil?(actual) : nil?(actual) ? false : nha-tail(wanted[0]) ? len(wanted) == 1 && len(actual[0])>0 : (nha-variable(wanted[0]) ? len(actual[0])>0 : wanted[0] == actual[0]) && nha-match-parts(wanted[1:],actual[1:]);
   def nha-matches(pattern,path) {
    let wanted = split-on(pattern,"/"); let actual = split-on(path,"/");
-   len(wanted) == len(actual) && all?(i => nha-variable(wanted[i]) ? len(actual[i])>0 : wanted[i] == actual[i],range(0,len(wanted)));
+   nha-match-parts(wanted,actual);
   }
   def nha-parameters(pattern,path) {
    let wanted = split-on(pattern,"/"); let actual = split-on(path,"/");
-   json-node-object(map(i => json-node-pair(substring(wanted[i],1,len(wanted[i]) - 1),json-node-string(ncf-uri(actual[i]))),filter(i => nha-variable(wanted[i]),range(0,len(wanted)))));
+   json-node-object(map(i => json-node-pair(nha-key(wanted[i]),json-node-string(ncf-uri(nha-tail(wanted[i]) ? nha-join(actual[i:]) : actual[i]))),filter(i => nha-variable(wanted[i]),range(0,len(wanted)))));
   }
-  def nha-regex(pattern) = "^" ++ str-spans(map(part => "/" ++ (nha-variable(part) ? "[^/]+" : part),drop(1,split-on(pattern,"/")))) ++ "$";
-  def nha-route-rule(route) = "(Method(`" ++ ncf-string(route,"method") ++ "`) && " ++ (any?(part => nha-variable(part),split-on(ncf-string(route,"path"),"/")) ? "PathRegexp(`" ++ nha-regex(ncf-string(route,"path")) ++ "`)" : "Path(`" ++ ncf-string(route,"path") ++ "`)") ++ ")";
+  def nha-regex(pattern) = "^" ++ str-spans(map(part => "/" ++ (nha-tail(part) ? ".+" : nha-variable(part) ? "[^/]+" : part),drop(1,split-on(pattern,"/")))) ++ "$";
+  def nha-methods(routes) = nha-join-methods(foldl((methods,route) => { let method = ncf-string(route,"method"); any?(one => one == method,methods) ? methods : append(methods,[method]); },["OPTIONS"],routes));
+  def nha-join-methods(methods) = nil?(methods) ? "" : methods[0] ++ str-spans(map(method => ", " ++ method,methods[1:]));
+  def nha-route-rule(route) = "((Method(`OPTIONS`) || Method(`" ++ ncf-string(route,"method") ++ "`)) && " ++ (any?(part => nha-variable(part),split-on(ncf-string(route,"path"),"/")) ? "PathRegexp(`" ++ nha-regex(ncf-string(route,"path")) ++ "`)" : "Path(`" ++ ncf-string(route,"path") ++ "`)") ++ ")";
   // Existing literal declarations retain their owner ahead of a new parameter
   // template. This reads source metadata at deployment, never a request fallback.
   def nha-existing-literals(source,base) {
@@ -27,12 +33,29 @@ section [form.bml] {
    let at = str_find(text,"=",0);
    json-node-pair(ncf-uri(nha-space(at<0 ? text : substring(text,0,at))),json-node-string(ncf-uri(nha-space(at<0 ? "" : substring(text,at+1,len(text))))));
   }
+  // The socket dispatcher has admitted framing. Decode the payload once here;
+  // content bytes and chunk extensions never become application semantics.
+  def nha-unchunk(text,at,parts) {
+   let end = str_find(text,"\r\n",at);
+   end<0 ? form_error("request chunk source is incomplete") : {
+    let size = nsd-hexadecimal(nsd-lower(trim(split-on(substring(text,at,end),";")[0])),0,0);
+    nothing?(size) || end+2+size>len(text) ? form_error("request chunk source is incomplete") : size == 0 ? str-spans(reverse(parts)) : nha-unchunk(text,end+2+size+2,cons(substring(text,end+2,end+2+size),parts));
+   };
+  }
+  def nha-body(raw) {
+   let at = str_find(raw,"\r\n\r\n",0);
+   at<0 ? "" : {
+    let head = split-on(substring(raw,0,at),"\r\n"); let body = substring(raw,at+4,len(raw));
+    let encodings = nsd-values(head,"transfer-encoding");
+    any?(value => str_find(nsd-lower(value),"chunked",0)>=0,encodings) ? nha-unchunk(body,0,[]) : body;
+   };
+  }
   def nha-request(raw,routes) {
    let line = split-on(split-on(raw,"\r\n")[0]," "); let method = line[0]; let target = line[1];
    let mark = str_find(target,"?",0); let path = mark<0 ? target : substring(target,0,mark);
    let query = json-node-object(mark<0 ? [] : map(part => nha-query-pair(part),filter(part => len(part)>0,split-on(substring(target,mark+1,len(target)),"&"))));
    let matched = filter(route => (ncf-string(route,"method") == method || method == "OPTIONS") && nha-matches(ncf-string(route,"path"),path),routes);
-   record_new(0,"method",method,"path",path,"query",query,"route",nil?(matched) ? nothing() : matched[0],"parameters",nil?(matched) ? json-node-object([]) : nha-parameters(ncf-string(matched[0],"path"),path));
+   record_new(0,"method",method,"path",path,"query",query,"body",nha-body(raw),"route",nil?(matched) ? nothing() : matched[0],"parameters",nil?(matched) ? json-node-object([]) : nha-parameters(ncf-string(matched[0],"path"),path));
   }
   def nha-value(request,key,fallback) = json-object-has?(record_get(request,"query"),key) ? ncf-string(record_get(request,"query"),key) : fallback;
   def nha-number(request,key,fallback) {
@@ -44,6 +67,6 @@ section [form.bml] {
    let text = nsd-lower(nha-value(request,key,fallback ? "true" : "false"));
    text == "true" || text == "1" || text == "yes" ? true : text == "false" || text == "0" || text == "no" ? false : form_error("request " ++ key ++ " needs a boolean");
   }
-  def nha-reply(code,body,began) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 204 ? " No Content" : code == 404 ? " Not Found" : " Error") ++ "\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\nCache-Control: no-store, no-transform\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nX-Content-Type-Options: nosniff\r\nX-Form-Router: fkwu\r\nX-Coherence-Runtime-Ms: " ++ (host_monotonic_ms() - began).str() ++ "\r\n\r\n" ++ body;
+  def nha-reply(code,body,began,methods) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 204 ? " No Content" : code == 404 ? " Not Found" : " Error") ++ "\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\nCache-Control: no-store, no-transform\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: " ++ methods ++ "\r\nAccess-Control-Allow-Headers: *\r\nX-Content-Type-Options: nosniff\r\nX-Form-Router: fkwu\r\nX-Coherence-Runtime-Ms: " ++ (host_monotonic_ms() - began).str() ++ "\r\n\r\n" ++ body;
  }
 }

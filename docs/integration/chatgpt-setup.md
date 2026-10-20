@@ -1,4 +1,4 @@
-# Update the existing Sema GPT
+# Sema GPT: published profile and update procedure
 
 The repository already points to [Sema in ChatGPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625).
 Use that existing door for friends and family. Its link is recorded in the
@@ -6,30 +6,53 @@ Use that existing door for friends and family. Its link is recorded in the
 and [Android invitation source](../../mobile/sema-companion/app/src/main/java/com/coherence/sema/data/InvitationClient.kt).
 Those references establish identity, not current account access or deployment health.
 
-On 2026-10-20, the existing GPT's ChatGPT page was observed as **Sema —
-coherence-kernel**, by **Urs Muff**, with a notice asking for migration to plugins
-by **December 11** and warning that unmigrated GPTs would become unavailable.
-This is a dated observation of this GPT's UI. Preserve its identity and inspect
-the offered migration path before choosing any replacement. No migration or
-publication is established by this source update.
+## Published configuration — 2026-10-20
 
-The [existing editor](https://chatgpt.com/gpts/editor/g-6a4a77627dbc819180a16645f5662625)
-requires an account allowed to edit it. In the same read-only session on
-2026-10-20, the editor was accessible and showed this profile:
+At **2026-10-20T06:53:03Z**, saved-editor readback confirmed the updated
+**Sema — coherence-kernel** GPT was **Published; Everyone**. Its complete
+Instructions text matched the canonical 6,867-character payload, including the
+teaching-visual refinement and the existing skill’s portable continuation practice. Its description
+and all four conversation starters matched [chatgpt-profile.json](chatgpt-profile.json).
+See the [publication and behavior observations](companion-gpt-observations.md)
+for the dated evidence and subsequent live trials.
 
 | Observed setting | Value |
 |---|---|
 | Publication | Published; Everyone |
-| Last edited label | July 16 |
-| Enabled host capabilities | Web Search, Canvas, Image Generation, Code Interpreter |
+| Instructions | Exact match to `form/plugin/ai-plugin.json#description_for_model`; 6,867 characters |
+| Description and conversation starters | Match the description and four starters in `chatgpt-profile.json` |
+| Enabled host capabilities | Web Search, Canvas, Image Generation, Code Interpreter & Data Analysis |
 | Native Action server | `https://sema.hati.earth` |
 | Action authentication | None |
 | Imported operations | `GET /ask` and `GET /trace` only |
-| Instructions | The earlier reflective style requiring one lifting move per reply |
+| Imported Action schema | JSON-equal to the owner's pre-update backup |
 
-These are editor observations, not end-to-end execution proof. Editing repository
-files alone does not update the GPT. Preserve its identity, sharing choices,
-enabled capabilities, and two-operation Action while reviewing the instructions.
+The earlier instructions required one lifting move per reply. The published
+payload instead asks for useful work at the person's requested scale: mentorship,
+business exploration, design, creation, research, collaboration, or reflection.
+It allows finished artifacts without a mandatory follow-up or short-reply limit,
+preserves warnings and refusals, and separates conversation, sharing, memory,
+and learning capture.
+
+This advances the North Star's care, agency, and truthful attribution at the
+instruction boundary. Conversation still uses the host's model; relevant native
+Action results must carry their own evidence. This publication does not establish
+native conversational sovereignty, private memory, or success on every live task.
+Configuration readback and observed behavior remain separate receipts.
+
+## Historical starting point and migration boundary
+
+The earlier read on 2026-10-20 showed the GPT by **Urs Muff**, a **July 16**
+last-edited label, and the reflective one-lifting-move instructions. Its page also
+showed a notice asking for migration to plugins by **December 11** and warning
+that unmigrated GPTs would become unavailable. That notice is a dated observation
+of this GPT's UI. The instruction publication above does not establish migration.
+Inspect the offered migration path before choosing any replacement.
+
+The [existing editor](https://chatgpt.com/gpts/editor/g-6a4a77627dbc819180a16645f5662625)
+requires an account allowed to edit it. Editing repository files alone does not
+update the GPT. Preserve its identity, sharing choices, enabled capabilities,
+and two-operation Action when making further changes.
 
 ## Two related contracts, with different owners
 
@@ -54,12 +77,14 @@ update.** Memory, invitations, and dialogue writes require their own deployment,
 access-control, privacy, and authorization review before being exposed. This
 GPT's observed Action currently offers none of those operations.
 
-The kernel's [publication handoff](../../form/plugin/PUBLISH-HANDOFF.md) is the
-current procedure for publishing and reading back this instruction update. Its
-dated editor observations establish the starting configuration, not server
-execution or authenticated private storage.
+The kernel's [publication handoff](../../form/plugin/PUBLISH-HANDOFF.md) covers
+the canonical instructions and Action boundary. This guide and
+[profile](chatgpt-profile.json) record the applied description and starter update;
+the [observation receipt](companion-gpt-observations.md) records publication and
+live behavior separately. Neither an editor readback nor a source manifest proves
+server execution or authenticated private storage.
 
-## Prepare the update
+## Maintain and read back the profile
 
 1. In the existing editor, read the current instructions, conversation starters,
    Action server URL and operation IDs, enabled tools, and sharing state. Retain
@@ -70,11 +95,11 @@ execution or authenticated private storage.
    text and review the change. The existing GPT remains limited to `ask` and
    `trace` even where the source describes future operations conditionally.
 3. Replace Instructions with that exact payload following the
-   [publication handoff](../../form/plugin/PUBLISH-HANDOFF.md). Preserve the
-   current description, conversation starters, enabled capabilities, identity,
-   and sharing settings. The six [everyday examples](../front-door/connectors.md#six-ways-to-begin)
-   are evaluation prompts; changing the GPT's visible starters is a separate
-   future choice for its owner.
+   [publication handoff](../../form/plugin/PUBLISH-HANDOFF.md). Apply the description
+   and four conversation starters from [chatgpt-profile.json](chatgpt-profile.json).
+   Preserve enabled capabilities, identity, and sharing settings. The six
+   [everyday examples](../front-door/connectors.md#six-ways-to-begin) supply further
+   evaluation prompts; they do not replace the recorded visible starters.
 4. Keep the existing Action server `https://sema.hati.earth`, authentication
    setting, and imported `GET /ask` and `GET /trace` operations unchanged for
    this instruction update. Remove claims about operations absent from that
@@ -94,6 +119,9 @@ A normal browsing conversation should not be assumed to support arbitrary POSTs.
 
 ## Focused acceptance examples
 
+These are expectations for fresh conversations, not a list of passed trials.
+Record actual results in the [observations](companion-gpt-observations.md).
+
 - “Teach me the difference between revenue and profit, then give me a small exercise.”
   Produces a useful lesson without publishing an idea.
 - “Help me test a weekend workshop business.”
@@ -108,8 +136,9 @@ A normal browsing conversation should not be assumed to support arbitrary POSTs.
   Explains the actual available storage and consent boundary; no public
   ingestion or training capture follows automatically.
 - “Publish this summary.”
-  Makes the exact destination, public content, and attribution reviewable and
-  uses authorization for that payload; success needs the returned receipt.
+  Prepares the shareable content and identifies any missing destination or
+  attribution. Explains that the current read-only Action cannot publish it;
+  does not claim an external write occurred.
 
 Read and drafting examples need no external mutation. Test publishing or memory
 only with a specifically approved sample and a known destination. Keep private

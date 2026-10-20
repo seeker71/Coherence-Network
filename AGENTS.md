@@ -48,7 +48,7 @@ The operational guide below gives the next-command shape for shipping safely. Th
 
 ## Project Summary
 
-Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → `fkwu` JIT realization → observed route/runtime proof. Retired carriers are bootstrap history, not siblings or validation authorities. The current application still includes Next.js, PostgreSQL, Neo4j, and a Python compatibility host while their live seams move into Form/BML.
+Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → `fkwu` JIT realization → observed route/runtime proof. Retired carriers are bootstrap history, not siblings or validation authorities. The current application still includes Next.js, PostgreSQL, and a Python compatibility host while their live seams move into Form/BML.
 
 ## Workflow
 
@@ -118,7 +118,7 @@ A claim about a provider's limits, remaining quota or routing is made from machi
 - `docs/SPEC-QUALITY-GATE.md` — the quality contract for changed specs; `specs/TEMPLATE.md` — spec format
 - `docs/GLOSSARY.md` — terms
 
-Earlier pipeline-era readers (`docs/STATUS.md`, `docs/PLAN.md`, `docs/SPEC-COVERAGE.md`, `docs/MODEL-ROUTING.md`, `docs/PIPELINE-*.md`, `docs/RUNBOOK.md`, `docs/META-QUESTIONS.md`, `docs/REFERENCE-REPOS.md`) remain in the tree as history; no index circulates them and they are not arrival ground.
+Pipeline-era readers stand under `docs/retired/` as history (`docs/retired/README.md` names them and the scripts that left with them); they are not arrival ground.
 
 ## Interface
 
@@ -192,11 +192,8 @@ python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 cd api && pytest -v
 cd api && pytest -v --ignore=tests/holdout   # agent validation
 
-# Agent-task lane (the overnight pipeline; off by config today — agent_executor.auto_execute, disable_codex_executor)
+# Agent-task lane status (the executor is off by config — agent_executor.auto_execute, disable_codex_executor)
 cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
-cd api && .venv/bin/python scripts/project_manager.py --dry-run   # preview next task
-# The autonomous and overnight runners live beside them in api/scripts/ (run_autonomous.sh, run_overnight_pipeline.sh,
-# ensure_effective_pipeline.sh, the watchdog); start one only with the executor config read first.
 ```
 
 ## Full Pipeline for Codex Work
@@ -285,12 +282,6 @@ curl http://localhost:8000/api/agent/tasks
 curl "http://localhost:8000/api/agent/route?task_type=impl"
 ```
 
-**Check monitor issues (automated pipeline health):**
-```bash
-curl http://localhost:8000/api/agent/monitor-issues
-```
-If `issues` non-empty, follow `suggested_action` per issue (sorted by priority). See `docs/PIPELINE-MONITORING-AUTOMATED.md`.
-
 **Measure pipeline effectiveness (throughput, issues, goal proximity):**
 ```bash
 curl http://localhost:8000/api/agent/effectiveness
@@ -335,7 +326,7 @@ Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying
 - Repo `.sh` scripts run through Git Bash at `C:\Program Files\Git\bin\bash.exe`; the Makefile startup targets call it automatically.
 - `ruff` is not listed in `pyproject.toml` dev dependencies and `make lint` needs it in the API venv.
 - `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
-- No external databases (PostgreSQL, Neo4j) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
+- No external databases (PostgreSQL) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
 - Lint runs with: `cd api && .venv/bin/ruff check .`
 - The API reads `~/.coherence-network/config.json` → `api/config/api.json` (provider keys, Telegram, executors, costs); `api/.env.example` only feeds external CLIs such as Cursor. The web carrier takes `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` for a local API.

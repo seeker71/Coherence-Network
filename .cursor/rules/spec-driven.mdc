@@ -21,7 +21,7 @@ The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It i
 
 **Current project:** Coherence-Network. All implementations belong here (`api/`, `web/`, `specs/`).
 
-**references/**: Symlinks to Crypo-Coin-Coherency-Network and Living-Codex-CSharp. Read-only context — patterns, ideas, lineage. Edits stay inside Coherence-Network. See `docs/REFERENCE-REPOS.md`.
+**references/**: Symlinks to Crypo-Coin-Coherency-Network and Living-Codex-CSharp. Read-only context — patterns, ideas, lineage. Edits stay inside Coherence-Network. See `references/README.md`.
 
 ## Spec-First
 

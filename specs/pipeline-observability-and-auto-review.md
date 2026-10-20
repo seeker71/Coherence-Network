@@ -188,8 +188,8 @@ TaskMetric:
 
 ## See Also
 
-- [docs/AGENT-DEBUGGING.md](../docs/AGENT-DEBUGGING.md) — Pipeline troubleshooting
-- [docs/SPEC-COVERAGE.md](../docs/SPEC-COVERAGE.md) — Spec→impl mapping
+- [docs/retired/AGENT-DEBUGGING.md](../docs/retired/AGENT-DEBUGGING.md) — Pipeline troubleshooting
+- [docs/retired/SPEC-COVERAGE.md](../docs/retired/SPEC-COVERAGE.md) — Spec→impl mapping
 - [005-project-manager-pipeline.md](project-manager-pipeline.md) — Pipeline phases
 
 ## Concurrency Behavior

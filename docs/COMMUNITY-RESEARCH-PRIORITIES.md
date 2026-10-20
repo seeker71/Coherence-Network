@@ -12,7 +12,7 @@
 - **Quality:** Success rate, test pass rate, spec compliance — improving?
 - **Efficiency:** Time per task, cost per task — within target?
 - **Bottlenecks:** Where does human time go? needs_decision? Failures? Reviews?
-- **Goal alignment:** Is the backlog moving us toward MVP / Sprint goals? (See [PLAN.md](PLAN.md))
+- **Goal alignment:** Is the backlog moving us toward where we go? (See [form/NORTH_STAR.md](../form/NORTH_STAR.md))
 
 ### What Works?
 
@@ -45,7 +45,7 @@
 |------|-------------------|---------------|
 | **Agent orchestration** | How do others run multi-agent pipelines? | OpenClaw, Agent Zero, LangGraph, CrewAI, AutoGen |
 | **Prompt engineering** | Best practices for spec→impl, test-first? | Anthropic, OpenAI guides; papers on chain-of-thought, tool use |
-| **Model routing** | Cost vs quality tradeoffs; when to use which model? | MODEL-ROUTING.md; provider docs; community benchmarks |
+| **Model routing** | Cost vs quality tradeoffs; when to use which model? | `api/config/model_routing.json`; provider docs; community benchmarks |
 | **Backlog management** | How to structure work for AI agents? | Agile for AI; agentic workflows; product backlogs |
 | **Spec-driven dev** | Contract-first, spec-as-oracle patterns? | API-first, OpenAPI, TDD; Living Codex, crypo-coin references |
 | **OSS health metrics** | Coherence-like scores; existing frameworks? | CHAOSS, OpenSSF, deps.dev, Libraries.io, Tidelift |
@@ -173,11 +173,9 @@
 
 ## 6. See Also
 
-- [META-QUESTIONS.md](META-QUESTIONS.md) — Validate setup, monitoring, effectiveness; catch config drift
 - [PIPELINE-EFFICIENCY-PLAN.md](PIPELINE-EFFICIENCY-PLAN.md) — Measurement and improvement
-- [PLAN.md](PLAN.md) — Product vision and roadmap
-- [AGENT-DEBUGGING.md](AGENT-DEBUGGING.md) — Debugging the pipeline
-- [REFERENCE-REPOS.md](REFERENCE-REPOS.md) — Source material and related work
+- [form/NORTH_STAR.md](../form/NORTH_STAR.md) — Who we are and where we go
+- [shared/agent-start-packet.md](shared/agent-start-packet.md) — Current floor
 
 ---
 

@@ -54,6 +54,19 @@ test("missing both runtimes reports failure on stderr only", options, (t) => {
   assert.match(result.stderr, /could not start python3/);
 });
 
+test("Windows selection uses the Python launcher when uv is absent", options, (t) => {
+  const path = fixtures(t, {
+    py: 'process.stdout.write(JSON.stringify(process.argv.slice(2))); process.exitCode = 23;',
+  });
+  // Observe Windows command selection with real subprocesses; native Windows
+  // execution remains a separate platform check because these fixtures use shebangs.
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e",
+    `Object.defineProperty(process, "platform", { value: "win32" }); await import(${JSON.stringify(launcher)});`,
+  ], { env: { ...process.env, PATH: path }, encoding: "utf8", timeout: 10000 });
+  assert.equal(result.status, 23, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), ["-3", "-m", "coherence_mcp_server"]);
+});
+
 test("termination reaches the active fallback child", { ...options, timeout: 10000 }, async (t) => {
   const path = fixtures(t, {
     python3: 'process.on("SIGTERM", () => { process.stderr.write("stopped\\n"); process.exit(29); }); process.stdout.write("ready\\n"); setInterval(() => {}, 1000);',

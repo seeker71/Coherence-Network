@@ -1,0 +1,61 @@
+// Durable named values carry the body's canonical workspace cell codec. Numeric
+// NodeIDs name this request's native field; SHA-256 of the wire is the durable
+// composition identity across private request fields and process lifetimes.
+import postgres.bml;
+import native_config.bml;
+import form-stdlib/bml/form-token-workspace.bml;
+import form-stdlib/cell-serialize.fk;
+section [form.bml] {
+ class NativeNamedPersistence {
+  def nnp-registry() = map(name => wr-entry(name,ftw-cat(name)),["ftw-record","ftw-list","ftw-nothing","ftw-node","ftw-opaque"]);
+  def nnp-pack(value) = cell-to-json(ftw-encode(value),nnp-registry());
+  def nnp-cell(wire) = json-to-cell(wire,nnp-registry());
+  def nnp-unpack(wire) = ftw-decode(nnp-cell(wire));
+  def nnp-identity(wire) = "sha256:" ++ nc-hex(nc-sha256(wire));
+  def nnp-json(value) = nothing?(value) ? json-node-null() : value_kind(value) == "string" ? json-node-string(value) : value_kind(value) == "int" ? json-node-int(value) : value_kind(value) == "float" ? json-node-float-text(value.str()) : value_kind(value) == "list" ? json-node-array(map(nnp-json,value)) : value_kind(value) == "record" ? json-node-object(map(key => json-node-pair(key,nnp-json(record_get(value,key))),record_keys(value))) : form_error("named value is not in its offered value grammar");
+  def nnp-schema() = [
+   "CREATE TABLE IF NOT EXISTS form_values (identity text PRIMARY KEY, wire text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())",
+   "CREATE TABLE IF NOT EXISTS form_named_values (domain text NOT NULL, name text NOT NULL, identity text NOT NULL REFERENCES form_values(identity), source_label text NOT NULL DEFAULT '', visibility text NOT NULL DEFAULT 'public', created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(domain,name))",
+   "CREATE INDEX IF NOT EXISTS form_named_values_identity ON form_named_values(identity)"
+  ];
+  def nnp-prepare(conn) = map(sql => npg-query(conn,sql,[]),nnp-schema());
+  def nnp-node-json(node) = json-node-object([json-node-pair("package",json-node-int(node_pkg(node))),json-node-pair("level",json-node-int(node_level(node))),json-node-pair("type",json-node-int(node_type(node))),json-node-pair("instance",json-node-int(node_inst(node)))]);
+  def nnp-cell-view(row,cell) = json-node-object([json-node-pair("kind",json-node-string("native-value")),json-node-pair("name",json-node-string(row[1])),json-node-pair("domain",json-node-string(row[0])),json-node-pair("identity",json-node-string(row[2])),json-node-pair("node_id",nnp-node-json(cell)),json-node-pair("blueprint",nnp-node-json(node_category(cell))),json-node-pair("ctor",nnp-node-json(cell)),json-node-pair("source_path",json-node-null()),json-node-pair("node_id_scope",json-node-string("request-local"))]);
+  def nnp-row(row) {
+   let cell = nnp-cell(row[3]); let value = ftw-decode(cell);
+   json-node-object([json-node-pair("domain",json-node-string(row[0])),json-node-pair("name",json-node-string(row[1])),json-node-pair("identity",json-node-string(row[2])),json-node-pair("cell",nnp-cell-view(row,cell)),json-node-pair("blueprint",nnp-node-json(node_category(cell))),json-node-pair("ctor",nnp-node-json(cell)),json-node-pair("source_path",json-node-null()),json-node-pair("cell_wire",parse-json("native-cell-wire",row[3])),json-node-pair("value",nnp-json(value)),json-node-pair("source_label",json-node-string(row[4])),json-node-pair("updated_at",json-node-string(row[5])),json-node-pair("runtime",json-node-string("fkwu")),json-node-pair("node_id_scope",json-node-string("request-local")),json-node-pair("node_id",nnp-node-json(cell))]);
+  }
+  def nnp-result(status,value) = record_new(0,"status",status,"body",json-emit(value));
+  def nnp-detail(status,detail) = nnp-result(status,json-node-object([json-node-pair("detail",json-node-string(detail))]));
+  def nnp-observe(conn,domain,name) {
+   let result = npg-query(conn,"SELECT n.visibility,n.domain,n.name,n.identity,CASE WHEN n.visibility='public' THEN v.wire ELSE NULL END,n.source_label,n.updated_at::text FROM form_named_values n JOIN form_values v ON v.identity=n.identity WHERE n.domain=$1 AND n.name=$2",[domain,name]);
+   nil?(result[1]) ? nothing() : result[1][0];
+  }
+  def nnp-same(row,identity,wire,source_label) = !nothing?(row) && row[0] == "public" && row[3] == identity && row[4] == wire && row[5] == source_label;
+  def nnp-private(row) = !nothing?(row) && row[0] != "public";
+  def nnp-after-put(conn,domain,name,identity,wire,source_label) {
+   let current = nnp-observe(conn,domain,name);
+   nnp-private(current) ? nnp-detail(403,"This name is held outside the public source door") : nnp-same(current,identity,wire,source_label) ? nnp-result(200,nnp-row(drop(1,current))) : {
+    let content = npg-query(conn,"SELECT wire=$2 FROM form_values WHERE identity=$1",[identity,wire]);
+    !nil?(content[1]) && content[1][0][0] == "f" ? nnp-detail(409,"Composition identity differs from its persisted bytes") : nnp-detail(409,"The named source changed during this offer; read its current value before offering again");
+   };
+  }
+  def nnp-put(conn,domain,name,value,source_label) {
+   let wire = nnp-pack(value); let identity = nnp-identity(wire);
+   let current = nnp-observe(conn,domain,name);
+   nnp-private(current) ? nnp-detail(403,"This name is held outside the public source door") : nnp-same(current,identity,wire,source_label) ? nnp-result(200,nnp-row(drop(1,current))) : {
+    let content = npg-query(conn,"INSERT INTO form_values(identity,wire) VALUES($1,$2) ON CONFLICT(identity) DO NOTHING",[identity,wire]);
+    let result = npg-query(conn,"WITH written AS (INSERT INTO form_named_values(domain,name,identity,source_label,visibility) SELECT $1,$2,v.identity,$3,'public' FROM form_values v WHERE v.identity=$4 AND v.wire=$5 ON CONFLICT(domain,name) DO UPDATE SET identity=EXCLUDED.identity,source_label=EXCLUDED.source_label,updated_at=now() WHERE form_named_values.visibility='public' AND (form_named_values.identity IS DISTINCT FROM EXCLUDED.identity OR form_named_values.source_label IS DISTINCT FROM EXCLUDED.source_label) RETURNING domain,name,identity,source_label,updated_at) SELECT domain,name,identity,$5::text,source_label,updated_at::text FROM written",[domain,name,source_label,identity,wire]);
+    !nil?(result[1]) ? nnp-result(200,nnp-row(result[1][0])) : nnp-after-put(conn,domain,name,identity,wire,source_label);
+   };
+  }
+  def nnp-lookup(conn,domain,name) {
+   let result = npg-query(conn,"SELECT n.domain,n.name,n.identity,v.wire,n.source_label,n.updated_at::text FROM form_named_values n JOIN form_values v ON v.identity=n.identity WHERE n.domain=$1 AND n.name=$2 AND n.visibility='public'",[domain,name]);
+   nil?(result[1]) ? nothing() : nnp-row(result[1][0]);
+  }
+  def nnp-by-identity(conn,identity) {
+   let result = npg-query(conn,"SELECT n.domain,n.name,n.identity,v.wire,n.source_label,n.updated_at::text FROM form_named_values n JOIN form_values v ON v.identity=n.identity WHERE n.identity=$1 AND n.visibility='public' ORDER BY n.domain,n.name LIMIT 1",[identity]);
+   nil?(result[1]) ? nothing() : nnp-row(result[1][0]);
+  }
+ }
+}

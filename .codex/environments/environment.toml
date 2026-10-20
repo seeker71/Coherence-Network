@@ -42,8 +42,7 @@ commands = [
 
 [validation.pipeline]
 commands = [
-  "cd api && .venv/bin/python scripts/check_pipeline.py --json",
-  "cd api && ./scripts/ensure_effective_pipeline.sh"
+  "cd api && .venv/bin/python scripts/check_pipeline.py --json"
 ]
 
 [validation.deploy]

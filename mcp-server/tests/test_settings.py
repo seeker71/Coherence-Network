@@ -21,6 +21,7 @@ def test_defaults_and_file_overlay_ignore_environment(tmp_path, monkeypatch):
     defaults = load_settings(repo=repo, home=home)
     assert defaults["api_base"] == "https://api.coherencycoin.com"
     assert defaults["api_key"] == ""
+    assert defaults["capability_profile"] == "companion"
     assert defaults["grounded_ask_timeout_seconds"] == 90
     assert defaults["kernel_path"] == str(repo / "form" / "fkwu")
     write_config(repo / "api/config/api.json", {"mcp": {
@@ -28,11 +29,13 @@ def test_defaults_and_file_overlay_ignore_environment(tmp_path, monkeypatch):
     }})
     write_config(home / ".coherence-network/config.json", {"mcp": {
         "api_key": "local-key", "grounded_ask_timeout_seconds": 120,
+        "capability_profile": "advanced",
     }})
     selected = load_settings(repo=repo, home=home)
     assert selected["api_base"] == "http://localhost:8000"
     assert selected["api_key"] == "local-key"
     assert selected["grounded_ask_timeout_seconds"] == 120
+    assert selected["capability_profile"] == "advanced"
 
 
 @pytest.mark.parametrize("document", [
@@ -46,6 +49,9 @@ def test_defaults_and_file_overlay_ignore_environment(tmp_path, monkeypatch):
     {"mcp": {"grounded_ask_timeout_seconds": 0}},
     {"mcp": {"grounded_ask_timeout_seconds": 901}},
     {"mcp": {"grounded_ask_timeout_seconds": "90"}},
+    {"mcp": {"capability_profile": "all"}},
+    {"mcp": {"capability_profile": ""}},
+    {"mcp": {"capability_profile": True}},
 ])
 def test_invalid_configuration_does_not_select_a_fallback(tmp_path, document):
     write_config(tmp_path / ".coherence-network/config.json", document)

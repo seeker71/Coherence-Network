@@ -63,7 +63,7 @@ files_allowed:
   - specs/unified-agent-cli-flow-patch-on-fail.md
   - .cursor/skills/edge-tender/SKILL.md
   - api/scripts/project_manager.py
-  - docs/AGENT-DEBUGGING.md
+  - docs/retired/AGENT-DEBUGGING.md
 done_when:
   - Every executor (`claude`, `cursor`, `codex`, `gemini`) supports `spec`, `impl`, `test`, `review`, and `heal` task typ...
   - The flow executes end-to-end (`idea -> spec -> impl -> test -> review`) for local and remote runner modes with no tas...
@@ -95,7 +95,7 @@ constraints:
 - `specs/unified-agent-cli-flow-patch-on-fail.md` — this spec.
 - `.cursor/skills/edge-tender/SKILL.md` — extend with “Review output (FAIL)” section: require VERIFICATION_RESULT, FILES_TO_CHANGE, PATCH_GUIDANCE; optional SPEC_VERIFICATION_IMPROVEMENT. (Cursor parallel of `.claude/agents/edge-tender.md`.)
 - `api/scripts/project_manager.py` — when building direction for impl after a failed review, pass full review output (or at least PATCH_GUIDANCE / FILES_TO_CHANGE) in context or direction, not only a 300-character truncation. Preserve existing behavior when output is small.
-- `docs/AGENT-DEBUGGING.md` or `docs/PLAN.md` — add a short subsection describing the flow (spec → impl → test → review → patch on fail) and the review output contract.
+- `docs/retired/AGENT-DEBUGGING.md` or `docs/retired/PLAN.md` — add a short subsection describing the flow (spec → impl → test → review → patch on fail) and the review output contract.
 
 ## Acceptance Tests
 
@@ -150,4 +150,4 @@ cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py test
 - specs/pipeline-observability-and-auto-review.md
 - .cursor/skills/spec-driven/SKILL.md
 - .cursor/skills/edge-tender/SKILL.md
-- docs/MODEL-ROUTING.md
+- docs/retired/MODEL-ROUTING.md

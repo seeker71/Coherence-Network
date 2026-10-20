@@ -8,6 +8,13 @@ sys.path.insert(0, str(ROOT))
 
 from coherence_mcp_server import server as mcp_server
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def advanced_profile(monkeypatch):
+    monkeypatch.setitem(mcp_server._SETTINGS, "capability_profile", "advanced")
+
 
 def test_awareness_tools_are_registered() -> None:
     required = {
