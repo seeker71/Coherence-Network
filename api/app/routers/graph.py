@@ -18,26 +18,10 @@ from typing import Any
 
 from app.services import graph_service
 from app.models.graph import CANONICAL_EDGE_TYPE_SET, NODE_TYPE_SET
-from app.services.locale_projection import (
-    DEFAULT_LOCALE,
-    SUPPORTED_LOCALES,
-    project,
-    resolve_caller_lang,
-)
 
 router = APIRouter()
 log = logging.getLogger(__name__)
 
-
-# Node types that carry user-facing prose worth localizing — contributors,
-# assets/works, communities, places, events, scenes/practices/skills, and
-# concepts. Other graph types (system internals, anonymous-meeting traces,
-# tag taxonomies) are addressable but their text is operational rather
-# than user-narrative, so we don't pay the translation cost there.
-_LOCALIZABLE_NODE_TYPES = {
-    "contributor", "asset", "community", "network-org", "place",
-    "event", "scene", "practice", "skill", "concept",
-}
 
 # These cells have their own authenticated access contract and external
 # reconciliation. Generic graph access would bypass those privacy and
@@ -79,80 +63,6 @@ def _reject_dedicated_identity(node_id: str) -> None:
         _reject_dedicated_read(node)
 
 
-def _project_node(node: dict | None, lang: str | None) -> dict | None:
-    """Project a single graph node's name + description into the caller's
-    locale via the entity_views cache.
-
-    Flow on cache-miss:
-      1. Write the EN source as the canonical anchor view (AUTHOR_TYPE_ORIGINAL_HUMAN)
-         if no anchor exists yet — this lets future attunements work for any
-         locale, not just the one currently requested.
-      2. Call attune_from_anchor(target_lang) which routes through the
-         registered libretranslate backend and writes the translated view
-         to entity_views.
-      3. Re-project the node so the response carries the translated text.
-
-    Failures are best-effort — a translator-backend timeout or libretranslate
-    being unhealthy returns the source-language text rather than blocking
-    the read. The next request retries naturally.
-    """
-    if not node or not lang or lang == DEFAULT_LOCALE or lang not in SUPPORTED_LOCALES:
-        return node
-    node_id = node.get("id")
-    node_type = node.get("type")
-    if not node_id or node_type not in _LOCALIZABLE_NODE_TYPES:
-        return node
-
-    # Cache hit path — fastest case, no backend touched.
-    project(node, "node", node_id, lang, title_field="name", body_field="description")
-    if _name_or_desc_translated(node, lang):
-        return node
-
-    # Cache miss — attune from anchor (writing the anchor first if needed).
-    try:
-        from app.services import translation_cache_service as _tcache
-        from app.services import translator_service as _ts
-        if not _ts.has_backend():
-            return node
-        anchors = _tcache.all_canonical_views("node", node_id)
-        if not _tcache.find_anchor(anchors):
-            _tcache.write_view(
-                entity_type="node",
-                entity_id=node_id,
-                lang=DEFAULT_LOCALE,
-                content_title=node.get("name", "") or "",
-                content_description=node.get("description", "") or "",
-                content_markdown="",
-                author_type=_tcache.AUTHOR_TYPE_ORIGINAL_HUMAN,
-            )
-        _ts.attune_from_anchor(
-            entity_type="node",
-            entity_id=node_id,
-            target_lang=lang,
-        )
-        # Re-project now that a translated view exists.
-        project(node, "node", node_id, lang, title_field="name", body_field="description")
-    except Exception as e:  # pragma: no cover — translation must never block reads
-        log.debug("graph._project_node attune-on-miss skipped: %s", e)
-    return node
-
-
-def _name_or_desc_translated(node: dict, lang: str) -> bool:
-    """Heuristic — was the node already projected? We can't tell from the
-    payload alone (a German speaker's English bio looks German-ish to a
-    string matcher), so we just check whether a canonical view exists in
-    the cache for this lang. Fast lookup, no backend touched."""
-    try:
-        from app.services import translation_cache_service as _tcache
-        rec = _tcache.canonical_view("node", node.get("id"), lang)
-        return rec is not None
-    except Exception:
-        return False
-
-
-# ── Request models ───────────────────────────────────────────────────
-
-
 class NodeCreate(BaseModel):
     id: str | None = None
     type: str
@@ -185,26 +95,6 @@ class EdgeCreate(BaseModel):
 # ── Node endpoints ──────────────────────────────────────────────────
 
 
-@router.get("/graph/nodes", summary="List nodes with optional type, phase, and search filters")
-async def list_nodes(
-    type: str | None = None,
-    phase: str | None = None,
-    search: str | None = None,
-    limit: int = Query(default=50, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
-):
-    """List nodes with optional type, phase, and search filters."""
-    _reject_dedicated_type(type)
-    return graph_service.list_nodes(
-        type=type,
-        phase=phase,
-        search=search,
-        limit=limit,
-        offset=offset,
-        exclude_types=_DEDICATED_NODE_TYPES,
-    )
-
-
 @router.post("/graph/nodes", summary="Create a new node. Reject unknown graph node types while preserving canonical semantics")
 async def create_node(body: NodeCreate):
     """Create a new node. Reject unknown graph node types while preserving canonical semantics."""
@@ -233,43 +123,10 @@ async def create_node(body: NodeCreate):
         raise HTTPException(status_code=422, detail=str(exc))
 
 
-@router.get("/graph/nodes/count", summary="Count nodes, optionally filtered by type")
-async def count_nodes(type: str | None = None):
-    """Count nodes, optionally filtered by type."""
-    _reject_dedicated_type(type)
-    return graph_service.count_nodes(type=type)
-
-
 @router.get("/graph/stats", summary="Get graph-wide statistics")
 async def graph_stats():
     """Get graph-wide statistics."""
     return graph_service.get_stats(exclude_node_types=_DEDICATED_NODE_TYPES)
-
-
-@router.get("/graph/nodes/{node_id}", summary="Get a single node")
-async def get_node(node_id: str, request: Request, lang: str | None = Query(None)):
-    """Get a single node by id, falling back to slug and alias lookup.
-
-    The path argument is treated as a graph id first. When that misses,
-    the lookup retries against the node's `slug` and declared `aliases`.
-    A recognized namespace prefix narrows those matches to the same node
-    type; a bare value retains the legacy `contributor:{path}` fallback.
-    This lets every URL form converge to one identity through one endpoint,
-    with the mapping living in the graph instead of a hand-curated table.
-
-    Locale-projected when the caller's lang resolves to a non-default
-    SUPPORTED_LOCALES member. Cache-miss triggers a best-effort
-    libretranslate attunement so subsequent reads land in the cached
-    path; the current read keeps source-language text rather than
-    blocking on translation latency.
-    """
-    _reject_dedicated_identity(node_id)
-    node = graph_service.resolve_node_identity(node_id)
-    if not node:
-        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
-    _reject_dedicated_read(node)
-    target_lang = resolve_caller_lang(request, lang)
-    return _project_node(node, target_lang)
 
 
 @router.patch("/graph/nodes/{node_id}", summary="Update a node")

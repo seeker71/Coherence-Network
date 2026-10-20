@@ -80,8 +80,14 @@ Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
 separate claims: their identity checks stay intact, and no automatic second
 kernel build or stale observer workflow pin is imposed on every deployment.
-The release read reuses public health, API/web revision parity, the web root,
-and CORS. Kernel status assertions, deleted-router canaries, unrelated profile
+The rollout binds its serving container and local health to its explicit target,
+then observes the public host, API health, web root and CORS. A newer `main`
+commit is queued work; an unchanged web image keeps its own identity. The former
+moving-main API/web parity loops duplicated the owned-target boundary and could
+hold the deployment lock while waiting for the next queued release behind that
+same lock. Those loops and their timer fixture are retired. Independent
+authenticated reproduction retains its source and identity checks.
+Kernel status assertions, deleted-router canaries, unrelated profile
 pages, assets, provider readiness, persistence, Telegram and pulse readings are
 not recurring release gates. When one of those surfaces changes or signals an
 issue, follow that finding at its source with the smallest relevant observation.
@@ -114,12 +120,10 @@ supplies the fkwu shared-memory resource. Image assembly realizes application BM
 once on native tmpfs, and requests reuse those images. Pulse's socket listener,
 TLS probes, cadence, persistence and query/repair templates are BML on the pinned
 fkwu. Native Recipe pages and checksummed transaction logs replace the SQLite
-engine. For a legacy volume, prepare its immutable base snapshot with
-`pulse/migrate.bml` while the old witness stays live. Startup imports the final
-row-ID delta and refreshed silence receipts, then archives the legacy files in
-the same volume. Keep the volume and private recovery snapshot intact. All history
-persists; public read windows do not delete records. Follow an actual persistence
-finding with its smallest fixture or archive-backed observation, not kernel suites.
+engine. The completed SQLite importer and its startup/configuration path are
+retired. Startup opens and recovers native pages directly. Private snapshots are
+available recovery resources, not routine release gates. Follow an actual
+persistence finding with its smallest native observation, not kernel suites.
 
 The `/pulse` web route belongs to that same native owner. Compose care gives its
 exact path on the existing web hosts priority over the Next.js router,

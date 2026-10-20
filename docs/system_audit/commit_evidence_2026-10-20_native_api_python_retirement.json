@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/native-upstream-flow-20261020",
+  "commit_scope": "Release replaced Python public read owners and the completed Pulse SQLite bootstrap.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources",
+    "ideas-prioritization"
+  ],
+  "task_ids": [
+    "native-api-python-read-retirement",
+    "pulse-native-startup-bootstrap-retirement"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "retire replaced route ownership"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "exact-serving-model-variant-not-exposed"
+  },
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/routers/graph.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/vitality.py",
+    "pulse/store.bml",
+    "pulse/config.json",
+    "pulse/Dockerfile",
+    "pulse/sqlite-import.bml",
+    "pulse/import-history.bml",
+    "pulse/migrate.bml",
+    "pulse/README.md",
+    "docs/DEPLOY.md",
+    "specs/pulse-silence-boundary-repair.md"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/routers/graph.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/vitality.py",
+    "pulse/store.bml",
+    "pulse/config.json",
+    "pulse/Dockerfile",
+    "pulse/sqlite-import.bml",
+    "pulse/import-history.bml",
+    "pulse/migrate.bml",
+    "pulse/README.md",
+    "docs/DEPLOY.md",
+    "specs/pulse-silence-boundary-repair.md"
+  ],
+  "evidence_refs": [
+    "Deletes358 Python lines and adds no Python implementation: ideas list/detail/resonance and their dead read-only translation/vote helpers, graph list/detail/count and dead translation helpers, and the vitality public router registration/module. Internal Python services with other callers are not falsely claimed retired.",
+    "The Form/BML replacement, resource byte observations, authenticated production PostgreSQL observations and independent read-only native HTTP rehearsal are recorded in commit_evidence_2026-10-20_native_api_read_owner.json. The final vitality query307ms and graph page89ms answer the newly reached source findings without response caching, probe threshold relaxation or sampled caps.",
+    "Public native handoff observed after source4105 and release-care4108 merged: deployed image5e173832146116d10bb27f0fc974599e2425b9af, native container healthy, only fkwu process. Form/BML Compose care activated native-api and api together; specific literal routes keep their explicit owner. Native health200 routerfkwu, persistence native-postgres, db_connectedtrue,336ms total13ms serving.",
+    "Public six-way parallel native trace /data/native-io/36223-latency-trace completed in934ms, all200: graphpage328ms/115serving, privateownership327/88, ideas476/218, nativehealth438/30, nodecount480/105, vitality754/521. These are real post-handoff public HTTP observations, not direct SQL or an earlier rehearsal image. Earlier overlapping compatibility trace /data/native-io/34920-latency-trace timed out all six after35s; no threshold was relaxed.",
+    "Completed Pulse SQLite bootstrap retired:315 BML importer/worker lines removed, legacy_path removed, migration image admission removed. Startup uses existing nw-create and nw-recover, then native index care. Native startup fixture creates/reopens an isolated store and returns status ok, runtime fkwu, persistence form-recipes, samples_total0. No existing service data was deleted. Snapshot availability remains a recovery resource, not a routine contract/history gate.",
+    "Source/diff observation for Python deletion and one changed Pulse startup observation; no broad Python tests or kernel suite. Reuse unchanged native evidence and observe the merged rollout. No history or response-parity preservation requirement is imposed. OpenAI authored reasoning, Form performed execution; exact token counts unavailable."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Exact old-owner deletion and source/diff reading; zero Python additions. Isolated native store startup/reopen observed ok through fkwu; no kernel source change or kernel validation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Read relevant source findings without reviving old response-contract owners."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Native public handoff5e173832 observed healthy through fkwu. Next merge this retirement and observe dependency image identity, Pulse native startup and affected public reads."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The migrated public GET routes have only their native Form owner; compatibility modules do not retain dormant duplicates.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ideas?limit=1",
+      "https://api.coherencycoin.com/api/workspaces/coherence-network/vitality",
+      "https://api.coherencycoin.com/api/graph/nodes?limit=1"
+    ],
+    "test_flows": [
+      "Public native read trace",
+      "Running native dependency image revision"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Native public handoff and merged retirement rollout are next; this is evidence state, not a policy gate."
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/release-care-owned-target-20261020",
+  "commit_scope": "Release duplicate moving-main parity gates that hold an owned deployment lock behind its queued successor.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "split-review-deploy-verify-phases"
+  ],
+  "task_ids": [
+    "owned-release-identity-care"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "source retirement and native care guidance"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "exact-serving-model-variant-not-exposed"
+  },
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "scripts/INDEX.md",
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "api/app/form_recipes/delivery_care.bml",
+    "docs/DEPLOY.md"
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "scripts/INDEX.md",
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "api/app/form_recipes/delivery_care.bml",
+    "docs/DEPLOY.md"
+  ],
+  "evidence_refs": [
+    "Run39355326426 deployed b7f19b9d1fbb0cb13dcef2efbee1f6138fed77cb. Host log at2026-10-20T01:58:13Z records exact target identity and at01:58:25Z public Traefik/API stability and completed rollout. Its outer verifier continued holding the deploy lock while native API run39356041918 for merged e0980dc02ee4fa5f02b2467bd075ea975fb0166d remained queued.",
+    "scripts/verify_web_api_deploy.sh check_api_runtime_sha compared the serving release against /api/gates/main-head on every retry. check_web_runtime_sha additionally required an unchanged web image's own SHA to equal that newer main. A queued successor therefore became a false failure of the release ahead of it, with two180second parity loops per pass.",
+    "The existing live boundary in auto-deploy.sh remains intact: explicit TARGET_SHA equals local serving /api/health deployed_sha, followed by current public-host ownership and stable local/public reachability. The separate authenticated reproducibility observer and protected-ref identity are untouched.",
+    "Only the duplicate moving-main API/web parity functions, invocations, obsolete environment knobs and associated281line timer fixture are removed. Existing public API health, web root, CORS and actual request-error handling remain. There is zero added shell implementation; the replacement guidance is Form/BML delivery care.",
+    "One corrected public observation against the actually serving b7 revision while main already held its successor returned API200, web200 and CORS200 with the correct origin. It exited0 without claiming that b7 was the newest main or that an unchanged web image had advanced. Changed-shell syntax and source/diff reads pass; no kernel or broad suite.",
+    "Current active rollout is owned by its preceding task and has not been reset or raced. The source fix is landed through its own commit, and only this task's obsolete queued native API run may be replaced by the corrected merged successor. Native API implementation and its local retirement branch remain preserved."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Three changed carrier syntax reads, source retirement and one actual public reachability/CORS observation pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Read actual source findings; no timer replay or routine suites."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Corrected merged release follows the current owner without a moving-main gate."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A completed owned target is not stalled by newer queued main work or unchanged web bytes; native read-owner rollout can proceed with actual target identity and public effect.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "Exact owned target remains verified by auto-deploy",
+      "Public API/web/CORS observation"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Corrected merged rollout remains to be observed; this records evidence, not policy."
+  }
+}
