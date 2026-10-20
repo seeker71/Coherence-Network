@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/gpt-continuity-proof-20261020",
+  "commit_scope": "Pin the published portable-continuity instructions and record actual handoff, fresh-chat revision, initial failures and supervised recoveries.",
+  "files_owned": [
+    "form",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_gpt_continuity.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_files": [
+    "form",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_gpt_continuity.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "gpt-portable-continuity-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "JSON and manifest-field invariance verified; canonical instructions 6867 characters; independent source review clean. Readme generator, spec and evidence checks validate the recorded source, not broad behavioral reliability.",
+    "commands": [
+      "JSON parse and changed-key assertion: description_for_model only; auth/API unchanged",
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-20_gpt_continuity.json",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "summary": "Kernel PR621 merged with successful GitGuardian check. Parent PR4119 head03a57e62418ec816be3ca42aa8c02bf94da4e8ae passed GitGuardian at2026-10-20T07:01:48Z; independent current-source review found no actionable findings. This receipt update records those observations without changing the failed behavioral criterion."
+  },
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "Portable continuity preserves the approved artifact and enables a changed request in a fresh chat with truthful retention boundaries.",
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ],
+    "test_flows": [
+      "Published editor reload: exact6867-character instructions; Everyone; profile/capabilities and Action unchanged.",
+      "Existing creative conversation: first handoff reordered two approved lines. Corrected handoff matched actual276-byte downloaded flyer exactly.",
+      "Fresh chat: supplied corrected brief; changed two preferences, preserved remaining wording/order. Copyable Markdown required a further prompt; final exported bytes unverified.",
+      "Retention question: initially correct limited claim followed by unverified account-specific full-removal guidance. Challenge yielded truthful two-sentence correction and stopping."
+    ],
+    "limits": "First-pass fidelity and retention claims failed; recoveries are recorded separately. Owner-account observations with fictional content, not independent recipient use or superiority to ordinary ChatGPT."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Publication confirmed and read back at2026-10-20T06:53:03.876Z; original unauthenticated ask/trace schema JSON-equal. No service deployment, account billing change, package revision or expanded Action scope."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "R6 remains open: useful supervised continuation was observed, but first-pass artifact fidelity and retention explanations did not meet the desired behavior."
+  },
+  "evidence_refs": [
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "skills/coherence-network/references/session-brief.md",
+    "https://github.com/seeker71/coherence-kernel/pull/621",
+    "https://github.com/seeker71/Coherence-Network/pull/4119"
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex and hosted GPT responses; exact serving variants and task token counts unavailable.",
+    "native": "form-cli wrapper stalled at bootstrap and was cancelled with exit130. Direct fkwu form-cli-enrich-run returned no exact entry for the task terms; sovereignty returned an authored source seed, not a sufficient answer. Opening/closing local-flow and session-rent observations completed; mixed historical totals do not establish this task's native share.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent; qualitative review",
+      "suffic": 0,
+      "observed": false
+    },
+    "native_contender": "Existing fkwu companion/native-voice lanes were source-reviewed only. Current fixed companion conversation log is not an isolated multi-person memory service; no native continuity parity or readiness claimed."
+  },
+  "work_receipt": {
+    "loosened": "A corrected portable brief supported the requested fresh-chat creative revision without re-explaining settled choices.",
+    "tight": "The person still had to catch artifact drift and an unsupported retention explanation.",
+    "surprise": "A plausible handoff silently reordered the approved work even while carrying the right creative intent.",
+    "friction_to_lesson": "Comparing the actual artifact supplied a concrete recovery. The initial failures remain visible instead of being counted as clean passes."
+  }
+}
