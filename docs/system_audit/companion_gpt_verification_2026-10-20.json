@@ -70,8 +70,8 @@
   ],
   "distribution": {
     "public_release_current": "companion-v0.6.1",
-    "plugin_source_version": "0.6.1",
-    "prepared_zip_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+    "plugin_source_version": "0.6.2",
+    "prepared_zip_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
     "prepared_zip_entries": 8,
     "prepared_zip_matches_source": true,
     "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
@@ -117,6 +117,23 @@
       "capabilities_enabled": true,
       "action_equal": true,
       "authentication_none": true
+    }
+  ],
+  "prior_distribution": [
+    {
+      "public_release_current": "companion-v0.6.1",
+      "plugin_source_version": "0.6.1",
+      "prepared_zip_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+      "prepared_zip_entries": 8,
+      "prepared_zip_matches_source": true,
+      "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
+      "npm": "Account authentication unfinished; registry publication not completed.",
+      "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement.",
+      "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1",
+      "release_source_commit": "26057a5e30d1065725a184c46dced593717afd93",
+      "public_download_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+      "public_download_matches_reviewed": true,
+      "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
     }
   ]
 }
