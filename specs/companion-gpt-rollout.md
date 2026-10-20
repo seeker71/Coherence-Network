@@ -37,11 +37,12 @@ waves, preserving the owner's existing public identity and actual tool scope.
   skills-only plugin version, keeping optional MCP separate.
 - [x] R5: Inspect publishing access; publish/submit where authorized and available.
   Keep npm, directory, GPT, server and migration outcomes distinct.
-- [ ] R6: Carry the existing portable session-brief practice into the GPT.
+- [x] R6: Carry the existing portable session-brief practice into the GPT.
   Observe a handoff of the actual creative artifact into a fresh chat, a changed
   constraint and a revised brief without false memory or erasure claims.
-  Publication and supervised recovery are complete; first-pass fidelity and
-  retention explanations failed in the observed wave, so this remains open.
+  The next wave passed this bounded chain on first responses after explicit
+  source comparison and retention-scope instructions. Prior failures remain
+  recorded; revised code-copy equality normalizes one terminal newline.
 
 ## Implementation Plan
 
@@ -89,6 +90,32 @@ waves, preserving the owner's existing public identity and actual tool scope.
   constraints into a fresh conversation. A changed request is incorporated;
   removing a detail from the brief does not imply erasing chat history.
 
+### Next wave: faithful transfer and bounded retention
+
+Use the existing flyer and fraction examples, as selected by the owner.
+Replace vague preservation guidance with read/copy/edit/compare steps, carry
+the same practice into the canonical skill reference, and remove instructions
+for public-dialogue tools absent from the GPT Action.
+
+Observe first responses separately from recovery:
+
+1. Give a fresh conversation the verified current flyer and ask for a portable
+   handoff. Compare wording, order, placeholders and Markdown before correcting
+   anything. Then supply that handoff in another fresh chat and request only
+   the established watching-counts replacement and tea removal.
+2. Ask whether removing tea from the brief also removed it from earlier chat
+   and the saved file. Require a direct scope distinction, no unperformed
+   deletion, and no unsolicited unverified account-control instructions.
+3. Resume fractions at `2/3 + 1/6`, leave practice open, give one targeted hint
+   after `3/9`, and honor one sentence then stop after the learner reaches `5/6`.
+   Scripted learner turns establish response behavior, not human learning.
+
+R6 can close for this bounded case only if the complete handoff, fresh-chat
+revision and retention answer pass without corrective intervention. Keep
+earlier failures and any unobserved byte fidelity visible. Publish the changed
+free skill as a new immutable 0.6.2 bundle, verifying every archive member and
+the actual public download; unchanged MCP lifecycle proof remains reusable.
+
 ## Verification
 
 ```sh
@@ -130,11 +157,15 @@ are separate. A skills-only directory listing cannot currently add MCP later.
   chooses. No directory submission or approval is claimed.
 - Follow-up task: prove native Action-equivalent remote MCP lifecycle before any
   GPT migration; preserve private memory as a separately authenticated capability.
-- Continuity wave completed as a bounded observation: kernel PR621 published and
+- Earlier continuity wave completed as a bounded observation: kernel PR621 published and
   read back at 6,867 characters; corrected handoff matched the actual flyer and
   enabled fresh-chat revision. First handoff reordered content, and an unverified
   retention explanation required correction. First-pass reliability and use by
   an independent recipient remain unproved; see the observation record.
+- Next wave: kernel PR622 published and read back at 7,103 characters; a fresh
+  approved-source handoff, requested revision and retention answer passed the
+  bounded R6 criteria without corrective intervention. This closes that case,
+  not broad reliability or independent-recipient usefulness.
 
 ## See also
 

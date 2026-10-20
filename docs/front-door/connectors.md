@@ -6,7 +6,7 @@ learning the network's vocabulary.
 
 ## Install the free companion
 
-The [Coherence Companion 0.6.1 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1)
+The [Coherence Companion 0.6.2 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.2)
 contains a small plugin ZIP, the existing Coherence icon, and `SHA256SUMS` for
 checking the download. The optional MCP package remains in the
 [0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0).
@@ -23,7 +23,7 @@ verification is separate from recipients' usage.
 For a Codex CLI with plugin support:
 
 ```sh
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.1 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 --sparse .agents/plugins --sparse plugins/coherence-companion
 codex plugin add coherence-companion@coherence-network
 ```
 
@@ -32,7 +32,7 @@ the result you want. The installed skill works without Node, Python or the
 optional MCP. You can ask for a three-line continuation brief to take elsewhere;
 saving that brief is your choice.
 
-In a host supporting plugin archive import, use `coherence-companion-0.6.1.zip`.
+In a host supporting plugin archive import, use `coherence-companion-0.6.2.zip`.
 For a skills-only host, use the archive's complete `skills/coherence-network/`
 folder, including its references. Host install controls vary; the release is
 publicly downloadable but does not imply acceptance into a universal directory.
@@ -61,7 +61,7 @@ relevant published knowledge. Name which source or tool carried a result.
 
 The [existing Sema GPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625)
 was confirmed **Published; Everyone** in saved-editor readback at
-**2026-10-20T06:21:13Z**. Its updated instructions support useful work across the
+**2026-10-20T09:06:53Z**. Its updated instructions support useful work across the
 six workflows above, with a matching description and four new starters. Web
 Search, Canvas, Image Generation, and Code Interpreter & Data Analysis remain
 enabled. The native Action remains `GET /ask` and `GET /trace` at

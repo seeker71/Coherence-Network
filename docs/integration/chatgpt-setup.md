@@ -8,10 +8,10 @@ Those references establish identity, not current account access or deployment he
 
 ## Published configuration — 2026-10-20
 
-At **2026-10-20T06:53:03Z**, saved-editor readback confirmed the updated
+At **2026-10-20T09:06:53Z**, saved-editor readback confirmed the updated
 **Sema — coherence-kernel** GPT was **Published; Everyone**. Its complete
-Instructions text matched the canonical 6,867-character payload, including the
-teaching-visual refinement and the existing skill’s portable continuation practice. Its description
+Instructions text matched the canonical 7,103-character payload, including the
+teaching-visual refinement, portable continuation, explicit source comparison and bounded retention guidance. Its description
 and all four conversation starters matched [chatgpt-profile.json](chatgpt-profile.json).
 See the [publication and behavior observations](companion-gpt-observations.md)
 for the dated evidence and subsequent live trials.
@@ -19,7 +19,7 @@ for the dated evidence and subsequent live trials.
 | Observed setting | Value |
 |---|---|
 | Publication | Published; Everyone |
-| Instructions | Exact match to `form/plugin/ai-plugin.json#description_for_model`; 6,867 characters |
+| Instructions | Exact match to `form/plugin/ai-plugin.json#description_for_model`; 7,103 characters |
 | Description and conversation starters | Match the description and four starters in `chatgpt-profile.json` |
 | Enabled host capabilities | Web Search, Canvas, Image Generation, Code Interpreter & Data Analysis |
 | Native Action server | `https://sema.hati.earth` |

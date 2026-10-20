@@ -65,6 +65,16 @@ work, decisions, completed actions and scope in text the person can inspect,
 revise and take elsewhere. It adds no memory service or account requirement.
 Instructions and successful transfer remain different claims.
 
+At **2026-10-20T09:06:53Z**, the next refinement was read back after publication:
+**7,103 characters**, equal to the canonical source landed in kernel
+`9ba37cce8c3f358626080c0f70b77577b8f8f5f1`
+([PR #622](https://github.com/seeker71/coherence-kernel/pull/622)).
+Published / Everyone, no unpublished changes, the profile and capabilities,
+and the unchanged unauthenticated ask/trace schema were checked again.
+The instructions now separate approved-work comparison, proportional
+continuation and specific retention effects. They remove the conditional
+protocol for public-dialogue tools absent from this GPT.
+
 ## Mentorship: fractions and a misleading picture
 
 The learner asked why `1/2 + 1/3` differs from `2/5`. Sema produced an image
@@ -170,6 +180,69 @@ external sharing was introduced. The existing instructions already cover the
 failed boundaries, so this wave retains the execution gap rather than claiming
 another instruction paragraph would solve it.
 
+## Next wave: first-response preservation and retention scope
+
+The owner chose to continue the existing examples. A fresh conversation received
+the complete approved flyer and created a new Markdown file. The actual download
+matched the original **276 bytes** and SHA-256 exactly. The same pause/handoff
+request used in the previous wave then produced a fenced Markdown handoff.
+Using its Copy code control and pasting into a fresh composer exposed the actual
+copyable text: the embedded flyer matched the approved bytes, including line
+order, formatting and the terminal newline. No corrective prompt was needed.
+
+That fresh chat received the handoff and the two established changes: replace
+“Or just bring yourself.” with “Watching counts.” and remove the tea line.
+Its first response supplied fenced Markdown and an updated handoff. Copying
+the Markdown back through the UI showed exactly the expected wording, order
+and formatting, with one difference: the code copy omitted the terminal newline.
+The comparison passes after adding that newline; it is not raw byte equality.
+No revised file was requested or claimed to have been saved.
+
+The first answer to “Did removing tea from this brief also remove it from the
+earlier chat and saved file?” distinguished the current text from earlier
+messages and the unchanged file. It explicitly said the file had not been
+rechecked and gave no account-settings steps or claim of complete removal.
+This met the bounded R6 criterion without corrective intervention. The changed
+setup, model variability and single observed chain do not establish causation,
+general reliability or superiority to ordinary ChatGPT.
+
+The same read/copy/edit/compare and retention-scope practice is in the canonical
+skill reference, carried into the 0.6.2 bundle. The source instruction change
+is narrow; its parent kernel pin also inherits previously merged Glass/ear,
+native-care, Metal observation and native-turn receipt changes. Their focused
+proof remains attributed to the upstream Glass care receipt; this wave did not
+rerun those runtime observations or deploy that runtime. The skills archive
+contains none of those kernel files.
+
+The instruction structure follows the distinction between instructions,
+context and examples in the [official prompt guide](https://developers.openai.com/api/docs/guides/prompt-engineering).
+That guide also treats model output as nondeterministic and recommends
+behavioral evaluation. The retention change stays scoped because different
+data types can have separate controls, as described in
+[ChatGPT Work's data-handling documentation](https://learn.chatgpt.com/docs/enterprise/chatgpt-work-overview).
+These sources informed the change; they do not prove this GPT's account state.
+
+### Mentorship across a pause
+
+A fresh conversation resumed fractions with the context that adding tops and
+bottoms had already been discussed. It left `2/3 + 1/6` unanswered, explained
+equal-sized pieces in plain text and asked the learner to convert `2/3` to
+sixths. The scripted reply “I got 3/9” was ambiguous: it followed that local
+conversion question but was intended as an answer to the whole sum. The
+two-line pause note adopted the local-question interpretation.
+
+After one clarification of the intended scope, Sema corrected just the note,
+kept the answer out and preserved the learner's attempt. That actual note was
+copied into another fresh chat. Sema resumed with one hint about equal-sized
+parts and left the exercise open. When the learner supplied `5/6` and asked
+for one sentence then stop, it returned one sentence about common denominators
+and stopped.
+
+This is useful adaptation and portable learning context after an ambiguity was
+resolved. The initial interpretation is not a clear tutoring failure given the
+visible local question. These scripted turns establish response behavior,
+not human learning, independent recipient success or native generation.
+
 ## What the next wave should answer
 
 Further waves should follow a person's actual need or a material observed gap.
@@ -177,7 +250,7 @@ Automatic repetition without a changed claim or useful question adds no useful
 evidence; a repeated prompt after a repair can answer a new question.
 The concrete remaining hosted questions are independently readable teaching
 text, reliable visual verification, restraint with unsolicited references,
-faithful artifact handoff and retention explanations based on actual controls.
+and artifact/retention reliability beyond the one newly passing case.
 The next useful trial should follow a person's chosen task, measure how much
 correction they need and whether they can continue unaided, and inspect the
 artifact itself. Repeat examples alone do not demonstrate usefulness to friends
