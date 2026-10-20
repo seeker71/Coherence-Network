@@ -417,9 +417,6 @@ jobs:
               "observation_nonce_sha256":nonce_sha,
               "deployed_sha":target,
               "status":"ok",
-              "integrity_verified":True,
-              "integrity_compromised":False,
-              "schema_ok":True,
           }
           for key,value in required.items():
               if body.get(key) != value:
@@ -458,9 +455,6 @@ jobs:
               "observation_nonce_sha256":nonce_sha,
               "carrier_challenge_input_sha256":challenge_input,
               "status":"ok",
-              "integrity_verified":True,
-              "integrity_compromised":False,
-              "schema_ok":True,
               "kernel_runtime":kernel["runtime"],
               "kernel_result":str(fkwu_expected),
               **digest_fields,
