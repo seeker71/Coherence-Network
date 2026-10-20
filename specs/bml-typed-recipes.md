@@ -12,7 +12,7 @@ source:
     symbols: []
   - file: form/form/form-stdlib/tests/bml-generics-band.fk
     symbols: []
-  - file: specs/form-intrinsic-casting.md
+  - file: specs/retired/form-intrinsic-casting.md
     symbols: []
   - file: docs/field/urs/artifacts/master-thesis-2000/backtracking-model-languages.txt
     symbols: []
@@ -107,7 +107,7 @@ rests on the same content-addressed ground as everything else.
 - `docs/coherence-substrate/name-resolution-as-recipe.form` — the
   resolution walk as the static peer of the value walk; type resolution
   is that walk carrying type coordinates.
-- `specs/form-intrinsic-casting.md` — CAST recipes, nothing-on-failure,
+- `specs/retired/form-intrinsic-casting.md` — CAST recipes, nothing-on-failure,
   dialect coercion tables; this spec supplies BML's rows and the
   signatures the cast-check lane reads at function boundaries.
 

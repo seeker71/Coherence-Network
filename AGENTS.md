@@ -96,17 +96,7 @@ Spec → Test → Implement → CI → Review → Merge
 
 ### Hard-Data Contract (Subscription + Routing Claims)
 
-- Provider limits, remaining quota, and routing behavior are claimed from machine evidence, not from assumptions or static docs.
-- For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
-  1. local fact report from the active worktree: `cd api && python scripts/cursor_fact_report.py` (Windows PowerShell: `cd api; py -3 scripts/cursor_fact_report.py`)
-  2. live usage/readiness API snapshots:
-     - `curl -sS https://api.coherencycoin.com/api/automation/usage/readiness`
-     - `curl -sS https://api.coherencycoin.com/api/automation/usage`
-  3. official provider source links (pricing/docs/limits page).
-- Required proof for routing claims:
-  - include executor-policy evidence (`routing_policy_proof`) and route matrix (`route_decision_matrix`) from the fact report.
-  - show at least one Cursor-routed case and one OpenClaw/Codex-routed case.
-- When a provider exposes no hard numeric limits via API/headers/account CLI, report that explicitly as a data gap and treat it as a blocker for numeric-limit claims.
+A claim about a provider's limits, remaining quota or routing is made from machine evidence, never from memory: the live readiness and usage doors (`/api/automation/usage/readiness`, `/api/automation/usage`), the fact report from the active worktree (`cd api && python scripts/cursor_fact_report.py`, with its `routing_policy_proof` and `route_decision_matrix`), and the provider's own published page. Where a provider exposes no numeric limit, say so as a data gap rather than a number.
 
 ### Executor proof record
 
@@ -343,8 +333,7 @@ Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying
 - Windows 11 host setup is `powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1`.
 - In Windows PowerShell, use `py -3` for Python and `npm.cmd` for npm commands.
 - Repo `.sh` scripts run through Git Bash at `C:\Program Files\Git\bin\bash.exe`; the Makefile startup targets call it automatically.
-- `python3.12-venv` is not installed by default on the VM; the update script handles this.
-- `ruff` is not listed in `pyproject.toml` dev dependencies but is required for `make lint`. The update script installs it into the API venv.
+- `ruff` is not listed in `pyproject.toml` dev dependencies and `make lint` needs it in the API venv.
 - `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
 - No external databases (PostgreSQL, Neo4j) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`

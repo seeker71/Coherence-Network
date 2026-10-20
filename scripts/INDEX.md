@@ -98,6 +98,7 @@
 | [influence_teaching_translator.py](influence_teaching_translator.py) | Print influence teaching translator shards for a field story. |
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
 | [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
+| [install_kernel_steward.sh](install_kernel_steward.sh) | install_kernel_steward.sh — a thin launchd carrier for the body's kernel steward (carrier tissue, not logic). |
 | [integrate_one_branch.sh](integrate_one_branch.sh) | Integrate one remote branch into main: rebase, add evidence, push, create PR, merge. |
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
