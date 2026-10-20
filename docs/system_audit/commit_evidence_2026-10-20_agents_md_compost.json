@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Compost the operational sections of AGENTS.md that described tissue the body no longer carries: the fixed cheap-executor contract, environment-variable knobs the application never reads, a Form file that moved, the spring interface list, eleven pointer docs no index circulates, and the overnight-pipeline command wall.",
+  "files_owned": ["AGENTS.md"],
+  "change_intent": "docs_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["agents-md-compost"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["tend"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Verified 2026-10-20 against the tree and the live OpenAPI: every script, route and doc AGENTS.md named exists except form/form/form-stdlib/form-cli-main.fk (moved into the form-cli organs under form/form/form-stdlib/bml/) and specs/006-overnight-backlog.md (gone); both references are healed or removed.",
+    "The 2-Tier Executor / Task Card / Budget / Prompt Contract / Validation Loop / Proof Record sections fixed `openai/gpt-4o-mini` and token budgets in prose; api/app/config_loader.py carries the executor truth (`agent_executor.default` = federation, `disable_codex_executor` true, `auto_execute` false; `agent_cost.*`) and the last 80 rows of docs/system_audit/model_executor_runs.jsonl name openai/gpt-5. Folded into one 'Executor proof record' section that points at the config keys and the ledger.",
+    "The Codex pipeline and Telegram sections named AGENT_AUTO_EXECUTE, PAID_TOOL_*, AGENT_TASK_MAX_COST_USD, OPENCLAW_MODEL and TELEGRAM_* environment variables; grep of api/app finds no reads of them — they are the `agent_executor`, `agent_cost` and `telegram` blocks of api/config/api.json overlaid by ~/.coherence-network/config.json, which the sections now name (the hard rule on the same page forbids the env form).",
+    "Key Files pointed at docs/STATUS.md, PLAN, SPEC-COVERAGE, SPEC-TRACKING, MODEL-ROUTING, AGENT-DEBUGGING, PIPELINE-ATTENTION, PIPELINE-MONITORING-AUTOMATED, META-QUESTIONS, RUNBOOK, REFERENCE-REPOS (last touched Feb–Aug 2026; neither MANIFEST.md nor docs/INDEX.md circulates any of them). They stay in the tree as history and are named as such in one line; the list now carries the arrival surfaces (CLAUDE.md, the start packet, MANIFEST/INDEX, DEPLOY with its native reminder, PRODUCTION-SUBSTRATE, PR triage, spec quality gate, glossary).",
+    "The overnight-pipeline command wall (api/scripts/run_autonomous.sh, run_overnight_pipeline.sh, the watchdog — untouched since Feb–Apr 2026, referenced only by scripts/clear_queue_and_start_flow.sh) is one pointer with its config truth; the web's API base is named as public config (web/lib/public-config.ts) with NEXT_PUBLIC_API_URL as the carrier's build-time override.",
+    "Structural check after the rewrite: every path AGENTS.md names resolves (the remaining grep hits are api/scripts paths written as `cd api && ./scripts/…` and runtime outputs). 364 lines from 443; 34 insertions, 127 deletions.",
+    "Noticed, left for its owner: api/app/services/automation_usage_service.py reads OPENAI_RESPONSES_URL / ANTHROPIC_MESSAGES_URL and quota-probe model names through os.getenv — the one application-code reader of environment the audit found."
+  ],
+  "change_files": ["AGENTS.md", "docs/system_audit/commit_evidence_2026-10-20_agents_md_compost.json"],
+  "local_validation": {"status": "pass", "summary": "Every path named in AGENTS.md resolves in the tree; routes named resolve in the live OpenAPI document; config keys named exist in api/app/config_loader.py."},
+  "ci_validation": {"status": "pending", "summary": "Docs-only; the PR's checks run the structural suite."},
+  "deploy_validation": {"status": "pending", "environment": "none", "summary": "Docs-only; AGENTS.md is read at arrival, not deployed."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "A new agent arriving through AGENTS.md is not taught a cheap-executor contract, env-var knobs or pointer docs that no longer circulate.", "public_endpoints": [], "test_flows": ["grep -oE '(scripts|api|web|docs|form|specs)/[A-Za-z0-9_./-]+' AGENTS.md | sort -u | while read p; do [ -e \"$p\" ] || echo MISSING $p; done"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Docs-only; nothing to deploy."}
+}
