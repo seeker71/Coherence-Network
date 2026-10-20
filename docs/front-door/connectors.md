@@ -52,10 +52,20 @@ relevant published knowledge. Name which source or tool carried a result.
 ## Read with a link
 
 The [existing Sema GPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625)
-is the ChatGPT door already recorded by the invitation clients. Start there when
-using ChatGPT; availability and capabilities depend on its current configuration.
-Maintainers should [update that existing GPT](../integration/chatgpt-setup.md),
-preserving its native Action, rather than creating a duplicate.
+was confirmed **Published; Everyone** in saved-editor readback at
+**2026-10-20T06:21:13Z**. Its updated instructions support useful work across the
+six workflows above, with a matching description and four new starters. Web
+Search, Canvas, Image Generation, and Code Interpreter & Data Analysis remain
+enabled. The native Action remains `GET /ask` and `GET /trace` at
+`https://sema.hati.earth`, with authentication set to None.
+
+Start there when using ChatGPT. See the
+[dated publication and behavior observations](../integration/companion-gpt-observations.md)
+for what was verified. Saved configuration does not establish that every live
+workflow has passed. Conversation and artifacts still use the host's model and
+available tools; native grounding is attributed to the Action's returned evidence.
+This update does not establish private memory or plugin migration. Maintainers
+can follow the [existing GPT guide](../integration/chatgpt-setup.md) for later changes.
 
 Give a browsing-capable assistant this message:
 
@@ -116,12 +126,13 @@ direct calls to hidden tools. Deliberate network work can use an explicit
 `"capability_profile": "advanced"` local setting and server restart. This
 exposes capabilities; it does not authorize a particular write or contribution.
 
-## Configure a GPT Action
+## Optional public-network GPT Action
 
 For the existing Sema GPT, first follow the
 [update guide](../integration/chatgpt-setup.md). Its native kernel Action and
-this public-network Action have different source owners. Keep the working native
-contract while reviewing any additional network contribution capability.
+this public-network Action have different source owners. The public-network
+schema below is **not installed in the published Sema GPT**. Keep the working
+native contract while reviewing any additional network contribution capability.
 
 A maintainer can use [openai-gpt-action.yaml](openai-gpt-action.yaml) as the Action
 schema, configure authentication for the selected deployment, and add the
@@ -133,9 +144,10 @@ The public offer operation is marked consequential, so the host asks for
 confirmation before publishing. This follows OpenAI's
 [Action production guidance](https://developers.openai.com/api/docs/actions/production#consequential-flag).
 
-These files do not install or publish a GPT in anyone's account. For another
-assistant accepting custom instructions, reuse the practice below; its tools
-and connection support determine what can run.
+Editing these files does not install or publish an Action. The saved GPT update
+described above retained its existing read-only Action. For another assistant
+accepting custom instructions, reuse the practice below; its tools and connection
+support determine what can run.
 
 ## Companion instructions for a host
 
