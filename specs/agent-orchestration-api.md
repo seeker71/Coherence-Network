@@ -323,7 +323,7 @@ AgentTask:
 
 List items omit `command` and `output`; full GET includes them.
 
-## Routing Logic (from docs/MODEL-ROUTING.md)
+## Routing Logic (from docs/retired/MODEL-ROUTING.md)
 
 | task_type | model | tier |
 |-----------|-------|------|
@@ -500,8 +500,8 @@ None for MVP.
 ## See also
 
 - [project-manager-pipeline.md](project-manager-pipeline.md) — orchestrator that uses this API
-- [docs/MODEL-ROUTING.md](../docs/MODEL-ROUTING.md) — routing table and fallbacks
-- [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — monitor-issues usage
+- [docs/retired/MODEL-ROUTING.md](../docs/retired/MODEL-ROUTING.md) — routing table and fallbacks
+- [docs/retired/PIPELINE-MONITORING-AUTOMATED.md](../docs/retired/PIPELINE-MONITORING-AUTOMATED.md) — monitor-issues usage
 
 ## Concurrency Behavior
 

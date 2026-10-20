@@ -9,7 +9,7 @@ source:
   - file: api/app/services/agent_service_pipeline_status.py
     symbols: [get_pipeline_status()]
 requirements:
-  - "Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)"
+  - "Orchestrator finds the next task from a backlog (specs/, docs/retired/PLAN.md, or config)"
   - "For each task, runs phases in order: spec → impl → test → review"
   - "After review, validates: pytest passes and review output indicates pass"
   - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
@@ -20,7 +20,7 @@ requirements:
   - "PM complete: : Running the project manager with `--dry-run` exits 0 and logs deterministic preview (backlog index, phase, next item)."
   - "E2E smoke test: : A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess `--dry-run` exit 0, or `-"
 done_when:
-  - "Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)"
+  - "Orchestrator finds the next task from a backlog (specs/, docs/retired/PLAN.md, or config)"
   - "For each task, runs phases in order: spec → impl → test → review"
   - "After review, validates: pytest passes and review output indicates pass"
   - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
@@ -53,7 +53,7 @@ Implement a project manager orchestrator that automates the full spec-driven cyc
 
 ## Requirements
 
-- [x] Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)
+- [x] Orchestrator finds the next task from a backlog (specs/, docs/retired/PLAN.md, or config)
 - [x] For each task, runs phases in order: spec → impl → test → review
 - [x] After review, validates: pytest passes and review output indicates pass
 - [x] If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations
@@ -80,7 +80,7 @@ files_allowed:
   - docs/AGENT-ARCHITECTURE.md
   - api/tests/test_project_manager_pipeline.py
 done_when:
-  - Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)
+  - Orchestrator finds the next task from a backlog (specs/, docs/retired/PLAN.md, or config)
   - For each task, runs phases in order: spec → impl → test → review
   - After review, validates: pytest passes and review output indicates pass
   - If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations
@@ -133,7 +133,7 @@ Validation: `cd api && pytest -v` exit 0 and review output contains "pass" (or e
 
 ## Backlog
 
-Primary source: `specs/backlog.md` (created by this spec) — list of work items, one per line or in structured format. Fallback: scan specs/ for uncompleted items, or use docs/PLAN.md Sprint items. Alternate backlog: `specs/overnight-backlog.md` via `--backlog`.
+Primary source: `specs/backlog.md` (created by this spec) — list of work items, one per line or in structured format. Fallback: scan specs/ for uncompleted items, or use docs/retired/PLAN.md Sprint items. Alternate backlog: `specs/overnight-backlog.md` via `--backlog`.
 
 ## API Contract
 

@@ -292,10 +292,10 @@ Before contributing, review:
 - [CLAUDE.md](CLAUDE.md) — Project configuration and conventions
 - [AGENTS.md](AGENTS.md) — Agent workflow, proof contract, and task-card shape
 - [docs/SETUP.md](docs/SETUP.md) — Development setup
-- [docs/STATUS.md](docs/STATUS.md) — Current implementation status
-- [docs/PLAN.md](docs/PLAN.md) — Project roadmap
+- [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) — Current runtime floor and destination
+- [form/NORTH_STAR.md](form/NORTH_STAR.md) — Who we are and where we go
 - [docs/DEPLOY.md](docs/DEPLOY.md) — Deployment guide
-- [docs/RUNBOOK.md](docs/RUNBOOK.md) — Operational procedures
+- [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) — Deployed topology and live persistence
 
 ## 🐛 Reporting Issues
 

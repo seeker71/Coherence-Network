@@ -106,7 +106,7 @@ Heal Completion → Issue Resolution — see `idea_id: pipeline-reliability` for
 | File | Change |
 |---|---|
 | `api/scripts/monitor_pipeline.py` | Ensure `_record_resolution()` always receives `heal_task_id` from `prev_condition_to_heal_task` map. Add optional `_persist_resolved_to_issues_file()` helper called when `MONITOR_PERSIST_RESOLVED=1`. |
-| `docs/PIPELINE-MONITORING-AUTOMATED.md` | Document resolution recording, `MONITOR_PERSIST_RESOLVED` env var, `resolved` array semantics, and capping behavior. |
+| `docs/retired/PIPELINE-MONITORING-AUTOMATED.md` | Document resolution recording, `MONITOR_PERSIST_RESOLVED` env var, `resolved` array semantics, and capping behavior. |
 | `api/app/routers/agent_issues_routes.py` | No change required — already returns file content as-is; `resolved` field passes through automatically. |
 
 - `api/app/services/auto_heal_service.py`
