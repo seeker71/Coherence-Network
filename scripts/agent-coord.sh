@@ -82,7 +82,17 @@ _coord_fmt() {
 }
 
 _coord_roster() {
-  # who is in the field: last-seen time + announced worktree, newest first
+  # who is in the field: cells seen in the last day, last-seen time + announced worktree, newest first; the
+  # older cells are counted, not listed (115 rows of long-gone worktrees made the arrival too big to be read)
+  local cutoff
+  cutoff="$(date -u -v-24H +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%S 2>/dev/null || echo 0)"
+  awk -F'\t' -v cutoff="$cutoff" '
+    { last[$2]=$1; n[$2]++; if($3=="announce") home[$2]=$4; if($3=="interface") iface[$2]=$4 }
+    END { older=0; for (a in last) { if (last[a] >= cutoff) printf "%s\t  %-8s last %s  (%d signals)  %s%s\n", last[a], a, substr(last[a],12,8), n[a], home[a], (iface[a] ? "  offers: " iface[a] : ""); else older++ }
+          if (older > 0) printf "0\t  (%d cells last seen more than a day ago; coord roster --all lists them)\n", older }
+  ' "$COHERENCE_COORD" 2>/dev/null | sort -r | cut -f2-
+}
+_coord_roster_all() {
   awk -F'\t' '
     { last[$2]=$1; n[$2]++; if($3=="announce") home[$2]=$4; if($3=="interface") iface[$2]=$4 }
     END { for (a in last) printf "%s\t  %-8s last %s  (%d signals)  %s%s\n", last[a], a, substr(last[a],12,8), n[a], home[a], (iface[a] ? "  offers: " iface[a] : "") }
@@ -203,7 +213,7 @@ coord() {
   case "$type" in
     watch)  tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
     log)    tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
-    roster)   _coord_roster; return;;
+    roster)   if [ "${1:-}" = "--all" ]; then _coord_roster_all; else _coord_roster; fi; return;;
     view)     _coord_view; return;;
     doing)    _coord_doing; return;;
     live)     while true; do clear; _coord_view; sleep "${1:-3}"; done; return;;

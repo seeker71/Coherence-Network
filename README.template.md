@@ -204,9 +204,8 @@ Every part of the network links to every other. Jump in wherever makes sense.
 
 ## Documentation
 
-- [Setup](docs/SETUP.md) · [Status](docs/STATUS.md) · [Deploy](docs/DEPLOY.md) · [Runbook](docs/RUNBOOK.md)
-- [Spec Coverage](docs/SPEC-COVERAGE.md) · [Spec Tracking](docs/SPEC-TRACKING.md) · [Glossary](docs/GLOSSARY.md)
-- [Join the Network](docs/JOIN-NETWORK.md) · [Model Routing](docs/MODEL-ROUTING.md)
+- [Setup](docs/SETUP.md) · [Deploy](docs/DEPLOY.md) · [Production substrate](docs/PRODUCTION-SUBSTRATE.md) · [Glossary](docs/GLOSSARY.md)
+- [Agent start packet](docs/shared/agent-start-packet.md) · [Who we are](form/NORTH_STAR.md#who-we-are) · [Join the Network](docs/JOIN-NETWORK.md)
 
 ## License
 

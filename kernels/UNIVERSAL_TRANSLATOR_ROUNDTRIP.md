@@ -77,7 +77,7 @@ What this proof closes is a small mouth. The wider arc — *any Form recipe → 
 - Emitter: [`form/form/form-stdlib/emits/python-native.fk`](../form/form/form-stdlib/emits/python-native.fk)
 - Round-trip driver: [`form/form/form-stdlib/emits/python-native-roundtrip-driver.fk`](../form/form/form-stdlib/emits/python-native-roundtrip-driver.fk)
 - Orchestration: [`form/form/scripts/emit_native_python_roundtrip.sh`](../form/form/scripts/emit_native_python_roundtrip.sh)
-- Spec: [`specs/form-binary-to-native-python-emitter.md`](../specs/form-binary-to-native-python-emitter.md)
+- Spec: [`specs/retired/form-binary-to-native-python-emitter.md`](../specs/retired/form-binary-to-native-python-emitter.md)
 - Companion teaching: [`lc-one-kernel-many-tongues`](../docs/vision-kb/concepts/lc-one-kernel-many-tongues.md), [`lc-parsers-as-recipes`](../docs/vision-kb/concepts/lc-parsers-as-recipes.md)
 - Wider arc: [`PYTHON_PIPELINE_STATUS.md`](PYTHON_PIPELINE_STATUS.md) (the emitter half of bullet 2 — "compile any file → Form-recipe binary the kernel CLI runs standalone")
 - Known walls: [`python_bmf/KNOWN_GAPS.md`](python_bmf/KNOWN_GAPS.md) (the Form-resident kernel's scaling ceiling)
