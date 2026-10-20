@@ -107,6 +107,12 @@ RUN mkdir -p /app/bin \
 # API source. The api/ dir is the package root inside the container; the
 # Procfile uses `app.main:app` so /app needs to BE the api directory contents.
 COPY api/ ./
+# The native owner loads immutable images in its own file-backed runtime context.
+RUN --mount=type=tmpfs,target=/dev/shm cd /app/form \
+ && cp /app/config/fkwu.conf ./fkwu.conf \
+ && ./fkwu --check /app/app/form_recipes/native_api.bml \
+ && ./fkwu --check /app/app/form_recipes/native_api_health.bml \
+ && rm ./fkwu.conf
 
 # Scripts live at /app/scripts because auto-deploy.sh ALSO copies them in
 # post-build (substrate ingest). Ship them at build time too so the image

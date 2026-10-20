@@ -1,0 +1,62 @@
+// Form-owned byte operations and keyed digest resources for authenticated wire protocols.
+import form-stdlib/bml/native-linux.bml;
+section [form.bml] {
+ class NativeCrypto {
+  def nc-z() = byte_to_str(0);
+  def nc-pad(s,n) = s ++ nli-zero(n - len(s));
+  def nc-close(fd) = nli-call(3,[fd])[0];
+  def nc-digest-open(name,key) {
+   let fd = nli-call(41,[38,5,0])[0];
+   fd<0 ? form_error("digest resource birth failed") : {
+    let address = nli-le(38,2) ++ nc-pad("hash",14) ++ nli-zero(8) ++ nc-pad(name,64);
+    let bound = nli-call(49,[fd,address,len(address)])[0];
+    let keyed = bound == 0 && !nothing?(key) ? nli-call(54,[fd,279,1,key,len(key)])[0] : bound;
+    let op = keyed == 0 ? nli-call(43,[fd,0,0])[0] : -1;
+    let closed = nc-close(fd);
+    op<0 ? form_error("digest resource admission failed") : op;
+   };
+  }
+  def nc-digest-at(fd,text) {
+   let sent = nli-call(44,[fd,text,len(text),16384,0,0])[0];
+   let got = sent == len(text) ? nli-call(45,[fd,[nli-zero(32)],32,0,0,0]) : [-1,""];
+   got[0] != 32 ? form_error("digest resource did not return SHA-256") : got[1];
+  }
+  def nc-digest(name,key,text) {
+   let fd = nc-digest-open(name,key);
+   let answer = attempt(nc-digest-at(fd,text)); let closed = nc-close(fd);
+   nothing?(answer) ? form_error("digest operation needs care") : answer;
+  }
+  def nc-sha256(text) = nc-digest("sha256",nothing(),text);
+  def nc-hmac(key,text) = nc-digest("hmac(sha256)",key,text);
+  def nc-xor(a,b) = len(a) != len(b) ? form_error("digest widths differ") : str-spans(map(i => byte_to_str(bxor(str_byte_at(a,i),str_byte_at(b,i))),range(0,len(a))));
+  def nc-pbkdf-round(fd,left,prior,total) = left == 0 ? total : {
+   let next = nc-digest-at(fd,prior); nc-pbkdf-round(fd,left - 1,next,nc-xor(total,next));
+  };
+  def nc-pbkdf(password,salt,iterations) {
+   iterations<1 ? form_error("PBKDF iteration count is not positive") : {
+    let fd = nc-digest-open("hmac(sha256)",password);
+    let first = nc-digest-at(fd,salt ++ nli-bytes([0,0,0,1]));
+    let result = attempt(nc-pbkdf-round(fd,iterations - 1,first,first)); let closed = nc-close(fd);
+    nothing?(result) ? form_error("PBKDF operation needs care") : result;
+   };
+  }
+  def nc-random(n) {
+   let got = nli-call(318,[[nli-zero(n)],n,0]);
+   got[0] != n ? form_error("entropy resource returned an incomplete nonce: " ++ got[0].str()) : got[1];
+  }
+  def nc-base64(text) = nc-b64-at(text,0,[]);
+  def nc-b64-at(text,at,parts) = at>=len(text) ? str-spans(reverse(parts)) : {
+   let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+   let a = str_byte_at(text,at); let b = at+1<len(text) ? str_byte_at(text,at+1) : 0; let c = at+2<len(text) ? str_byte_at(text,at+2) : 0;
+   let word = substring(alphabet,a/4,a/4+1) ++ substring(alphabet,(a%4)*16+b/16,(a%4)*16+b/16+1) ++ (at+1<len(text) ? substring(alphabet,(b%16)*4+c/64,(b%16)*4+c/64+1) : "=") ++ (at+2<len(text) ? substring(alphabet,c%64,c%64+1) : "=");
+   nc-b64-at(text,at+3,cons(word,parts));
+  };
+  def nc-unbase64(text) = nc-unb64-at(text,0,0,0,[]);
+  def nc-unb64-at(text,at,held,bits,parts) = at>=len(text) ? (bits>=6 || held != 0 ? form_error("invalid base64 tail") : str-spans(reverse(parts))) : substring(text,at,at+1) == "=" ? (all?(i => substring(text,i,i+1) == "=",range(at,len(text))) && len(text)%4 == 0 && len(text) - at<=2 && held == 0 ? str-spans(reverse(parts)) : form_error("invalid base64 padding")) : {
+   let n = str_find("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",substring(text,at,at+1),0);
+   n<0 ? form_error("invalid base64 digit") : { let value = held*64+n; let width = bits+6; width>=8 ? { let remain = width - 8; let scale = remain == 0 ? 1 : remain == 2 ? 4 : 16; nc-unb64-at(text,at+1,value%scale,remain,cons(byte_to_str(value/scale),parts)); } : nc-unb64-at(text,at+1,value,width,parts); };
+  };
+  def nc-hex(text) = str-spans(map(i => { let n = str_byte_at(text,i); let digits = "0123456789abcdef"; substring(digits,n/16,n/16+1) ++ substring(digits,n%16,n%16+1); },range(0,len(text))));
+  def nc-equal(a,b) = len(a) == len(b) && foldl((held,i) => bor(held,bxor(str_byte_at(a,i),str_byte_at(b,i))),0,range(0,len(a))) == 0;
+ }
+}

@@ -1,0 +1,49 @@
+// Route templates and request values are shared by native dispatch and deployment.
+import native_config.bml;
+import form-stdlib/bml/native-socket-dispatch.bml;
+section [form.bml] {
+ class NativeHttp {
+  def nha-variable(part) = len(part)>2 && substring(part,0,1) == "{" && substring(part,len(part) - 1,len(part)) == "}";
+  def nha-matches(pattern,path) {
+   let wanted = split-on(pattern,"/"); let actual = split-on(path,"/");
+   len(wanted) == len(actual) && all?(i => nha-variable(wanted[i]) ? len(actual[i])>0 : wanted[i] == actual[i],range(0,len(wanted)));
+  }
+  def nha-parameters(pattern,path) {
+   let wanted = split-on(pattern,"/"); let actual = split-on(path,"/");
+   json-node-object(map(i => json-node-pair(substring(wanted[i],1,len(wanted[i]) - 1),json-node-string(ncf-uri(actual[i]))),filter(i => nha-variable(wanted[i]),range(0,len(wanted)))));
+  }
+  def nha-regex(pattern) = "^" ++ str-spans(map(part => "/" ++ (nha-variable(part) ? "[^/]+" : part),drop(1,split-on(pattern,"/")))) ++ "$";
+  def nha-route-rule(route) = "(Method(`" ++ ncf-string(route,"method") ++ "`) && " ++ (any?(part => nha-variable(part),split-on(ncf-string(route,"path"),"/")) ? "PathRegexp(`" ++ nha-regex(ncf-string(route,"path")) ++ "`)" : "Path(`" ++ ncf-string(route,"path") ++ "`)") ++ ")";
+  // Existing literal declarations retain their owner ahead of a new parameter
+  // template. This reads source metadata at deployment, never a request fallback.
+  def nha-existing-literals(source,base) {
+   let prefix = "@router.get(\"";
+   let lines = filter(line => str_find(trim(line),prefix,0) == 0,split-on(source,"\n"));
+   let paths = map(line => { let text = trim(line); let at = str_find(text,"\"",len(prefix)); at<0 ? "" : base ++ substring(text,len(prefix),at); },lines);
+   filter(path => len(path)>len(base) && !any?(part => nha-variable(part),split-on(path,"/")),paths);
+  }
+  def nha-space(text) = str-spans(map(i => str_byte_at(text,i) == 43 ? " " : substring(text,i,i+1),range(0,len(text))));
+  def nha-query-pair(text) {
+   let at = str_find(text,"=",0);
+   json-node-pair(ncf-uri(nha-space(at<0 ? text : substring(text,0,at))),json-node-string(ncf-uri(nha-space(at<0 ? "" : substring(text,at+1,len(text))))));
+  }
+  def nha-request(raw,routes) {
+   let line = split-on(split-on(raw,"\r\n")[0]," "); let method = line[0]; let target = line[1];
+   let mark = str_find(target,"?",0); let path = mark<0 ? target : substring(target,0,mark);
+   let query = json-node-object(mark<0 ? [] : map(part => nha-query-pair(part),filter(part => len(part)>0,split-on(substring(target,mark+1,len(target)),"&"))));
+   let matched = filter(route => (ncf-string(route,"method") == method || method == "OPTIONS") && nha-matches(ncf-string(route,"path"),path),routes);
+   record_new(0,"method",method,"path",path,"query",query,"route",nil?(matched) ? nothing() : matched[0],"parameters",nil?(matched) ? json-node-object([]) : nha-parameters(ncf-string(matched[0],"path"),path));
+  }
+  def nha-value(request,key,fallback) = json-object-has?(record_get(request,"query"),key) ? ncf-string(record_get(request,"query"),key) : fallback;
+  def nha-number(request,key,fallback) {
+   let text = nha-value(request,key,fallback.str());
+   let number = len(text) == 0 ? nothing() : nsd-decimal(text,0,0);
+   nothing?(number) ? form_error("request " ++ key ++ " needs an unsigned integer") : number;
+  }
+  def nha-bool(request,key,fallback) {
+   let text = nsd-lower(nha-value(request,key,fallback ? "true" : "false"));
+   text == "true" || text == "1" || text == "yes" ? true : text == "false" || text == "0" || text == "no" ? false : form_error("request " ++ key ++ " needs a boolean");
+  }
+  def nha-reply(code,body,began) = "HTTP/1.1 " ++ code.str() ++ (code == 200 ? " OK" : code == 204 ? " No Content" : code == 404 ? " Not Found" : " Error") ++ "\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " ++ len(body).str() ++ "\r\nConnection: close\r\nCache-Control: no-store, no-transform\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nX-Content-Type-Options: nosniff\r\nX-Form-Router: fkwu\r\nX-Coherence-Runtime-Ms: " ++ (host_monotonic_ms() - began).str() ++ "\r\n\r\n" ++ body;
+ }
+}

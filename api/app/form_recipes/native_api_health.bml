@@ -1,0 +1,12 @@
+// Container liveness follows the native route and its current database connection.
+import native_config.bml;
+import form-stdlib/http-client.bml;
+section [form.bml] {
+ let cfg = ncf-file("../config/native_api.json");
+ let conn = socket_connect("127.0.0.1",str_to_int(json-emit(json-object-get(cfg,"port"))));
+ conn<0 ? form_error("native API listener is not available") : {
+  let sent = http-send-all(conn,"GET /api/native/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n",0);
+  let received = socket_recv(conn,4096); let closed = socket_close(conn);
+  nothing?(received) || kh-status-of(received) != 200 ? form_error("native API persistence needs care") : 0;
+ };
+}

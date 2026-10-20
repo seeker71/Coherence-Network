@@ -4,6 +4,7 @@
 // stdin: {"host":"root@host","key":"/local/key","compose":"/host/docker-compose.yml","backup":"/host/private-backup.yml","stage":"/host/docker-compose.incoming.yml","activate":["web"]}
 // preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk form/form-stdlib/bml/stdin-source.bml form/form-stdlib/bml/host-child.bml
 import remote_task.bml;
+import native_http.bml;
 section [form.bml] {
  class DeploymentComposeCare {
   def dcc-get(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
@@ -37,6 +38,37 @@ section [form.bml] {
    dcc-set(service, "labels", dcc-set(current, "traefik.http.routers.coherence-web.service", json-node-string("coherence-web")));
   }
   def dcc-owners(body) = node_children(json-object-get(body, "services"));
+  def dcc-object(doc) = node_eq(node_category(doc),JSON-OBJECT()) ? doc : json-node-object([]);
+  def dcc-native-dependency(body,service) {
+   let dependencies = dcc-object(json-object-get(service,"depends_on"));
+   let native = json-node-object([json-node-pair("condition",json-node-string("service_healthy")),json-node-pair("required",json-node-bool(true))]);
+   let depended = dcc-set(service,"depends_on",dcc-set(dependencies,"native-api",native));
+   let settings = ncf-file("../api/config/native_api.json"); let routes = node_children(json-object-get(settings,"routes"));
+   let literals = foldl((out,path) => append(out,nha-existing-literals(read_file(json-string-value(path)) ?? "",ncf-string(settings,"existing_route_prefix"))),[],node_children(json-object-get(settings,"existing_route_sources")));
+   let existing = filter(path => !any?(route => ncf-string(route,"method") == "GET" && ncf-string(route,"path") == path,routes),literals);
+   let labels = dcc-labels(json-object-get(service,"labels"));
+   let ports = filter(pair => str_find(json-pair-key(pair),"traefik.http.services.",0) == 0 && str_find(json-pair-key(pair),".loadbalancer.server.port",0)>0,node_children(labels));
+   let alias = nil?(ports) ? form_error("existing API route needs its service port owner") : split-on(substring(json-pair-key(ports[0]),len("traefik.http.services."),len(json-pair-key(ports[0]))),".")[0];
+   let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"traefik.http.routers.existing-api-reads.",0) != 0,node_children(labels)));
+   let bindings = nil?(existing) ? [] : [["traefik.http.routers.existing-api-reads.rule",dcc-api-rules(body) ++ " && Method(`GET`) && (" ++ hch-join(map(path => "Path(`" ++ path ++ "`)",existing)," || ") ++ ")"],["traefik.http.routers.existing-api-reads.priority","400"],["traefik.http.routers.existing-api-reads.entrypoints","websecure"],["traefik.http.routers.existing-api-reads.tls.certresolver","letsencrypt"],["traefik.http.routers.existing-api-reads.service",alias]];
+   dcc-set(depended,"labels",foldl((out,row) => dcc-set(out,row[0],json-node-string(row[1])),kept,bindings));
+  }
+  def dcc-api-rules(body) {
+   let api = json-object-get(json-object-get(body,"services"),"api"); let labels = dcc-labels(json-object-get(api,"labels"));
+   let rules = map(pair => json-string-value(json-pair-value(pair)),filter(pair => str_find(json-pair-key(pair),"traefik.http.routers.",0) == 0 && str_find(json-pair-key(pair),"traefik.http.routers.existing-api-reads.",0) != 0 && substring(json-pair-key(pair),len(json-pair-key(pair)) - 5,len(json-pair-key(pair))) == ".rule" && str_find(json-string-value(json-pair-value(pair)),"Host(",0)>=0,node_children(labels)));
+   nil?(rules) ? form_error("native API needs the current public API host owner") : "(" ++ hch-join(rules," || ") ++ ")";
+  }
+  def dcc-native-api(body) {
+   let api = json-object-get(json-object-get(body,"services"),"api"); let configured = dcc-get(api,"image");
+   let image = len(configured)>0 ? configured : dcc-get(body,"name") ++ "-api";
+   let settings = ncf-file("../api/config/native_api.json"); let routes = node_children(json-object-get(settings,"routes"));
+   let rule = dcc-api-rules(body) ++ " && (" ++ hch-join(map(route => nha-route-rule(route),routes)," || ") ++ ")";
+   let labels = json-node-object(map(p => json-node-pair(p[0],json-node-string(p[1])),[["traefik.enable","true"],["traefik.http.routers.native-api.rule",rule],["traefik.http.routers.native-api.priority","300"],["traefik.http.routers.native-api.entrypoints","websecure"],["traefik.http.routers.native-api.tls.certresolver","letsencrypt"],["traefik.http.routers.native-api.service","native-api"],["traefik.http.services.native-api.loadbalancer.server.port",json-emit(json-object-get(settings,"port"))]]));
+   let mount = json-node-object([json-node-pair("type",json-node-string("bind")),json-node-pair("source",json-node-string("/root/.coherence-network/config.json")),json-node-pair("target",json-node-string("/root/.coherence-network/config.json")),json-node-pair("read_only",json-node-bool(true)),json-node-pair("bind",json-node-object([json-node-pair("create_host_path",json-node-bool(false))]))]);
+   let health = json-node-object([json-node-pair("test",json-node-array(map(v => json-node-string(v),["CMD","/app/form/fkwu","/app/app/form_recipes/native_api_health.bml"]))),json-node-pair("interval",json-node-string("60s")),json-node-pair("timeout",json-node-string("10s")),json-node-pair("start_period",json-node-string("120s")),json-node-pair("retries",json-node-int(3))]);
+   let database = json-node-object([json-node-pair("condition",json-node-string("service_healthy")),json-node-pair("required",json-node-bool(true))]);
+   json-node-object([json-node-pair("image",json-node-string(image)),json-node-pair("entrypoint",json-node-array([json-node-string("/app/form/fkwu")])),json-node-pair("command",json-node-array([json-node-string("/app/app/form_recipes/native_api.bml")])),json-node-pair("working_dir",json-node-string("/app/form")),json-node-pair("read_only",json-node-bool(true)),json-node-pair("tmpfs",json-node-array([json-node-string("/tmp")])),json-node-pair("shm_size",json-node-string("1gb")),json-node-pair("volumes",json-node-array([mount,json-node-object([json-node-pair("type",json-node-string("bind")),json-node-pair("source",json-node-string("/docker/coherence-network/repo/api/config/fkwu.conf")),json-node-pair("target",json-node-string("/app/form/fkwu.conf")),json-node-pair("read_only",json-node-bool(true)),json-node-pair("bind",json-node-object([json-node-pair("create_host_path",json-node-bool(false))]))])])),json-node-pair("depends_on",json-node-object([json-node-pair("postgres",database)])),json-node-pair("healthcheck",health),json-node-pair("restart",json-node-string("unless-stopped")),json-node-pair("labels",labels)]);
+  }
   def dcc-web-rules(body) {
    let web = json-object-get(json-object-get(body,"services"),"web");
    let labels = dcc-labels(json-object-get(web,"labels"));
@@ -64,7 +96,7 @@ section [form.bml] {
   def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
   def dcc-body(body) {
    let web_rules = dcc-web-rules(body);
-   let services = json-node-object(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)), dcc-owners(body))));
+   let services = json-node-object(append(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : json-pair-key(pair) == "api" ? json-node-pair("api",dcc-native-dependency(body,json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)) && json-pair-key(pair) != "native-api", dcc-owners(body))),[json-node-pair("native-api",dcc-native-api(body))]));
    json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
   }
   def dcc-apply(doc, body) {
@@ -77,7 +109,7 @@ section [form.bml] {
    let accepted = dcc-run(doc, "compose-model-accept", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--quiet", "--no-interpolate", "--no-env-resolution"], "");
    let published = dcc-run(doc, "compose-source-publish", ["mv", dcc-get(doc, "stage"), dcc-get(doc, "compose")], "");
    let activated = dcc-activate(doc);
-   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Released owners retired from live Compose; web routes share one service; private source backup retained; requested services activated.";
+   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Native API read routes own their fkwu service; released owners retired; web routes share one service; private source backup retained; requested services activated.";
   }
   def dcc-activate(doc) {
    let owners = map(row => json-string-value(row), node_children(json-object-get(doc, "activate")));
@@ -85,7 +117,11 @@ section [form.bml] {
   }
   def dcc-care(doc) {
    let body = dcc-read(doc);
-   dcc-apply(doc, body);
+   dcc-get(doc,"mode") == "observe" ? dcc-plan(body) : dcc-apply(doc, body);
+  }
+  def dcc-plan(body) {
+   let next = dcc-body(body); let services = json-object-get(next,"services"); let native = json-object-get(services,"native-api");
+   json-emit(json-node-object([json-node-pair("idempotent",json-node-bool(node_eq(next,dcc-body(next)))),json-node-pair("existing_service",json-object-get(json-object-get(json-object-get(services,"api"),"labels"),"traefik.http.routers.existing-api-reads.service")),json-node-pair("image",json-object-get(native,"image")),json-node-pair("native_command",json-object-get(native,"command")),json-node-pair("public_routes",json-object-get(json-object-get(native,"labels"),"traefik.http.routers.native-api.rule")),json-node-pair("api_dependencies",json-object-get(json-object-get(services,"api"),"depends_on"))]));
   }
  }
  let doc = parse-json("deployment-compose-care", stdin-text());
