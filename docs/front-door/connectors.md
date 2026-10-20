@@ -6,16 +6,24 @@ learning the network's vocabulary.
 
 ## Install the free companion
 
-The [Coherence Companion 0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0)
-contains a small plugin ZIP, the optional MCP package, and `SHA256SUMS` for checking
-the downloads. The plugin is Apache-2.0 source and adds no charge. You need no
+The [Coherence Companion 0.6.1 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1)
+contains a small plugin ZIP, the existing Coherence icon, and `SHA256SUMS` for
+checking the download. The optional MCP package remains in the
+[0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0).
+The plugin is Apache-2.0 source and adds no charge. You need no
 Coherence account, payment or API key for ordinary assistance. Your chosen host's
 availability, plans, tools and retention still apply.
+
+The bundle carries instructions, references and artwork. It contains no API
+credentials, automatically connected MCP service or publisher-funded inference
+proxy. People use their own host account; installing this package does not give
+them access to the publisher's OpenAI API credits. Directory publisher
+verification is separate from recipients' usage.
 
 For a Codex CLI with plugin support:
 
 ```sh
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.0 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.1 --sparse .agents/plugins --sparse plugins/coherence-companion
 codex plugin add coherence-companion@coherence-network
 ```
 
@@ -24,7 +32,7 @@ the result you want. The installed skill works without Node, Python or the
 optional MCP. You can ask for a three-line continuation brief to take elsewhere;
 saving that brief is your choice.
 
-In a host supporting plugin archive import, use `coherence-companion-0.6.0.zip`.
+In a host supporting plugin archive import, use `coherence-companion-0.6.1.zip`.
 For a skills-only host, use the archive's complete `skills/coherence-network/`
 folder, including its references. Host install controls vary; the release is
 publicly downloadable but does not imply acceptance into a universal directory.
@@ -91,8 +99,9 @@ arguments: ["/absolute/path/to/Coherence-Network/mcp-server/index.mjs"]
 transport: stdio
 ```
 
-For a clone-free setup, extract `coherence-mcp-server-0.6.0.tgz` from the release
-above and point `node` at its `package/index.mjs`. Install Node 18+ and `uv` for the
+For a clone-free setup, extract `coherence-mcp-server-0.6.0.tgz` from the
+[0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0)
+and point `node` at its `package/index.mjs`. Install Node 18+ and `uv` for the
 locked Python runtime. The [MCP guide](../../mcp-server/README.md) covers fallbacks.
 `npx coherence-mcp-server` runs the separate npm release: the registry observed
 on 2026-10-20 serves 0.5.5, which lacks the current companion boundaries.

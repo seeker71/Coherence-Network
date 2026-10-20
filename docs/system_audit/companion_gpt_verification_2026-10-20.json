@@ -39,14 +39,19 @@
     }
   ],
   "distribution": {
-    "public_release_current": "companion-v0.6.0",
+    "public_release_current": "companion-v0.6.1",
     "plugin_source_version": "0.6.1",
     "prepared_zip_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
     "prepared_zip_entries": 8,
     "prepared_zip_matches_source": true,
-    "directory": "Portal redirected to login; owner sign-in requested. No submission or approval claimed.",
+    "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
     "npm": "Account authentication unfinished; registry publication not completed.",
-    "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement."
+    "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement.",
+    "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1",
+    "release_source_commit": "26057a5e30d1065725a184c46dced593717afd93",
+    "public_download_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+    "public_download_matches_reviewed": true,
+    "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
   },
   "native_boundary": "Host composed these replies. No native generation, native sufficiency, task-specific rent reduction or universal privacy claimed.",
   "retention": "Private account snapshots and recovery copies remain outside git. Public evidence includes only fictional cases and bounded observations."

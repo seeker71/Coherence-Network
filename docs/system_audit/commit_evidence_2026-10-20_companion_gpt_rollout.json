@@ -1,38 +1,22 @@
 {
   "date": "2026-10-20",
-  "thread_branch": "codex/companion-gpt-rollout-20261020",
-  "commit_scope": "Publish and observe existing GPT companion instructions, pin the source repair, preserve read-only Action and prepare directory metadata0.6.1.",
+  "thread_branch": "codex/companion-gpt-release-proof-20261020",
+  "commit_scope": "Record merged GPT source and public0.6.1 package readback; clarify recipient account use without publisher API-credit sharing.",
   "files_owned": [
-    "docs/integration/chatgpt-profile.json",
-    "docs/integration/chatgpt-setup.md",
-    "docs/integration/companion-gpt-observations.md",
     "docs/front-door/connectors.md",
-    "form",
-    "plugins/coherence-companion/plugin.json",
-    "plugins/coherence-companion/assets/logo.svg",
-    "scripts/build_readmes.py",
-    "mcp-server/tests/test_companion_plugin.py",
-    "specs/companion-gpt-rollout.md",
     "docs/system_audit/companion_gpt_verification_2026-10-20.json",
     "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
-    "docs/system_audit/model_executor_runs.jsonl"
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
   ],
   "change_files": [
-    "docs/integration/chatgpt-profile.json",
-    "docs/integration/chatgpt-setup.md",
-    "docs/integration/companion-gpt-observations.md",
     "docs/front-door/connectors.md",
-    "form",
-    "plugins/coherence-companion/plugin.json",
-    "plugins/coherence-companion/assets/logo.svg",
-    "scripts/build_readmes.py",
-    "mcp-server/tests/test_companion_plugin.py",
-    "specs/companion-gpt-rollout.md",
     "docs/system_audit/companion_gpt_verification_2026-10-20.json",
     "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
-    "docs/system_audit/model_executor_runs.jsonl"
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "docs_only",
   "idea_ids": [
     "trusted-everyday-companion"
   ],
@@ -68,12 +52,14 @@
       "form-run python3 scripts/build_readmes.py --check",
       "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
       "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
-      "form-run git diff --check"
+      "form-run git diff --check",
+      "gh release view companion-v0.6.1 --json tagName,targetCommitish,url,assets",
+      "curl -fL -sS public0.6.1 ZIP; shasum -a256:8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d"
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Kernel PR620 merged with successful GitGuardian check and independent review; parent PR checks follow push."
+    "status": "pass",
+    "summary": "Source PR4116 merged at26057a5e30d1065725a184c46dced593717afd93 with successful GitGuardian check and independent reviews; kernelPR620 merged first. This follow-up changes documentation only."
   },
   "e2e_validation": {
     "status": "pass",
@@ -91,16 +77,18 @@
   },
   "deploy_validation": {
     "status": "pass",
-    "summary": "Existing GPT published and5857characters read back exactly at06:21:13Z, unchanged Action/profile. No server, npm, directory or migration completion claimed."
+    "summary": "Existing GPT5857-character saved readback verified; companion-v0.6.1 released from merged source and downloaded without credentials, matching reviewed SHA256. Directory, npm and migration remain separate and incomplete."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Parent PR checks await push; GPT publication and local observations are complete."
+    "can_move_next_phase": true,
+    "blocked_reason": null
   },
   "evidence_refs": [
     "docs/system_audit/companion_gpt_verification_2026-10-20.json",
     "docs/integration/companion-gpt-observations.md",
-    "https://github.com/seeker71/coherence-kernel/pull/620"
+    "https://github.com/seeker71/coherence-kernel/pull/620",
+    "https://github.com/seeker71/Coherence-Network/pull/4116",
+    "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1"
   ],
   "sovereignty_receipt": {
     "reasoning": "Rented OpenAI Codex; GPT-host outputs also rented; exact serving variants and task costs unavailable.",
@@ -115,7 +103,7 @@
   },
   "work_receipt": {
     "loosened": "Practical help at the existing shared GPT link with inspectable published settings.",
-    "tight": "Native task ownership, broad visual reliability, independently readable lesson text and publisher authentication remain open.",
+    "tight": "Directory publisher verification, npm authentication, native task ownership and broad visual reliability remain separate; public sharing already works without exposing publisher credentials.",
     "surprise": "Correct explanation accompanied an incorrect picture; the artifact itself needed inspection.",
     "friction_to_lesson": "User confusion redirected mechanical checks into observed mentorship, authorship and sovereign collaboration."
   }
