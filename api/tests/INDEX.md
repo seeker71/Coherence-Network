@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 212
+**Total files**: 210
 
 | File | Purpose |
 |---|---|
@@ -124,7 +124,6 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_ingest_lock_retry.py](test_ingest_lock_retry.py) | Stone: retry the ingest on a lock-timeout cancellation (2026-07-02). |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
-| [test_instance_pulse.py](test_instance_pulse.py) | Acceptance tests for instance-pulse — per-instance breath sharing. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_intern_count_stone.py](test_intern_count_stone.py) | Stones for the substrate write-lane wedge (2026-07-02). |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
@@ -153,7 +152,6 @@
 | [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_public_dialogues.py](test_public_dialogues.py) | _no top-of-file purpose_ |
-| [test_pulse_health_projection.py](test_pulse_health_projection.py) | The continuous pulse witness uses bounded health, not deep runtime proof. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |

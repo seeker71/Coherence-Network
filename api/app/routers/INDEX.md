@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 152
+**Total files**: 151
 
 | File | Purpose |
 |---|---|
@@ -129,7 +129,6 @@
 | [proprioception.py](proprioception.py) | Proprioception router — auto-sensing system state endpoints. |
 | [provider_stats.py](provider_stats.py) | Provider measurement stats endpoint. |
 | [providers.py](providers.py) | Task execution provider routes. |
-| [pulse.py](pulse.py) | Instance pulse routes — each coherence instance exposes its own breath. |
 | [push.py](push.py) | Web Push router — subscribe, unsubscribe, send. |
 | [reactions.py](reactions.py) | Reactions router — emoji + comment on any entity. |
 | [registry_discovery.py](registry_discovery.py) | Discovery registry submission inventory routes. |
@@ -149,7 +148,7 @@
 | [translations.py](translations.py) | Translations router — POST submitted or generated translations for any entity. |
 | [treasury.py](treasury.py) | Implements: spec-122 (crypto treasury bridge) |
 | [ui_preferences.py](ui_preferences.py) | UI Preferences router — spec ux-tabs-mobile-friendly. |
-| [utils.py](utils.py) | Compatibility API module for utility routes implemented as Form recipes. |
+| [utils.py](utils.py) | _no top-of-file purpose_ |
 | [value_lineage.py](value_lineage.py) | API routes for value lineage and payout attribution. |
 | [vedic.py](vedic.py) | Vedic (jyotisha) chart — a birth-moment cast by the native vedic-chat.fk cell on fkwu as a chart (JSON) or answered in words; Python only carries the data. |
 | [verification.py](verification.py) | Verification router — public endpoints for auditing CC flows. |
