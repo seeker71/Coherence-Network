@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import functools
 import hashlib
 import re
 from urllib.parse import urlparse
@@ -15,7 +16,18 @@ from app.services.form_kernel_bridge import serve_text_via_kernel
 
 
 _ANONYMOUS_MEETING_TRACE = "anonymous_meeting_trace"
-_ANONYMOUS_TRACE_QUERY, _ = serve_text_via_kernel("anonymous_trace_query.bml", {})
+
+
+@functools.lru_cache(maxsize=1)
+def _anonymous_trace_query() -> str:
+    """The ordered-read SQL the kernel serves from anonymous_trace_query.bml, read once, on first use.
+
+    Read at import time this call took the whole API down when the kernel could not stage its source inside the
+    image (2026-10-20, revision b9527a577: every route 404 for ten hours). The query is the trace route's own need;
+    a failure to serve it stays that route's error, with the kernel's words intact.
+    """
+    query, _ = serve_text_via_kernel("anonymous_trace_query.bml", {})
+    return query
 
 
 def _iso_now() -> str:
@@ -208,7 +220,7 @@ def _summary_for_anonymous_traces(nodes: list[Node], source_point_id: str | None
 
 
 def _anonymous_trace_nodes(s, source_point_id: str | None = None) -> list[Node]:
-    nodes = s.query(Node).from_statement(text(_ANONYMOUS_TRACE_QUERY)).params(source_point_id=source_point_id).all()
+    nodes = s.query(Node).from_statement(text(_anonymous_trace_query())).params(source_point_id=source_point_id).all()
     traces = [node for node in nodes if _is_anonymous_trace(node)]
     return traces
 
