@@ -2666,17 +2666,12 @@ def _build_context_block(
                 parts.append(f"### Project conventions (CLAUDE.md)\n```\n{content}\n```")
             break
 
-    # 3. Repo runbook — operational guidance
-    for runbook_path in [
-        repo_dir / "docs" / "RUNBOOK.md",
-        repo_dir / "RUNBOOK.md",
-        repo_dir / "docs" / "runbook.md",
-    ]:
-        if runbook_path.exists():
-            content = _read_file_capped(runbook_path, cap=1500)
-            if content:
-                parts.append(f"### Runbook\n```\n{content}\n```")
-            break
+    # 3. Delivery guide — operational guidance
+    runbook_path = repo_dir / "docs" / "DEPLOY.md"
+    if runbook_path.exists():
+        content = _read_file_capped(runbook_path, cap=1500)
+        if content:
+            parts.append(f"### Delivery guide (docs/DEPLOY.md)\n```\n{content}\n```")
 
     # 4. Related files — mentioned in spec or direction, confirmed to exist
     related = _resolve_related_files(

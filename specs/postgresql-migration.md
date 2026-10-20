@@ -352,7 +352,7 @@ class AgentTask(BaseModel):
 - [ ] `api/pyproject.toml` — Add asyncpg, psycopg2-binary dependencies
 - [ ] `api/requirements.txt` — Update lockfile
 - [ ] `docs/SETUP.md` — Document PostgreSQL setup steps
-- [ ] `docs/RUNBOOK.md` — Add PostgreSQL troubleshooting section
+- [ ] `docs/retired/RUNBOOK.md` — Add PostgreSQL troubleshooting section
 - [ ] `.env.example` — Add DATABASE_URL and migration config examples
 
 ## Testing Requirements

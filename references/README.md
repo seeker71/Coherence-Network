@@ -11,4 +11,4 @@ Symlinks to source repos used when creating this project:
 
 When in Cursor: reference these for context, patterns, and ideas. **Do not edit them as part of Coherence-Network work.** Implementations belong in the main Coherence-Network tree (`api/`, `web/`, `specs/`).
 
-See [docs/REFERENCE-REPOS.md](../docs/REFERENCE-REPOS.md) for details.
+The symlinks are local-only (`ln -sf ../../Crypo-Coin-Coherency-Network crypo-coin`, `ln -sf ../../Living-Codex-CSharp living-codex` from this directory) and are not tracked.

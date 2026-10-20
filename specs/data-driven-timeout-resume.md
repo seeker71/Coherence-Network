@@ -156,7 +156,7 @@ Target: `efficiency_ratio > 0.90` after 30 days of data.
 - `api/app/services/smart_reaper_service.py` — inject is_resume, prepend partial output to direction on resume task
 - `api/tests/test_timeout_adaptive_service.py` — **CREATE NEW** — tests for percentile computation, fallback logic
 - `api/tests/test_agent_runner.py` — add tests for adaptive timeout selection and partial output capture
-- `docs/RUNBOOK.md` — add Data-Driven Timeout Tuning section
+- `docs/retired/RUNBOOK.md` — add Data-Driven Timeout Tuning section
 
 ## Acceptance Tests
 

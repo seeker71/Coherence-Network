@@ -1,4 +1,4 @@
-"""Task-type → model/tier routing (see docs/MODEL-ROUTING.md). All from config (model_routing.json); uniform across providers."""
+"""Task-type → model/tier routing (routing as data in api/config/model_routing.json). All from config (model_routing.json); uniform across providers."""
 
 from __future__ import annotations
 

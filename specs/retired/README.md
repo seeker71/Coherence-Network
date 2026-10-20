@@ -9,3 +9,6 @@ What they asked for lives on in fkwu's own bands and in the kernel's CURRENT_FLO
 wants to return is rewritten against the sources that exist, not restored.
 
 Moved 2026-10-20; the senses read 84 missing source paths across these eighteen before the move.
+
+`project-manager-pipeline.md` joined them on 2026-10-20 when `api/scripts/project_manager.py`
+and the overnight lane around it left (see `docs/retired/README.md`).

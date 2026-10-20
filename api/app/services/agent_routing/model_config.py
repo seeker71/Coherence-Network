@@ -1,4 +1,4 @@
-"""Model normalization and OpenRouter policy (see docs/MODEL-ROUTING.md). No aliasing; model ids from config used as-is."""
+"""Model normalization and OpenRouter policy (policy as data in api/config/model_routing.json). No aliasing; model ids from config used as-is."""
 
 from __future__ import annotations
 

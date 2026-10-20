@@ -1,6 +1,6 @@
 # Coherence Algorithm — Sketch
 
-From docs/PLAN.md. Initial formula for project health 0.0–1.0. Formal spec per specs/018-coherence-algorithm-spec.md.
+From docs/retired/PLAN.md. Initial formula for project health 0.0–1.0. Formal spec per specs/018-coherence-algorithm-spec.md.
 
 ## Inputs (8 components)
 
