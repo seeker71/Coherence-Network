@@ -1085,7 +1085,7 @@ sync_substrate_content
   POST_REACHED=0
   for ((verify_attempt = 1; verify_attempt <= 6; verify_attempt++)); do
     POST_HEALTH="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-        sh -lc 'curl -fsS --max-time 30 http://127.0.0.1:8000/api/health 2>/dev/null' \
+        sh -lc 'curl -fsS --max-time 30 http://native-api:8110/api/health 2>/dev/null' \
         2>/dev/null || true)"
     if [[ -n "$POST_HEALTH" ]]; then
       POST_REACHED=1

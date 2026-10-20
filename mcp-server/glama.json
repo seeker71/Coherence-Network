@@ -4,7 +4,7 @@
   "url": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
-  "tags": ["knowledge-graph", "ideas", "resonance", "collaboration", "neo4j", "ontology", "value-chain", "attribution"],
+  "tags": ["knowledge-graph", "ideas", "resonance", "collaboration", "ontology", "value-chain", "attribution"],
   "install": {
     "npx": "coherence-mcp-server",
     "uvx": "coherence-mcp-server",

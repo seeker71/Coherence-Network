@@ -29,19 +29,51 @@ The reminder itself is Form/BML:
 cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml
 ```
 
-The native API read owner reuses the application image with a fkwu entrypoint,
+The native API owner reuses the application image with a fkwu entrypoint,
 not the compatibility Python process. Its routes, template parameters and port
 come from `api/config/native_api.json`. Compose care derives the public host
 from the existing API owner and publishes the native route bindings atomically.
 `mode: "observe"` reports only the image, routes and dependency plan. After the
 merged image is built, apply the same care request with `activate: ["native-api"]`.
 Keep its private config mount and `/app/form` assembly/runtime context together.
+The image preserves the pinned source home: stdlib lives at
+`/app/form/form/form-stdlib`, with `/app/form/control` and `/app/form/runtime`
+beside it. Native imports use that one layout, not duplicated alias trees.
 The compatibility service depends on that native owner; subsequent image updates
 raise the dependency before the compatibility process. There is no native-to-Python
 request fallback. Retire replaced Python route owners after the public handoff.
 Current literal routes remain more specific than new parameter templates.
 Compose care reads those declarations from their existing source owners rather
 than inventing a reserved-name list or forwarding an unresolved native request.
+
+`native_health.bml` owns public health, readiness, persistence and write-lane
+observations on that same fkwu JIT. Each reads its live PostgreSQL dependency;
+ordinary probes do not traverse the audit ledger, spawn kernel challenges, or
+rebuild deployment witnesses. Release identity comes from the image's immutable
+`config/image_identity.json`, not the host configuration for a queued successor.
+The compatibility process keeps its own `/api/ping` liveness probe; a native
+success is not evidence that a separate Python process is alive.
+
+`native_instance_pulse.bml` shares one live native request/persistence reading
+between `/api/pulse/self` and `/api/pulse/now`, with instance identity and
+visibility supplied by file-backed federation configuration. Its peers read
+returns the real stored federation observations. The Python self-check pool,
+schema probe and environment-based identity/privacy switches are retired;
+the active federation peer writer keeps its record ownership until that effect
+moves natively too.
+
+`native_substrate.bml` owns the public page binding, kernel-status observation
+and source-offer door. `native_named_persistence.bml` holds reusable native
+values and named cells in PostgreSQL. Existing lattice rows remain read
+projections while their callers move, not a second Python write authority.
+`native_health_observation.bml` carries the separately requested authenticated
+target/nonce observation. Ordinary probes never enter that expensive effect;
+it is not a scheduled audit or kernel validation band.
+
+PostgreSQL owns application graph state and traversal. The unused Neo4j service,
+driver and discovery probe are retired. Compose care accepts explicit released
+service names, removes their dependency references and releases only project
+volumes no remaining service holds; unrelated state stays with its owner.
 
 Native assembly admits the application images once on tmpfs. Source admission,
 one affected native route observation and the actual rollout answer this change;
@@ -80,7 +112,7 @@ Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
 separate claims: their identity checks stay intact, and no automatic second
 kernel build or stale observer workflow pin is imposed on every deployment.
-The rollout binds its serving container and local health to its explicit target,
+The rollout binds its native serving image and local health to its explicit target,
 then observes the public host, API health, web root and CORS. A newer `main`
 commit is queued work; an unchanged web image keeps its own identity. The former
 moving-main API/web parity loops duplicated the owned-target boundary and could
@@ -96,9 +128,14 @@ bounded health does not observe those claims. Their historical retirement notes
 remain in the silence ledger; the completed two-record retirement action is
 released. Native `pulse/snapshot.bml` supplies consistent Form-store snapshots
 without external database tools or rewriting historical receipts.
-The compatibility health carrier reuses its native observation while artifact
-bytes hold. A fifteen-second challenge-expiry timer has retired; changed carrier
-bytes or explicit care give the observation work, not elapsed time alone.
+The public probe owners and the diagnostics overview's duplicate health and
+persistence evaluations are retired from Python. The verifier's unused Pulse,
+CSS, persistence, provider and Telegram gate functions and their obsolete
+fixtures are retired too. The live release observation remains public API
+health, web reachability and CORS. A separately requested authenticated observer
+owns its nonce challenge and independent reproduction; ordinary health does not
+perform that work or claim its result. Changed carrier bytes or explicit care
+give that observation work, not elapsed time alone.
 Retirement includes persisted deployment configuration as well as containers.
 The native `deployment_compose_care.bml` action removes released router service
 owners from the host's Compose model, preserving a private source backup and
@@ -175,12 +212,9 @@ source expression and update order. This retains full same-browser history and
 the global view without loading every event for each meeting write. The source
 carrier enters fkwu normally so its native grammar discovery carries BML; the
 obsolete raw-reader forcing flag has retired.
-Keep the image's native source home coherent: `/app/form/form-stdlib` pairs
-with `/app/runtime`, just as the checkout's `form/form/form-stdlib` pairs with
-`form/runtime`. The carrier derives runtime resources from that stdlib home.
-`native_image_layout_care.bml` can publish the unchanged pinned resources at the
-canonical live path while the corrected image assembles; the image retires the
-former location rather than keeping a duplicate path or adding a kernel patch.
+Keep the image's native source home coherent: `/app/form/form/form-stdlib`,
+`/app/form/control` and `/app/form/runtime` retain the pinned checkout layout.
+The image owns these resources; the transitional live-copy repair is retired.
 The query template has no runtime inputs: materialize it through fkwu once at
 the immutable image's service initialization, then bind the source point at the
 database door. Repeated source staging/compilation is not per-request work; a
@@ -251,7 +285,7 @@ curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now \
 | SSH key | `~/.ssh/hostinger-openclaw` |
 | Deploy root | `/docker/coherence-network` |
 | Repo on VPS | `/docker/coherence-network/repo` |
-| Services | `api`, `web`, `postgres`, `neo4j` |
+| Services | `native-api`, `api`, `web`, `pulse`, `postgres` |
 | Proxy | Traefik behind Cloudflare |
 | Production DB | Internal Docker Compose Postgres service |
 

@@ -317,6 +317,8 @@
   },
   "federation": {
     "_doc": "Federation service configuration.",
+    "instance_id": "local",
+    "pulse_enabled": true,
     "stats_window_days": 7,
     "bridge_token": null,
     "form_graph_store_path": "~/.coherence-network/federation-graph"

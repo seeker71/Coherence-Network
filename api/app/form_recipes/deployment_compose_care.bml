@@ -10,11 +10,13 @@ section [form.bml] {
   def dcc-get(doc, key) = json-string-value(json-object-get(doc, key)) ?? "";
   def dcc-run(doc, step, args, input) {
    let argv = rmt-argv(doc,args);
-   let result = hch-run(step, argv, input, hch-by(30000));
+   let io = "../.cache/private-compose-care-" ++ host_pid().str(); let made = hch-mkdirs(io); let private = host_chmod(io,448);
+   private != 0 ? form_error("deployment compose care: private source trace was not admitted") : 0;
+   let result = hch-run-at(io,step,host_cwd(),argv,input,hch-by(30000));
    (Comparable) result[0] == 0 ? result[1] : form_error("deployment compose care: " ++ step ++ " failed; retained private host-child trace");
   }
   def dcc-read(doc) = parse-json("deployment-compose", dcc-run(doc, "compose-model-read", ["docker", "compose", "-f", dcc-get(doc, "compose"), "config", "--format", "json", "--no-interpolate", "--no-env-resolution"], ""));
-  def dcc-retired?(name) = (Comparable) name == "kernel-router" || (Comparable) name == "kernel-router-bml-front-door";
+  def dcc-retired?(name,release) = any?(owner => owner == name,release);
   def dcc-set(doc, key, value) = json-node-object(append(filter(pair => json-pair-key(pair) != key, node_children(doc)), [json-node-pair(key, value)]));
   // Compose keeps KEY=value rows in --no-interpolate models and may return a
   // map elsewhere. Both presentations become the same editable label model.
@@ -93,23 +95,57 @@ section [form.bml] {
    let owned = foldl((out,p) => dcc-set(out,p[0],json-node-string(p[1])),labels,routes);
    dcc-set(dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb")),"labels",owned);
   }
-  def dcc-active?(body) = any?(pair => dcc-retired?(json-pair-key(pair)), dcc-owners(body));
-  def dcc-body(body) {
-   let web_rules = dcc-web-rules(body);
-   let services = json-node-object(append(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : json-pair-key(pair) == "api" ? json-node-pair("api",dcc-native-dependency(body,json-pair-value(pair))) : pair, filter(pair => !dcc-retired?(json-pair-key(pair)) && json-pair-key(pair) != "native-api", dcc-owners(body))),[json-node-pair("native-api",dcc-native-api(body))]));
-   json-node-object(map(pair => (Comparable) json-pair-key(pair) == "services" ? json-node-pair("services", services) : pair, node_children(body)));
+  def dcc-active?(body,release) = any?(pair => dcc-retired?(json-pair-key(pair),release), dcc-owners(body));
+  def dcc-dependencies(service,release) {
+   !json-object-has?(service,"depends_on") ? service : {
+    let dependencies = json-object-get(service,"depends_on");
+    dcc-set(service,"depends_on",node_eq(node_category(dependencies),JSON-ARRAY()) ? json-node-array(filter(row => !dcc-retired?(json-string-value(row),release),node_children(dependencies))) : json-node-object(filter(pair => !dcc-retired?(json-pair-key(pair),release),node_children(dependencies))));
+   };
   }
-  def dcc-apply(doc, body) {
+  def dcc-volume-sources(services) = foldl((out,pair) => append(out,map(mount => ncf-string(mount,"source"),filter(mount => ncf-string(mount,"type") == "volume",node_children(json-object-get(json-pair-value(pair),"volumes"))))),[],node_children(services));
+  def dcc-body(body,release) {
+   let web_rules = dcc-web-rules(body);
+   let retained = map(pair => json-node-pair(json-pair-key(pair),dcc-dependencies(json-pair-value(pair),release)),filter(pair => !dcc-retired?(json-pair-key(pair),release) && json-pair-key(pair) != "native-api",dcc-owners(body)));
+   let services = json-node-object(append(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : json-pair-key(pair) == "api" ? json-node-pair("api",dcc-native-dependency(body,json-pair-value(pair))) : pair,retained),[json-node-pair("native-api",dcc-native-api(body))]));
+   let used = dcc-volume-sources(services);
+   json-node-object(map(pair => json-pair-key(pair) == "services" ? json-node-pair("services", services) : json-pair-key(pair) == "volumes" ? json-node-pair("volumes",json-node-object(filter(volume => any?(name => name == json-pair-key(volume),used),node_children(json-pair-value(pair))))) : pair,node_children(body)));
+  }
+  // Release only containers resolved from this project's exact service labels.
+  // An explicitly requested unused volume is released only after no container
+  // holds it and its own project label agrees; shared ownership stays visible.
+  def dcc-release(doc,body,release) {
+   let project = dcc-get(body,"name"); let volumes = record_new(0,"names",[]); let owners = record_new(0,"count",0);
+   let stopped = map(service => {
+    let source = dcc-run(doc,"release-owner-" ++ service,["docker","ps","-a","--no-trunc","--filter","label=com.docker.compose.project=" ++ project,"--filter","label=com.docker.compose.service=" ++ service,"--format","{{.ID}}"],"");
+    map(id => {
+     len(id) != 64 || !all?(i => str_find("0123456789abcdef",substring(id,i,i+1),0)>=0,range(0,len(id))) ? form_error("release owner returned no exact container identity") : {
+      let mounts = parse-json("release-owner-mounts",dcc-run(doc,"release-mounts-" ++ id,["docker","inspect",id,"--format","{{json .Mounts}}"],""));
+      let held = record_set(volumes,"names",append(record_get(volumes,"names"),map(mount => ncf-string(mount,"Name"),filter(mount => ncf-string(mount,"Type") == "volume",node_children(mounts)))));
+      let removed = dcc-run(doc,"release-container-" ++ id,["docker","rm","--force",id],""); record_set(owners,"count",record_get(owners,"count")+1);
+     };
+    },filter(id => len(id)>0,split-on(trim(source),"\n")));
+   },release);
+   let names = foldl((out,name) => any?(prior => prior == name,out) ? out : append(out,[name]),[],record_get(volumes,"names"));
+   let released = json-emit(json-object-get(doc,"release_unused_volumes")) != "true" ? [] : map(name => {
+    let held = trim(dcc-run(doc,"volume-holders-" ++ name,["docker","ps","-a","--filter","volume=" ++ name,"--format","{{.ID}}"],""));
+    let owner = trim(dcc-run(doc,"volume-owner-" ++ name,["docker","volume","inspect",name,"--format","{{index .Labels \"com.docker.compose.project\"}}"],""));
+    let removed = len(held) == 0 && owner == project ? dcc-run(doc,"release-volume-" ++ name,["docker","volume","rm",name],"") : "";
+    json-node-object([json-node-pair("volume",json-node-string(name)),json-node-pair("released",json-node-bool(len(removed)>0)),json-node-pair("care",json-node-string(len(held)>0 ? "An existing container still holds this volume" : owner != project ? "Volume belongs outside this project" : ""))]);
+   },names);
+   json-node-object([json-node-pair("containers_released",json-node-int(record_get(owners,"count"))),json-node-pair("volumes",json-node-array(released))]);
+  }
+  def dcc-apply(doc, body,release) {
    let backup = dcc-run(doc, "compose-source-backup", ["cp", "--no-clobber", dcc-get(doc, "compose"), dcc-get(doc, "backup")], "");
    let private-backup = dcc-run(doc, "compose-backup-private", ["chmod", "600", dcc-get(doc, "backup")], "");
-   let staged = dcc-run(doc, "compose-source-stage", ["tee", dcc-get(doc, "stage")], json-emit(dcc-body(body)) ++ "\n");
+   let staged = dcc-run(doc, "compose-source-stage", ["tee", dcc-get(doc, "stage")], json-emit(dcc-body(body,release)) ++ "\n");
    let yaml = dcc-run(doc, "compose-yaml-carrier", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--format", "yaml", "--no-interpolate", "--no-env-resolution"], "");
    let rendered = dcc-run(doc, "compose-yaml-stage", ["tee", dcc-get(doc, "stage")], yaml);
    let private-stage = dcc-run(doc, "compose-stage-private", ["chmod", "600", dcc-get(doc, "stage")], "");
    let accepted = dcc-run(doc, "compose-model-accept", ["docker", "compose", "-f", dcc-get(doc, "stage"), "config", "--quiet", "--no-interpolate", "--no-env-resolution"], "");
    let published = dcc-run(doc, "compose-source-publish", ["mv", dcc-get(doc, "stage"), dcc-get(doc, "compose")], "");
+   let released = dcc-release(doc,body,release);
    let activated = dcc-activate(doc);
-   dcc-active?(dcc-read(doc)) ? form_error("deployment compose care: released service owner remains") : "Native API read routes own their fkwu service; released owners retired; web routes share one service; private source backup retained; requested services activated.";
+   dcc-active?(dcc-read(doc),release) ? form_error("deployment compose care: released service owner remains") : json-emit(ncf-merge(released,json-node-object([json-node-pair("status",json-node-string("applied")),json-node-pair("source_backup",json-node-bool(true)),json-node-pair("activated",json-object-get(doc,"activate"))])));
   }
   def dcc-activate(doc) {
    let owners = map(row => json-string-value(row), node_children(json-object-get(doc, "activate")));
@@ -117,11 +153,12 @@ section [form.bml] {
   }
   def dcc-care(doc) {
    let body = dcc-read(doc);
-   dcc-get(doc,"mode") == "observe" ? dcc-plan(body) : dcc-apply(doc, body);
+   let release = map(row => json-string-value(row),node_children(json-object-get(doc,"release")));
+   dcc-get(doc,"mode") == "observe" ? dcc-plan(body,release) : dcc-apply(doc, body,release);
   }
-  def dcc-plan(body) {
-   let next = dcc-body(body); let services = json-object-get(next,"services"); let native = json-object-get(services,"native-api");
-   json-emit(json-node-object([json-node-pair("idempotent",json-node-bool(node_eq(next,dcc-body(next)))),json-node-pair("existing_service",json-object-get(json-object-get(json-object-get(services,"api"),"labels"),"traefik.http.routers.existing-api-reads.service")),json-node-pair("image",json-object-get(native,"image")),json-node-pair("native_command",json-object-get(native,"command")),json-node-pair("public_routes",json-object-get(json-object-get(native,"labels"),"traefik.http.routers.native-api.rule")),json-node-pair("api_dependencies",json-object-get(json-object-get(services,"api"),"depends_on"))]));
+  def dcc-plan(body,release) {
+   let next = dcc-body(body,release); let services = json-object-get(next,"services"); let native = json-object-get(services,"native-api");
+   json-emit(json-node-object([json-node-pair("idempotent",json-node-bool(node_eq(next,dcc-body(next,release)))),json-node-pair("release",json-node-array(map(json-node-string,release))),json-node-pair("existing_service",json-object-get(json-object-get(json-object-get(services,"api"),"labels"),"traefik.http.routers.existing-api-reads.service")),json-node-pair("image",json-object-get(native,"image")),json-node-pair("native_command",json-object-get(native,"command")),json-node-pair("public_routes",json-object-get(json-object-get(native,"labels"),"traefik.http.routers.native-api.rule")),json-node-pair("api_dependencies",json-object-get(json-object-get(services,"api"),"depends_on"))]));
   }
  }
  let doc = parse-json("deployment-compose-care", stdin-text());

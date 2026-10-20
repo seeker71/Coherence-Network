@@ -20,15 +20,16 @@ section [form.bml] {
    exit != 0 || status == 0 ? [false, exit == 137 ? "probe timed out after 10s" : "native HTTP transport failure"]
    : !nil?(cases) ? [json-emit(json-object-get(cases[0],"ok")) == "true",wr-text(cases[0],"detail")]
    : (status < 200) || (status > (json-object-has?(organ,"http_max") ? wr-number(organ,"http_max") : 299)) ? [false,"HTTP " ++ status.str()]
-   : !nil?(bad) ? [false, json-object-has?(organ,"strain_fields") && json-emit(json-object-get(doc,"healthy")) == "false" ? "write-lane strain: oldest txn " ++ json-emit(json-object-get(doc,"max_txn_age_seconds")) ++ "s, " ++ json-emit(json-object-get(doc,"lock_waiters")) ++ " lock-waiter(s)" : wr-text(bad[0],"detail")]
+   : !nil?(bad) ? [false,wr-text(bad[0],"detail")]
    : [true,wp-pressure(organ,doc)];
   }
   def wp-pressure(organ, doc) {
+   let care = json-object-has?(organ,"care_path") ? json-string-value(wr-path(doc,wr-array(organ,"care_path"))) ?? "" : "";
    let pressure = wr-path(doc,wr-array(organ,"pressure_path"));
    let total = wr-number(pressure,"total");
    let server = wr-number(pressure,"5xx");
    let client = wr-number(pressure,"4xx");
-   !json-object-has?(organ,"pressure_path") ? "" : server > 0 ? "slow: " ++ server.str() ++ "× 5xx in last 1m (of " ++ total.str() ++ " requests)" : total >= 20 && client * 2 > total ? "slow: " ++ client.str() ++ "× 4xx in last 1m (of " ++ total.str() ++ " requests)" : "";
+   len(care)>0 ? "care: " ++ care : !json-object-has?(organ,"pressure_path") ? "" : server > 0 ? "slow: " ++ server.str() ++ "× 5xx in last 1m (of " ++ total.str() ++ " requests)" : total >= 20 && client * 2 > total ? "slow: " ++ client.str() ++ "× 4xx in last 1m (of " ++ total.str() ++ " requests)" : "";
   }
   def wp-sample(organ, observation, exit) {
    let verdict = wp-verdict(organ,observation,exit);

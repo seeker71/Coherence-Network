@@ -4,13 +4,10 @@ The Coherence Network is built on the conviction that everything traceable belon
 
 ## What the network holds, in plain terms
 
-Three kinds of record accumulate as the network breathes:
-
 | Record | Lives in | Visibility | Substrate |
 |---|---|---|---|
 | **Contributions** | `contribution_ledger` table | Public | Postgres on the VPS · nightly dumps to [coherence-network-archive](https://github.com/seeker71/coherence-network-archive) |
 | **View events** | `asset_view_events` (last ~7 days) | Public | Postgres + cold-tier per-day archives at [Coherence-Network releases](https://github.com/seeker71/Coherence-Network/releases) tagged `archive-view-events-*` |
-| **Graph state** | Neo4j (contributors, assets, concepts, edges) | Public | Same nightly postgres dump captures the relational mirror |
 
 There is no separate private version. The dumps shipped to the public archive each night are byte-perfect mirrors of the live database. Anyone can verify their own contribution is preserved exactly as recorded, audit attribution chains across days, or stand up a fresh instance of the network from any past dump.
 

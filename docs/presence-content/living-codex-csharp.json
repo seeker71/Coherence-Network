@@ -62,7 +62,7 @@
       "title": "Living-Codex-CSharp (2024) — second iteration",
       "description": "Second iteration of the post-thesis arc. C# / .NET. Introduces U-CORE — the Universal Consciousness Resonance Engine — and the 'Everything is a Node' primitive. Large-scale resonance-based knowledge graph; the bridge between the visionary seed and the full network."
     },
-    "footer_md": "Source: [github.com/seeker71/Living-Codex-CSharp](https://github.com/seeker71/Living-Codex-CSharp). The U-CORE primitive — one Node holding every kind — survives forward into the Coherence Network's graph layer (now Neo4j + Postgres) without semantic change.",
+    "footer_md": "Source: [github.com/seeker71/Living-Codex-CSharp](https://github.com/seeker71/Living-Codex-CSharp). The U-CORE primitive — one Node holding every kind — survives forward into the Coherence Network's graph layer (now Postgres) without semantic change.",
     "note_from_body": {
       "body_md": "First iterations dream. Final iterations realize. Second iterations *structurally answer* the open questions the first iteration named. CSharp's job in the arc is to commit to a primitive — Node — that holds enough weight to carry every kind of being the system might need to model: concepts, contributors, places, schemas, even the interaction-logs themselves. Once that primitive holds, the third iteration can be built on it without re-deriving the foundation.",
       "eyebrow": "Why this is the bridge year"

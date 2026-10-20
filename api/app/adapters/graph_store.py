@@ -33,7 +33,7 @@ def _key(ecosystem: str, name: str) -> tuple[str, str]:
 
 
 class GraphStore(Protocol):
-    """Protocol for graph storage. Implementations: InMemoryGraphStore, future Neo4j."""
+    """Protocol for graph storage. Implementations: InMemoryGraphStore."""
 
     # ---- existing project API ----
     def get_project(self, ecosystem: str, name: str) -> Optional[Project]:
