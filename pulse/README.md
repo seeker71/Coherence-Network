@@ -99,16 +99,11 @@ become unknown after three probe intervals. An unresolved silence keeps the
 overall witness at least strained. All imported and subsequent history persists;
 the public 1–180-day window is a read shape, not a deletion policy.
 
-## History handoff and recovery
+## Native persistence and recovery
 
-`sqlite-import.bml` reads the legacy file format directly, including committed,
-checksum-valid WAL frames. `import-history.bml` streams the base archive into native
-pages using resumable native workers. `migrate.bml` takes file-backed configuration
-on stdin: `source`, `store_path`, and `work_path`. Run it against an immutable private
-snapshot while the old witness continues serving. At cutover, startup reads rows
-after the imported row ID and refreshes silence closures/notes from `legacy_path`.
-It then archives the original database and WAL under the native store's
-`retired-sqlite/` directory. No external SQLite runtime participates in import or service.
+Startup opens the native Recipe store and recovers its journal directly. The
+completed SQLite handoff, importer and legacy configuration are retired; they
+are not runtime dependencies. Existing data remains on the native volume.
 
 Native transaction frames are flushed before indexed pages, and those pages before
 their checkpoint. Independent pages share a staged-byte publication barrier;
@@ -146,9 +141,8 @@ checks escaping and weighted ranks, and reports its payload and elapsed time.
 bodies and headers remain private; total time and the serving runtime header are
 reported separately. Unexposed TLS stage timestamps are not fabricated.
 
-Before replacing a running witness, retain its private consistent snapshot. Observe
-the replacement against that archive, then land and deploy with the original
-volume. For a legacy SQLite volume, follow the one-time handoff above. Verify
-service identity, current samples, history and silence receipts.
+Deploy with the native volume and observe the changed claim: service identity,
+current samples or the affected persistence boundary. A private snapshot is an
+available recovery resource, not a routine history-preservation gate.
 An API restart is observable independently; whole-host loss still calls for a
 separately hosted witness rather than a claim this process cannot establish.
