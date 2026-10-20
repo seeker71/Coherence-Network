@@ -183,7 +183,6 @@
 | [test_settle_public_deploy_stale_target_dispatch.sh](test_settle_public_deploy_stale_target_dispatch.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_css_assets.sh](test_verify_web_api_css_assets.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
-| [test_verify_web_api_sha_patience.sh](test_verify_web_api_sha_patience.sh) | _no top-of-file purpose_ |
 | [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
 | [training_corpus.py](training_corpus.py) | Feed the body's edges into the form-cli training catalog as (intent->realization) pairs. |
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |

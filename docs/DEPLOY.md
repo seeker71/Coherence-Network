@@ -80,8 +80,14 @@ Public deployment completes with the serving revision and API/web route
 observation. Independent reproducibility and authenticated witness work remain
 separate claims: their identity checks stay intact, and no automatic second
 kernel build or stale observer workflow pin is imposed on every deployment.
-The release read reuses public health, API/web revision parity, the web root,
-and CORS. Kernel status assertions, deleted-router canaries, unrelated profile
+The rollout binds its serving container and local health to its explicit target,
+then observes the public host, API health, web root and CORS. A newer `main`
+commit is queued work; an unchanged web image keeps its own identity. The former
+moving-main API/web parity loops duplicated the owned-target boundary and could
+hold the deployment lock while waiting for the next queued release behind that
+same lock. Those loops and their timer fixture are retired. Independent
+authenticated reproduction retains its source and identity checks.
+Kernel status assertions, deleted-router canaries, unrelated profile
 pages, assets, provider readiness, persistence, Telegram and pulse readings are
 not recurring release gates. When one of those surfaces changes or signals an
 issue, follow that finding at its source with the smallest relevant observation.

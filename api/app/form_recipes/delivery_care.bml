@@ -13,6 +13,8 @@ section [form.bml] {
     ++ "Read review findings with the current source; keep useful work with its owner.\n"
     ++ "Reuse existing evidence and observe only the changed claim.\n"
     ++ "Deploy the merged application commit and read its public API/web identity.\n"
+    ++ "The rollout's owned target is its identity; a newer main commit is queued work, not a failed serving release.\n"
+    ++ "Read unchanged web sources as unchanged; independent authenticated reproduction is its own offered claim, not a recurring deployment gate.\n"
     ++ "Keep implementation in Form/BML; close each page-JIT gap at its source.\n"
     ++ (!hch-ok?(source) ? "Kernel source provenance is unread; retain its native task trace before claiming pin-only proof.\n" : nil?(changes) ? "Kernel source matches its checkout; known local telemetry/cache changes are separate.\n" : "Kernel source differs from its checkout:\n" ++ hch-join(changes,"\n") ++ "\nKeep these coordinates in the proof receipt and land their owning kernel work before claiming pin-only reproducibility.\n");
 }
