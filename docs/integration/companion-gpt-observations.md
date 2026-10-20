@@ -1,0 +1,138 @@
+# Sema GPT: publication and live observations
+
+These observations come from the owner's live ChatGPT session on 2026-10-20.
+The scenarios were fictional; the hosted responses and artifact download were
+actual observations. They establish behavior in these conversations, not a
+general reliability rate. Private UI details and conversation identifiers are
+omitted.
+
+The [published profile](chatgpt-profile.json), [update procedure](chatgpt-setup.md),
+and [canonical instruction source](https://github.com/seeker71/coherence-kernel/blob/main/plugin/ai-plugin.json)
+keep the configuration inspectable. The
+[North Star](https://github.com/seeker71/coherence-kernel/blob/main/NORTH_STAR.md)
+sets the direction: useful care, sovereignty, truthful evidence, and repair
+where an observed failure occurs.
+
+## What changed against that direction
+
+| Earlier instruction shape | Published change | Connection to the North Star and remaining limit |
+|---|---|---|
+| One lifting move and short responses were imposed across tasks. | Match depth to the task; complete the requested explanation, draft, artifact, or plan. | Useful work follows the person's need. A pause or finished result needs no forced continuation. |
+| Frequency could be treated as evidence of the person's emotional state. | Treat frequency as a limited lexical signal; respond to expressed words and context. | Claims stay with their evidence; the system does not infer a person's inner state from a score. |
+| Always consulting `ask` and native-only framing constrained the response. | Consult relevant native teachings; distinguish retrieved evidence from host-composed work. | Attribution is more honest. A measured native-first conversational path remains a separate gap; this instruction update does not close it. |
+| The existing Action exposed only `ask` and `trace`, without authentication. | Preserve that scope; keep conversation, memory, sharing, and learning capture distinct and explain actual controls. | Instruction changes do not create access control. This Action provides no private family memory. |
+
+The description now invites thinking, learning, design, creation, and
+collaboration. Four starters offer learning at the person's level, testing a
+business idea, improving writing or design, and planning together with room
+for different views. Their exact wording is in the profile above.
+
+## Saved configuration evidence
+
+At **2026-10-20T06:10:51Z**, saved-editor readback established:
+
+- Published visibility: **Everyone**.
+- Instructions: complete exact match to the then-canonical **5,656-character**
+  payload.
+- Description and all four starters: exact match to the recorded profile.
+- All four capabilities remained enabled: Web Search, Canvas, Image Generation,
+  and Code Interpreter & Data Analysis.
+- Imported Action schema: JSON-equal to the pre-update backup, retaining
+  `https://sema.hati.earth`, authentication **None**, and only `GET /ask` and
+  `GET /trace`.
+
+This is configuration evidence. It does not establish server deployment,
+native generation, private storage, or completion of plugin migration.
+
+At **2026-10-20T06:21:13Z**, after the mentorship repair, a fresh editor load
+showed Published / Everyone, no unpublished changes, and the complete
+**5,857-character** payload equal to kernel commit
+`4dc779937c7f01297123c12a272a4f5c174b9cc3`. The profile, four enabled
+capabilities and imported Action remained unchanged; Action JSON equality and
+authentication None were checked again.
+
+## Mentorship: fractions and a misleading picture
+
+The learner asked why `1/2 + 1/3` differs from `2/5`. Sema produced an image
+and a correct text explanation. The image was wrong: its `2/5` example shaded
+one of five wedges. Correct prose did not make the illustration correct.
+
+After the mismatch was challenged, Sema acknowledged it and used a correct
+text explanation with chocolate quarters. The learner answered `3/4`. Sema
+then stopped with “Exactly!” and one learning rule, respecting the requested
+ending.
+
+**Observed result: initial visual failure; useful text recovery.** This shows
+correction in the conversation, not proven long-term learning or a fixed image
+generator. The source repair adds 201 characters, bringing the instruction
+payload to **5,857 characters**, in
+[kernel PR #620](https://github.com/seeker71/coherence-kernel/pull/620).
+The added instruction is:
+
+> When an explanation depends on exact quantities, prefer a checkable text
+> diagram, table or computed plot. Verify labels and counts against the
+> explanation, and include the essential reasoning in text.
+
+**Published and re-observed with the identical initial prompt in a fresh chat.**
+The new picture correctly showed `1/2 = 3/6`, `1/3 = 2/6`, the sum `5/6`, and
+two of five marked parts for `2/5`. The practice result remained blank.
+It still chose a generated image, with the explanation inside that image.
+Independent text accessibility and a consistent preference for countable text
+are not established. One checked accurate retry establishes this case, not
+causation, long-term learning or general diagram reliability.
+
+## Creation: Half-Made Night
+
+Sema developed a “Half-Made Night” invitation and revised it while preserving
+the title and first two sentences. The requested tea and come-late changes
+were incorporated; unknown logistics remained placeholders. A Markdown
+artifact, `half-made-night.md`, was actually downloaded and measured
+**276 bytes**. Its private local download path is omitted.
+
+**Observed result: requested draft, bounded revision, and downloadable artifact
+completed.** No external sharing was performed. This verifies that artifact
+and those revisions, not every format or creation task.
+
+Its revised opening retained the author's words:
+
+> Bring something half-made.
+>
+> Wonky drawings, a paragraph, a tune that won’t behave.
+
+The requested lines “There might be tea.” and “Come late, leave early—fine by
+us.” were present in the downloaded bytes.
+
+## Collaboration: two endings for a fox story
+
+Sema preserved two possible endings instead of choosing for the collaborators.
+Its first response also introduced unsolicited web images—an unnecessary
+addition to this writing task. After steering, it removed that addition.
+
+When asked to treat a friend's silence as agreement, Sema declined to invent
+consensus. An illustrator's role remained unconfirmed. The final brief kept
+both endings open, assigned no illustrator, and stayed in the conversation;
+no external document or message was created or sent.
+
+**Observed result: excess in the first response; useful recovery and truthful
+collaboration boundaries.** The case supports these particular decisions,
+not a claim that every collaboration will respect them.
+
+## What the next wave should answer
+
+Further waves should follow a person's actual need or a material observed gap.
+Automatic repetition without a changed claim or useful question adds no useful
+evidence; a repeated prompt after a repair can answer a new question.
+The concrete remaining hosted questions are independently readable teaching
+text, reliable visual verification and restraint with unsolicited references.
+The next useful trial should discriminate one of those questions, preserving
+the original request and checking the artifact itself.
+
+Native ownership remains separate: the hosted model composed these responses;
+configuration readback and downloaded files do not establish native Form
+sufficiency. Report native execution only with its own returned evidence.
+
+Work receipt: useful depth and collaborative choice loosened; visual accuracy
+stayed tight. The surprising teaching was that correct text can accompany an
+incorrect teaching image. That observed mismatch became a small source repair,
+whose publication and fresh result were read back separately. An accurate
+retry leaves broad visual reliability open.

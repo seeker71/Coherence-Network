@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/companion-gpt-rollout-20261020",
+  "commit_scope": "Publish and observe existing GPT companion instructions, pin the source repair, preserve read-only Action and prepare directory metadata0.6.1.",
+  "files_owned": [
+    "docs/integration/chatgpt-profile.json",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/front-door/connectors.md",
+    "form",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/assets/logo.svg",
+    "scripts/build_readmes.py",
+    "mcp-server/tests/test_companion_plugin.py",
+    "specs/companion-gpt-rollout.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "docs/integration/chatgpt-profile.json",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/front-door/connectors.md",
+    "form",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/assets/logo.svg",
+    "scripts/build_readmes.py",
+    "mcp-server/tests/test_companion_plugin.py",
+    "specs/companion-gpt-rollout.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "companion-gpt-rollout-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Exact saved instruction/profile/Action readback; three live waves plus one fresh retry; actual artifact bytes;4bundle tests reused; generator/spec checks. Initial diagram error and remaining limits retained.",
+    "commands": [
+      "Saved GPT full-field readback through Chrome accessibility UI; Action JSON equality before/after",
+      "Actual hosted mentorship3turns + same-prompt fresh retry; creation2turns; collaboration3turns",
+      "Download and inspect half-made-night.md; shasum -a256",
+      "form-run uv run --locked --with pytest pytest -q tests/test_companion_plugin.py (mcp-server):4passed; reused unchanged source proof",
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-20_companion_gpt_rollout.json",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR620 merged with successful GitGuardian check and independent review; parent PR checks follow push."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The existing GPT supports requested task depth, honest provenance, bounded creative revision and sovereign collaboration. The observed visual error led to explicit quantity verification; the checked retry was accurate, with broad reliability still open.",
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ],
+    "test_flows": [
+      "Reload published editor: exact 5857-character instructions, profile and capabilities; unchanged imported Action JSON.",
+      "Mentorship: observe initial visual error, correct it in conversation, then inspect the identical prompt's fresh response after the published refinement.",
+      "Creation: revise and download actual 276-byte Markdown file; inspect requested exact words and placeholders.",
+      "Collaboration: preserve both endings, refuse invented agreement from silence, leave roles unconfirmed and honor stopping."
+    ],
+    "limits": "Owner-account observations and fictional inputs; no universal success, causal improvement, native generation or separate recipient access claimed."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Existing GPT published and5857characters read back exactly at06:21:13Z, unchanged Action/profile. No server, npm, directory or migration completion claimed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Parent PR checks await push; GPT publication and local observations are complete."
+  },
+  "evidence_refs": [
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/integration/companion-gpt-observations.md",
+    "https://github.com/seeker71/coherence-kernel/pull/620"
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex; GPT-host outputs also rented; exact serving variants and task costs unavailable.",
+    "native": "fkwu orientation/local-flow completed; prior form-cli lookup supplied no sufficient answer. Historical mixed-session telemetry does not establish this task’s native share.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent, qualitative review",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Practical help at the existing shared GPT link with inspectable published settings.",
+    "tight": "Native task ownership, broad visual reliability, independently readable lesson text and publisher authentication remain open.",
+    "surprise": "Correct explanation accompanied an incorrect picture; the artifact itself needed inspection.",
+    "friction_to_lesson": "User confusion redirected mechanical checks into observed mentorship, authorship and sovereign collaboration."
+  }
+}

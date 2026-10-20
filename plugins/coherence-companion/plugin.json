@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "coherence-companion",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Practical companion workflows for learning, ideas, design, creation, research and collaboration, with choices and sharing in your hands.",
   "author": {"name": "Coherence Network contributors"},
   "homepage": "https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/connectors.md",
@@ -12,11 +12,13 @@
     "com.openai": {
       "interface": {
         "displayName": "Coherence Companion",
-        "shortDescription": "Learn, think and make things together",
-        "longDescription": "Bring a question, rough idea or unfinished draft. Get useful work at your pace, with clear evidence and control over what is saved or shared. Free open-source guidance using your host's available tools; optional network tools are configured separately.",
+        "shortDescription": "Learn, think and create",
+        "longDescription": "Work through learning, ideas, design, writing, research and collaboration with practical workflows that adapt to your pace. Turn rough material into useful drafts, keep assumptions and decisions clear, and create an editable session brief to continue elsewhere. Choose what to save or share. Open-source guidance uses your host's available tools and data controls; optional Coherence Network tools are configured separately.",
         "developerName": "Coherence Network contributors",
         "category": "Productivity",
         "websiteURL": "https://github.com/seeker71/Coherence-Network",
+        "logo": "./assets/logo.svg",
+        "composerIcon": "./assets/logo.svg",
         "defaultPrompt": [
           "Help me turn this rough idea into a useful first draft.",
           "Teach me this at my level and let me try.",
