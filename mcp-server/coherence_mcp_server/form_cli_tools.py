@@ -111,6 +111,12 @@ def catalog_capture(
             "captured": False,
             "required_consent": CAPTURE_CONSENT,
         }
+    if not hasattr(os, "fchmod") or not hasattr(os, "O_NOFOLLOW"):
+        return {
+            "error": "Local learning capture is unavailable on this host: owner-only file permissions and no-follow opening are required",
+            "error_code": "capture_permissions_unavailable",
+            "captured": False,
+        }
     values = (request, raw, transmuted, lane, outcome)
     if any(not isinstance(value, str) for value in values):
         return {"error": "Capture fields must be strings", "captured": False}
@@ -140,7 +146,7 @@ def catalog_capture(
     try:
         catalog = Path(load_settings()["catalog_path"]).expanduser()
         catalog.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY | os.O_NOFOLLOW
         fd = os.open(catalog, flags, 0o600)
         metadata = os.fstat(fd)
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:

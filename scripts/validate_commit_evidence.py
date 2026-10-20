@@ -14,6 +14,7 @@ VALID_CHANGE_INTENTS = {"runtime_feature", "runtime_fix", "process_only", "docs_
 VALID_E2E_STATUS = {"pass", "fail", "pending"}
 RUNTIME_PATH_PREFIXES = (
     "api/app/",
+    "mcp-server/coherence_mcp_server/",
     "web/app/",
     "web/components/",
     "web/lib/",
@@ -82,7 +83,7 @@ def _declared_change_files(data: dict[str, Any]) -> set[str]:
 
 
 def _is_runtime_path(path: str) -> bool:
-    return path == "form" or path.startswith(RUNTIME_PATH_PREFIXES)
+    return path in {"form", "mcp-server/index.mjs"} or path.startswith(RUNTIME_PATH_PREFIXES)
 
 
 def _expected_non_evidence_files(changed_files: list[str]) -> set[str]:
@@ -206,7 +207,7 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
         runtime_changed = any(_is_runtime_path(path) for path in expected)
         runtime_intent = change_intent in {"runtime_feature", "runtime_fix"}
         if runtime_intent and not runtime_changed:
-            errors.append("change_intent requires runtime changes under api/app or web/app or web/components")
+            errors.append("change_intent requires runtime source changes")
         if (not runtime_intent) and runtime_changed:
             errors.append("runtime files changed but change_intent is not runtime_feature/runtime_fix")
 

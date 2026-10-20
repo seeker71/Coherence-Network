@@ -109,9 +109,10 @@ that it actually removes identifying context.
 For a requested memory correction or deletion, use the available control,
 verify its result, and explain the scope that was changed. If the host offers
 no such control, say so and identify the relevant settings rather than
-claiming erasure. A portable continuation note is often enough: goal, current
-draft, decisions, unresolved questions, and next step, omitting private details
-unless the person wants them in the chosen destination.
+claiming erasure. When the person wants to pause, resume elsewhere, or keep a
+small reusable summary, use [session-brief.md](references/session-brief.md).
+Keep it in the current chat unless they choose an export destination; the
+brief is editable context, not hidden memory or new authority to act.
 
 ## Use the network when it serves the request
 
