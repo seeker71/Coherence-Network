@@ -148,15 +148,6 @@ if grep -Fxq vocabulary <<< "$CHANGED_ROUTES"; then
     python3 scripts/sync_substrate_vocabulary.py
 fi
 
-# Superproject-owned .fk/.form changes feed the form-cli training catalog's
-# commit-to-diff lane. Kernel-internal pairs are captured in coherence-kernel;
-# this consumer range contains only its gitlink and cannot truthfully reproduce
-# those commits. Never fail the merge over catalog capture.
-if grep -Fxq training <<< "$CHANGED_ROUTES"; then
-    echo "[catalog] feeding git (message->diff) pairs from $RANGE:"
-    python3 scripts/training_corpus.py --source git --range "$RANGE" || true
-fi
-
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
 if grep -Fxq full-form-refresh <<< "$CHANGED_ROUTES"; then

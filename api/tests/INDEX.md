@@ -104,7 +104,7 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
-| [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
+| [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | Consent and native delegation at the existing local MCP carrier boundary. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |

@@ -79,21 +79,21 @@
 
   (two-tiers
     (prototype   "router + recognizers: predictor-train/nearest-shape — online exemplar"
-                 "interning, cheap, starts accumulating TODAY from real usage.")
+                 "interning over selected examples authorized for learning.")
     (transformer "freq-check (~100M+, freq-check-model.form) + transmuter: real semantic"
                  "models needing actual backprop EPOCHS on transformer-block.fk. The block"
                  "exists; the training loop (forward/loss/step over the corpus) is the real"
                  "build. This is where 'days of usage + actual epochs' applies."))
 
   (timescale
-    "Honest: this is days, not minutes. The mesh training-carrier floors quantify"
-    "'enough' — order >=10k labels and >=100 MiB heldout before a lane's receipt is"
-    "trustworthy. The corpus fills from live sessions (the Stop-hook capture ->"
-    "training-catalog.fk). The first move is to point the oracle at qwen2.5:72b and let"
-    "real usage accumulate; eval is the native-vs-oracle score rising over the heldout"
-    "window across days. We measure, we don't assume.")
+    "Measure progress from authorized examples and observed evaluation results."
+    "Automatic Stop-hook capture is retired. The MCP boundary saves only selected"
+    "excerpts with per-sample consent; repository imports require per-invocation"
+    "consent. cross-train-oracle.form names this current boundary. A saved corpus"
+    "is not proof of training, and a routing score is not proof of capability.")
 
   (composition
     "On main already: fcr-route (lane), form-agent-protocol (the turn shape + Hermes/"
     "native encodings), tool-channel (tc-plan), freq-check head + voice, training-catalog"
-    "+ the capture hook. This cell is the search/cross-train layer those compose into."))
+    "+ explicitly authorized capture. This cell describes the search/cross-train"
+    "composition; its running source and receipts establish its current scope."))

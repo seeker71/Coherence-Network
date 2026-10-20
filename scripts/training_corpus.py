@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Feed the body's edges into the form-cli training catalog as (intent->realization) pairs.
+"""Import selected repository edges as local learning pairs with explicit per-invocation consent.
 
 The body is full of labeled training pairs because it maintains edges: a commit's
 (message -> diff), a spec's (idea -> spec) and (spec -> code) frontmatter, a concept's
@@ -16,10 +15,11 @@ directly (it already holds these edges — concept-corpus.fk, spec ingest) once 
 reads it natively; this is the host-IO bootstrap carrier until then.
 
 Usage:
-  training_corpus.py --source git --range ORIG_HEAD..HEAD   # post-merge: just-landed commits
-  training_corpus.py --source git --backfill 200            # manual: last N .fk/.form commits
-  training_corpus.py --source chain                         # idea->spec + spec->code edges
-  training_corpus.py --source all
+  training_corpus.py --source git --range ORIG_HEAD..HEAD --capture-consent selected-excerpt-local-learning-v1
+
+Choose and review the source range before consenting. The consent flag permits
+only this invocation's selected repository excerpts to become a separate local
+learning copy. It does not enroll future imports or chat transcripts.
 """
 from __future__ import annotations
 
@@ -31,13 +31,13 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "mcp-server"))
-from coherence_mcp_server.form_cli_tools import catalog_capture  # noqa: E402
+from coherence_mcp_server.form_cli_tools import CAPTURE_CONSENT, catalog_capture
 
 MAX_TEXT = 8000  # bound each record; the full artifact always lives in the body
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], capture_output=True, text=True, cwd=REPO).stdout
+    return subprocess.run(["git", *args], check=True, capture_output=True, text=True, cwd=REPO).stdout
 
 
 def _frontmatter(text: str) -> str:
@@ -70,12 +70,12 @@ def source_chain(**_):
         fm = _frontmatter(spec.read_text(encoding="utf-8", errors="ignore"))
         if not fm:
             continue
-        idea_m = re.search(r"^\s*idea_id:\s*(\S+)", fm, re.M)
-        reqs_m = re.search(r"requirements:\s*(.+?)(?:\n\w|\Z)", fm, re.S)
+        idea_m = re.search(r"^\s*idea_id:\s*(\S+)", fm, re.MULTILINE)
+        reqs_m = re.search(r"requirements:\s*(.+?)(?:\n\w|\Z)", fm, re.DOTALL)
         idea = idea_m.group(1) if idea_m else ""
         reqs = reqs_m.group(1).strip() if reqs_m else ""
         intent = f"{spec.stem}\n{reqs}".strip()[:MAX_TEXT]
-        files = re.findall(r"^\s*-\s*file:\s*(\S+)", fm, re.M)
+        files = re.findall(r"^\s*-\s*file:\s*(\S+)", fm, re.MULTILINE)
         if idea and idea != "{parent-idea-slug}":
             yield (f"idea: {idea}", intent, "idea-to-spec", "spec-registered")
         if files:
@@ -85,12 +85,19 @@ def source_chain(**_):
 SOURCES = {"git": source_git, "chain": source_chain}
 
 
-def feed(pairs) -> dict[str, int]:
+def feed(pairs, *, capture_consent: str | None = None) -> dict[str, int]:
+    if capture_consent != CAPTURE_CONSENT:
+        raise ValueError("Select repository excerpts and consent before reading them for local learning")
     counts: dict[str, int] = {}
     for intent, realization, lane, label in pairs:
         # request = intent, raw = transmuted = realization (a verified body edge is the
         # trusted output — no fear to transmute); lane + outcome carry the label.
-        catalog_capture(intent, realization, realization, lane, label)
+        receipt = catalog_capture(
+            intent, realization, realization, lane, label,
+            capture_consent=capture_consent,
+        )
+        if not receipt.get("captured"):
+            raise RuntimeError(receipt.get("error", "Local learning capture failed"))
         counts[lane] = counts.get(lane, 0) + 1
     return counts
 
@@ -101,11 +108,20 @@ def main() -> int:
     ap.add_argument("--range", dest="range_spec", default=None,
                     help="git range of just-merged commits, e.g. ORIG_HEAD..HEAD")
     ap.add_argument("--backfill", type=int, default=None, help="git: last N .fk/.form commits")
+    ap.add_argument(
+        "--capture-consent", choices=[CAPTURE_CONSENT],
+        help="Consent to a separate local learning copy of this invocation's selected repository excerpts",
+    )
     args = ap.parse_args()
+    if args.capture_consent != CAPTURE_CONSENT:
+        ap.error("--capture-consent is required before source content is read")
     names = list(SOURCES) if args.source == "all" else [args.source]
     total: dict[str, int] = {}
     for name in names:
-        for lane, n in feed(SOURCES[name](range_spec=args.range_spec, backfill=args.backfill)).items():
+        for lane, n in feed(
+            SOURCES[name](range_spec=args.range_spec, backfill=args.backfill),
+            capture_consent=args.capture_consent,
+        ).items():
             total[lane] = total.get(lane, 0) + n
     for lane, n in sorted(total.items()):
         print(f"[catalog] {lane}: fed {n} (intent->realization) pairs")

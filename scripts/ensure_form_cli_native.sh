@@ -147,7 +147,9 @@ if [ -x "$TARGET" ] && [ -r "$SOURCE_ID_FILE" ] && [ -r "$RECEIPT" ] \
   fi
 fi
 
-(cd "$KERNEL_ROOT" && printf '{"out":"%s","force_link":1,"cc":"cc"}\n' "$TARGET" | ./fkwu gate/form-cli-build-run.bml)
+# Build diagnostics belong on stderr. The --print-path caller captures stdout
+# as exactly one executable path, including on a fresh checkout.
+(cd "$KERNEL_ROOT" && printf '{"out":"%s","force_link":1,"cc":"cc"}\n' "$TARGET" | ./fkwu gate/form-cli-build-run.bml) >&2
 [ -x "$TARGET" ] || {
   echo "form-cli: Form build gate produced no executable" >&2
   exit 1

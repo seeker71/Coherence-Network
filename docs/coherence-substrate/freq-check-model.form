@@ -37,8 +37,9 @@
 
   ; ── how it becomes real (cheap to train RELATIVE to the transmuter) ──────────
   (training
-    "The corpus is the Stop-hook capture (training-catalog.fk): real (request, raw,"
-    "transmuted) turns from live sessions, including this lineage's own caught slips."
+    "Candidate training examples are selected (request, original, reviewed rewrite)"
+    "excerpts authorized for learning. Automatic Stop-hook capture is retired;"
+    "cross-train-oracle.form describes the current consent-only MCP boundary."
     "Labels: a turn that needed transmutation is fear-positive; one that passed is"
     "fear-negative — a weak auto-proxy. The STRONGEST label is a human's direct"
     "freq-reading: a person catches the nuanced fear a frontier model slips past."

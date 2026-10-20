@@ -111,8 +111,8 @@
       "description": "Receive the shared invitation and compact agent start packet so anyone or anything can ask what is alive, read lineage/Form/core vision/wrongness practice/frequencies, and return a trace."
     },
     {
-      "name": "coherence_substrate_form",
-      "description": "Evaluate Form notation against the coherence-substrate through the AST evaluator or streaming direct-Recipe emitter."
+      "name": "coherence_grounded_ask",
+      "description": "Ask the configured Coherence service for grounded public knowledge and its actual sufficiency receipt. Query text is sent to that service."
     },
     {
       "name": "coherence_list_federation_nodes",

@@ -1,0 +1,229 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/trusted-companion-20261020",
+  "commit_scope": "Advance the existing Coherence skill, MCP and Sema GPT instruction source into practical everyday assistance with explicit learning consent, accurate tool and package boundaries, and a native implementation roadmap.",
+  "files_owned": [
+    ".claude/settings.json",
+    "MANIFEST.md",
+    "README.md",
+    "api/app/data/web_routes.json",
+    "api/app/routers/INDEX.md",
+    "api/config/api.json",
+    "api/tests/INDEX.md",
+    "api/tests/test_form_cli_mcp_tools.py",
+    "cli/README.md",
+    "docs/coherence-substrate/cross-train-oracle.form",
+    "docs/coherence-substrate/form-native-agent-shape.form",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/coherence-substrate/voice-attunement.md",
+    "docs/front-door/INDEX.md",
+    "docs/front-door/connectors.md",
+    "docs/front-door/openai-gpt-action.yaml",
+    "docs/integration/chatgpt-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-20_trusted_companion.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/capture_hook.py",
+    "mcp-server/coherence_mcp_server/capture_worker.py",
+    "mcp-server/coherence_mcp_server/form_cli_tools.py",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/coherence_mcp_server/settings.py",
+    "mcp-server/index.mjs",
+    "mcp-server/package.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/server.json",
+    "mcp-server/smithery.yaml",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/tests/test_form_cli_bootstrap.py",
+    "mcp-server/tests/test_launcher.mjs",
+    "mcp-server/tests/test_learning_consent.py",
+    "mcp-server/tests/test_settings.py",
+    "mcp-server/tests/test_skill_generation.py",
+    "mcp-server/tests/test_stdio_startup.py",
+    "mcp-server/uv.lock",
+    "scripts/INDEX.md",
+    "scripts/build_readmes.py",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/substrate_post_merge_hook.sh",
+    "scripts/training_corpus.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/mcp-config.json",
+    "skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/references/network.md",
+    "specs/INDEX.md",
+    "specs/trusted-everyday-companion.md",
+    "web/app/INDEX.md",
+    "web/lib/INDEX.md",
+    "web/public/llms.txt"
+  ],
+  "change_files": [
+    ".claude/settings.json",
+    "MANIFEST.md",
+    "README.md",
+    "api/app/data/web_routes.json",
+    "api/app/routers/INDEX.md",
+    "api/config/api.json",
+    "api/tests/INDEX.md",
+    "api/tests/test_form_cli_mcp_tools.py",
+    "cli/README.md",
+    "docs/coherence-substrate/cross-train-oracle.form",
+    "docs/coherence-substrate/form-native-agent-shape.form",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/coherence-substrate/voice-attunement.md",
+    "docs/front-door/INDEX.md",
+    "docs/front-door/connectors.md",
+    "docs/front-door/openai-gpt-action.yaml",
+    "docs/integration/chatgpt-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-20_trusted_companion.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/capture_hook.py",
+    "mcp-server/coherence_mcp_server/capture_worker.py",
+    "mcp-server/coherence_mcp_server/form_cli_tools.py",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/coherence_mcp_server/settings.py",
+    "mcp-server/index.mjs",
+    "mcp-server/package.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/server.json",
+    "mcp-server/smithery.yaml",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/tests/test_form_cli_bootstrap.py",
+    "mcp-server/tests/test_launcher.mjs",
+    "mcp-server/tests/test_learning_consent.py",
+    "mcp-server/tests/test_settings.py",
+    "mcp-server/tests/test_skill_generation.py",
+    "mcp-server/tests/test_stdio_startup.py",
+    "mcp-server/uv.lock",
+    "scripts/INDEX.md",
+    "scripts/build_readmes.py",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/substrate_post_merge_hook.sh",
+    "scripts/training_corpus.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/mcp-config.json",
+    "skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/references/network.md",
+    "specs/INDEX.md",
+    "specs/trusted-everyday-companion.md",
+    "web/app/INDEX.md",
+    "web/lib/INDEX.md",
+    "web/public/llms.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "trusted-companion-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "plan",
+        "implement",
+        "test",
+        "independent review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex with three concurrent subagents",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "105 Python tests passed, four Node subprocess launcher tests passed, nine fictional forward scenarios covered all six workflows. Native routing, native manifest parsing, actual MCP initialize/list/call, generated documents, skill frontmatter, spec quality, package contents and shell syntax verified.",
+    "commands": [
+      "uv run --directory mcp-server --with ../api --with pytest --with pyyaml --with pytest-asyncio python -m pytest tests ../api/tests/test_form_cli_mcp_tools.py -q --noconftest --tb=short",
+      "node --test mcp-server/tests/test_launcher.mjs",
+      "python3 scripts/build_readmes.py --check",
+      "python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md",
+      "npm pack --dry-run --json (mcp-server)",
+      "bash -n scripts/substrate_post_merge_hook.sh",
+      "fkwu native routing observations and native JSON whole-document parse/roundtrip",
+      "fkwu observe/local-flow-review.bml; fkwu observe/session-rent-run.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR 619 merged with observed successful secret scan; parent branch checks begin after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No npm package publication, live GPT instruction update, plugin migration, or production service deployment claimed. Checkout connection is documented separately from the published package."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Hosted rollout and future native private-project capabilities are not established by this source delivery."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Actual MCP client initializes through the Node-to-Python launcher, lists current tools and rewrites in current chat; selected learning is consent-gated and its receipt reports uncertain persistence honestly.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/substrate/grounded-ask (source contract; no changed deployment claim)",
+      "https://sema.hati.earth/ask and /trace (existing GPT imported Action scope observed read-only)"
+    ],
+    "test_flows": [
+      "test_stdio_startup.py uses actual MCP client and launcher process",
+      "test_learning_consent.py and test_form_cli_mcp_tools.py verify denied capture before I/O, explicit selected capture, linked-file rejection and indeterminate fsync failure",
+      "test_launcher.mjs observes protocol bytes, exit codes, missing uv fallback, missing both runtimes and termination",
+      "Nine fictional skill scenarios: hint-first learning, business hypothesis, family invitation, memory/privacy, untrusted vendor content, design directions, creative revision, collaboration private context, conflicting evidence"
+    ]
+  },
+  "evidence_refs": [
+    "specs/trusted-everyday-companion.md",
+    "https://github.com/seeker71/coherence-kernel/pull/619 merged at 8676489edc2aecf4c2efdb563696c36fa456eb11; only plugin manifest descriptions and handoff docs changed.",
+    "Existing GPT https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625 observed in editor on 2026-10-20: Sema — coherence-kernel, public, all four host artifact/research capabilities enabled, imported unauthenticated GET ask/trace only at sema.hati.earth; current UI migration notice recorded as observation. No editor mutation performed.",
+    "Independent review repairs: grounded lookup transport timeout now file-backed 90 seconds (integer 1..900), covering default native execution plus observations; post-write storage errors now captured:null/may_be_retained:true, with fingerprints and inspect-before-retry instruction; checkout versus published npm provenance explicit.",
+    "Native fkwu routing observed form-native for scores (100,80,80,80) vs (50,90,100,100); capability zero selected agent-cli. These are formula outcomes over supplied scores, not model-quality measurements or external invocations.",
+    "Native plugin JSON proof consumed all 6328 bytes, model description 5656, human description 170, roundtrip_same=1, whole_document_parsed=1, exit0. Identity, auth and URLs preserved; full native Action schema not imported.",
+    "npm pack dry-run: 13 files include uv.lock, pyproject.toml, settings.py, launcher and Python package. Skill quick_validate succeeded using existing PyYAML-capable interpreter; all four generated documents match templates.",
+    "Initial uv MCP resolution selected 2.3.0 and failed with AttributeError: Server object has no attribute list_tools. Package now requires mcp>=1.0.0,<2 and records uv.lock; actual stdio session passed using 1.30.0.",
+    "Cold native form-cli build emitted diagnostics into executable-path stdout; scripts/ensure_form_cli_native.sh now routes build diagnostics to stderr. Cold/warm fixture passes; cached real form-cli ask answers, but its lexical matches were insufficient for this implementation.",
+    "First combined pytest run without --with ../api failed 19 setup cases: ModuleNotFoundError: No module named sqlalchemy. The exact final command includes the existing API dependencies, pytest-asyncio and --noconftest, and passes105.",
+    "Ruff across shared server.py exposed ten pre-existing issues (eight broad exception catches, two unnecessary f prefixes). Changed/new helper and test files pass targeted Ruff; no claim of a clean repository-wide lint run.",
+    "Historical catalogs/queued learning files were not deleted. Retired hook/worker and post-merge caller no longer capture; manual corpus imports stop on failed or indeterminate saves. Removing a row does not untrain a model.",
+    "Retired automatic post-merge capture and synchronized four native teaching documents; only explicit MCP capture and consent-gated manual repository import remain active callers. Generated index wording comes from the source docstring.",
+    "Pre-merge existing deployment read: ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com passed API200, web200, CORS200 with exact allowed origin. This does not claim this source revision is deployed."
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI GPT-6 family; exact serving variant and token meter unavailable. Three child agents plus root, no invented token total.",
+    "native": "fkwu routing and JSON parsing observed; native form-cli lookup attempted but no sufficient task answer. local-flow-review and session-rent-run read historical/multiple sessions; not attributable as this task native/rented percentage.",
+    "trust_matrix": {
+      "implementation_reasoning": {
+        "path": "oracle",
+        "grounded": 0,
+        "freq": "clear intent and preserved boundaries; qualitative review",
+        "suffic": 0,
+        "observed": false
+      },
+      "native_proofs": {
+        "path": "native",
+        "grounded": 0,
+        "freq": "bounded routing/JSON observations",
+        "suffic": 0,
+        "observed": false,
+        "note": "Execution proofs, no NodeID or sufficiency claim"
+      }
+    },
+    "champion_challenger": "Existing fkwu retrieval and voice lanes remain native contenders; no benchmark establishes general-purpose companion parity in this work."
+  },
+  "work_receipt": {
+    "loosened": "Useful assistance no longer requires network onboarding or automatic learning.",
+    "tight": "Authenticated private continuity, plugin migration and live distribution remain separate work.",
+    "surprise": "The existing GPT already had creative host tools; counsel-only instructions constrained practical help.",
+    "friction_to_lesson": "A failed save can leave a sensitive copy; indeterminate persistence now produces an honest receipt."
+  }
+}

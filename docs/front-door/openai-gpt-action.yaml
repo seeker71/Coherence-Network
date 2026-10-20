@@ -1,20 +1,32 @@
 openapi: 3.1.0
 info:
-  title: Coherence Network — front door
-  description: >
-    Ask the Coherence Network's content-addressed substrate anything structural,
-    and offer it ideas, concepts, teachings, documents, or tasks — no account,
-    no git. Reads are public; an offer is held as `offered` and grounded into the
-    body by tending. Paste this schema into a Custom
-    GPT's Actions (Authentication: None).
-  version: "2026-06-14"
+  title: Coherence companion — public knowledge and chosen contributions
+  description: >-
+    Read Coherence Network sources for everyday learning and work. The hosting
+    assistant provides conversation and creation tools. Native lookup returns
+    its own evidence when available. Public ingestion publishes a cell; use it
+    only for the owner's explicitly approved content, destination, and attribution.
+    These endpoints do not provide private conversation or family memory.
+  version: "2026-10-20"
 servers:
   - url: https://api.coherencycoin.com
 paths:
+  /api/agent/invitation:
+    get:
+      operationId: getInvitation
+      summary: Read the network welcome and entry surfaces.
+      responses:
+        "200":
+          description: The current invitation.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
   /api/substrate/cell/{domain}/{name}:
     get:
       operationId: getCell
-      summary: A cell and its metadata (Blueprint, source_path, NodeID coordinate).
+      summary: Read a public cell with its source and structural coordinates.
       parameters:
         - name: domain
           in: path
@@ -25,60 +37,114 @@ paths:
         - name: name
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { description: The cell with its Blueprint, ctor, access, and source_path }
+        "200":
+          description: Public cell, Blueprint, source path, and NodeID coordinates.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404":
+          description: No matching cell; do not invent a source.
   /api/substrate/equivalent/{domain}/{name}:
     get:
       operationId: getEquivalent
-      summary: Every cell that shares this cell's Blueprint (its shape-family).
+      summary: Read cells sharing a structural shape; this does not prove semantic agreement.
       parameters:
         - name: domain
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
         - name: name
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
       responses:
-        "200": { description: The Blueprint and the list of cells sharing it }
+        "200":
+          description: The Blueprint and matching cells.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404":
+          description: No matching cell.
   /api/substrate/lattice/stats:
     get:
       operationId: getLatticeStats
-      summary: How large the body is — blueprints, recipes, cells.
+      summary: Read lattice totals.
       responses:
-        "200": { description: Lattice totals }
-  /api/substrate/form:
+        "200":
+          description: Blueprint, recipe, and cell totals.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blueprints_total: {type: integer}
+                  recipes_total: {type: integer}
+                  cells_total: {type: integer}
+  /api/substrate/grounded-ask:
     post:
-      operationId: askForm
-      summary: Ask the lattice in Form notation (the rich structural query).
+      operationId: groundedAsk
+      summary: Ask the deployed native lookup for an answer and its trust receipt.
+      description: >-
+        Sends query text to the API. Use the minimum non-sensitive context needed.
+        Inspect returned trust fields and sufficiency before attributing a native
+        answer. Unavailable or insufficient lookup is not proof for the host's
+        own reasoning. This is not a general chat or artifact-generation service.
+      x-openai-isConsequential: false
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [expression]
+              required: [query]
               properties:
-                expression:
+                query:
                   type: string
-                  description: >
-                    Form notation. Examples:
-                    '?equivalent @spec(agent-memory-system)' (shape-family),
-                    '@concept(lc-cross-modal-unity)' (a cell + metadata),
-                    '@idea(agent-pipeline) |> @spec' (walk an edge),
-                    '?cells where domain == "concept"' (filter), '?lattice' (count).
+                  minLength: 1
+                  maxLength: 10000
+                  description: A nonblank question without control characters.
       responses:
-        "200": { description: "A discriminated result (kind: node_id | recipe | cell | cells | view | views | value)" }
+        "200":
+          description: Native answer and runtime/source trust receipt.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer: {type: string}
+                  trust: {type: string}
+                  trust_fields:
+                    type: object
+                    additionalProperties: {type: string}
+                  grounded_node_id: {type: [string, "null"]}
+                  source_path: {type: [string, "null"]}
+                  kernel_runtime: {type: string}
+                additionalProperties: true
+        "422":
+          description: Invalid query.
+        "503":
+          description: Native carrier or required runtime evidence unavailable.
+        "504":
+          description: Native lookup timed out; no native answer established.
   /api/substrate/ingest:
     post:
       operationId: offerContent
-      summary: Offer an idea, concept, teaching, document, or task to the network.
-      description: >
-        The submission is held as a content-addressed offer. Include
-        `status: offered` and `claimed: false` in the markdown frontmatter; it is
-        grounded into the canonical body by a tending act.
+      summary: Publish an explicitly approved artifact to the public lattice.
+      description: >-
+        Publishes or updates a publicly readable cell. Use the owner's explicit
+        approval for the exact content, destination, visibility, and attribution.
+        Exclude private content. Offered/unclaimed labels do not provide privacy.
+        Report success only from the returned receipt.
+      x-openai-isConsequential: true
       requestBody:
         required: true
         content:
@@ -92,8 +158,25 @@ paths:
                   enum: [idea, concept, spec, presence, memory]
                 content:
                   type: string
-                  description: >
-                    Markdown with frontmatter. Include name:, status: offered,
-                    claimed: false, then a body holding the idea/teaching/document.
+                  minLength: 1
+                  maxLength: 65536
+                  description: >-
+                    Exact owner-approved public Markdown. Optional frontmatter
+                    names a stable cell and may update it. status: offered marks
+                    intent; claimed: false leaves attribution unclaimed.
+                source_label:
+                  type: string
+                  maxLength: 512
+                  description: Owner-approved public provenance hint; exclude private identifiers.
       responses:
-        "200": { description: The held offer — its cell, Blueprint, and ctor NodeIDs }
+        "200":
+          description: The published cell, Blueprint, and constructor coordinates.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: Invalid domain or content.
+        "503":
+          description: Write lane unavailable; inspect the outcome before retrying.
