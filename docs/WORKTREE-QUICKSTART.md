@@ -129,8 +129,6 @@ python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
 # optional explicit startup (for manual end-to-end contract check)
 THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
-# optional smoke/e2e (run only when pushing runtime-impactful changes)
-./scripts/thread-runtime.sh run-e2e
 ```
 
 `worktree_pr_guard.py` runs expensive API, web build, and runtime web checks only when changed files touch those surfaces, unless the caller passes the matching `--force-*` flag. Hosted PR thread gates follow the same surface-aware shape for API, maintainability, and web build steps.

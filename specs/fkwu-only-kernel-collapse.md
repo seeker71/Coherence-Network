@@ -202,6 +202,6 @@ cd form/form && python3 scripts/validate_fkwu_native_surface.py \
 
 ## See also
 
-- `specs/fkwu-native-host-platform.md` (if present) — host port layer
+- `specs/retired/fkwu-native-host-platform.md` (if present) — host port layer
 - `docs/coherence-substrate/form-native-models.form` — ML/native floor
 - `kernels/README.md` — sibling tracking (to be rewritten in Phase 4)

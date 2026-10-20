@@ -38,9 +38,9 @@ pip install -e ".[dev]"
 cd ../web
 npm install
 
-# 4. Configure environment
-cp api/.env.example api/.env
-# Edit api/.env and add any required API keys
+# 4. Configure (file-backed; application code reads no environment variables)
+#    ~/.coherence-network/config.json overlays api/config/api.json — provider keys, Telegram, executors, costs
+#    api/.env.example only feeds external CLIs such as Cursor
 
 # 5. Run tests
 cd api

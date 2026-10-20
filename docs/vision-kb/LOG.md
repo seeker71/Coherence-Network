@@ -283,7 +283,7 @@ A practice lineage of numeric **light** codes (777 open the heart to gold, 444 c
 
 `field-model-form.md` was a full concept (frontmatter, geometry, proof surface, cross-refs) living in `concepts/`, but without the `lc-` prefix `generate_repo_indexes.py` (and `wellness_check.py`, and `parse_crossrefs`) globs for — so it was invisible to INDEX.md, the count, navigation, and the DB (404 in prod; never synced since it was created in PR #2365). Healed in one breath:
 
-- **Renamed** `field-model-form.md` → `lc-field-model-form.md`; `id:` follows. The substrate family (`field-model-form.form` / `.fk` / `specs/field-model-form-v0.md`) keeps its names — concepts, specs, and `.fk` are separate naming domains, linked by content, not by matching slugs.
+- **Renamed** `field-model-form.md` → `lc-field-model-form.md`; `id:` follows. The substrate family (`field-model-form.form` / `.fk` / `specs/retired/field-model-form-v0.md`) keeps its names — concepts, specs, and `.fk` are separate naming domains, linked by content, not by matching slugs.
 - **Cross-refs to canonical form**: the outbound list now uses the `→` arrow (renders as linked pills, matching 102 of 104 concepts) and drops the dangling `trace-symbol-spaces` — a real `.form` artifact, not a concept. The inbound ref from [`lc-dmt-laser-symbol-space-recipe`](concepts/lc-dmt-laser-symbol-space-recipe.md) now points at `lc-field-model-form`, so `parse_crossrefs` finally forms the edge.
 - **INDEX**: Concept Map entry beside its sibling; the generator re-counts the header (also healing a pre-existing count drift the wellness check had been naming).
 - **DB**: synced so `/vision/lc-field-model-form` serves the story and the graph-backed connections.
