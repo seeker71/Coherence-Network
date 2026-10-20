@@ -248,7 +248,7 @@ CenterPulseFactory = Callable[[], CenterPulse | None]
 
 
 _CENTER_DEFINITIONS: list[tuple[int, str, str, int, str, str, str, str, CenterPulseFactory]] = [
-    (1, "Root", "Muladhara", 174, "#dc2626", "Grounding, foundation, the held weight of the body", "Treasury, infrastructure, Postgres, Neo4j, the VPS — the material substrate CC rests on.", "Feel your feet on the floor. Breathe into the ground the organism lives on.", _supply_pulse),
+    (1, "Root", "Muladhara", 174, "#dc2626", "Grounding, foundation, the held weight of the body", "Treasury, infrastructure, Postgres, the VPS — the material substrate CC rests on.", "Feel your feet on the floor. Breathe into the ground the organism lives on.", _supply_pulse),
     (2, "Sacral", "Svadhisthana", 417, "#f97316", "Creativity, relationship, the flow between", "Contributions, blueprints, the making itself — every art, craft, and line of code flowing between contributors.", "Feel what wants to be born today. Breathe the creative water through you.", _creative_pulse),
     (3, "Solar Plexus", "Manipura", 528, "#eab308", "Will, agency, the warmth of motion", "Agents, tasks, the pipeline in motion — the will-to-build, ideas moving from seed to form.", "Feel the fire the organism has to act. Breathe it warm and steady.", _pipeline_pulse),
     (4, "Heart", "Anahata", 639, "#22c55e", "Resonance, harmony, the circulation of vitality", "The CC flow, resonance matching, the organic discovery layer — every synapse the field grows, every hand earning vitality by alignment.", "Feel where love is flowing in the organism. Breathe into every hand that carries it.", _heart_pulse),

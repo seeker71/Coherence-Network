@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import inspect
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app import config_loader
 from app.middleware.auth import require_admin_key
-from app.routers import health as health_router
 from app.services import (
     auto_heal_service,
     agent_execution_hooks,
@@ -21,7 +19,6 @@ from app.services import (
     context_hygiene_service,
     failed_task_diagnostics_service,
     friction_service,
-    persistence_contract_service,
     runtime_service,
 )
 from app.services.agent_service import list_tasks
@@ -129,14 +126,6 @@ def _serialize_runtime_event(row: Any) -> dict[str, Any]:
     if isinstance(row, dict):
         return dict(row)
     return {"value": row}
-
-
-async def _resolve_payload(value: Any) -> Any:
-    if inspect.isawaitable(value):
-        value = await value
-    if hasattr(value, "model_dump"):
-        return value.model_dump(mode="json")
-    return value
 
 
 def _deep_set(target: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
@@ -330,7 +319,6 @@ def _diagnostics_runner_payload(runner_rows: list[dict[str, Any]]) -> dict[str, 
 
 @router.get("/diagnostics/overview", summary="Get Diagnostics Overview")
 async def get_diagnostics_overview(
-    request: Request,
     _admin_key: str = Depends(require_admin_key),
 ) -> dict:
     counts = agent_service.get_task_count()
@@ -351,13 +339,9 @@ async def get_diagnostics_overview(
         limit=200,
         source="auto",
     )
-    health_payload = await _resolve_payload(health_router.health())
-    persistence_payload = await _resolve_payload(persistence_contract_service.evaluate(request.app))
     return {
         "generated_at": _iso_utc_now(),
         "config": _diagnostics_config_payload(),
-        "health": health_payload,
-        "persistence": persistence_payload,
         "tasks": _diagnostics_task_payload(
             counts=counts,
             recent_rows=recent_rows,

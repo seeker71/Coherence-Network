@@ -611,7 +611,7 @@ export default function UrsLineagePage() {
                 Coherence-Network
               </Link>
               {" "}is the page you are reading and the substrate
-              underneath it: Next.js + FastAPI + Neo4j + Postgres on
+              underneath it: Next.js + FastAPI + Postgres on
               Hostinger behind Traefik and Cloudflare, with seven
               edge-type families painted in their own spectrum hues,
               auto-attune resonance scoring, contribution attribution,

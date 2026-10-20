@@ -1,0 +1,69 @@
+// Explicit authenticated deployment observations. Normal runtime probes never
+// enter this source: a live one-use OIDC challenge admits the expensive effect.
+import native_health.bml;
+import native_http.bml;
+import form-stdlib/bml/host-child.bml;
+section [form.bml] {
+ class NativeHealthObservation {
+  def nho-nonce?(nonce) = len(nonce) == 43 && all?(i => str_find("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-",substring(nonce,i,i+1),0)>=0,range(0,len(nonce)));
+  def nho-hex?(text,width) = len(text) == width && all?(i => str_find("0123456789abcdef",substring(text,i,i+1),0)>=0,range(0,len(text)));
+  def nho-sha(text) = nc-hex(nc-sha256(text));
+  def nho-input(nonce) = nho-sha("coherence-deployment-observer-v1" ++ nc-z() ++ nonce);
+  def nho-word(text,at) = foldl((value,i) => value*16+ncf-unhex(str_byte_at(text,i)),0,range(at,at+4));
+  def nho-expected(input) = (((nho-word(input,0)*17+nho-word(input,4))*19+nho-word(input,8))*23)+nho-word(input,12);
+  def nho-active(conn,nonce_sha,target) {
+   let answer = npg-query(conn,"SELECT EXISTS(SELECT 1 FROM deployment_observer_challenges WHERE nonce_sha256=$1::text AND target_sha=$2::text AND schema='deployment-observer-challenge-v1' AND consumed_epoch IS NULL AND expires_epoch>=FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::bigint AND issued_epoch<=FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::bigint+30)::text",[nonce_sha,target]);
+   nil?(answer[1]) ? form_error("native observation returned no admission observation") : answer[1][0][0] == "true";
+  }
+  // File slices stay bytes and feed the kernel digest resource incrementally;
+  // neither executable-sized lists nor an external hashing program are needed.
+  def nho-file-feed(fd,path,at,size) = at>=size ? nc-digest-at(fd,"") : {
+   let wanted = size - at>65536 ? 65536 : size - at; let chunk = read_file_slice(path,at,wanted);
+   nothing?(chunk) || len(chunk) != wanted ? form_error("native observation artifact changed during its read") : {
+    let sent = nli-call(44,[fd,chunk,len(chunk),49152,0,0])[0];
+    sent != len(chunk) ? form_error("native observation artifact digest ended before its bytes") : nho-file-feed(fd,path,at+len(chunk),size);
+   };
+  };
+  def nho-file-sha(path) {
+   let size = file_size(path);
+   size<0 ? form_error("native observation artifact is absent: " ++ path) : {
+    let fd = nc-digest-open("sha256",nothing()); let result = attempt(nho-file-feed(fd,path,0,size)); let closed = nc-close(fd);
+    nothing?(result) ? form_error("native observation artifact digest needs care: " ++ path) : nc-hex(result);
+   };
+  }
+  def nho-cli-line(io,step,command) {
+   let result = hch-run-at(io,step,"/app",["/app/form/form-cli"],command ++ "\n",hch-by(10000)); let text = result[1];
+   !hch-ok?(result) || len(split-on(text,"\n")) != 2 || substring(text,len(text) - 1,len(text)) != "\n" ? form_error("native CLI observation framing needs care") : substring(text,0,len(text) - 1);
+  }
+  def nho-form-cli(io,input) {
+   let binary = nho-file-sha("/app/form/form-cli"); let wrapper = nho-file-sha("/app/bin/form-cli");
+   let expected = trim(read_file("/app/form/form-cli.sha256") ?? ""); let expected_wrapper = trim(read_file("/app/bin/form-cli.sha256") ?? "");
+   let source = trim(read_file("/app/form/form-cli.source.id") ?? "");
+   !nho-hex?(source,16) || !nc-equal(binary,expected) || !nc-equal(wrapper,expected_wrapper) ? form_error("native CLI observation artifact identity differs") : {
+    let identity = nho-cli-line(io,"identity","carrier-id");
+    identity != ("carrier-id|form-cli-carrier-v3|" ++ source ++ "|coherence-kernel-fkwu-native-v2") ? form_error("native CLI carrier identity differs") : {
+     let line = nho-cli-line(io,"challenge","carrier-challenge " ++ input); let fields = split-on(line,"|");
+     len(fields) != 4 || fields[0] != "carrier-challenge-v2" || fields[1] != source || fields[2] != input || !nho-hex?(fields[3],16) ? form_error("native CLI challenge binding differs") : json-node-object([
+      json-node-pair("input_sha256",json-node-string(input)),json-node-pair("result",json-node-string(fields[3])),json-node-pair("verified",json-node-bool(true)),json-node-pair("protocol",json-node-string("form-cli-v3")),json-node-pair("binary_sha256",json-node-string(binary)),json-node-pair("wrapper_sha256",json-node-string(wrapper)),json-node-pair("source_sha256",json-node-string(nho-file-sha("/app/form/form-cli.source.id"))),json-node-pair("table_sha256",json-node-string(nho-file-sha("/app/form/form-cli.sym"))),json-node-pair("stamp_sha256",json-node-string(nho-file-sha("/app/form/form-cli.native.attestation")))
+     ]);
+    };
+   };
+  }
+  def nh-observation(conn,request,settings) {
+   let nonce = nha-value(request,"observation_nonce","");
+   !nho-nonce?(nonce) ? record_new(0,"status",400,"body","{\"detail\":\"Native observation nonce must be a URL-safe 32-byte challenge\"}") : {
+    let digest = nho-sha(nonce); let target = ncf-string(ncf-file("../config/image_identity.json"),"deployed_sha");
+    let admitted = nho-active(conn,digest,target);
+    !admitted ? record_new(0,"status",403,"body","{\"detail\":\"Native observation requires an active authenticated deployment challenge for this image\"}") : {
+    let input = nho-input(nonce);
+    let io = "/tmp/native-health-observation-" ++ host_pid().str() ++ "-" ++ host_monotonic_ms().str();
+    let cli = nho-form-cli(io,input); let kernel = json-node-object([
+     json-node-pair("input_sha256",json-node-string(input)),json-node-pair("result",json-node-string(nho-expected(input).str())),json-node-pair("verified",json-node-bool(true)),json-node-pair("runtime",json-node-string("fkwu")),json-node-pair("binary_sha256",json-node-string(nho-file-sha("/proc/self/exe")))
+    ]);
+    let base = parse-json("native-runtime-observation",nh-project(conn,"health",settings));
+    record_new(0,"status",200,"body",json-emit(ncf-merge(base,json-node-object([json-node-pair("observation_schema",json-node-string("native-carrier-observation-v1")),json-node-pair("observation_nonce_sha256",json-node-string(digest)),json-node-pair("kernel_challenge",kernel),json-node-pair("form_cli_challenge",cli)]))));
+    };
+   };
+  }
+ }
+}

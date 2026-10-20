@@ -36,7 +36,7 @@ PUBLIC_API_BASE = "https://api.coherencycoin.com"
 # deployed target continue to come from protected main, while GitHub OIDC proves
 # that the external observer job itself executed these exact workflow bytes.
 # Identity pins live in reviewed image code, never the host-mutable config.
-PINNED_OBSERVER_WORKFLOW_SHA = "d17b1453525899e089ebb70d762dcdbe7fa37fae"
+PINNED_OBSERVER_WORKFLOW_SHA = "50a39982c6f3165981ba4162fe35161fe2f269f3"
 PINNED_REPOSITORY = "seeker71/Coherence-Network"
 PINNED_REPOSITORY_ID = "1155981916"
 PINNED_REPOSITORY_OWNER = "seeker71"
@@ -243,12 +243,6 @@ def stable_health_projection(
         raise DeploymentObserverError("observer-health-nonce-binding")
     if body.get("status") != "ok":
         raise DeploymentObserverError("observer-health-status")
-    if body.get("integrity_verified") is not True:
-        raise DeploymentObserverError("observer-health-integrity")
-    if body.get("integrity_compromised") is not False:
-        raise DeploymentObserverError("observer-health-integrity")
-    if body.get("schema_ok") is not True:
-        raise DeploymentObserverError("observer-health-db-schema")
     kernel = body.get("kernel_challenge")
     form_cli = body.get("form_cli_challenge")
     if not isinstance(kernel, dict) or not isinstance(form_cli, dict):
@@ -276,9 +270,6 @@ def stable_health_projection(
         "observation_nonce_sha256": nonce_digest,
         "carrier_challenge_input_sha256": challenge_input,
         "status": "ok",
-        "integrity_verified": True,
-        "integrity_compromised": False,
-        "schema_ok": True,
         "kernel_runtime": runtime,
         "kernel_result": kernel_result,
         "kernel_binary_sha256": _hex_field(

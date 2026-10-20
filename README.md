@@ -430,7 +430,6 @@ Every part of the network links to every other. Jump in wherever makes sense.
 - **Form-native runtime**: BML/domain grammars, Form recipes/cells, and the fkwu page JIT — `form/`
 - **API/front door**: native kernel routes where promoted; `api/` is the compatibility bridge and current upstream for the tail
 - **Web**: Next.js 16 + shadcn/ui — `web/` — live at [coherencycoin.com](https://coherencycoin.com)
-- **Graph**: Neo4j
 - **Relational**: PostgreSQL (in-memory store in dev)
 - **CLI**: Node.js — `cli/` — [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli)
 - **MCP**: Node.js — `mcp-server/` — [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server)

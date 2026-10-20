@@ -111,7 +111,7 @@ def _build_ideas_needing_skills(contributor_id: Optional[str], limit: int) -> li
         {
             "idea_id": "idea_789",
             "title": "Graph-based coherence scoring",
-            "skill_match": ["python", "neo4j"],
+            "skill_match": ["python"],
             "phase": "spec",
             "open_tasks": 2,
             "coherence_score": 0.74,

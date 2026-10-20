@@ -1,39 +1,71 @@
 import postgres.bml;
 import graph_projection.bml;
 import native_http.bml;
+import native_health_observation.bml;
+import native_substrate.bml;
+import native_instance_pulse.bml;
 section [form.bml] {
  class NativeApi {
   def nap-idea-parameters(request,detail,page_size) = [nha-value(request,"workspace_id",""),nha-value(request,"q",""),nha-bool(request,"include_internal",true),nha-bool(request,"only_unvalidated",false),nha-bool(request,"curated_only",false),nha-value(request,"pillar",""),nha-value(request,"tags",""),nha-value(request,"sort","free_energy"),nha-value(request,"lang","en"),detail ? 1 : nha-number(request,"limit",page_size),detail ? 0 : nha-number(request,"offset",0),detail ? ncf-string(record_get(request,"parameters"),"idea_id") : ""];
-  def nap-project(conn,request,settings) {
+  def nap-result(status,body) = record_new(0,"status",status,"body",body);
+  def nap-graph(conn,request,settings,name) {
    let page_size = str_to_int(json-emit(json-object-get(settings,"page_size")));
    let private_types = json-object-get(settings,"private_graph_types");
    !node_eq(node_category(private_types),JSON-ARRAY()) ? form_error("public graph resource needs its private ownership description") : 0;
    let hidden = json-emit(private_types);
-   let name = ncf-string(record_get(request,"route"),"projection");
    let parameters = record_get(request,"parameters");
-   let result = name == "health" ? npg-query(conn,"SELECT jsonb_build_object('status','ready','runtime','fkwu','persistence','native-postgres','db_connected',true)::text",[])
-    : name == "ideas" ? npg-query(conn,gp-ideas(),nap-idea-parameters(request,false,page_size))
+   let result = name == "ideas" ? npg-query(conn,gp-ideas(),nap-idea-parameters(request,false,page_size))
     : name == "idea" ? npg-query(conn,gp-idea(),nap-idea-parameters(request,true,page_size))
     : name == "vitality" ? npg-query(conn,gp-vitality(),[ncf-string(parameters,"workspace_id"),hidden])
     : name == "resonance" ? npg-query(conn,gp-resonance(),[nha-value(request,"workspace_id",""),nha-number(request,"window_hours",24),nha-number(request,"limit",page_size),nha-number(request,"offset",0)])
     : name == "nodes" ? npg-query(conn,gp-nodes(),[nha-value(request,"workspace_id",""),nha-value(request,"type",""),nha-value(request,"phase",""),nha-value(request,"search",""),nha-number(request,"limit",page_size),nha-number(request,"offset",0),hidden])
     : name == "node" ? npg-query(conn,gp-node-detail(),[ncf-string(parameters,"node_id"),hidden])
     : name == "node-count" ? npg-query(conn,gp-node-count(),[nha-value(request,"workspace_id",""),nha-value(request,"type",""),hidden]) : form_error("native projection has no source owner: " ++ name);
-   record_new(0,"body",nil?(result[1]) ? nothing() : result[1][0][0]);
+   nil?(result[1]) ? nap-result(404,"{\"detail\":\"No matching graph value\"}") : nap-result(200,result[1][0][0]);
+  }
+  def nap-project(conn,request,settings) {
+   let name = ncf-string(record_get(request,"route"),"projection");
+   nh-handles?(name) ? name == "health" && len(nha-value(request,"observation_nonce",""))>0 ? nh-observation(conn,request,settings) : nap-result(200,nh-project(conn,name,settings))
+    : name == "instance-pulse" || name == "peer-pulses" ? nip-project(conn,name,settings)
+    : name == "substrate-ingest" ? nsub-ingest(conn,record_get(request,"payload"),settings)
+    : name == "substrate-page" ? nap-result(200,nsub-page(conn,request,settings))
+    : name == "substrate-cells" ? nap-result(200,nsub-cells(conn,request,settings))
+    : name == "substrate-stats" ? nap-result(200,nsub-stats(conn,request,settings))
+    : name == "substrate-cell" || name == "substrate-value" ? {
+     let body = name == "substrate-cell" ? nsub-cell(conn,request,settings) : nsub-value(conn,request,settings);
+     nothing?(body) ? nap-result(404,"{\"detail\":\"No public substrate value\"}") : nap-result(200,body);
+    } : nap-graph(conn,request,settings,name);
+  }
+  def nap-reply(settings,result,began) {
+   let configured = ncf-string(settings,"allowed_methods");
+   let methods = len(configured)>0 ? configured : nha-methods(node_children(json-object-get(settings,"routes")));
+   nha-reply(record_get(result,"status"),record_get(result,"body"),began,methods);
   }
   def nap-read(database,credential,request,settings,began) {
    let conn = npg-open(database,credential);
    let result = attempt(nap-project(conn,request,settings)); let closed = npg-close(conn);
-   nothing?(result) ? form_error("native graph projection source needs care") : {
-    let body = record_get(result,"body");
-    nothing?(body) ? nha-reply(404,"{\"detail\":\"No matching graph value\"}",began) : nha-reply(200,body,began);
+   nothing?(result) ? form_error("native application persistence source needs care") : nap-reply(settings,result,began);
+  }
+  def nap-input(request) {
+   let route = record_get(request,"route");
+   ncf-string(route,"input") != "json" ? "" : {
+    let payload = attempt(parse-json("native-request-value",record_get(request,"body")));
+    nothing?(payload) || !node_eq(node_category(payload),JSON-OBJECT()) ? "Request needs a JSON object" : {
+     let held = record_set(request,"payload",payload);
+     ncf-string(route,"projection") == "substrate-ingest" ? nsub-ingest-need(payload) : "";
+    };
    };
   }
   def nap-handle(database,credential,settings,raw) {
    let began = host_monotonic_ms(); let routes = node_children(json-object-get(settings,"routes")); let request = attempt(nha-request(raw,routes));
-   nothing?(request) ? nha-reply(400,"{\"detail\":\"Request source needs care\"}",began) : nothing?(record_get(request,"route")) ? nha-reply(404,"{\"detail\":\"No native route\"}",began) : record_get(request,"method") == "OPTIONS" ? nha-reply(204,"",began) : {
-    let response = attempt(nap-read(database,credential,request,settings,began));
-    nothing?(response) ? nha-reply(503,"{\"detail\":\"Native persistence source needs care\"}",began) : response;
+   nothing?(request) ? nap-reply(settings,nap-result(400,"{\"detail\":\"Request source needs care\"}"),began) : nothing?(record_get(request,"route")) ? nap-reply(settings,nap-result(404,"{\"detail\":\"No native route\"}"),began) : record_get(request,"method") == "OPTIONS" ? nap-reply(settings,nap-result(204,""),began) : {
+    let needed = nap-input(request);
+    len(needed)>0 ? nap-reply(settings,nap-result(400,json-emit(json-node-object([json-node-pair("detail",json-node-string(needed))]))),began) : {
+     let name = ncf-string(record_get(request,"route"),"projection");
+     let admission = name == "instance-pulse" || name == "peer-pulses" ? nip-admission(settings) : nothing();
+     let response = attempt(!nothing?(admission) ? nap-reply(settings,admission,began) : name == "kernel-status" ? nap-reply(settings,nap-result(200,nsub-kernel-status()),began) : nap-read(database,credential,request,settings,began));
+     nothing?(response) ? nap-reply(settings,nap-result(503,"{\"detail\":\"Native application source needs care\"}"),began) : response;
+    };
    };
   }
  }
