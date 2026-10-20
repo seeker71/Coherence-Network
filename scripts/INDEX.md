@@ -98,6 +98,7 @@
 | [influence_teaching_translator.py](influence_teaching_translator.py) | Print influence teaching translator shards for a field story. |
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
 | [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
+| [install_kernel_steward.sh](install_kernel_steward.sh) | install_kernel_steward.sh — a thin launchd carrier for the body's kernel steward (carrier tissue, not logic). |
 | [integrate_one_branch.sh](integrate_one_branch.sh) | Integrate one remote branch into main: rebase, add evidence, push, create PR, merge. |
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
@@ -184,7 +185,7 @@
 | [test_verify_web_api_css_assets.sh](test_verify_web_api_css_assets.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
 | [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
-| [training_corpus.py](training_corpus.py) | Feed the body's edges into the form-cli training catalog as (intent->realization) pairs. |
+| [training_corpus.py](training_corpus.py) | Import selected repository edges as local learning pairs with explicit per-invocation consent. |
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |

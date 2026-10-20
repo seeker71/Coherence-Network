@@ -16,7 +16,8 @@
     "index.mjs",
     "README.md",
     "coherence_mcp_server/*.py",
-    "pyproject.toml"
+    "pyproject.toml",
+    "uv.lock"
   ],
   "keywords": [
     "mcp",

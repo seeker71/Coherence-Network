@@ -15,22 +15,12 @@ startCommand:
   type: stdio
   configSchema:
     type: object
-    properties:
-      COHERENCE_API_URL:
-        type: string
-        description: API base URL (defaults to https://api.coherencycoin.com)
-        default: https://api.coherencycoin.com
-      COHERENCE_API_KEY:
-        type: string
-        description: API key for write operations (optional — reads work without a key)
+    properties: {}
+    description: Configure the MCP host through ~/.coherence-network/config.json under mcp. Defaults connect to the public service.
   commandFunction: |-
-    (config) => ({
+    () => ({
       command: "npx",
-      args: ["coherence-mcp-server"],
-      env: {
-        COHERENCE_API_URL: config.COHERENCE_API_URL || "https://api.coherencycoin.com",
-        ...(config.COHERENCE_API_KEY ? { COHERENCE_API_KEY: config.COHERENCE_API_KEY } : {}),
-      }
+      args: ["-y", "coherence-mcp-server"]
     })
 
 tools:

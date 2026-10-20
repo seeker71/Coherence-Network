@@ -1,130 +1,237 @@
-"""form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session.
-
-route delegates to the Form recipe (form-cli-router.fk) on the fkwu
-kernel; capture/transmute/hook are thin carriers over the training-catalog shape.
-The body is Form; these tests prove the carrier delegates and persists honestly.
-"""
+"""Consent and native delegation at the existing local MCP carrier boundary."""
 from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import stat
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 _MCP = Path(__file__).resolve().parents[2] / "mcp-server"
 sys.path.insert(0, str(_MCP))
 
+from coherence_mcp_server import capture_hook, capture_worker  # noqa: E402
 from coherence_mcp_server import form_cli_tools as fct  # noqa: E402
 
 
-def test_capture_keeps_both_and_derives_three_pairs(tmp_path, monkeypatch):
-    monkeypatch.setattr(fct, "_CATALOG", tmp_path / "cat.jsonl")
-    e = fct.catalog_capture("design the surface",
-                            "this is risky and blocks us",
-                            "a gradient with clear next data",
-                            "agent-cli:claude", "turn")
-    assert e["raw"].startswith("this is risky")
-    assert e["transmuted"].startswith("a gradient")
-    assert e["raw_sig"] != e["transmuted_sig"]
-    rs, raws, vits = e["request_sig"], e["raw_sig"], e["transmuted_sig"]
-    assert e["pairs"]["raw"] == [rs, raws]
-    assert e["pairs"]["transmute"] == [raws, vits]
-    assert e["pairs"]["reasoning"] == [rs, vits]
+def _forbid(*args, **kwargs):
+    raise AssertionError("Unexpected read, process, or write")
 
 
-def test_capture_appends_durably(tmp_path, monkeypatch):
-    cat = tmp_path / "c.jsonl"
-    monkeypatch.setattr(fct, "_CATALOG", cat)
-    fct.catalog_capture("R1", "raw1", "vit1", "agent-cli", "turn")
-    fct.catalog_capture("R2", "raw2", "vit2", "agent-cli", "turn")
-    lines = cat.read_text().strip().splitlines()
-    assert len(lines) == 2
-    assert json.loads(lines[1])["request"] == "R2"
-
-
-def test_transmute_routes_and_reasons(monkeypatch):
-    # transmute is ROUTED (form-native transmuter vs the sovereign reasoner) and
-    # actually reasons — no metered API, no fake rewrite. With a reasoner present
-    # it returns transmuted text; without one it hands back the instruction.
-    monkeypatch.setattr(fct, "kernel_route", lambda a, b: {"winner": "agent-cli"})
-    monkeypatch.setattr(fct, "_reason", lambda prompt, oracle, timeout=120.0:
-                        "An opportunity with clear next data.")
-    out = fct.transmute_text("this is too dangerous to attempt")
-    assert out["route"] == "agent-cli"
-    assert out["transmuted"] == "An opportunity with clear next data."
-
-    # reasoner unreachable -> instruction handed back, never faked
-    monkeypatch.setattr(fct, "_reason", lambda *a, **k: "")
-    out2 = fct.transmute_text("this is risky")
-    assert out2["transmuted"] == ""
-    assert "opportunity" in out2["instruction"]
-
-
-def test_transmute_and_capture_writes_full_pair(tmp_path, monkeypatch):
-    monkeypatch.setattr(fct, "_CATALOG", tmp_path / "tc.jsonl")
-    monkeypatch.setattr(fct, "kernel_route", lambda a, b: {"winner": "agent-cli"})
-    monkeypatch.setattr(fct, "_reason", lambda *a, **k: "the gradient we walk")
-    e = fct.transmute_and_capture("plan it", "this blocks us", "agent-cli:test")
-    assert e["raw"] == "this blocks us"
-    assert e["transmuted"] == "the gradient we walk"
-    assert e["outcome"] == "turn"
-    assert e["raw_sig"] != e["transmuted_sig"]
-
-
-def test_route_uses_the_kernel_recipe(tmp_path):
-    # route delegates to fcr-route on the kernel; if the kernel binary isn't
-    # built it reports that honestly rather than guessing in Python.
-    out = fct.kernel_route(
-        {"sovereignty": 100, "trust": 80, "capability": 80, "confidence": 80},
-        {"sovereignty": 50, "trust": 90, "capability": 100, "confidence": 100},
+@pytest.mark.parametrize("consent", [None, "", True, "true", "all-future-turns", {}])
+def test_capture_denies_before_configuration_or_io(consent, monkeypatch):
+    monkeypatch.setattr(fct, "load_settings", _forbid)
+    monkeypatch.setattr(fct.os, "open", _forbid)
+    monkeypatch.setattr(Path, "mkdir", _forbid)
+    result = fct.catalog_capture(
+        "private request", "private answer", "reviewed answer", "chat", "turn",
+        capture_consent=consent,
     )
-    if "error" in out:
-        assert "kernel" in out["error"].lower()  # honest "not built" path
+    assert result["captured"] is False
+    assert "private" not in json.dumps(result)
+
+
+def test_explicit_capture_persists_selected_copy_and_returns_receipt(tmp_path, monkeypatch):
+    catalog = tmp_path / "learning" / "catalog.jsonl"
+    monkeypatch.setattr(fct, "load_settings", lambda: {"catalog_path": str(catalog)})
+    result = fct.catalog_capture(
+        "selected request", "original warning", "reviewed warning", "chat", "reviewed",
+        capture_consent=fct.CAPTURE_CONSENT,
+    )
+    entry = json.loads(catalog.read_text())
+    assert result["captured"] is True
+    assert result["catalog_path"] == str(catalog)
+    assert "selected request" not in json.dumps(result)
+    assert entry["request"] == "selected request"
+    assert entry["raw"] == "original warning"
+    assert entry["transmuted"] == "reviewed warning"
+    assert entry["capture_consent"] == fct.CAPTURE_CONSENT
+    assert entry["pairs"]["raw"] == [entry["request_sig"], entry["raw_sig"]]
+    assert entry["pairs"]["reasoning"] == [entry["request_sig"], entry["transmuted_sig"]]
+    assert stat.S_IMODE(catalog.stat().st_mode) == 0o600
+    assert stat.S_IMODE(catalog.parent.stat().st_mode) == 0o700
+
+    catalog.chmod(0o644)
+    fct.catalog_capture("r2", "o2", "w2", "chat", "reviewed", capture_consent=fct.CAPTURE_CONSENT)
+    assert len(catalog.read_text().splitlines()) == 2
+    assert stat.S_IMODE(catalog.stat().st_mode) == 0o600
+
+
+@pytest.mark.parametrize("link_type", ["symlink", "hardlink"])
+def test_capture_refuses_links(tmp_path, monkeypatch, link_type):
+    target = tmp_path / "other-file"
+    target.write_text("unchanged")
+    catalog = tmp_path / "catalog"
+    if link_type == "symlink":
+        catalog.symlink_to(target)
     else:
-        assert out["winner"] == "form-native" and out["sovereign"] is True
+        os.link(target, catalog)
+    monkeypatch.setattr(fct, "load_settings", lambda: {"catalog_path": str(catalog)})
+    result = fct.catalog_capture("r", "o", "w", "chat", "reviewed", capture_consent=fct.CAPTURE_CONSENT)
+    assert result["captured"] is False
+    assert target.read_text() == "unchanged"
 
 
-def test_stop_hook_spawns_detached_worker(tmp_path, monkeypatch):
-    # the hook does NOT reason inline (no blocking) — it extracts the turn and
-    # spawns a detached worker with the (request, raw) handed off in a temp file.
-    transcript = tmp_path / "t.jsonl"
-    transcript.write_text("\n".join(json.dumps(r) for r in [
-        {"type": "user", "message": {"role": "user", "content": "plan the routing"}},
-        {"type": "assistant", "message": {"role": "assistant",
-         "content": [{"type": "text", "text": "Here is a risky plan."}]}},
-    ]), encoding="utf-8")
-
-    spec = importlib.util.spec_from_file_location(
-        "capture_hook", _MCP / "coherence_mcp_server" / "capture_hook.py")
-    hook = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(hook)
-
-    spawned: dict = {}
-
-    def fake_popen(argv, **kwargs):
-        spawned["argv"] = argv
-        spawned["detached"] = kwargs.get("start_new_session")
-        payload = json.loads(Path(argv[2]).read_text(encoding="utf-8"))
-        spawned["payload"] = payload
-        Path(argv[2]).unlink()  # we consume the temp; worker would too
-
-        class _P:  # a stand-in process handle
-            pass
-        return _P()
-
-    monkeypatch.setattr(hook.subprocess, "Popen", fake_popen)
-    monkeypatch.setattr(sys, "stdin",
-                        _Stdin(json.dumps({"transcript_path": str(transcript)})))
-    assert hook.main() == 0
-    assert spawned["detached"] is True
-    assert spawned["argv"][1].endswith("capture_worker.py")
-    assert spawned["payload"]["request"] == "plan the routing"
-    assert spawned["payload"]["raw"] == "Here is a risky plan."
+def test_capture_failure_returns_no_raw_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr(fct, "load_settings", lambda: {"catalog_path": str(tmp_path / "catalog")})
+    def unavailable(*args, **kwargs):
+        raise OSError("storage unavailable")
+    monkeypatch.setattr(fct.os, "open", unavailable)
+    result = fct.catalog_capture("private request", "private answer", "reviewed", "chat", "turn", capture_consent=fct.CAPTURE_CONSENT)
+    assert result["captured"] is False
+    assert "private" not in json.dumps(result)
+    assert not (tmp_path / "catalog").exists()
 
 
-class _Stdin:
-    def __init__(self, text: str):
-        self._text = text
+def test_capture_sync_failure_reports_possible_retention(tmp_path, monkeypatch):
+    catalog = tmp_path / "catalog.jsonl"
+    monkeypatch.setattr(fct, "load_settings", lambda: {"catalog_path": str(catalog)})
 
-    def read(self) -> str:
-        return self._text
+    def interrupted_sync(fd):
+        raise OSError("storage sync interrupted after the row was flushed")
+
+    monkeypatch.setattr(fct.os, "fsync", interrupted_sync)
+    result = fct.catalog_capture(
+        "selected private request", "selected private original", "selected private rewrite",
+        "chat", "reviewed", capture_consent=fct.CAPTURE_CONSENT,
+    )
+
+    saved = json.loads(catalog.read_text())
+    assert result["captured"] is None
+    assert result["status"] == "indeterminate"
+    assert result["may_be_retained"] is True
+    assert result["catalog_path"] == str(catalog)
+    for field in ("request_sig", "raw_sig", "transmuted_sig"):
+        assert result[field] == saved[field]
+    assert "before retrying" in result["next_step"]
+    assert "selected private" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("raw,reviewed", [("", "rewrite"), ("original", ""), ("x" * 8001, "rewrite")])
+def test_capture_rejects_missing_review_or_oversized_excerpt_before_io(raw, reviewed, monkeypatch):
+    monkeypatch.setattr(fct, "load_settings", _forbid)
+    assert fct.catalog_capture("request", raw, reviewed, "chat", "reviewed", capture_consent=fct.CAPTURE_CONSENT)["captured"] is False
+
+
+def test_rewrite_stays_in_current_chat_and_preserves_warning_contract(monkeypatch):
+    monkeypatch.setattr(fct.subprocess, "run", _forbid)
+    monkeypatch.setattr(fct, "catalog_capture", _forbid)
+    monkeypatch.setattr(fct, "load_settings", _forbid)
+    text = "Do not proceed: this may be dangerous. I am uncertain."
+    result = fct.transmute_text(text)
+    assert result["raw"] == text
+    assert result["route"] == "current-chat"
+    assert result["captured"] is False
+    assert result["transmuted"] == ""
+    for meaning in ("warnings", "risks", "refusals", "negation", "uncertainty", "untrusted"):
+        assert meaning in result["instruction"]
+
+
+def test_retired_hooks_and_automatic_capture_do_no_work(monkeypatch):
+    monkeypatch.setattr(sys, "stdin", SimpleNamespace(read=_forbid))
+    monkeypatch.setattr(Path, "read_text", _forbid)
+    monkeypatch.setattr(subprocess, "Popen", _forbid)
+    monkeypatch.setattr(fct, "catalog_capture", _forbid)
+    monkeypatch.setattr(sys, "argv", ["capture_worker.py", "/private/queued-payload.json"])
+    assert capture_hook.main() == 0
+    assert capture_worker.main() == 0
+    assert fct.transmute_and_capture("private", "private")["captured"] is False
+
+
+def test_stop_hook_is_no_longer_registered():
+    settings = json.loads((_MCP.parent / ".claude" / "settings.json").read_text())
+    assert "capture_hook.py" not in json.dumps(settings)
+
+
+def test_route_rejects_invalid_axes_before_configuration(monkeypatch):
+    monkeypatch.setattr(fct, "load_settings", _forbid)
+    assert "error" in fct.kernel_route({"trust": "100"}, {})
+    assert "error" in fct.kernel_route({"trust": True}, {})
+    assert "error" in fct.kernel_route({"trust": 101}, {})
+
+
+def test_route_uses_fkwu_and_preserves_failed_execution(tmp_path, monkeypatch):
+    kernel = tmp_path / "fkwu"
+    kernel.write_text("native runtime stand-in")
+    kernel.chmod(0o700)
+    recipe = tmp_path / "route.fk"
+    recipe.write_text("; native recipe")
+    monkeypatch.setattr(fct, "load_settings", lambda: {"kernel_path": str(kernel)})
+    monkeypatch.setattr(fct, "_ROUTER_FK", recipe)
+    calls = []
+    def run(command, **kwargs):
+        calls.append((command, Path(command[1]).read_text()))
+        return SimpleNamespace(returncode=0, stdout="form-native\n")
+    monkeypatch.setattr(fct.subprocess, "run", run)
+    result = fct.kernel_route({"trust": 100}, {"trust": 50})
+    assert result["winner"] == "form-native"
+    assert result["runtime"] == "fkwu"
+    assert result["selection_only"] is True
+    assert result["external_model_invoked"] is False
+    assert calls[0][0][0] == str(kernel)
+    assert "import form-stdlib/form-cli-router.fk;" in calls[0][1]
+    assert "fcr-route(fcr-backend(" in calls[0][1]
+    assert calls[0][0][1].endswith(".bml")
+    assert not Path(calls[0][0][1]).exists()
+    monkeypatch.setattr(fct.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="form-native\n"))
+    assert "error" in fct.kernel_route({}, {})
+
+
+def _corpus_module():
+    spec = importlib.util.spec_from_file_location("training_corpus", _MCP.parent / "scripts" / "training_corpus.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_source_import_denies_before_iteration_or_reads(monkeypatch):
+    corpus = _corpus_module()
+    class UnreadSources:
+        def __iter__(self):
+            pytest.fail("Sources read before consent")
+    with pytest.raises(ValueError, match="consent"):
+        corpus.feed(UnreadSources())
+    monkeypatch.setattr(sys, "argv", ["training_corpus.py", "--source", "all"])
+    monkeypatch.setattr(corpus, "SOURCES", {"git": _forbid, "chain": _forbid})
+    with pytest.raises(SystemExit) as failure:
+        corpus.main()
+    assert failure.value.code == 2
+
+
+def test_source_import_passes_consent_and_counts_only_saved_rows(monkeypatch):
+    corpus = _corpus_module()
+    calls = []
+    def save(*args, **kwargs):
+        calls.append(kwargs)
+        return {"captured": True}
+    monkeypatch.setattr(corpus, "catalog_capture", save)
+    pairs = [("intent", "source", "spec", "verified")]
+    assert corpus.feed(pairs, capture_consent=fct.CAPTURE_CONSENT) == {"spec": 1}
+    assert calls == [{"capture_consent": fct.CAPTURE_CONSENT}]
+    monkeypatch.setattr(corpus, "catalog_capture", lambda *args, **kwargs: {"captured": False, "error": "unavailable"})
+    with pytest.raises(RuntimeError, match="unavailable"):
+        corpus.feed(pairs, capture_consent=fct.CAPTURE_CONSENT)
+
+
+def test_source_import_does_not_count_an_indeterminate_save(monkeypatch):
+    corpus = _corpus_module()
+    calls = []
+
+    def interrupted_save(*args, **kwargs):
+        calls.append(args)
+        return {
+            "captured": None,
+            "status": "indeterminate",
+            "error": "Saving was interrupted; some or all of the local copy may remain",
+        }
+
+    monkeypatch.setattr(corpus, "catalog_capture", interrupted_save)
+    pairs = [("first", "source", "spec", "verified"), ("second", "source", "spec", "verified")]
+    with pytest.raises(RuntimeError, match="local copy may remain"):
+        corpus.feed(pairs, capture_consent=fct.CAPTURE_CONSENT)
+    assert len(calls) == 1

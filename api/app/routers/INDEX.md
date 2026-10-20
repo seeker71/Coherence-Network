@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 153
+**Total files**: 152
 
 | File | Purpose |
 |---|---|
@@ -155,7 +155,6 @@
 | [verification.py](verification.py) | Verification router — public endpoints for auditing CC flows. |
 | [views.py](views.py) | Views router — per-contributor view tracking, analytics, discovery rewards. |
 | [vision.py](vision.py) | Vision content routes backed by graph records. |
-| [vitality.py](vitality.py) | Workspace vitality routes — living-system health metrics. |
 | [wallets.py](wallets.py) | Wallets router — connect, verify, and manage on-chain wallets. |
 | [wellness.py](wellness.py) | Wellness — the body sensing itself, surfaced outward. |
 | [workspace_projects.py](workspace_projects.py) | Workspace Project routes — group ideas within a workspace. |

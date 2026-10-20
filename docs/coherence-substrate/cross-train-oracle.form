@@ -1,48 +1,46 @@
-; cross-train-oracle.form — the local teacher the form-native lanes learn from.
+; cross-train-oracle.form — teaching, selected examples, and observed learning.
 ;
-; The cross-training loop is form-native-agent-shape.form: a local oracle's decisions
-; become ground-truth labels (predictor-sampling.fk) that grow the form-native
-; challenger (predictor-train.fk) toward the champion, proven by native-vs-oracle score
-; (native-training-receipt.fk). This cell names the teacher and its status.
+; The native learning lanes live in the pinned Form body. This teaching describes
+; the parent MCP boundary; a retained example is not proof of training or efficacy.
 
 (cross-train-oracle
 
   (teacher
-    "qwen2.5:72b, run locally via ollama — the strongest local tool-calling model"
-    "available. Local, no key, no metered API. Set as _CROSS_TRAIN_ORACLE in"
-    "mcp-server/coherence_mcp_server/form_cli_tools.py (env FORM_CLI_ORACLE to override)."
-    "deepseek-r1:32b is the reasoning/transmute teacher when reasoning depth matters.")
+    "The MCP carrier does not select or launch a separate teacher model."
+    "coherence_transmute returns faithful editing instructions to the current chat;"
+    "the chat's actual model supplies the rewrite, with its provenance kept honest."
+    "Native training and teacher selection are separate Form-owned operations;"
+    "their current source and observed results establish what runs.")
 
-  (verified
-    "Probed live: given a tool and a request, qwen2.5:72b emitted exactly"
-    "<tool_call>{\"name\":\"bash\",\"arguments\":{\"cmd\":\"ls\"}}</tool_call> — it"
-    "speaks the Hermes tag encoding form-agent-protocol.fk standardized on, NATIVELY."
-    "So the teacher's raw output drops straight into the protocol's hermes lane with no"
-    "translation: the label and the wire format are already aligned.")
-
-  (loop
-    (decide   "the teacher makes a routing / tool-use decision on a real request")
-    (label    "predictor-sampling.fk fuses it (a circle of models) into ONE ground-truth label, gating contested ones")
-    (score    "io-match.fk scores by EFFICACY — did the candidate's output WORK — not by reproducing the teacher's exact tokens")
-    (grow     "predictor-train.fk pt-learn interns (label, feature-vector) into the form-native challenger")
-    (infer    "nearest-shape.fk routes the live query to the nearest interned shape")
-    (prove    "native-training-receipt.fk: native-vs-oracle score over a heldout window")
-    (graduate "fcr-route flips the shape local once the lane's pass-rate crosses threshold"))
+  (configuration
+    "The MCP carrier reads its mcp settings from api/config/api.json, overlaid by"
+    "~/.coherence-network/config.json. Paths and transport come from these files."
+    "There is no environment-variable oracle override or implicit model launch.")
 
   (corpus
-    "The corpus fills from live sessions via the Stop-hook capture (capture_hook.py ->"
-    "training-catalog.fk), on main now. Honest status at this writing: empty — the hook"
-    "fires only for Claude Code sessions that load settings AFTER it merged, so"
-    "accumulation begins with fresh sessions, not retroactively. The days-clock starts"
-    "there: no labels yet, so no receipt is trustworthy yet.")
+    "Automatic Stop-hook and detached-worker capture are retired. Ordinary chat,"
+    "rewriting, installation and public sharing do not authorize a learning copy."
+    "coherence_capture accepts an exact user-selected request, original and reviewed"
+    "rewrite only with selected-excerpt-local-learning-v1 consent for that sample."
+    "The receipt identifies the local catalog and content fingerprints without"
+    "echoing the excerpt. This copy survives chat deletion until removed from its"
+    "own catalog; removal does not untrain a model or erase other copies."
+    "A write-stage failure may leave data: inspect an indeterminate receipt before"
+    "retrying or assuming the sample is absent.")
 
-  (timescale
-    "Days, measured not assumed. The mesh training-carrier floors quantify 'enough'"
-    "(order >=10k labels, >=100 MiB heldout) before a lane's native-training-receipt is"
-    "trusted. We read the native-vs-oracle score rising over the heldout window across"
-    "days; that number — not a claim — tells us how well the form-native version learned.")
+  (repository-excerpts
+    "scripts/training_corpus.py is a manual import of selected repository edges."
+    "Its --capture-consent applies only to that invocation. The post-merge hook"
+    "does not enroll repository changes for learning automatically.")
 
-  (next
-    "Two tiers learn from this teacher: the router (prototype: predictor-train/"
-    "nearest-shape, can converge online as labels arrive) and the freq-check/transmuter"
-    "(transformer: real backprop epochs on transformer-block.fk — the genuine build)."))
+  (learning-evidence
+    "A reviewed teacher example is candidate evidence, not ground truth by origin."
+    "Preserve provenance, disagreements and the limits of the observation."
+    "The native predictor and scoring organs may use authorized examples; prove"
+    "their actual effect on a separate evaluation before claiming improvement."
+    "Retention establishes a saved sample. Training requires its own run receipt."
+    "A routing result over supplied scores is not a measurement of readiness.")
+
+  (direction
+    "Grow native capability from consented, reviewed examples and measured outcomes."
+    "Keep the person's choice to receive help separate from the choice to teach."))

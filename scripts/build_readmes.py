@@ -7,18 +7,13 @@ No external dependencies. Works with Python 3.8+.
 import os
 import re
 import sys
-import shutil
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 INCLUDE_RE = re.compile(r"^<!-- include: (.+?) -->$", re.MULTILINE)
 
 # Templates and their output paths (relative to repo root).
-# Special case: skills template also copies to an external path.
-SKILL_EXTERNAL = os.path.expanduser(
-    "~/.openclaw/workspace/skills/coherence-network/SKILL.md"
-)
-
+# Installing a skill is a separate, explicit whole-directory operation.
 TEMPLATES = [
     "README.template.md",
     "cli/README.template.md",
@@ -45,6 +40,13 @@ def expand(template_text: str, template_name: str) -> str:
             return f.read().rstrip("\n")
 
     body = INCLUDE_RE.sub(_replace, template_text)
+    # Skill discovery reads YAML at byte zero; generated provenance belongs
+    # after the metadata, never in front of it.
+    if template_name == "SKILL.template.md" and body.startswith("---\n"):
+        closing = body.find("\n---\n", 4)
+        if closing != -1:
+            end = closing + len("\n---\n")
+            return body[:end] + "\n" + header + body[end:]
     return header + body
 
 
@@ -80,15 +82,6 @@ def build(check: bool = False) -> bool:
             with open(out_abs, "w") as f:
                 f.write(result)
             print(f"WROTE {out_rel}")
-
-            # Special: copy skill output to external path
-            if tpl_rel == "skills/coherence-network/SKILL.template.md":
-                ext_dir = os.path.dirname(SKILL_EXTERNAL)
-                if os.path.isdir(ext_dir):
-                    shutil.copy2(out_abs, SKILL_EXTERNAL)
-                    print(f"COPY  {SKILL_EXTERNAL}")
-                else:
-                    print(f"SKIP  external copy ({ext_dir} not found)")
 
     return all_ok
 
