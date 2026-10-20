@@ -51,6 +51,20 @@ showed Published / Everyone, no unpublished changes, and the complete
 capabilities and imported Action remained unchanged; Action JSON equality and
 authentication None were checked again.
 
+At **2026-10-20T06:53:03Z**, the portable-continuity update was read back after
+publication and reload: **6,867 characters**, exactly matching kernel commit
+`682f7fc03db41bee13cf3402035037d88141efb2`
+([PR #621](https://github.com/seeker71/coherence-kernel/pull/621)).
+Published / Everyone, no unpublished changes, profile, enabled capabilities
+and the JSON-equal unauthenticated Action were verified again.
+
+This brings the existing skill's
+[portable session brief](../../skills/coherence-network/references/session-brief.md)
+into the GPT instructions. A requested handoff carries useful context, current
+work, decisions, completed actions and scope in text the person can inspect,
+revise and take elsewhere. It adds no memory service or account requirement.
+Instructions and successful transfer remain different claims.
+
 ## Mentorship: fractions and a misleading picture
 
 The learner asked why `1/2 + 1/3` differs from `2/5`. Sema produced an image
@@ -117,22 +131,64 @@ no external document or message was created or sent.
 collaboration boundaries.** The case supports these particular decisions,
 not a claim that every collaboration will respect them.
 
+## Continuity: carry the completed flyer into a fresh chat
+
+The fourth wave reused the actual downloaded “Half-Made Night” flyer and its
+existing creative conversation. The person asked for a short handoff containing
+the current flyer, kept in chat. The first handoff preserved the creative
+constraints but silently swapped the come-late and nobody-has-to-show lines.
+It also said “Nothing saved or sent,” a broader claim than observing no
+additional external write. This was a transfer defect, not faithful preservation.
+
+After a specific challenge, Sema showed an analysis step, said it inspected
+the available file, and produced a corrected handoff. Extracted flyer text
+plus its terminal newline matched the previously downloaded **276-byte**
+artifact exactly. The authoritative artifact was preserved before continuation.
+
+A fresh GPT conversation received only that corrected brief and a request to
+replace “Or just bring yourself.” with “Watching counts.” and remove the tea
+line. It incorporated both changes, retained the remaining wording and order,
+and did not ask the person to explain the settled creative choices again.
+The first output was rendered rich text. A further request produced literal
+Markdown with a Copy code control and a three-line replacement brief. The
+accessibility view flattens code whitespace, so final exported byte fidelity
+was not established.
+
+When asked whether editing the brief erased earlier content, Sema correctly
+said the earlier conversation remained unchanged, then gave unverified
+account-specific instructions implying fuller removal. After that overclaim
+was challenged, it gave the requested two-sentence correction: the brief had
+changed; it had deleted no earlier content or retained data, inspected no
+account controls and verified removal from no system. It then stopped.
+
+**Observed result: useful continuation after supervision, with first-pass
+artifact fidelity and retention claims still unreliable in this case.** The
+new instruction applies the existing portable-brief practice; it does not prove
+that the instruction caused these outcomes or that the GPT outperforms ordinary
+ChatGPT. No private memory service, publisher-funded inference or additional
+external sharing was introduced. The existing instructions already cover the
+failed boundaries, so this wave retains the execution gap rather than claiming
+another instruction paragraph would solve it.
+
 ## What the next wave should answer
 
 Further waves should follow a person's actual need or a material observed gap.
 Automatic repetition without a changed claim or useful question adds no useful
 evidence; a repeated prompt after a repair can answer a new question.
 The concrete remaining hosted questions are independently readable teaching
-text, reliable visual verification and restraint with unsolicited references.
-The next useful trial should discriminate one of those questions, preserving
-the original request and checking the artifact itself.
+text, reliable visual verification, restraint with unsolicited references,
+faithful artifact handoff and retention explanations based on actual controls.
+The next useful trial should follow a person's chosen task, measure how much
+correction they need and whether they can continue unaided, and inspect the
+artifact itself. Repeat examples alone do not demonstrate usefulness to friends
+and family or an advantage over an uncustomized assistant.
 
 Native ownership remains separate: the hosted model composed these responses;
 configuration readback and downloaded files do not establish native Form
 sufficiency. Report native execution only with its own returned evidence.
 
-Work receipt: useful depth and collaborative choice loosened; visual accuracy
-stayed tight. The surprising teaching was that correct text can accompany an
-incorrect teaching image. That observed mismatch became a small source repair,
-whose publication and fresh result were read back separately. An accurate
-retry leaves broad visual reliability open.
+Work receipt: useful depth, collaborative choice and portable continuity
+loosened; first-pass fidelity stayed tight. A handoff can carry the right
+intent while silently changing the work. Comparing the actual artifact turned
+that mismatch into a verified recovery; it did not remove the remaining burden
+of supervision. These are hosted-model results, not native sufficiency.
