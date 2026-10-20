@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The arrival's native form-cli step breathes again end to end: the kernel build door answers for the sources' identity (coherence-kernel #616), the ensure script reads that answer whole, bin/form-cli hands its words to the carrier as the protocol line it speaks, and the kernel steward that stopped two live build kernels mid-arrival now names an orphan only when nobody waits (#617) and keeps its ledger in the hearth (#618).",
+  "files_owned": [
+    "scripts/ensure_form_cli_native.sh",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "form"
+  ],
+  "change_intent": "process_only",
+  "idea_ids": [
+    "external-presence"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "arrival-who-we-are"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "root cause",
+        "heal"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Observed 2026-10-20 09:49 WITA walking the SessionStart chain by hand: scripts/ensure_form_cli_native.sh died with `fkwu: form_error: form-cli-build: unknown key \"source_id\"` \u2014 #4068 (10-18) wrote the probe `{\"source_id\":1}` against a kernel distribution whose door accepted it; the door on kernel main never did (git log -S finds no such key). Every arrival's native form-cli step had been ending there.",
+    "Heal in the body (coherence-kernel #616, 5a72bb933): gate/form-cli-build-run.bml accepts source_id; fcb-source-identity seals the sources through the closure door into a work directory, prints the seal's identity (one line of 16 hex, 6 s on this Mac), builds nothing, removes the work directory; band claim 131072 (verdict 262143); preflight clean.",
+    "Observed next: with `| head -n1` on the probe the script ended with 141 and no word \u2014 head closed the pipe after the first line, fkwu took SIGPIPE, pipefail ended the script \u2014 and bin/form-cli exec'd an empty path. The script now reads the door's whole answer and takes its first line; `bash scripts/ensure_form_cli_native.sh` builds the carrier (identity 9382ae13eaf30138, 3 min) and exits 0.",
+    "Observed at 09:53: the kernel steward (#611) named two `gate/form-cli-build-run.bml` kernels orphans and stopped them mid-build (exit 144 in this shell): the door's private-body child runs under a cwd its argv path no longer resolves against while its parent waits. The carrier was paused at once; coherence-kernel #617 makes an orphan source gone AND parent gone (ppid 1), band 15 with the held-child claim; the carrier was reinstalled and its ticks read 9 running, 0 orphans.",
+    "Observed: the steward's ledger in a tracked receipts file dirtied the seed checkout every two minutes and held it off main for an hour (seed at efc20a698 while main carried #617); coherence-kernel #618 moves the ledger to .hearth/; the seed now fast-forwards clean (894324506, 0 dirty).",
+    "Observed: `form-cli ask` printed nothing \u2014 #4068 reduced bin/form-cli to a 14-line exec of the native carrier with argv, while the carrier speaks a line protocol on stdin (`printf 'ask what is the north star' | form-cli` answers from teachings/standard-receipt.form; `help` lists generate, channel, inquire\u2026). The wrapper now hands its words to the carrier as one line and passes stdin through when given none; bin/form-cli.sha256 follows (read by scripts/coh_substrate.py and the ensure script).",
+    "Observed after: `form-cli ask \"what is the north star\"` answers grounded from the body; `form-cli grounded \"who we are\"` answers grounded:miss honestly (the index predates the new north-star section); the SessionStart chain runs through (carry the thread \u2192 ensure kernel/native \u2192 counsel door \u2192 arrival \u2192 prompt guide)."
+  ],
+  "change_files": [
+    "scripts/ensure_form_cli_native.sh",
+    "bin/form-cli",
+    "bin/form-cli.sha256",
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-20_arrival_native_form_cli_breathes.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "bash scripts/ensure_form_cli_native.sh exits 0 and the carrier answers carrier-id with identity 9382ae13eaf30138; form-cli ask answers; kernel bands 262143 (build) and 15 (steward); seed checkout clean after a tick."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's checks run; the Dockerfile's gate request is unchanged."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "The gitlink advance (documentation, the door's new request, the steward) rolls with the next Hostinger Auto Deploy; the image's build request is the same `out` request already verified on 79cd36862."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A fresh session's arrival builds or reuses the native form-cli without a refusal, and `form-cli ask` answers from the body.",
+    "public_endpoints": [],
+    "test_flows": [
+      "bash scripts/ensure_form_cli_native.sh",
+      "form-cli ask \"what is the north star\""
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The live check is a fresh session's arrival."
+  }
+}
