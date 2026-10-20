@@ -63,7 +63,7 @@ status_output="$("${GHX_CMD[@]}" auth status -h github.com 2>&1)" || {
   exit 1
 }
 
-account_line="$(printf '%s\n' "$status_output" | rg -m1 "Logged in to github.com account" || true)"
+account_line="$(printf '%s\n' "$status_output" | grep -m1 "Logged in to github.com account" || true)"
 if [[ -z "$account_line" ]]; then
   echo "ghx-auth-check: unable to parse account from ghx auth status output."
   echo "$status_output"

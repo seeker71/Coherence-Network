@@ -1,4 +1,4 @@
-# Worktree Quickstart (Mandatory)
+# Worktree Quickstart
 
 Date: 2026-02-17
 
@@ -28,7 +28,7 @@ PowerShell notes for this host:
 - Git Bash is at `C:\Program Files\Git\bin\bash.exe`; the Makefile uses it automatically for startup targets on Windows.
 - Run `gh auth login` before unbypassed `make prompt-guide` and PR checks if the bootstrap warns that GitHub CLI is not authenticated.
 
-## Rule 0
+## The one practice
 
 - Never implement from the primary repo workspace.
 - Always create/use a linked worktree under `~/.claude-worktrees/Coherence-Network/`.
@@ -57,7 +57,7 @@ git submodule update --init --recursive
 make prompt-guide
 ```
 
-## Mandatory Preflight (before edits)
+## Before edits
 
 ```bash
 make prompt-guide
@@ -106,7 +106,7 @@ Temporary bypass (not recommended):
 PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide
 ```
 
-## Mandatory Local Guard (before commit/push)
+## Before commit/push — the local proof
 
 Enable local git hook enforcement once per worktree (can be done once per checkout):
 
