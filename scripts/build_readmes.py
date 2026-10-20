@@ -52,7 +52,7 @@ def expand(template_text: str, template_name: str) -> str:
 
 
 def build_companion_plugin(check: bool = False) -> bool:
-    """Package the canonical companion skill; keep repository-only skills out."""
+    """Package canonical companion guidance, license, and existing brand asset."""
     root = Path(REPO_ROOT)
     plugin = root / "plugins" / "coherence-companion"
     if not (plugin / "plugin.json").is_file():
@@ -60,7 +60,8 @@ def build_companion_plugin(check: bool = False) -> bool:
     source = root / "skills" / "coherence-network"
     destination = plugin / "skills" / "coherence-network"
     copies = [(source / "SKILL.md", destination / "SKILL.md"),
-              (root / "LICENSE", plugin / "LICENSE")]
+              (root / "LICENSE", plugin / "LICENSE"),
+              (root / "web/public/assets/logo.svg", plugin / "assets/logo.svg")]
     copies.extend((path, destination / "references" / path.name)
                   for path in sorted((source / "references").glob("*.md")))
     expected = {target for _, target in copies}

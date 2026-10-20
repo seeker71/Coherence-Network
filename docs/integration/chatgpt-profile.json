@@ -1,0 +1,27 @@
+{
+  "gpt_id": "g-6a4a77627dbc819180a16645f5662625",
+  "name": "Sema — coherence-kernel",
+  "description": "Think, learn, design, create, and collaborate with Sema. Get useful work through the host's available tools, with relevant teachings and source traces from the Form body.",
+  "instruction_source": "form/plugin/ai-plugin.json#description_for_model",
+  "conversation_starters": [
+    "Teach me something at my level, one step at a time.",
+    "Help me test a business idea with a small, practical experiment.",
+    "Help me create or improve a piece of writing or a design.",
+    "Help us make a clear plan together, with room for different views."
+  ],
+  "preserved_action": {
+    "server": "https://sema.hati.earth",
+    "authentication": "None",
+    "operations": [
+      "GET /ask",
+      "GET /trace"
+    ]
+  },
+  "preserved_capabilities": [
+    "Web Search",
+    "Canvas",
+    "Image Generation",
+    "Code Interpreter & Data Analysis"
+  ],
+  "visibility": "Everyone"
+}
