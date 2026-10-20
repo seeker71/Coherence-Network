@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/companion-faithful-wave-20261020",
+  "commit_scope": "Publish explicit approved-source comparison and bounded retention guidance in the GPT and free skill, then observe first-response continuity and mentoring.",
+  "files_owned": [
+    "form",
+    "skills/coherence-network/references/session-brief.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "plugins/coherence-companion/plugin.json",
+    "docs/front-door/connectors.md",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_gpt_faithful_wave.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_files": [
+    "form",
+    "skills/coherence-network/references/session-brief.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "plugins/coherence-companion/plugin.json",
+    "docs/front-door/connectors.md",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-20_gpt_faithful_wave.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/companion-gpt-rollout.md"
+  ],
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "gpt-faithful-wave-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Canonical JSON invariant;7103characters; independent source review and pin provenance; generator current;4bundle tests passed;8ZIPmembers equal source. Spec/evidence checks cover this receipt.",
+    "commands": [
+      "JSON parse and changed-key assertion: description_for_model only",
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run uv run --directory mcp-server --locked --with pytest --with pytest-asyncio python -m pytest tests/test_companion_plugin.py -q --noconftest",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-20_gpt_faithful_wave.json",
+      "form-run git diff --check",
+      "Compare every ZIP member with source and canonical session-brief bytes"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR622 merged after local invariant checks and independent review; no automated status checks were reported. Parent checks not yet observed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Approved-source handoff and requested fresh-chat revision preserve content without corrections; retention answer describes actual scope without unverified account instructions.",
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ],
+    "test_flows": [
+      "Published7103-character saved readback; profile/capabilities and original Action equal.",
+      "Fresh approved flyer creation downloaded:276bytes matching originalSHA256. Same handoff prompt: copied embedded source matches approved bytes without correction.",
+      "Fresh-chat requested revision: actual copied code matches expected wording/order/Markdown after one terminal-newline normalization; no revised file created.",
+      "First retention answer distinguishes current text, prior chat and unmodified/unrechecked file, without account-setting instructions or complete-erasure claims.",
+      "Mentoring pause/resume: ambiguous3/9scope clarified once; corrected answer-free note used in fresh chat; one hint and final one-sentence stop observed."
+    ],
+    "limits": "One bounded first-response chain, with changed setup and nondeterministic host; no causal improvement or broad superiority claimed. Scripted mentoring requires no claim about actual human learning. Mentoring included one clarification of ambiguous answer scope, not a clean first-pass learner-state transfer."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Existing GPT publication and complete readback verified at2026-10-20T09:06:53.529Z.0.6.2ZIP prepared and matched to source; public release/download still pending. No billing, Action-scope or server deployment change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Public0.6.2release/readback and parent CI observation remain to be recorded; current publication and local proof are complete."
+  },
+  "evidence_refs": [
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "skills/coherence-network/references/session-brief.md",
+    "https://github.com/seeker71/coherence-kernel/pull/622",
+    "https://developers.openai.com/api/docs/guides/prompt-engineering",
+    "https://learn.chatgpt.com/docs/enterprise/chatgpt-work-overview"
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex and hosted GPT responses; exact serving variants and task token counts unavailable.",
+    "native": "Known form-cli wrapper bootstrap failure was not repeated. Working fkwu enrichment returned no exact entries for artifact/handoff/retention/verification; no sufficient native answer. Native local-flow observation completed; task-specific token totals unavailable.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent; qualitative review",
+      "suffic": 0,
+      "observed": false
+    },
+    "native_contender": "Existing fkwu companion/native-voice lanes were source-reviewed only. Current fixed companion conversation log is not an isolated multi-person memory service; no native continuity parity or readiness claimed."
+  },
+  "work_receipt": {
+    "loosened": "First-response approved artifact transfer and bounded retention answer worked in the observed chain.",
+    "tight": "One terminal newline omitted by copied revised code; broader reliability and independent-recipient outcomes remain unproved.",
+    "surprise": "Inspecting the actual Copy code payload made formatting verifiable despite flattened accessibility rendering.",
+    "friction_to_lesson": "Read/copy/edit/compare replaced vague preservation guidance; truthful retention stayed with the specific effects."
+  },
+  "inherited_pin": {
+    "from": "682f7fc03db41bee13cf3402035037d88141efb2",
+    "to": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1",
+    "scope": "3commits/32files include previously merged Glass/ear/native-care/Metal changes and native-turn receipts. PR622 itself changes only plugin/ai-plugin.json. Skills ZIP excludes kernel runtime.",
+    "proof_owner": "Upstream receipts/2026-10-20-glass-care-and-observation.md; focused proof reused, not rerun. Current Glass liveness is not established by this wave."
+  }
+}

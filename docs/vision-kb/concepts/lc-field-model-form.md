@@ -41,7 +41,7 @@ Forward and reverse paths stay part of the same shape. A field change is not com
 - `form/form-stdlib/field-model-form.fk`
 - `form/form-stdlib/field-model-form-runtime.fk`
 - `form/form-stdlib/tests/field-model-form-band.fk`
-- `specs/retired/field-model-form-v0.md`
+- `specs/field-model-form-v0.md`
 
 ## Relation
 
