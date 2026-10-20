@@ -11,4 +11,9 @@ while [ -h "$src" ]; do
 done
 root="$(cd -P "$(dirname "$src")/.." && pwd)"
 native="$(bash "$root/scripts/ensure_form_cli_native.sh" --print-path)"
-exec "$native" "$@"
+# The native carrier speaks a line protocol on stdin (`ask <question>`, `grounded <question>`, `help`, …);
+# words on the command line are one such line, and with none the caller's stdin is the conversation.
+if [ "$#" -gt 0 ]; then
+  exec "$native" < <(printf '%s\n' "$*")
+fi
+exec "$native"

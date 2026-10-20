@@ -116,12 +116,18 @@ mkdir -p "$TARGET_DIR"
 if [ ! -x "$FKWU" ] || [ "$KERNEL_ROOT/runtime/fkwu-uni.c" -nt "$FKWU" ]; then
   cc -O2 -o "$FKWU" "$KERNEL_ROOT/runtime/fkwu-uni.c"
 fi
-CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml)"
+CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml 2>/dev/null)"
+# the door's first line is the identity; the line after it is the door's own exit value. Reading the whole answer first
+# keeps the door from a closed pipe (head -n1 sent it SIGPIPE, and pipefail ended this script with 141 and no word).
+CURRENT_SOURCE_ID="${CURRENT_SOURCE_ID%%$'\n'*}"
 if [ "${#CURRENT_SOURCE_ID}" -ne 16 ]; then
   # a stale seed answers the probe with a refusal, not an identity; rebuild
   # it once from the pinned source and ask again before giving up
   cc -O2 -o "$FKWU" "$KERNEL_ROOT/runtime/fkwu-uni.c"
-  CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml)"
+  CURRENT_SOURCE_ID="$(cd "$KERNEL_ROOT" && printf '{"source_id":1}\n' | ./fkwu gate/form-cli-build-run.bml 2>/dev/null)"
+# the door's first line is the identity; the line after it is the door's own exit value. Reading the whole answer first
+# keeps the door from a closed pipe (head -n1 sent it SIGPIPE, and pipefail ended this script with 141 and no word).
+CURRENT_SOURCE_ID="${CURRENT_SOURCE_ID%%$'\n'*}"
 fi
 [ "${#CURRENT_SOURCE_ID}" -eq 16 ] || {
   echo "form-cli: Form source identity is unavailable" >&2
