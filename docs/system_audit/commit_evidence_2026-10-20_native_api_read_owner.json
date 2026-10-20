@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/native-upstream-flow-20261020",
+  "commit_scope": "Give hot API read families a reusable native Form/BML owner with authenticated PostgreSQL and source-owned projection work.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "pipeline-reliability",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources",
+    "ideas-prioritization"
+  ],
+  "task_ids": [
+    "native-upstream-api-read-ownership"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "native resource and projection source repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "exact-serving-model-variant-not-exposed"
+  },
+  "files_owned": [
+    "Dockerfile.api",
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "api/app/form_recipes/native_crypto.bml",
+    "api/app/form_recipes/postgres.bml",
+    "api/app/form_recipes/native_config.bml",
+    "api/app/form_recipes/graph_projection.bml",
+    "api/app/form_recipes/native_http.bml",
+    "api/app/form_recipes/native_api_handlers.bml",
+    "api/app/form_recipes/native_api_prepare.bml",
+    "api/app/form_recipes/native_api.bml",
+    "api/app/form_recipes/native_api_health.bml",
+    "api/config/fkwu.conf",
+    "api/config/native_api.json",
+    "CLAUDE.md",
+    "docs/DEPLOY.md",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "Dockerfile.api",
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "api/app/form_recipes/native_crypto.bml",
+    "api/app/form_recipes/postgres.bml",
+    "api/app/form_recipes/native_config.bml",
+    "api/app/form_recipes/graph_projection.bml",
+    "api/app/form_recipes/native_http.bml",
+    "api/app/form_recipes/native_api_handlers.bml",
+    "api/app/form_recipes/native_api_prepare.bml",
+    "api/app/form_recipes/native_api.bml",
+    "api/app/form_recipes/native_api_health.bml",
+    "api/config/fkwu.conf",
+    "api/config/native_api.json",
+    "CLAUDE.md",
+    "docs/DEPLOY.md",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "On current production e6342eb98 the native Pulse current-state read returned 200 in226ms/44ms serving while ideas and vitality upstream samples were2715ms/2686ms. Prior rollout readings also retained real404/timeout findings. The request seam, not the repaired Pulse dispatch, gained work.",
+    "Python source built and scored the complete portfolio before pagination, repeatedly shaped graph data and translated on reads. Native Form/BML now owns framed PostgreSQL startup, bound parameters, SCRAM-SHA-256 server proof, request templates, file-backed config and independent JIT request contexts. No new Python/Go/C implementation, host-language route, response cache or kernel change.",
+    "Linux native crypto observation passed RFC4231 HMAC bytes and PBKDF2-SHA2564096 reference bytes in982ms. Native PostgreSQL authenticated against current production, observed4586ideas, passed quoted UTF8/bound-number/null bytes, drained deliberate SQLSTATE42703, then queried and reopened with the matching derived credential. Initial authentication915ms; work plus reopen25ms.",
+    "Read-only native HTTP rehearsal used the actual application layout and existing fkwu seed: all six concurrent responses200; health29ms/15ms serving, ideas162/149, nodes89/63, count66/52, private-ownership61/45, earlier vitality624/611. Full trace is retained privately at /data/native-io/33245-latency-trace. Protected spending returned no public rows. This is a changed-application observation, not a kernel suite.",
+    "Actual EXPLAIN found graph JSON emitted for69379rows before LIMIT1, and inflated edge joins estimated12157498rows for5355actual, spending879.150ms in PostgreSQL JIT compilation. Source now materializes selected page identities before JSON, evaluates aggregate signals once and expresses edge eligibility as bounded membership. The final vitality projection read307ms against the same live database. No JIT disable, timer workaround or relaxed probe threshold.",
+    "Native startup creates graph_nodes_native_recent and graph_nodes_native_workspace_kind concurrently. A missing expression-index statistics reading earns ANALYZE once; unchanged starts reuse it. No table data was deleted or rewritten. No old history or response-parity requirement was imposed.",
+    "Native Compose preview derived the current API host, shared application image, eight GET route bindings and native dependency. Request dispatch goes directly to native-api8110, with no Python fallback. Existing compatibility routes are retired in the following handoff change after native public activation.",
+    "Only native source admission, the affected byte/persistence/query/HTTP observations, source diff and this receipt validation were used. Public deployment and CI status remain pending, not inferred from private rehearsal. OpenAI authored reasoning and source; native Form performed observations; no grounded NodeID/sufficiency hit is claimed."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Affected native resource/route observations and immutable-layout application admission; no runtime-kernel or broad suite."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Read current PR findings against source."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Build merged image, apply native Compose ownership, activate native-api, then observe public routes."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hot reads reach fkwu/PostgreSQL directly; private records stay private, all-data vitality replaces sampled caps, and no Python list/model/translation work owns those requests.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/native/health",
+      "https://api.coherencycoin.com/api/ideas?limit=1&sort=marginal_cc",
+      "https://api.coherencycoin.com/api/workspaces/coherence-network/vitality",
+      "https://api.coherencycoin.com/api/graph/nodes?limit=1"
+    ],
+    "test_flows": [
+      "Existing pulse/trace.bml public request wave",
+      "Running native image/process and public X-Form-Router observation"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Public handoff is next and has not yet been observed; this field records evidence state, not a policy gate."
+  }
+}

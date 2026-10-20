@@ -14,20 +14,25 @@ kernel deployment paths are historical rather than live topology.
 | Deploy root | `/docker/coherence-network` |
 | Repo on host | `/docker/coherence-network/repo` |
 | Front proxy | Traefik behind Cloudflare |
-| Runtime services | `api`, `web`, `postgres`, `neo4j` in Docker Compose |
+| Runtime services | `native-api`, `api`, `web`, `pulse`, `postgres`, `neo4j` in Docker Compose |
 | Form runtime inside API | c-bootstrapped `fkwu` |
 | Native ask carrier | Form-built `form-cli` v3 bundle |
 
-Traefik sends API traffic to `api:8000`. The API container is the current
-compatibility HTTP host and contains only one Form runtime: fkwu. There is no
-Go/Rust/TypeScript kernel-router service, native-preview header overlay, or
-Python-fallback fanout in the current deployment.
+Traefik sends the GET routes declared in `api/config/native_api.json` directly
+to `native-api:8110`. That owner runs fkwu and opens its own authenticated
+PostgreSQL connections. Other API families and verbs stay with `api:8000` while
+their owners move. There is no Python forwarding or fallback inside the native
+owner. Both services reuse the same immutable application image; their process
+entrypoints and file-backed runtime contexts are separate.
 
 Application-owned recipes under `api/app/form_recipes/` execute directly on
-fkwu. The native BML application catalog at
-`form/form/apps/coherence-network/api.bml` is the destination host surface;
-its route families become public only when fkwu owns their HTTP dispatch,
-configuration, persistence, and startup effects end to end.
+fkwu. `native_api.bml` owns native startup and dispatch; `native_http.bml` shares
+route-template meaning with deployment; `postgres.bml` owns wire framing,
+parameter binding, SCRAM server verification and query-error recovery.
+`graph_projection.bml` selects pages before JSON materialization and aggregates
+workspace vitality without sampled-data caps. Public graph reads carry the
+file-backed private-type ownership description; private spending stays private.
+The earlier kernel-side API catalog is not a production dispatch authority.
 
 ## Configuration and credentials
 
@@ -56,9 +61,12 @@ docker compose exec -T postgres sh -lc \
 SH
 ```
 
-This is a database observation, not a second application execution path. The
-remaining production work is to move Postgres ownership into the fkwu/BML
-application host and then remove each corresponding Python owner.
+This is a database observation, not a second application execution path.
+Native read families now own PostgreSQL through Form/BML. Remaining compatibility
+families move at their live seams, then release their corresponding Python owners.
+The native startup care creates its recent-order and workspace/kind indexes
+concurrently. A missing expression-index selectivity reading earns one ANALYZE;
+unchanged starts reuse that reading rather than scanning the table again.
 
 ## Runtime identity
 

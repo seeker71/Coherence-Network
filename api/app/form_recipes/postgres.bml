@@ -1,0 +1,96 @@
+// PostgreSQL wire ownership in Form. Parameters stay separate from SQL;
+// SCRAM verifies the server proof before a connection becomes a query resource.
+import native_crypto.bml;
+import form-stdlib/json.fk;
+import form-stdlib/line-grammar.fk;
+section [form.bml] {
+ class NativePostgres {
+  def npg-be(n,width) = npg-unsigned(n<0 ? n+npg-power256(width) : n,width);
+  def npg-unsigned(n,width) = width == 0 ? "" : npg-unsigned(n/256,width - 1) ++ byte_to_str(n%256);
+  def npg-int(s,at,n) = n == 0 ? 0 : str_byte_at(s,at)*npg-power256(n - 1)+npg-int(s,at+1,n - 1);
+  def npg-power256(n) = n == 0 ? 1 : 256*npg-power256(n - 1);
+  def npg-cstr(s) = s ++ nc-z();
+  def npg-message(kind,body) = kind ++ npg-be(len(body)+4,4) ++ body;
+  def npg-send(fd,text,at) = at>=len(text) ? 0 : {
+   let sent = socket_send(fd,substring(text,at,len(text)));
+   sent<=0 ? form_error("PostgreSQL send ended before its frame") : npg-send(fd,text,at+sent);
+  };
+  def npg-read(fd,n,parts) = n == 0 ? str-spans(reverse(parts)) : {
+   let chunk = socket_recv(fd,n);
+   nothing?(chunk) || len(chunk) == 0 ? form_error("PostgreSQL receive ended before its frame") : npg-read(fd,n - len(chunk),cons(chunk,parts));
+  };
+  def npg-frame(fd) {
+   let head = npg-read(fd,5,[]); let n = npg-int(head,1,4);
+   n<4 ? form_error("PostgreSQL returned an invalid frame length") : [substring(head,0,1),npg-read(fd,n - 4,[])];
+  }
+  def npg-field(text,key) {
+   let matches = filter(v => str_find(v,key ++ "=",0) == 0,split-on(text,","));
+   len(matches) != 1 ? form_error("SCRAM challenge has a missing or repeated attribute") : substring(matches[0],len(key)+1,len(matches[0]));
+  }
+  def npg-error-code(body,at) = at>=len(body) || str_byte_at(body,at) == 0 ? "unknown" : {
+   let end = str_find(body,nc-z(),at+1);
+   end<0 ? "invalid-frame" : substring(body,at,at+1) == "C" ? substring(body,at+1,end) : npg-error-code(body,end+1);
+  };
+  def npg-error(body) = form_error("PostgreSQL source returned SQLSTATE " ++ npg-error-code(body,0));
+  def npg-text(doc,key) = json-string-value(json-object-get(doc,key)) ?? "";
+  def npg-salted(password,salt,iterations,credential) = !nothing?(credential) && record_get(credential,"salt") == salt && record_get(credential,"iterations") == iterations && nc-equal(record_get(credential,"password"),password) ? credential : record_new(0,"salt",salt,"iterations",iterations,"password",password,"salted",nc-pbkdf(password,nc-unbase64(salt),iterations));
+  def npg-challenge(fd,password,nonce,bare,challenge,credential) {
+   let attrs = split-on(challenge,","); let names = map(v => split-on(v,"=")[0],attrs);
+   let server_nonce = npg-field(challenge,"r"); let salt = npg-field(challenge,"s"); let rounds = npg-field(challenge,"i");
+   let iterations = str_to_int(rounds);
+   any?(k => k == "m" || len(filter(one => one == k,names)) != 1,names) || str_find(server_nonce,nonce,0) != 0 || len(server_nonce)<=len(nonce) || iterations<1 || !all?(i => str_byte_at(rounds,i)>=48 && str_byte_at(rounds,i)<=57,range(0,len(rounds))) ? form_error("SCRAM server challenge needs care") : {
+    let held = npg-salted(password,salt,iterations,credential); let salted = record_get(held,"salted");
+    let final = "c=biws,r=" ++ server_nonce; let auth = bare ++ "," ++ challenge ++ "," ++ final;
+    let client = nc-hmac(salted,"Client Key"); let proof = nc-xor(client,nc-hmac(nc-sha256(client),auth));
+    let signature = nc-hmac(nc-hmac(salted,"Server Key"),auth);
+    let sent = npg-send(fd,npg-message("p",final ++ ",p=" ++ nc-base64(proof)),0);
+    npg-auth(fd,password,nonce,bare,signature,false,false,held);
+   };
+  }
+  def npg-auth(fd,password,nonce,bare,signature,verified,authenticated,credential) {
+   let frame = npg-frame(fd); let kind = frame[0]; let body = frame[1];
+   kind == "E" ? npg-error(body) : kind == "Z" ? (!authenticated || (len(signature)>0 && !verified) ? form_error("PostgreSQL reached ready without authenticated identity") : credential) : kind != "R" ? npg-auth(fd,password,nonce,bare,signature,verified,authenticated,credential) : {
+    let code = npg-int(body,0,4); let data = substring(body,4,len(body));
+    code == 10 ? (!any?(v => v == "SCRAM-SHA-256",split-on(data,nc-z())) || len(bare)>0 ? form_error("PostgreSQL authentication mechanism needs care") : {
+     let first = "n=,r=" ++ nonce; let initial = "n,," ++ first;
+     let sent = npg-send(fd,npg-message("p",npg-cstr("SCRAM-SHA-256") ++ npg-be(len(initial),4) ++ initial),0);
+     npg-auth(fd,password,nonce,first,"",false,false,credential);
+    }) : code == 11 ? (len(bare) == 0 || len(signature)>0 ? form_error("SCRAM challenge arrived outside its exchange") : npg-challenge(fd,password,nonce,bare,data,credential)) : code == 12 ? (len(signature) != 32 || verified || !nc-equal(nc-unbase64(npg-field(data,"v")),signature) ? form_error("SCRAM server identity differs") : npg-auth(fd,password,nonce,bare,signature,true,false,credential)) : code == 0 ? (len(signature)>0 && !verified ? form_error("SCRAM server proof was not observed") : npg-auth(fd,password,nonce,bare,signature,verified,true,credential)) : form_error("PostgreSQL authentication shape needs work: " ++ code.str());
+   };
+  }
+  def npg-open(cfg,credential) {
+   let host = npg-text(cfg,"host"); let port = json-object-has?(cfg,"port") ? str_to_int(json-emit(json-object-get(cfg,"port"))) : 5432;
+   let fd = socket_connect(host,port);
+   fd<0 ? form_error("PostgreSQL connection resource unavailable") : {
+    let body = npg-be(196608,4) ++ npg-cstr("user") ++ npg-cstr(npg-text(cfg,"user")) ++ npg-cstr("database") ++ npg-cstr(npg-text(cfg,"database")) ++ npg-cstr("client_encoding") ++ npg-cstr("UTF8") ++ npg-cstr("application_name") ++ npg-cstr("form-native-api") ++ nc-z();
+    let sent = npg-send(fd,npg-be(len(body)+4,4) ++ body,0);
+    let accepted = attempt(npg-auth(fd,npg-text(cfg,"password"),nc-base64(nc-random(18)),"","",false,false,credential));
+    nothing?(accepted) ? { socket_close(fd); form_error("PostgreSQL authentication needs source care"); } : record_new(0,"fd",fd,"credential",accepted);
+   };
+  }
+  def npg-close(conn) = socket_close(record_get(conn,"fd"));
+  def npg-parameter(value) = nothing?(value) ? npg-be(-1,4) : {
+   let text = value_kind(value) == "string" ? value : value_kind(value) == "bool" ? (value ? "true" : "false") : value.str();
+   npg-be(len(text),4) ++ text;
+  };
+  def npg-columns(body,at,left,out) = left == 0 ? reverse(out) : {
+   let end = str_find(body,nc-z(),at);
+   end<0 || end+19>len(body) ? form_error("PostgreSQL column frame is incomplete") : npg-columns(body,end+19,left - 1,cons(substring(body,at,end),out));
+  };
+  def npg-row(body,at,left,out) = left == 0 ? reverse(out) : {
+   let n = npg-int(body,at,4);
+   n == 4294967295 ? npg-row(body,at+4,left - 1,cons(nothing(),out)) : at+4+n>len(body) ? form_error("PostgreSQL row frame is incomplete") : npg-row(body,at+4+n,left - 1,cons(substring(body,at+4,at+4+n),out));
+  };
+  def npg-results(fd,columns,rows,error) {
+   let frame = npg-frame(fd); let kind = frame[0]; let body = frame[1];
+   kind == "Z" ? (len(error)>0 ? form_error("PostgreSQL query returned SQLSTATE " ++ error) : [columns,reverse(rows)]) : kind == "E" ? npg-results(fd,columns,rows,npg-error-code(body,0)) : kind == "T" ? npg-results(fd,npg-columns(body,2,npg-int(body,0,2),[]),rows,error) : kind == "D" ? npg-results(fd,columns,cons(npg-row(body,2,npg-int(body,0,2),[]),rows),error) : npg-results(fd,columns,rows,error);
+  }
+  def npg-query(conn,sql,parameters) {
+   let fd = record_get(conn,"fd");
+   let parse = npg-message("P",nc-z() ++ npg-cstr(sql) ++ npg-be(0,2));
+   let bind = npg-message("B",nc-z() ++ nc-z() ++ npg-be(0,2) ++ npg-be(len(parameters),2) ++ str-spans(map(v => npg-parameter(v),parameters)) ++ npg-be(0,2));
+   let sent = npg-send(fd,parse ++ bind ++ npg-message("D","P" ++ nc-z()) ++ npg-message("E",nc-z() ++ npg-be(0,4)) ++ npg-message("S",""),0);
+   npg-results(fd,[],[],"");
+  }
+ }
+}

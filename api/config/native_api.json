@@ -1,0 +1,17 @@
+{
+  "port": 8110,
+  "page_size": 50,
+  "private_graph_types": ["grocery_spend"],
+  "existing_route_sources": ["../api/app/routers/ideas.py", "../api/app/routers/graph.py"],
+  "existing_route_prefix": "/api",
+  "routes": [
+    {"method":"GET","path":"/api/native/health","projection":"health"},
+    {"method":"GET","path":"/api/ideas","projection":"ideas"},
+    {"method":"GET","path":"/api/ideas/resonance","projection":"resonance"},
+    {"method":"GET","path":"/api/ideas/{idea_id}","projection":"idea"},
+    {"method":"GET","path":"/api/workspaces/{workspace_id}/vitality","projection":"vitality"},
+    {"method":"GET","path":"/api/graph/nodes","projection":"nodes"},
+    {"method":"GET","path":"/api/graph/nodes/count","projection":"node-count"},
+    {"method":"GET","path":"/api/graph/nodes/{node_id}","projection":"node"}
+  ]
+}

@@ -1,0 +1,10 @@
+// One native application owner. Request contexts inherit admitted recipes and
+// the matching derived credential, then own independent database connections.
+import native_api_handlers.bml;
+import native_api_prepare.bml;
+section [form.bml] {
+ let server = ncf-file("../config/native_api.json"); let database = ncf-postgres(ncf-load());
+ let first = npg-open(database,nothing()); let credential = record_get(first,"credential"); let prepared = nap-prepare(first); let closed = npg-close(first);
+ let port = str_to_int(json-emit(json-object-get(server,"port")));
+ nsd-serve(nsd-open(port,raw => nap-handle(database,credential,server,raw)));
+}

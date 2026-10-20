@@ -1,0 +1,16 @@
+// Persistence care for the live projection shapes, not a request-time discovery pass.
+import postgres.bml;
+section [form.bml] {
+ class NativeApiPreparation {
+  def nap-prepare(conn) {
+   let indexes = map(sql => npg-query(conn,sql,[]),[
+   "CREATE INDEX CONCURRENTLY IF NOT EXISTS graph_nodes_native_recent ON graph_nodes (updated_at DESC,id)",
+   "CREATE INDEX CONCURRENTLY IF NOT EXISTS graph_nodes_native_workspace_kind ON graph_nodes ((COALESCE(properties->>'workspace_id','coherence-network')),type,updated_at DESC,id)"
+   ]);
+   // A newly created expression index has no selectivity reading until ANALYZE.
+   // Ask only for that missing reading, not a fresh table scan at every startup.
+   let statistics = npg-query(conn,"SELECT count(*)::text FROM pg_stats WHERE schemaname='public' AND tablename='graph_nodes_native_workspace_kind'",[]);
+   statistics[1][0][0] == "0" ? npg-query(conn,"ANALYZE graph_nodes",[]) : [];
+  }
+ }
+}
