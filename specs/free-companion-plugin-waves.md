@@ -34,7 +34,7 @@ through these journeys, not a claim of universal optimality.
 
 ## Requirements
 
-- [ ] **R1 — Free distribution:** publish an Apache-2.0 companion archive with
+- [x] **R1 — Free distribution:** publish an Apache-2.0 companion archive with
   source and clear setup, independent of npm publishing credentials. No Coherence
   payment, registration, identity binding or API key for ordinary assistance.
 - [x] **R2 — Portable skill:** only the everyday skill and its relevant references
@@ -134,6 +134,15 @@ form-run codex plugin list --available --json --marketplace coherence-network
 - Authenticated shared family storage, automatic cross-chat memory, a new model,
 and unsupported host capability guarantees remain outside this release. The
 native roadmap in the earlier spec retains their prerequisites and proofs.
+
+## Observed Release
+
+[Companion 0.6.0](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0)
+is public. Unauthenticated downloads matched reviewed checksums, Codex installed
+from the pinned public marketplace, and an actual MCP client exercised the
+GitHub archive through `npx` with isolated configuration. The
+[release receipt](../docs/system_audit/companion_release_verification_2026-10-20.json)
+records scope, outputs and remaining distribution dependencies.
 
 ## Known Gaps and Follow-up Tasks
 

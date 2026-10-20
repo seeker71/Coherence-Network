@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/companion-release-proof-20261020",
+  "commit_scope": "Record completed public companion0.6.0 distribution with unauthenticated checksum read-back and actual public-source plugin/MCP installation.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-10-20_companion_public_release.json",
+    "docs/system_audit/companion_release_verification_2026-10-20.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/free-companion-plugin-waves.md"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-10-20_companion_public_release.json",
+    "docs/system_audit/companion_release_verification_2026-10-20.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/free-companion-plugin-waves.md"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "free-companion-plugin-waves"
+  ],
+  "task_ids": [
+    "companion-public-release-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "release",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Public artifacts matched reviewed bytes; supported Codex install and actual npx GitHub archive MCP lifecycle passed. Source proofs reused while source remained unchanged.",
+    "commands": [
+      "Public curl downloads of ZIP, TGZ and SHA256SUMS; shasum -a 256 -c SHA256SUMS; cmp against reviewed manifest",
+      "codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.0 --sparse .agents/plugins --sparse plugins/coherence-companion",
+      "codex plugin add coherence-companion@coherence-network --json",
+      "codex plugin list --available --json --marketplace coherence-network",
+      "npx -y https://github.com/seeker71/Coherence-Network/releases/download/companion-v0.6.0/coherence-mcp-server-0.6.0.tgz",
+      "fkwu observe/local-flow-review.bml; fkwu observe/session-rent-run.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "summary": "Source PR4113 merged at4f78ebe0d9b176caf56e5fba6fdc918ec081c6cc with successful GitGuardian check and independent source/archive reviews. This receipt changes only documentation."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "GitHub companion-v0.6.0 published; public downloads, pinned marketplace install and public npx archive session verified. No npm, directory, GPT or production service rollout claimed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_reason": null
+  },
+  "evidence_refs": [
+    "docs/system_audit/companion_release_verification_2026-10-20.json",
+    "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0",
+    "https://github.com/seeker71/Coherence-Network/pull/4113",
+    "Source release checks are recorded in docs/system_audit/commit_evidence_2026-10-20_companion_plugin_waves.json. Its publication-pending status describes the pre-merge observation; this receipt closes public GitHub distribution."
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex, GPT-6 family; exact serving variant/task token totals unavailable.",
+    "native": "Opening and closing fkwu local-flow-review plus session-rent-run completed. Readings span other/historical sessions and are not task-specific percentages. Native structural lookup was insufficient; package/install observations are host execution proof.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent, qualitative review",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Anyone can download the free reviewed plugin without Coherence credentials; supported Codex installation is proven from the public tag.",
+    "tight": "Host access, directory approval, npm authentication and existing GPT rollout remain separate.",
+    "surprise": "The public npx archive route provides a working optional MCP install without a new npm registry publication.",
+    "friction_to_lesson": "Clean public-source installation converted distribution assumptions into observable results."
+  }
+}

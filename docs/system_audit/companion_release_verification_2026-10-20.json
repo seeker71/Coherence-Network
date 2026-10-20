@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-20",
+  "release": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0",
+  "tag": "companion-v0.6.0",
+  "source_commit": "4f78ebe0d9b176caf56e5fba6fdc918ec081c6cc",
+  "source_pr": "https://github.com/seeker71/Coherence-Network/pull/4113",
+  "public": {
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-20T04:28:33Z",
+    "unauthenticated_downloads": "pass",
+    "checksum_readback": "pass",
+    "checksums": {
+      "coherence-companion-0.6.0.zip": "5afd715674160aaa9b45db6891f3ed528ca1da90cc274cfcd84f577142d8c049",
+      "coherence-mcp-server-0.6.0.tgz": "a84c6463dc971ec7c900838eab24b9bd05644d8860e403637aad15b9e5da67c8"
+    }
+  },
+  "plugin_install": {
+    "status": "pass",
+    "marketplace_source": "https://github.com/seeker71/Coherence-Network.git",
+    "ref": "companion-v0.6.0",
+    "version": "0.6.0",
+    "installed": true,
+    "enabled": true,
+    "source_comparison": "exact byte match",
+    "commands": [
+      "codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.0 --sparse .agents/plugins --sparse plugins/coherence-companion",
+      "codex plugin add coherence-companion@coherence-network --json",
+      "codex plugin list --available --json --marketplace coherence-network"
+    ]
+  },
+  "mcp_public_archive": {
+    "status": "pass",
+    "command": "npx -y https://github.com/seeker71/Coherence-Network/releases/download/companion-v0.6.0/coherence-mcp-server-0.6.0.tgz",
+    "transport": "actual MCP stdio client",
+    "isolated_personal_config": true,
+    "version": "0.6.0",
+    "default_tools": 10,
+    "all_tools_read_only_annotated": true,
+    "current_chat_rewrite": "pass",
+    "hidden_write_denied": true,
+    "learning_catalog_created": false,
+    "platform": "macOS arm64",
+    "python": "3.15.0",
+    "limits": "Windows launcher selection tested through simulation; native Windows run unmeasured."
+  },
+  "local_proof": {
+    "integrated_python_tests": 243,
+    "launcher_tests": 5,
+    "generator_bundle_tests_after_review_fix": 5,
+    "evidence_validator_tests": 14,
+    "synthetic_outputs": 14,
+    "synthetic_limits": "Ten core same-context responses, two nearby variants, two separate-agent followups; no independent-model or deployed-GPT improvement claim.",
+    "archive_review": "All7 ZIP and14 TGZ entries match source; references and executable mode verified; no personal configuration, catalogs, logs or credential-pattern hits."
+  },
+  "release_boundaries": {
+    "coherence_charge": "none; Apache-2.0 source",
+    "host_costs_and_access": "governed by the selected assistant",
+    "npm": "not published: npm whoami returned E401; registry observed0.5.5",
+    "public_directory": "not submitted or approved",
+    "existing_gpt": "preserved; not migrated or republished",
+    "production_api": "existing health/CORS/read endpoints verified; no service deployment claimed",
+    "private_storage": "not provided; optional user-owned brief, host retention applies"
+  },
+  "continuations": [
+    {
+      "owner": "authenticated npm package maintainer",
+      "action": "Authenticate npm, publish the reviewed0.6.0 artifact, and verify registry version/integrity.",
+      "next_command": "npm login"
+    },
+    {
+      "owner": "plugin publisher",
+      "action": "Submit the reviewed bundle through the hosting platform directory process; retain its approval receipt."
+    },
+    {
+      "owner": "native GPT plugin maintainer",
+      "action": "Verify a supported MCP replacement for existing native custom Actions before a migration that changes the existing GPT."
+    },
+    {
+      "owner": "Android native-build maintainer",
+      "action": "Repair the pre-existing workflow reference to the retired form/form/build-android-form-cli.sh with a verified native build.",
+      "next_command": "python3 scripts/validate_workflow_references.py"
+    }
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI Codex, GPT-6 family; exact serving variant/task token totals unavailable.",
+    "native": "Opening and closing fkwu local-flow-review plus session-rent-run completed. Readings span other/historical sessions and are not task-specific percentages. Native structural lookup was insufficient; package/install observations are host execution proof.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent, qualitative review",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Anyone can download the free reviewed plugin without Coherence credentials; supported Codex installation is proven from the public tag.",
+    "tight": "Host access, directory approval, npm authentication and existing GPT rollout remain separate.",
+    "surprise": "The public npx archive route provides a working optional MCP install without a new npm registry publication.",
+    "friction_to_lesson": "Clean public-source installation converted distribution assumptions into observable results."
+  }
+}
