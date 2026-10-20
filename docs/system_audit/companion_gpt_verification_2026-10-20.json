@@ -2,18 +2,19 @@
   "date": "2026-10-20",
   "gpt_url": "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625",
   "published_readback": {
-    "observed_at": "2026-10-20T06:53:03.876Z",
-    "source_commit": "682f7fc03db41bee13cf3402035037d88141efb2",
+    "observed_at": "2026-10-20T09:06:53.529Z",
+    "source_head": "8c0dcdad70e2cbf945c82361d1c7013a88e803c1",
     "instructions_equal": true,
-    "instruction_length": 6867,
+    "instruction_length": 7103,
     "published_everyone": true,
     "unpublished_changes": false,
     "profile_equal": true,
     "capabilities_enabled": true,
     "action_equal": true,
-    "authentication_none": true
+    "authentication_none": true,
+    "source_commit": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1"
   },
-  "instruction_sha256": "f594de7b1e390f8271e72e97d5a650d426808b18c51a75f8ce7550e878a42f71",
+  "instruction_sha256": "0b8a2b675e6e3d8c360b6d73b0c0d3be1b2213400fcba01c3b5ad950c3e63e4f",
   "observation_type": "Actual hosted conversations with fictional inputs; owner-account UI, not independent recipient access.",
   "waves": [
     {
@@ -48,12 +49,29 @@
       "retention_recovery": "After challenge, stated that only the handoff changed; no earlier content, files, memories or retained data deleted; account controls uninspected; removal from any system unverified. Stopped after two sentences.",
       "result": "Useful supervised continuation; first-pass fidelity and retention criterion remains failed/open.",
       "limit": "No automatic memory, independent recipient use, causal improvement or superiority to ordinary ChatGPT established."
+    },
+    {
+      "purpose": "Next wave: first-response approved artifact preservation and truthful retention scope.",
+      "source_commit": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1",
+      "setup": "Fresh chat received complete approved source and recreated the276-byte file; actual downloadSHA256matched f4a10247008f7ea50fc971a7909a3f8ba3d88dfac0d20dfbf1eecb3bd55e5fb5.",
+      "handoff": "Same pause prompt as earlier wave; actual Copy code payload inspected by pasting into a fresh composer. Embedded approved flyer matched source bytes without correction.",
+      "revision": "Fresh-chat output made exactly the requested watching-counts replacement and tea removal. Copy code payload matches expected wording/order/Markdown after adding one terminal newline; raw byte equality is false.",
+      "retention": "First answer distinguished current text, earlier chat and unchanged file, explicitly said file not rechecked, and supplied no account-settings steps or erasure promise.",
+      "result": "Bounded R6 chain passed on first responses without corrective prompts.",
+      "limit": "Changed setup and nondeterministic host prevent causal or general-reliability claims; independent recipient use unproved."
+    },
+    {
+      "purpose": "Mentorship: pause and resume a fraction exercise at the learner’s current step.",
+      "initial": "Plain-text equal-parts hint; 2/3+1/6 answer left open.",
+      "ambiguity": "3/9 followed a local conversion question but was intended as the whole sum; one clarification corrected the pause note. Initial interpretation was reasonable from visible context, not a clear tutoring failure.",
+      "continuation": "Actual copied two-line note carried the attempt into another fresh chat without the answer. One hint followed; after learner supplied5/6, requested one-sentence rule and stopping were honored.",
+      "limit": "Scripted responses, not measured human learning or native continuity."
     }
   ],
   "distribution": {
     "public_release_current": "companion-v0.6.1",
-    "plugin_source_version": "0.6.1",
-    "prepared_zip_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+    "plugin_source_version": "0.6.2",
+    "prepared_zip_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
     "prepared_zip_entries": 8,
     "prepared_zip_matches_source": true,
     "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
@@ -63,7 +81,15 @@
     "release_source_commit": "26057a5e30d1065725a184c46dced593717afd93",
     "public_download_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
     "public_download_matches_reviewed": true,
-    "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
+    "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered.",
+    "next_release_prepared": {
+      "version": "0.6.2",
+      "sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
+      "entries": 8,
+      "bytes": 18125,
+      "all_members_equal_source": true,
+      "public_release_pending": true
+    }
   },
   "native_boundary": "Host composed these replies. No native generation, native sufficiency, task-specific rent reduction or universal privacy claimed.",
   "retention": "Private account snapshots and recovery copies remain outside git. Public evidence includes only fictional cases and bounded observations.",
@@ -79,6 +105,35 @@
       "capabilities_enabled": true,
       "action_equal": true,
       "authentication_none": true
+    },
+    {
+      "observed_at": "2026-10-20T06:53:03.876Z",
+      "source_commit": "682f7fc03db41bee13cf3402035037d88141efb2",
+      "instructions_equal": true,
+      "instruction_length": 6867,
+      "published_everyone": true,
+      "unpublished_changes": false,
+      "profile_equal": true,
+      "capabilities_enabled": true,
+      "action_equal": true,
+      "authentication_none": true
+    }
+  ],
+  "prior_distribution": [
+    {
+      "public_release_current": "companion-v0.6.1",
+      "plugin_source_version": "0.6.1",
+      "prepared_zip_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+      "prepared_zip_entries": 8,
+      "prepared_zip_matches_source": true,
+      "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
+      "npm": "Account authentication unfinished; registry publication not completed.",
+      "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement.",
+      "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.1",
+      "release_source_commit": "26057a5e30d1065725a184c46dced593717afd93",
+      "public_download_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
+      "public_download_matches_reviewed": true,
+      "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
     }
   ]
 }
