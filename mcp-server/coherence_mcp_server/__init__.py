@@ -1,18 +1,17 @@
 """
 coherence-mcp-server — MCP server for the Coherence Network.
 
-Typed tool surface for AI agents to browse ideas, trace value chains,
-link identities, record contributions, read field stories, and explore the
-Living Codex ontology.
+Companion tools for grounded help, ideas, and creation. An explicit advanced
+profile enables the wider network surface.
 
 Usage:
     python -m coherence_mcp_server
     coherence-mcp-server
 
-Environment variables:
-    COHERENCE_API_URL   API base URL (default: https://api.coherencycoin.com)
-    COHERENCE_API_KEY   API key for write operations (optional for reads)
+Configuration:
+    The mcp object in ~/.coherence-network/config.json overlays repository
+    defaults; see settings.py for supported file-backed options.
 """
 
-__version__ = "0.5.6"
+__version__ = "0.6.0"
 __all__ = ["__version__"]

@@ -105,7 +105,12 @@ Existing Sema GPT: https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625
 Existing-GPT update guide: https://github.com/seeker71/Coherence-Network/blob/main/docs/integration/chatgpt-setup.md
 The GPT has its own native Action; inspect its current tools before offering capabilities.
 Skill: https://github.com/seeker71/Coherence-Network/tree/main/skills/coherence-network
-Local MCP: npx coherence-mcp-server (stdio; see the package README)
+Free companion plugin and optional MCP 0.6.0: https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0
+Plugin source: https://github.com/seeker71/Coherence-Network/tree/main/plugins/coherence-companion
+The skill plugin needs no Coherence account or local runtime. Host access, tools, costs and retention still apply.
+Local MCP: extract the release package and connect node to package/index.mjs (stdio; see the package README).
+The default companion profile exposes ten public-read/rewrite tools; advanced actions require explicit local configuration and scoped authorization.
+The npm registry observed on 2026-10-20 serves 0.5.5; npx without a reviewed version does not establish the 0.6.0 behavior.
 MCP native lookup: coherence_grounded_ask(query)
 Setup: https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/connectors.md
 Action schema: https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/openai-gpt-action.yaml

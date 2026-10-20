@@ -1,0 +1,12 @@
+{
+  "name": "coherence-network",
+  "interface": {"displayName": "Coherence Network"},
+  "plugins": [
+    {
+      "name": "coherence-companion",
+      "source": {"source": "local", "path": "./plugins/coherence-companion"},
+      "policy": {"installation": "AVAILABLE", "authentication": "ON_USE"},
+      "category": "Productivity"
+    }
+  ]
+}

@@ -14,8 +14,9 @@ from urllib.parse import quote
 import httpx
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
 
+from coherence_mcp_server import __version__
 from coherence_mcp_server.settings import load_settings
 
 try:
@@ -1672,13 +1673,72 @@ TOOLS: list[Tool] = [
     ),
 ]
 
+# Admission lives at this existing transport boundary. The default is an exact
+# allowlist: adding a new tool never silently gives it to companion sessions.
+# Advanced exposure is configuration, not authorization for a particular action.
+COMPANION_TOOLS = {
+    "coherence_transmute": "Rewrite selected text",
+    "coherence_agent_invitation": "Meet Coherence",
+    "coherence_list_ideas": "Explore public ideas",
+    "coherence_get_idea": "Read a public idea",
+    "coherence_idea_progress": "See an idea's progress",
+    "coherence_showcase": "Explore completed work",
+    "coherence_list_specs": "Explore public project plans",
+    "coherence_get_spec": "Read a project plan",
+    "coherence_list_blueprints": "Explore project templates",
+    "coherence_grounded_ask": "Ask public knowledge",
+}
+
+for _tool in TOOLS:
+    if _tool.name in COMPANION_TOOLS:
+        _local = _tool.name == "coherence_transmute"
+        _tool.annotations = ToolAnnotations(
+            title=COMPANION_TOOLS[_tool.name], readOnlyHint=True,
+            destructiveHint=False, idempotentHint=True, openWorldHint=not _local,
+        )
+        if not _local:
+            _tool.description += " Reads the configured public service; send public context only."
+
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
+
+
+def _allowed_tool_names() -> set[str]:
+    profile = _SETTINGS.get("capability_profile", "companion")
+    if profile == "advanced":
+        return set(TOOL_MAP)
+    if profile == "companion":
+        return set(COMPANION_TOOLS)
+    return set()  # Configuration validation also refuses this at startup.
+
+
+def _public_resource_id(value: Any) -> str | None:
+    """A companion read stays inside its named route, including before URL decoding."""
+    if (
+        not isinstance(value, str) or not value.strip() or len(value) > 500
+        or value in {".", ".."}
+        or any(character in value for character in "/\\%")
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        return None
+    return quote(value, safe="")
 
 # ---------------------------------------------------------------------------
 # Tool dispatch
 # ---------------------------------------------------------------------------
 
 def dispatch(name: str, args: dict[str, Any]) -> Any:
+    if name not in TOOL_MAP:
+        return {"error": f"Unknown tool: {name}"}
+    if name not in _allowed_tool_names():
+        return {
+            "error": "This tool is outside the active companion capability profile.",
+            "error_code": "capability_profile_denied",
+            "next_step": (
+                "Advanced tools require an explicit mcp.capability_profile=advanced "
+                "setting in ~/.coherence-network/config.json and an MCP server restart. "
+                "Enabling them does not authorize any individual external action or learning capture."
+            ),
+        }
     match name:
         # form-cli engine — route / capture / transmute
         case "coherence_route":
@@ -1704,9 +1764,15 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 params["curated_only"] = "true"
             return api_get("/api/ideas", params)
         case "coherence_get_idea":
-            return api_get(f"/api/ideas/{args['idea_id']}")
+            idea_id = _public_resource_id(args.get("idea_id"))
+            if idea_id is None:
+                return {"error": "idea_id must name one public idea, without path separators or escapes"}
+            return api_get(f"/api/ideas/{idea_id}")
         case "coherence_idea_progress":
-            return api_get(f"/api/ideas/{args['idea_id']}/progress")
+            idea_id = _public_resource_id(args.get("idea_id"))
+            if idea_id is None:
+                return {"error": "idea_id must name one public idea, without path separators or escapes"}
+            return api_get(f"/api/ideas/{idea_id}/progress")
         case "coherence_select_idea":
             return api_post("/api/ideas/select", {"temperature": args.get("temperature", 0.5)})
         case "coherence_showcase":
@@ -1722,7 +1788,10 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 params["workspace_id"] = args["workspace_id"]
             return api_get("/api/spec-registry", params)
         case "coherence_get_spec":
-            return api_get(f"/api/spec-registry/{args['spec_id']}")
+            spec_id = _public_resource_id(args.get("spec_id"))
+            if spec_id is None:
+                return {"error": "spec_id must name one public plan, without path separators or escapes"}
+            return api_get(f"/api/spec-registry/{spec_id}")
         # Lineage
         case "coherence_list_lineage":
             return api_get("/api/value-lineage/links", {"limit": args.get("limit", 20)})
@@ -2414,24 +2483,38 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
 # MCP server
 # ---------------------------------------------------------------------------
 
-server = Server("coherence-network")
+server = Server(
+    "coherence-network",
+    version=__version__,
+    instructions=(
+        f"Active capability profile: {_SETTINGS['capability_profile']}. "
+        "Companion tools offer selected-text rewriting and public knowledge reads. "
+        "Queries to public services leave this host; send public context only. "
+        "Help with private work in the current chat. Advanced capabilities require "
+        "explicit local file configuration; their presence does not authorize an "
+        "individual write, message, identity claim, or learning capture."
+    ),
+)
 
 
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
-    return TOOLS
+    allowed = _allowed_tool_names()
+    return [tool for tool in TOOLS if tool.name in allowed]
 
 
 @server.call_tool()
-async def handle_call_tool(name: str, arguments: dict | None) -> list[TextContent]:
+async def handle_call_tool(name: str, arguments: dict | None) -> CallToolResult:
     args = arguments or {}
     try:
         result = dispatch(name, args)
-        text = json.dumps(result, default=str)
     except Exception as exc:
         logger.exception("Tool %s failed", name)
-        text = json.dumps({"error": str(exc)})
-    return [TextContent(type="text", text=text)]
+        result = {"error": str(exc)}
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(result, default=str))],
+        isError=isinstance(result, dict) and "error" in result,
+    )
 
 
 async def run() -> None:

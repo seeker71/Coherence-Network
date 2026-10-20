@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 
 def _load_validator():
     repo_root = Path(__file__).resolve().parents[2]
@@ -114,3 +116,52 @@ def test_form_gitlink_is_runtime() -> None:
         (Path("docs/system_audit/commit_evidence_2026-04-24_runtime.json"), _record(["form"], "runtime_fix"))
     ]
     assert mod._validate_aggregate_change_coverage(aggregate_records, ["form"]) == []
+
+
+@pytest.mark.parametrize("runtime_path", [
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/coherence_mcp_server/settings.py",
+    "mcp-server/coherence_mcp_server/form_cli_tools.py",
+    "mcp-server/index.mjs",
+])
+def test_mcp_runtime_changes_require_runtime_intent(runtime_path: str) -> None:
+    mod = _load_validator()
+    record = _record([runtime_path], "runtime_fix")
+    evidence_path = Path("docs/system_audit/commit_evidence_mcp_runtime.json")
+
+    assert mod.validate(record, changed_files=[runtime_path]) == []
+    assert mod._validate_aggregate_change_coverage([(evidence_path, record)], [runtime_path]) == []
+
+    record["change_intent"] = "process_only"
+    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in mod.validate(
+        record, changed_files=[runtime_path]
+    )
+    assert any("runtime files declared" in error for error in mod._validate_aggregate_change_coverage(
+        [(evidence_path, record)], [runtime_path]
+    ))
+
+
+@pytest.mark.parametrize(("path", "intent"), [
+    ("mcp-server/README.md", "docs_only"),
+    ("mcp-server/README.template.md", "docs_only"),
+    ("mcp-server/tests/test_capability_profiles.py", "test_only"),
+    ("mcp-server/tests/test_launcher.mjs", "test_only"),
+    ("mcp-server/package.json", "process_only"),
+    ("mcp-server/index.mjs.md", "docs_only"),
+    ("mcp-server/coherence_mcp_server_examples/example.py", "process_only"),
+])
+def test_mcp_support_files_do_not_count_as_runtime(path: str, intent: str) -> None:
+    mod = _load_validator()
+    record = _record([path], intent)
+    evidence_path = Path("docs/system_audit/commit_evidence_mcp_support.json")
+
+    assert mod.validate(record, changed_files=[path]) == []
+    assert mod._validate_aggregate_change_coverage([(evidence_path, record)], [path]) == []
+
+    runtime_record = _record([path], "runtime_fix")
+    assert any("change_intent requires runtime" in error for error in mod.validate(
+        runtime_record, changed_files=[path]
+    ))
+    assert any("requires declared runtime changes" in error for error in mod._validate_aggregate_change_coverage(
+        [(evidence_path, runtime_record)], [path]
+    ))

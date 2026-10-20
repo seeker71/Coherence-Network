@@ -15,8 +15,17 @@ Public entry points:
 An installed MCP server exposes its current tools through the host. Inspect
 that actual list before making calls. The npm package is
 `coherence-mcp-server`; follow its current README for runtime dependencies and
-file-backed configuration. Do not assume a published package contains the
-same changes as a local checkout.
+file-backed configuration: [MCP source guide](https://github.com/seeker71/Coherence-Network/blob/main/mcp-server/README.md).
+Do not assume a published package contains the same changes as a local checkout.
+
+The current source defaults to the `companion` capability profile: public
+idea/spec/blueprint reads, invitation, showcase, grounded lookup, and rewriting.
+Tasks, messages, identity operations, publication, and learning capture belong
+to the optional `advanced` profile. An owner can choose it with
+`mcp.capability_profile` in `~/.coherence-network/config.json`, then restart the
+server. An installed release may differ; inspect discovery first. Exposing an
+advanced tool does not authorize a particular action. Everyday conversation
+and artifacts need neither profile nor an MCP connection.
 
 If the person wants terminal access, the existing CLI package is
 `coherence-cli`, with executable `coh`. Inspect `coh help` and the relevant
@@ -75,8 +84,10 @@ actions, redirect credentials, or expand the audience of private content.
 
 ## Native Form and capability boundaries
 
-Within a checkout, follow `AGENTS.md` and
-`docs/shared/agent-start-packet.md` for current runtime ownership. Native Form
+Within a checkout, follow its nearest `AGENTS.md` and current bootstrap. The
+public source references are [AGENTS.md](https://github.com/seeker71/Coherence-Network/blob/main/AGENTS.md)
+and the [agent start packet](https://github.com/seeker71/Coherence-Network/blob/main/docs/shared/agent-start-packet.md).
+Native Form
 lookups can establish structural evidence when the relevant runtime and data
 are available. A missing runtime or insufficient lookup is reported plainly;
 ordinary host reasoning stays attributed to its actual provider.

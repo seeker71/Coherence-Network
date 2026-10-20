@@ -4,10 +4,18 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from coherence_mcp_server import form_cli_tools as fct
 from coherence_mcp_server import server
+
+
+@pytest.fixture(autouse=True)
+def advanced_profile(monkeypatch):
+    """Learning is tested only after its separate capability exposure choice."""
+    monkeypatch.setitem(server._SETTINGS, "capability_profile", "advanced")
 
 
 def test_capture_schema_discloses_separate_local_copy():
@@ -36,3 +44,18 @@ def test_capture_dispatch_passes_only_callers_consent(monkeypatch):
         "capture_consent": fct.CAPTURE_CONSENT,
     })["captured"] is True
     assert calls[0][1] == {"capture_consent": fct.CAPTURE_CONSENT}
+
+
+@pytest.mark.parametrize("primitive", ["fchmod", "O_NOFOLLOW"])
+def test_capture_refuses_unsupported_permission_host_before_io(primitive, monkeypatch):
+    def no_io(*args, **kwargs):
+        pytest.fail("Unsupported local capture must not inspect settings or open storage")
+    monkeypatch.delattr(fct.os, primitive, raising=False)
+    monkeypatch.setattr(fct, "load_settings", no_io)
+    monkeypatch.setattr(fct.os, "open", no_io)
+    result = fct.catalog_capture(
+        "selected", "original", "reviewed", "chat", "reviewed",
+        capture_consent=fct.CAPTURE_CONSENT,
+    )
+    assert result["captured"] is False
+    assert result["error_code"] == "capture_permissions_unavailable"

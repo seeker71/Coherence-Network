@@ -50,6 +50,11 @@ for extra in (API_DIR, SCRIPTS_DIR):
 from coherence_mcp_server import server as mcp_server  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def advanced_profile(monkeypatch):
+    monkeypatch.setitem(mcp_server._SETTINGS, "capability_profile", "advanced")
+
+
 SEVEN_STORY_PROTOCOL_TOOLS = {
     "coherence_asset_get",
     "coherence_asset_verification",

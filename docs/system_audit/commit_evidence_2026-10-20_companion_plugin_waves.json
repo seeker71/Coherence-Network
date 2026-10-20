@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-20",
+  "thread_branch": "codex/companion-plugin-waves-20261020",
+  "commit_scope": "Deliver the existing companion as a portable free plugin, with ten default MCP tools, explicit advanced admission, reliable package startup, controlled continuation and observed evaluation rounds.",
+  "files_owned": [
+    ".agents/plugins/marketplace.json",
+    "api/config/api.json",
+    "api/tests/test_commit_evidence_validator.py",
+    "docs/front-door/connectors.md",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_plugin_waves.json",
+    "docs/system_audit/companion_wave_evaluation_2026-10-20.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "mcp-server/LICENSE",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/__init__.py",
+    "mcp-server/coherence_mcp_server/form_cli_tools.py",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/coherence_mcp_server/settings.py",
+    "mcp-server/index.mjs",
+    "mcp-server/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/server.json",
+    "mcp-server/smithery.yaml",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/tests/test_capability_profiles.py",
+    "mcp-server/tests/test_companion_plugin.py",
+    "mcp-server/tests/test_cross_modal_tools.py",
+    "mcp-server/tests/test_federation_tools.py",
+    "mcp-server/tests/test_launcher.mjs",
+    "mcp-server/tests/test_learning_consent.py",
+    "mcp-server/tests/test_settings.py",
+    "mcp-server/tests/test_stdio_startup.py",
+    "mcp-server/tests/test_story_protocol_tools.py",
+    "mcp-server/uv.lock",
+    "plugins/coherence-companion/LICENSE",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "plugins/coherence-companion/skills/coherence-network/references/network.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "scripts/build_readmes.py",
+    "scripts/validate_commit_evidence.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/evals/README.md",
+    "skills/coherence-network/evals/scenarios.json",
+    "skills/coherence-network/references/network.md",
+    "skills/coherence-network/references/session-brief.md",
+    "specs/INDEX.md",
+    "specs/free-companion-plugin-waves.md",
+    "web/public/llms.txt"
+  ],
+  "change_files": [
+    ".agents/plugins/marketplace.json",
+    "api/config/api.json",
+    "api/tests/test_commit_evidence_validator.py",
+    "docs/front-door/connectors.md",
+    "docs/system_audit/commit_evidence_2026-10-20_companion_plugin_waves.json",
+    "docs/system_audit/companion_wave_evaluation_2026-10-20.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "mcp-server/LICENSE",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/__init__.py",
+    "mcp-server/coherence_mcp_server/form_cli_tools.py",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/coherence_mcp_server/settings.py",
+    "mcp-server/index.mjs",
+    "mcp-server/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/server.json",
+    "mcp-server/smithery.yaml",
+    "mcp-server/tests/test_awareness_streaming.py",
+    "mcp-server/tests/test_capability_profiles.py",
+    "mcp-server/tests/test_companion_plugin.py",
+    "mcp-server/tests/test_cross_modal_tools.py",
+    "mcp-server/tests/test_federation_tools.py",
+    "mcp-server/tests/test_launcher.mjs",
+    "mcp-server/tests/test_learning_consent.py",
+    "mcp-server/tests/test_settings.py",
+    "mcp-server/tests/test_stdio_startup.py",
+    "mcp-server/tests/test_story_protocol_tools.py",
+    "mcp-server/uv.lock",
+    "plugins/coherence-companion/LICENSE",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "plugins/coherence-companion/skills/coherence-network/references/network.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "scripts/build_readmes.py",
+    "scripts/validate_commit_evidence.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/evals/README.md",
+    "skills/coherence-network/evals/scenarios.json",
+    "skills/coherence-network/references/network.md",
+    "skills/coherence-network/references/session-brief.md",
+    "specs/INDEX.md",
+    "specs/free-companion-plugin-waves.md",
+    "web/public/llms.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "free-companion-plugin-waves"
+  ],
+  "task_ids": [
+    "companion-plugin-waves-20261020"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "plan",
+        "implement",
+        "test",
+        "independent review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex with three parallel subagents",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "243 integrated Python tests; 5 Node launcher tests; 5 generator/bundle tests after review repair; 14 evidence-validator tests; actual local Codex install and byte comparison; 10 core fictional outputs plus 4 variants, 16 Node assertions and temporary-file brief lifecycle. Targeted Ruff, generated equality, spec and diff checks pass.",
+    "commands": [
+      "uv run --directory mcp-server --with ../api --with pytest --with pyyaml --with pytest-asyncio python -m pytest tests ../api/tests/test_form_cli_mcp_tools.py -q --noconftest --tb=short",
+      "node --test mcp-server/tests/test_launcher.mjs",
+      "uv run --directory mcp-server --with pytest --with pytest-asyncio python -m pytest ../api/tests/test_commit_evidence_validator.py -q --noconftest",
+      "python3 scripts/build_readmes.py --check",
+      "python3 scripts/validate_spec_quality.py --file specs/free-companion-plugin-waves.md",
+      "codex plugin marketplace add <active worktree>; codex plugin add coherence-companion@coherence-network --json",
+      "npm pack --ignore-scripts --json --pack-destination /tmp/coherence-companion-release-060 (mcp-server)",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Branch checks begin after push; independent package, trust and journey reviews completed locally."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Artifacts built and inspected; public release and pinned GitHub marketplace read-back follow source merge. npm not published (npm whoami E401). Existing GPT unchanged; no directory approval or service deployment claimed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Public distribution read-back follows source merge; npm and hosted directory publication remain separate owner actions."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "An actual client starts the locked packed server outside the repo with isolated configuration, sees version0.6.0 and ten tools, rewrites in current chat, and receives an MCP error for denied writes with no learning catalog. Codex discovers and installs the portable skill.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/agent/invitation",
+      "https://api.coherencycoin.com/api/ideas?limit=1",
+      "https://api.coherencycoin.com/api/spec-registry?limit=1"
+    ],
+    "test_flows": [
+      "test_stdio_startup.py npm-pack extraction with isolated HOME, real initialize/list/call, rejected write, unchanged lock",
+      "test_capability_profiles.py all hidden tools denied before arguments or I/O, model cannot elevate profile, public resource identifiers cannot change routes",
+      "test_launcher.mjs subprocess protocol, exit and termination behavior, missing-runtime fallback including simulated Windows selection",
+      "test_companion_plugin.py portable references, no automatic hooks/connections, generated drift and stale files fail ordinary CLI generation",
+      "docs/system_audit/companion_wave_evaluation_2026-10-20.md actual synthetic outputs and temporary brief export/edit/delete; same-context evaluation limits explicit"
+    ]
+  },
+  "evidence_refs": [
+    "specs/free-companion-plugin-waves.md",
+    "docs/system_audit/companion_wave_evaluation_2026-10-20.md",
+    "Local actual Codex marketplace discovery and installation succeeded; installed cache matched plugins/coherence-companion byte-for-byte. Public pinned-source installation remains a release read-back step.",
+    "Artifacts at /tmp/coherence-companion-release-060: plugin ZIP contains seven files and no personal config; MCP archive contains14 package files. SHA256SUMS retained for public comparison.",
+    "Plugin SHA256 5afd715674160aaa9b45db6891f3ed528ca1da90cc274cfcd84f577142d8c049; MCP SHA256 a84c6463dc971ec7c900838eab24b9bd05644d8860e403637aad15b9e5da67c8.",
+    "Independent generator review found ordinary build ignored False from stale generated references. main now exits1 for every failed build; actual CLI regression passes.",
+    "Registry source review found old0.5.6 metadata, MIT license and duplicate broad tool inventories. Version/license now match0.6.0/Apache-2.0; runtime tools/list owns inventory; Smithery source uses the pinned release archive. No registry update claimed.",
+    "Evidence validator initially rejected MCP runtime changes:4 failed,10 passed with change_intent requires runtime changes under api/app or web/app or web/components. MCP source directory and exact launcher now classify as runtime;14 passed, excluding docs/tests/near-match paths.",
+    "Python urllib public reads returned403; default httpx and curl returned200, including invitation, ideas and spec-registry. Server uses httpx; no service defect inferred from the alternate client.",
+    "All102 hidden tools are rejected in companion mode; advanced mode retains112 existing tools. Windows launcher selection is simulated; actual Windows execution unmeasured. Secure capture on unsupported hosts fails before saving.",
+    "npm whoami failed E401 (authentication unavailable); observed registry latest0.5.5. Public GitHub artifacts provide release distribution independently.",
+    "Existing production API/web/CORS check is a read-only health observation, not proof this source revision deployed.",
+    "Form seed compiled from committed runtime/fkwu-uni.c in this checkout; bootstrap/ground.fk returned42. Native opening local-flow-review completed. form-cli lookup did not supply a sufficient answer for this task; no kernel source or gitlink changed.",
+    "Independent final archive review verified both SHA256SUMS entries and every ZIP/TGZ member against source; no private config, catalogs, personal paths or credential-pattern hits. Launcher mode0755 and all bundled skill links verified.",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main failed: worktree_pr_guard requires the bootstrapped api/.venv runtime; run the repository host setup, then repeat the same command. Reused the already tested dependency environment with uv run --directory mcp-server --with ../api python ../scripts/worktree_pr_guard.py --mode local --base-ref origin/main.",
+    "PR guard then passed branch freshness and failed baseline workflow-reference-guard: .github/workflows/sema-companion-apk.yml line49 references missing form/form/build-android-form-cli.sh. Neither this Android workflow nor its missing retired kernel script is changed by this plugin release. Exact guard report: docs/system_audit/pr_check_failures/pr_check_guard_20261020T042646Z_codex-companion-plugin-waves-20261020.json (local ignored report). Android native-build owner continuation: replace the retired Android build invocation with a proven native build; rerun python3 scripts/validate_workflow_references.py. This non-critical unrelated workflow reading does not invalidate scoped plugin/client proofs."
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "Rented OpenAI GPT-6 family; exact serving variant and task token counts unavailable. Root plus three child agents.",
+    "native": "Native lookup attempted, insufficient; fkwu bootstrap and local-flow observation executed. Host package/client tests supply local execution evidence, not native generated reasoning.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent, qualitative review",
+      "suffic": 0,
+      "observed": false
+    },
+    "champion_challenger": "Native Form retrieval and voice remain contenders; no general-purpose quality parity measurement in these synthetic cases."
+  },
+  "work_receipt": {
+    "loosened": "A small portable plugin now installs without a Coherence account or local MCP runtime; optional MCP denies advanced actions by default.",
+    "tight": "Live npm authentication, directory approval and GPT migration are separate; host costs, retention and Windows runtime coverage remain scoped.",
+    "surprise": "An initialized server reported its SDK version and static manifests advertised stale broad tools; release identity now comes from the package and runtime inventory.",
+    "friction_to_lesson": "Clean extraction and independent review exposed hidden environment and generation assumptions before public distribution."
+  }
+}

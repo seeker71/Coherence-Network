@@ -4,6 +4,35 @@ Start with what matters today: a quick answer, a thoughtful conversation, a draf
 or a small next step. Receiving help does not require publishing an idea or
 learning the network's vocabulary.
 
+## Install the free companion
+
+The [Coherence Companion 0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0)
+contains a small plugin ZIP, the optional MCP package, and `SHA256SUMS` for checking
+the downloads. The plugin is Apache-2.0 source and adds no charge. You need no
+Coherence account, payment or API key for ordinary assistance. Your chosen host's
+availability, plans, tools and retention still apply.
+
+For a Codex CLI with plugin support:
+
+```sh
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.0 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin add coherence-companion@coherence-network
+```
+
+Start a new chat and ask: **“Use Coherence Companion to help me with…”** Describe
+the result you want. The installed skill works without Node, Python or the
+optional MCP. You can ask for a three-line continuation brief to take elsewhere;
+saving that brief is your choice.
+
+In a host supporting plugin archive import, use `coherence-companion-0.6.0.zip`.
+For a skills-only host, use the archive's complete `skills/coherence-network/`
+folder, including its references. Host install controls vary; the release is
+publicly downloadable but does not imply acceptance into a universal directory.
+See [official plugin installation and packaging](https://developers.openai.com/plugins/build/plugins).
+
+The bundle includes one everyday skill, with no startup hooks or automatically
+connected services. Optional network access is configured separately below.
+
 ## Six ways to begin
 
 | You want to… | A useful first message | First useful result |
@@ -52,12 +81,14 @@ arguments: ["/absolute/path/to/Coherence-Network/mcp-server/index.mjs"]
 transport: stdio
 ```
 
-`npx coherence-mcp-server` instead runs the published npm package. It may predate
-the checkout; verify a release includes these changes before expecting their
-behavior. A source update does not publish or update installed packages.
+For a clone-free setup, extract `coherence-mcp-server-0.6.0.tgz` from the release
+above and point `node` at its `package/index.mjs`. Install Node 18+ and `uv` for the
+locked Python runtime. The [MCP guide](../../mcp-server/README.md) covers fallbacks.
+`npx coherence-mcp-server` runs the separate npm release: the registry observed
+on 2026-10-20 serves 0.5.5, which lacks the current companion boundaries.
 
 Use the host's documented MCP settings; their location varies by product.
-Start with `coherence_agent_invitation` or `coherence_status`. The installed
+Start with `coherence_agent_invitation`. The installed
 server's tool list is the capability inventory. `coherence_grounded_ask` sends
 a query to the configured native lookup service; inspect its returned source and
 sufficiency evidence. Do not infer a hosted MCP endpoint from a REST URL.
@@ -69,7 +100,8 @@ Configuration lives in files: `~/.coherence-network/config.json` overrides
 {
   "mcp": {
     "api_base": "https://api.coherencycoin.com",
-    "api_key": ""
+    "api_key": "",
+    "capability_profile": "companion"
   }
 }
 ```
@@ -77,6 +109,12 @@ Configuration lives in files: `~/.coherence-network/config.json` overrides
 Public reads need no key. A protected action may require credentials and
 authorization. An API key does not make submitted content private. Keep keys
 in the local configuration, outside published artifacts.
+
+The companion profile exposes ten read/rewrite tools. Publishing, messaging,
+identity changes, local learning and administrative actions are denied, including
+direct calls to hidden tools. Deliberate network work can use an explicit
+`"capability_profile": "advanced"` local setting and server restart. This
+exposes capabilities; it does not authorize a particular write or contribution.
 
 ## Configure a GPT Action
 

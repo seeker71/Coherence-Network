@@ -7,6 +7,7 @@ No external dependencies. Works with Python 3.8+.
 import os
 import re
 import sys
+from pathlib import Path
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,6 +51,37 @@ def expand(template_text: str, template_name: str) -> str:
     return header + body
 
 
+def build_companion_plugin(check: bool = False) -> bool:
+    """Package the canonical companion skill; keep repository-only skills out."""
+    root = Path(REPO_ROOT)
+    plugin = root / "plugins" / "coherence-companion"
+    if not (plugin / "plugin.json").is_file():
+        return True
+    source = root / "skills" / "coherence-network"
+    destination = plugin / "skills" / "coherence-network"
+    copies = [(source / "SKILL.md", destination / "SKILL.md"),
+              (root / "LICENSE", plugin / "LICENSE")]
+    copies.extend((path, destination / "references" / path.name)
+                  for path in sorted((source / "references").glob("*.md")))
+    expected = {target for _, target in copies}
+    stale = set(destination.rglob("*.md")) - expected
+    ok = not stale
+    for path in sorted(stale):
+        print(f"STALE: {path.relative_to(root)}; remove the retired generated copy")
+    for origin, target in copies:
+        data = origin.read_bytes()
+        if check:
+            if not target.is_file() or target.read_bytes() != data:
+                print(f"DIFF: {target.relative_to(root)}; re-run scripts/build_readmes.py")
+                ok = False
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+    if ok:
+        print(f"{'OK' if check else 'WROTE'}: companion plugin ({len(copies)} canonical files)")
+    return ok
+
+
 def build(check: bool = False) -> bool:
     all_ok = True
     for tpl_rel in TEMPLATES:
@@ -83,13 +115,13 @@ def build(check: bool = False) -> bool:
                 f.write(result)
             print(f"WROTE {out_rel}")
 
-    return all_ok
+    return build_companion_plugin(check) and all_ok
 
 
 def main() -> None:
     check = "--check" in sys.argv
     ok = build(check=check)
-    if check and not ok:
+    if not ok:
         sys.exit(1)
 
 
