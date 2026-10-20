@@ -40,10 +40,11 @@ shape, route-template miss, or missing carrier is the work to close.
 
 Current native surfaces include file and socket I/O, HTTP client values,
 cryptographic primitives, cells, the Form shell, the Form-owned form-cli build
-door, and the JIT. `form/form/apps/coherence-network/api.bml` is the current
-application route catalog. It still needs a complete Form-owned application host
-for HTTP dispatch, configuration, PostgreSQL, and persistence before the Python
-compatibility host can leave production.
+door, and the JIT. `api/app/form_recipes/native_api.bml` owns native application
+startup, template dispatch, file-backed configuration and authenticated
+PostgreSQL read projections. `api/config/native_api.json` is the shared route
+description for that owner and deployment. The Python compatibility host carries
+the remaining families; the earlier kernel-side catalog is not a live router.
 
 ## The living kernel
 
@@ -130,11 +131,10 @@ adapter tree. The public consumer-side Python Form evaluator is retired; do not
 advertise `/api/substrate/form` or rebuild a browser evaluator.
 The native public ask/read surface resumes when the fkwu application host owns it.
 
-The live gaps are direct work:
+The remaining application work stays direct:
 
-- complete Form-owned HTTP dispatch, including template parameters;
-- bind file-backed configuration and PostgreSQL/persistence in Form;
-- move API families from Python request ownership into `api.bml`;
+- move remaining API families from Python request ownership into the native host;
+- extend the reusable persistence/projection shapes where live requests need them;
 - expose browser-facing Form capability through that native host;
 - close every observed JIT miss in the JIT.
 

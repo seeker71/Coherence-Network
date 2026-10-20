@@ -29,6 +29,26 @@ The reminder itself is Form/BML:
 cd form && ./fkwu ../api/app/form_recipes/delivery_care.bml
 ```
 
+The native API read owner reuses the application image with a fkwu entrypoint,
+not the compatibility Python process. Its routes, template parameters and port
+come from `api/config/native_api.json`. Compose care derives the public host
+from the existing API owner and publishes the native route bindings atomically.
+`mode: "observe"` reports only the image, routes and dependency plan. After the
+merged image is built, apply the same care request with `activate: ["native-api"]`.
+Keep its private config mount and `/app/form` assembly/runtime context together.
+The compatibility service depends on that native owner; subsequent image updates
+raise the dependency before the compatibility process. There is no native-to-Python
+request fallback. Retire replaced Python route owners after the public handoff.
+Current literal routes remain more specific than new parameter templates.
+Compose care reads those declarations from their existing source owners rather
+than inventing a reserved-name list or forwarding an unresolved native request.
+
+Native assembly admits the application images once on tmpfs. Source admission,
+one affected native route observation and the actual rollout answer this change;
+routine kernel suites and historical response-contract comparisons do not.
+Database care belongs to `native_api_prepare.bml`: concurrent indexes and a
+missing selectivity reading, not TTL response masking or per-request discovery.
+
 Hostinger deploy runs on a changed release or explicit request. The independent
 public-deploy contract is available on demand; scheduled redeploys and scheduled
 full-suite gates have retired.

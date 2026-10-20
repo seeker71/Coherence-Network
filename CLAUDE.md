@@ -48,8 +48,8 @@ path. New behavior is Form/BML; do not add host-language implementations beside
 the body.
 
 The pinned `form/` submodule owns reusable kernel work. Coherence Network owns
-application Form in `form/form/apps/coherence-network/api.bml` and
-`api/app/form_recipes/`. The Python API and Next.js application are compatibility
+application Form in `api/app/form_recipes/`, with native routes described by
+`api/config/native_api.json`. The Python API and Next.js application are compatibility
 hosts while their ownership moves into the native Form application host. Remove
 each compatibility owner after its live Form replacement carries the complete
 effect.
@@ -92,11 +92,12 @@ pairs the native trainer reads, so teach while you work.
 
 ## Application boundary
 
-The current fkwu/Form body already carries cells, files, sockets, HTTP client
-operations, crypto, JSON, host I/O, and a native form-cli build door. The live
-application-host work is template-parameter HTTP dispatch, file-backed config,
-PostgreSQL, durable persistence, and route startup ownership. Close those gaps
-where they live.
+The current fkwu/Form body carries cells, files, sockets, HTTP client operations,
+crypto, JSON, host I/O and a native form-cli build door. The native application
+owner in `api/app/form_recipes/native_api.bml` carries template dispatch,
+file-backed configuration, authenticated PostgreSQL and live graph projections.
+Its route description is `api/config/native_api.json`. Move remaining Python
+families at their actual seams and release each replaced owner after handoff.
 
 Configuration is file-backed:
 
