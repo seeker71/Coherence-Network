@@ -167,6 +167,32 @@ are separate. A skills-only directory listing cannot currently add MCP later.
   bounded R6 criteria without corrective intervention. This closes that case,
   not broad reliability or independent-recipient usefulness.
 
+### Collaboration and installed-release wave — October 21, 2026
+
+Continue the existing Half-Made Night flyer with fictional feedback from two
+people. Observe a proposal, a provisional mandatory-sharing draft, and the
+author's return to optional sharing. Acceptance is behavioral: represent both
+views fairly, keep the approved source untouched until asked, avoid claiming
+group agreement, supersede the interim decision, preserve unrelated wording,
+and name only stated commitments. Read the actual copied Markdown. No external
+message or save is requested. Record each first response before corrections.
+
+- [x] R7: The three-turn hosted collaboration preserved the author/group decision
+  distinction and left the unaccepted welcome role open. Copied final Markdown
+  matched the approved source after adding one terminal newline; no corrective
+  prompt or GPT instruction change was needed. A broad event-authority suggestion
+  in the first proposal remains a calibration limit, not established consensus.
+- [x] R8: Observe the installed release separately from public availability.
+  Update the existing older pin through supported marketplace commands and
+  verify the installed version, enabled state, all bundle bytes and unrelated
+  configuration. Carry the verified upgrade sequence into the installation guide.
+  Installed-file proof does not establish a fresh chat's skill use or access in
+  another person's account.
+
+This wave changes installation guidance and evidence only. Existing GPT
+instructions, plugin 0.6.2 bytes and optional MCP remain unchanged. Reuse their
+prior source checks; no new package release or runtime deployment is needed.
+
 ## See also
 
 - [Prior companion waves](free-companion-plugin-waves.md)
