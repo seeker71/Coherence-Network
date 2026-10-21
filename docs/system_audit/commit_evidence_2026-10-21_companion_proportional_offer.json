@@ -122,7 +122,7 @@
       "continuation": "Owned process group stopped; direct fkwu enrichment returned no exact entries; no sufficient native answer claimed."
     },
     {
-      "command": "python3 /Users/ursmuff/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/coherence-network",
+      "command": "python3 <CODEX_HOME>/skills/.system/skill-creator/scripts/quick_validate.py skills/coherence-network",
       "exit": 1,
       "output": "ModuleNotFoundError: No module named 'yaml'",
       "repair": "Ran same validator under existing locked MCP uv runtime with PyYAML; passed."
