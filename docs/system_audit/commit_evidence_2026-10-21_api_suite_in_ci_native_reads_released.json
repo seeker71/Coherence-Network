@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "The API suite is a proof a pull request carries again: tests stop reading the routes the native host owns (health, ready, ideas lists and single reads, graph node reads, workspace vitality) and keep this host's own claims; the Test workflow runs the suite on pull requests that touch the API or the kernel and the web build when the web changes; the companion-apk workflow loses a step that called a kernel script released in September; the arrival documents say which proof a PR carries.",
+  "files_owned": [".github/workflows/test.yml", ".github/workflows/sema-companion-apk.yml", "api/tests", "docs/shared/agent-start-packet.md", "AGENTS.md", "CLAUDE.md"],
+  "change_intent": "test_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["api-suite-in-ci"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["observe", "release", "shape"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Observed 2026-10-21 07:55 WITA: .github/workflows/test.yml has carried `if: false` since 2026-03-23 and no other workflow runs pytest, so pull requests merged (and deployed) with no API suite in CI; the suite run locally on main (cd api && pytest -q --ignore=tests/holdout) read 18 failed, 397 passed in 41 s, every failure a read of a route #4117 moved to the native container: /api/health and /api/ready (404), GET /api/ideas and /api/ideas/{id} (405), /api/graph/nodes/{id} (405), /api/workspaces/{id}/vitality (404).",
+    "Released rather than healed toward the retired owner: test_health_returns_ok_with_schema_ok, the CLI contract shapes for /api/ideas and /api/health and the CLI ideas smoke, test_ideas_list_honors_accept_language_header, the two graph-node identity/slug tests, test_vitality_returns_six_signals, test_health_shows_smart_reap_available; the mixed flows (core API health/meta, idea crud/lifecycle/fork, multi-device identity, project delete, workspace tenancy, vitality-and-meeting, grocery generic reads) keep this host's writes and Python-owned reads and say in place that the read is the native host's. api/config/native_api.json is the ownership source each comment names.",
+    "After the release: 406 passed, 0 failed in 45.6 s (the first full run); the run after the index change in this push is the one named in the companion record.",
+    "Test workflow: pull_request with path filters (api/**, form, Dockerfile.api, scripts/fkwu_run.sh, the workflow itself, web/**) plus workflow_dispatch; the API job builds the kernel seed (cc -O2 -o fkwu runtime/fkwu-uni.c) because the suite stages recipes on it, installs the API, runs the commit-evidence and spec-quality validators over the PR range, validate_workflow_references.py, and `pytest -q -p no:cacheprovider --ignore=tests/holdout`; the web job builds and tests only when web/ changed; dependabot PRs are skipped. Not on push to main: a merge deploys, the proof belongs before it.",
+    "validate_workflow_references.py reported one missing reference: sema-companion-apk.yml step 'Native form-cli (kernel in the pocket)' called form/form/build-android-form-cli.sh, released from the kernel on 2026-09-10 (edd8e77b2), under `set +e` so it could only ever print 'skipped'; the step is removed; the validator reads 0 missing.",
+    "docs/shared/agent-start-packet.md (Validation), AGENTS.md (Commands, Other Conventions) and CLAUDE.md (Validation) now say: a PR touching api/, the form gitlink or the image recipe carries the API suite in CI, holdout stays out, routes the native host owns are proven by the native observations."
+  ],
+  "change_files": [".github/workflows/test.yml", ".github/workflows/sema-companion-apk.yml", "api/tests/test_developer_quick_start.py", "api/tests/test_flow_cli.py", "api/tests/test_flow_core_api.py", "api/tests/test_flow_multilingual.py", "api/tests/test_flow_presence.py", "api/tests/test_flow_projects.py", "api/tests/test_flow_vitality.py", "api/tests/test_flow_workspaces.py", "api/tests/test_portfolio_governance.py", "api/tests/test_stale_task_reaper.py", "api/tests/test_grocery_ledger.py", "docs/shared/agent-start-packet.md", "AGENTS.md", "CLAUDE.md", "docs/system_audit/commit_evidence_2026-10-21_api_suite_in_ci_native_reads_released.json"],
+  "local_validation": {"status": "pass", "summary": "cd api && pytest -q --ignore=tests/holdout: 406 passed (first full run after the release); validate_workflow_references.py: 0 missing."},
+  "ci_validation": {"status": "pending", "summary": "This PR is the first to run the restored Test workflow on itself."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "Test and workflow changes; the merge deploys with the companion commit's API change."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "A PR touching api/ shows an 'API suite' check; a PR touching only docs shows none.", "public_endpoints": [], "test_flows": ["gh pr checks <this PR>"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The PR's own Test run is the proof."}
+}

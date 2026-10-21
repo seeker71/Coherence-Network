@@ -907,10 +907,11 @@ def sync_spec_implementation_gap_tasks(
     created_tasks: list[dict[str, Any]] = []
     skipped_existing_count = 0
 
+    active_tasks = agent_service.active_tasks_by_fingerprint()
     for candidate in candidates:
         row = dict(candidate)
         fingerprint = str(row.get("task_fingerprint") or "").strip()
-        active = agent_service.find_active_task_by_fingerprint(fingerprint) if fingerprint else None
+        active = active_tasks.get(fingerprint) if fingerprint else None
         if isinstance(active, dict):
             row["active_task"] = {
                 "id": active.get("id"),
@@ -1733,9 +1734,10 @@ def _create_progress_tasks(
 ) -> tuple[list[dict[str, Any]], int]:
     created: list[dict[str, Any]] = []
     skipped_existing = 0
+    active_tasks = agent_service.active_tasks_by_fingerprint()
     for row in rows[:per_category]:
         fingerprint = str(row.get("task_fingerprint") or "").strip()
-        if fingerprint and agent_service.find_active_task_by_fingerprint(fingerprint) is not None:
+        if fingerprint and active_tasks.get(fingerprint) is not None:
             skipped_existing += 1
             continue
         direction = str(direction_builder(row)).strip()
@@ -5304,7 +5306,8 @@ def build_spec_process_implementation_validation_flow(
 
     items: list[dict[str, Any]] = []
     unblock_queue: list[dict[str, Any]] = []
-    active_task_cache: dict[str, dict[str, Any] | None] = {}
+    # one pass over the task store for every idea below; a lookup per idea scanned it 4,600 times (91 s on production)
+    active_tasks = agent_service.active_tasks_by_fingerprint()
     for current_idea_id in sorted(flows.keys()):
         if (
             requested_idea_id is None
@@ -5358,10 +5361,7 @@ def build_spec_process_implementation_validation_flow(
         )
         if queue_candidate is not None:
             fingerprint = str(queue_candidate.get("task_fingerprint") or "")
-            active_task = active_task_cache.get(fingerprint)
-            if fingerprint and fingerprint not in active_task_cache:
-                active_task = agent_service.find_active_task_by_fingerprint(fingerprint)
-                active_task_cache[fingerprint] = active_task
+            active_task = active_tasks.get(fingerprint) if fingerprint else None
             queue_candidate["active_task"] = (
                 {
                     "id": active_task.get("id"),

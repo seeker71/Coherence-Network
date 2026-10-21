@@ -116,6 +116,9 @@ Validation follows the changed claim:
   observation that proves its changed effect.
 - Documentation and deletion work receive structural checks.
 - Do not run retired bootstrap comparisons or routine broad kernel validation.
+- A pull request that touches `api/`, the `form` gitlink or the image recipe
+  carries the API suite in CI (`cd api && pytest -q --ignore=tests/holdout`);
+  routes the native host owns are proven by the native observations instead.
 
 Issues are work. Preserve the exact failure and repair its cause. Do not rename
 an error as an accepted limitation, skip it through a fallback, or restore an

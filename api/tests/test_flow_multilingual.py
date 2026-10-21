@@ -601,53 +601,6 @@ class _StubSnippetBackend:
 
 
 @pytest.mark.asyncio
-async def test_ideas_list_honors_accept_language_header(monkeypatch):
-    """/api/ideas picks up `Accept-Language` even when ?lang= is absent."""
-    from app.services import translator_service as _tsvc
-    prev = _tsvc._BACKEND
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-            # Seed an idea
-            idea_id = f"view-idea-{uuid4().hex[:6]}"
-            r = await c.post(
-                "/api/ideas",
-                json={
-                    "id": idea_id,
-                    "name": "Tending the garden",
-                    "description": "Practice of attending to a living field.",
-                    "potential_value": 1.0,
-                    "estimated_cost": 1.0,
-                },
-                headers={"X-API-Key": "dev-key"},
-            )
-            assert r.status_code in (200, 201), r.text
-
-            # Write a German view
-            r = await c.post(
-                f"/api/entity-views/idea/{idea_id}",
-                json={
-                    "lang": "de",
-                    "content_title": "Den Garten hüten",
-                    "content_description": "Praxis des Hütens eines lebendigen Feldes.",
-                    "author_type": "original_human",
-                },
-            )
-            assert r.status_code == 200
-
-            # Accept-Language only — no ?lang=
-            r = await c.get(
-                "/api/ideas",
-                headers={"accept-language": "de-DE,de;q=0.9"},
-            )
-            assert r.status_code == 200
-            ideas = {i["id"]: i for i in r.json()["ideas"]}
-            assert idea_id in ideas
-            assert ideas[idea_id]["name"] == "Den Garten hüten"
-    finally:
-        _tsvc.set_backend(prev)
-
-
-@pytest.mark.asyncio
 async def test_spec_list_honors_accept_language_header():
     """/api/spec-registry picks up `Accept-Language` without ?lang=."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:

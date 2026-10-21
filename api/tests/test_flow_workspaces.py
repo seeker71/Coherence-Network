@@ -154,7 +154,7 @@ async def test_workspace_idea_validation_flow():
 
 @pytest.mark.asyncio
 async def test_workspace_cross_tenant_filter_flow():
-    """Ideas, specs, and tasks filtered by ?workspace_id= return only
+    """Specs and tasks filtered by ?workspace_id= return only
     items in that tenant; default workspace returns default items.
     All three surfaces share one tenant-isolation contract."""
     ws_id = _uid("ws")
@@ -178,12 +178,7 @@ async def test_workspace_cross_tenant_filter_flow():
         })
         assert r.status_code == 201
 
-        scoped_ideas = {i["id"] for i in (await c.get(
-            f"/api/ideas?workspace_id={ws_id}&limit=200")).json()["ideas"]}
-        assert scoped_idea in scoped_ideas and default_idea not in scoped_ideas
-        default_ideas = {i["id"] for i in (await c.get(
-            f"/api/ideas?workspace_id={DEFAULT_WS}&limit=200")).json()["ideas"]}
-        assert default_idea in default_ideas and scoped_idea not in default_ideas
+        # The scoped idea list is served by the native host; specs and tasks are this host's.
 
         # One spec per workspace.
         scoped_spec = _uid("spec-scoped")
