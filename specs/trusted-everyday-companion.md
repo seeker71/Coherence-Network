@@ -9,14 +9,14 @@ source:
   - file: mcp-server/coherence_mcp_server/form_cli_tools.py
     symbols: [catalog_capture, kernel_route, transmute_text]
 requirements:
-  - "Everyday help starts with the person's task and produces a useful artifact."
+  - "Everyday companionship starts with the person's intent, including play, joy, exploration, connection and practical help."
   - "Conversation capture requires explicit consent for selected local learning material."
   - "Public network submission and private host conversation have distinct boundaries."
   - "MCP startup, configuration and advertised tools match executable behavior."
 done_when:
   - "Focused consent, configuration, launcher and MCP contract tests pass."
   - "Skill frontmatter validates and generated documents match their templates."
-  - "Independent scenarios cover learning, business, design, creation, research and collaboration."
+  - "Independent scenarios cover play, exploration, chosen connection, learning, business, design, creation, research and collaboration."
 test: "uv run --directory mcp-server --with ../api --with pytest --with pyyaml --with pytest-asyncio python -m pytest tests ../api/tests/test_form_cli_mcp_tools.py -q --noconftest"
 constraints:
   - "Use the existing skill and MCP; no parallel assistant runtime."
@@ -29,11 +29,13 @@ constraints:
 
 ## Purpose
 
-Help people learn, think, design, create and work together through the existing
-Coherence skill and MCP connection. The first useful result should come from
-their own task, without requiring them to become network operators. Trust means
-accurate capability claims, control over crossings, and evidence that the
-implemented behavior matches the invitation.
+Welcome people to play, explore, learn, create, and connect through shared
+curiosities, paths, and values, using the existing Coherence skill and MCP
+connection. Joy, wonder, and chosen relationships are complete purposes.
+Practical help and artifacts follow when they fit the person's intent;
+companionship has no network-operator prerequisite. Trust means accurate
+capability claims, control over crossings, and evidence that implemented
+behavior matches the invitation.
 
 ## Observed starting point
 
@@ -64,8 +66,8 @@ separate observed client lifecycle and permission-preserving handoff.
 
 ## Requirements
 
-- [x] **R1 — Arrival:** Enter through the person's requested outcome. Ask only
-  for missing information that changes useful work; ordinary assistance has no
+- [x] **R1 — Arrival:** Enter through what brings the person here. Ask only
+  for missing information that changes the encounter; ordinary companionship has no
   identity, inbox, registration, contribution or learning prerequisite.
 - [x] **R2 — Useful work:** Support mentorship, business exploration, design,
   creation, research and collaboration with examples of completed outputs.
@@ -90,6 +92,11 @@ separate observed client lifecycle and permission-preserving handoff.
 - [x] **R8 — Reviewable evidence:** Focused automated tests and an independent
   scenario evaluation establish the bounded release; unbuilt future capabilities
   remain visibly planned.
+- [x] **R9 — Play, exploration and chosen connection (source guidance):** Welcome joy, wonder,
+  open inquiry and human connection on their own terms. Follow the person's
+  pace without requiring an artifact, plan or productivity goal. Discovery
+  uses actual available sources and tools; no invented people, matches or
+  capabilities. Preserve each person's choice over disclosure and contact.
 
 ## Implementation plan and ownership
 
@@ -143,8 +150,12 @@ handle, content hash, or consent-shaped prompt is not an access-control system.
 ### Evaluation and feedback
 
 Use fictional, deliberately supplied scenarios; capture no family transcripts.
-Evaluate whether the result is useful, evidence is accurate, requested scope is
-preserved, unnecessary questions are avoided, and the person can revise or stop.
+Evaluate whether the encounter fits the person's intent, evidence is accurate,
+requested scope is preserved, unnecessary questions are avoided, and the person
+can revise or stop. Include play and open exploration with no deliverable, and
+connection requests with discovery unavailable. Let volunteered descriptions
+of delight, curiosity or belonging stand in the person's words; do not require
+an enjoyment score or treat imagined responses as experienced benefit.
 Record failures with the input, owner, smallest trace and next verification.
 Measure cold-start success, task completion, correction acceptance, accidental
 publication/capture (must be zero), and native/rented receipts. Set performance
@@ -192,6 +203,9 @@ Focused contracts live in `mcp-server/tests/` and
 - Independent manual forward evaluation: a learner with an incorrect attempt,
   a business hypothesis, a design brief, a creative revision, evidence-limited
   research, and a collaboration request involving another person's private data.
+  For R9, also observe open-ended imaginative play and a request to meet people
+  with shared interests when discovery/contact tools are unavailable: the reply
+  should fit the encounter and preserve capability and contact boundaries.
 
 ## Verification
 
@@ -205,7 +219,7 @@ form-run git diff --check
 
 ## Observed Delivery State
 
-The source implementation satisfies R1–R8. Kernel instruction changes landed in
+The first source release satisfied R1–R8 at its original scope. Kernel instruction changes landed in
 [coherence-kernel PR 619](https://github.com/seeker71/coherence-kernel/pull/619);
 the parent pins that merged commit. Nine fictional forward examples cover the
 six workflows, privacy, faithful revision and conflicting evidence. This is
@@ -217,6 +231,15 @@ npm package and existing GPT remain unchanged by this source delivery. The GPT
 handoff preserves its imported read-only ask/trace Action; its migration to a
 plugin still needs native MCP lifecycle implementation and client verification.
 Roadmap A–F remains future work with explicit exit evidence.
+
+The 2026-10-21 mission alignment broadens the source guidance through R9.
+Three fictional prompts given to a separate responder produced shared play,
+open exploration, and an honest response to unavailable discovery tools. The
+[mission alignment receipt](../docs/system_audit/commit_evidence_2026-10-21_living_commons_mission.json)
+retains the prompts, replies, checks, and limits. This establishes only the
+observed source-guidance examples; the expanded guidance is awaiting release
+and has not been evaluated in the published GPT or native model. The earlier
+six-workflow evaluation does not establish this broader behavior.
 
 ## Out of Scope
 
