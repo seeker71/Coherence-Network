@@ -41,7 +41,8 @@
     "Tests released whole: test_grocery_ledger, test_creator_resonance_report, test_distribution_engine, test_vedic_chat, test_interest_registration, test_flow_notifications; test_views_and_wallets keeps its view-tracking classes as test_views_tracking. Shared tests lose only released lines: test_flow_core_api (the cross-device claim starts from graduate instead of the interest registration), test_flow_vitality (the energy and explore blocks; the tests are renamed to what remains), test_flow_proposals (the explore test), test_agent_invitation (the treasury surface, which the invitation no longer lists). tests/core_suite.txt follows.",
     "Specs retired (sources gone): distribution-engine, hati-grocery-ledger, self-custody-wallet-integration, stability-harmony-goal-sensing. api/config/api.json loses the grocery sheet section. Indexes regenerated (specs, MANIFEST, api/app/data/web_routes.json, web INDEX files).",
     "Local suite after the release: 397 passed, 0 failed. Named, not done: pass three over the held families with CI, CLI or kernel references (marketplace, creator economy, practice, cc economics, mcp_remote, deployment observer, proprioception, household, gatherings, memberships, geolocation, places, federation, investments, discord votes, messages, friction, onboarding, entity views, beliefs, graph questions, settlement, render events, renderers) and the web pages that use them.",
-    "Held on a second look: offerings and the /share page \u2014 the vision texts of all six locales point at /share as where what a cell carries becomes visible (42 localized links, kept by web/tests/internal-page-links), and the router has no exclusive service; the door stays. web/tests/hati-grocery-layout.test.ts left with the grocery page."
+    "Held on a second look: offerings and the /share page \u2014 the vision texts of all six locales point at /share as where what a cell carries becomes visible (42 localized links, kept by web/tests/internal-page-links), and the router has no exclusive service; the door stays. web/tests/hati-grocery-layout.test.ts left with the grocery page.",
+    "Seen in production's log after #4133 rolled out and healed here: idea_dashboards.get_idea_activity had called value_lineage_service since #1243 without importing it (every idea-activity read logged the NameError and dropped its lineage section); the import returns."
   ],
   "change_files": [
     "MANIFEST.md",
@@ -77,6 +78,7 @@
     "api/app/services/distribution_engine.py",
     "api/app/services/energy_goal_recipe_service.py",
     "api/app/services/explore_queue_service.py",
+    "api/app/services/idea_dashboards.py",
     "api/app/services/interest_service.py",
     "api/app/services/notification_service.py",
     "api/app/services/push_subscription_service.py",
