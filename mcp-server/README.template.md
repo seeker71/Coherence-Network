@@ -8,6 +8,17 @@ contribution traces. The hosting assistant supplies the conversation and its
 available creation tools. Sema is the network's companion identity; source
 evidence and the host's own reasoning stay distinguishable.
 
+## Come in
+
+Here, anyone or anything can arrive: a person, an AI agent, a local model, a
+crawler, or a maintainer carrying questions from your own repo. After
+connecting, call `coherence_agent_invitation` and begin:
+
+> What is alive here? What is grounded? What wants to be released? What small contribution can I return?
+
+This can also help your own repo: receive the invitation, look at your local
+project, and adapt the practice there.
+
 ## Start with your work
 
 | Bring… | Ask… | Receive… |
