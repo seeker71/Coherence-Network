@@ -4,64 +4,12 @@ Start with what matters today: a quick answer, a thoughtful conversation, a draf
 or a small next step. Receiving help does not require publishing an idea or
 learning the network's vocabulary.
 
-## Install the free companion
+## Start in ChatGPT
 
-The [Coherence Companion 0.6.2 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.2)
-contains a small plugin ZIP, the existing Coherence icon, and `SHA256SUMS` for
-checking the download. The optional MCP package remains in the
-[0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0).
-The plugin is Apache-2.0 source and adds no charge. You need no
-Coherence account, payment or API key for ordinary assistance. Your chosen host's
-availability, plans, tools and retention still apply.
-
-The bundle carries instructions, references and artwork. It contains no API
-credentials, automatically connected MCP service or publisher-funded inference
-proxy. People use their own host account; installing this package does not give
-them access to the publisher's OpenAI API credits. Directory publisher
-verification is separate from recipients' usage.
-
-For a Codex CLI with plugin support:
-
-```sh
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 --sparse .agents/plugins --sparse plugins/coherence-companion
-codex plugin add coherence-companion@coherence-network
-```
-
-### Update an earlier installation
-
-Release pins keep the installed guidance predictable. A marketplace pinned to
-an earlier tag stays on that release when refreshed. To move an existing
-`coherence-network` registration to 0.6.2, use:
-
-```sh
-codex plugin marketplace remove coherence-network
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 --sparse .agents/plugins --sparse plugins/coherence-companion
-codex plugin add coherence-companion@coherence-network
-codex plugin list --marketplace coherence-network --json
-```
-
-The first command removes this marketplace registration; the following commands
-register the selected release and update its installed companion. Check that the
-last result reports version `0.6.2`, installed and enabled. On the observed CLI,
-adding a different release pin over an existing registration returns “already
-added from a different source”; the remove/add sequence resolved that condition.
-This sequence was verified on October 21, 2026: all eight installed files matched
-the reviewed release, and configuration outside this plugin and marketplace stayed
-byte-for-byte unchanged. Other hosts may offer their own update controls.
-
-Start a new chat and ask: **“Use Coherence Companion to help me with…”** Describe
-the result you want. The installed skill works without Node, Python or the
-optional MCP. You can ask for a three-line continuation brief to take elsewhere;
-saving that brief is your choice.
-
-In a host supporting plugin archive import, use `coherence-companion-0.6.2.zip`.
-For a skills-only host, use the archive's complete `skills/coherence-network/`
-folder, including its references. Host install controls vary; the release is
-publicly downloadable but does not imply acceptance into a universal directory.
-See [official plugin installation and packaging](https://developers.openai.com/plugins/build/plugins).
-
-The bundle includes one everyday skill, with no startup hooks or automatically
-connected services. Optional network access is configured separately below.
+Open [Sema in ChatGPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625)
+and bring a question, rough idea or unfinished draft. Use your own ChatGPT
+account; its availability, plans, tools and data controls apply. No Coherence
+account, API key or local installation is needed.
 
 ## Six ways to begin
 
@@ -79,23 +27,86 @@ kind of artifact. The hosting assistant provides its reasoning and available
 browsing, image, document, and other tools. Coherence supplies practice and
 relevant published knowledge. Name which source or tool carried a result.
 
-## Read with a link
+<details>
+<summary>Published GPT capabilities and observed limits</summary>
 
-The [existing Sema GPT](https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625)
-was confirmed **Published; Everyone** in saved-editor readback at
-**2026-10-20T09:06:53Z**. Its updated instructions support useful work across the
-six workflows above, with a matching description and four new starters. Web
-Search, Canvas, Image Generation, and Code Interpreter & Data Analysis remain
-enabled. The native Action remains `GET /ask` and `GET /trace` at
+The existing Sema GPT was confirmed **Published; Everyone** in saved-editor
+readback at **2026-10-21T05:41:06Z**. Its instructions supported useful work across
+the six workflows above, with a matching description and four new starters.
+Web Search, Canvas, Image Generation, and Code Interpreter & Data Analysis were
+enabled. The native Action exposed `GET /ask` and `GET /trace` at
 `https://sema.hati.earth`, with authentication set to None.
 
-Start there when using ChatGPT. See the
-[dated publication and behavior observations](../integration/companion-gpt-observations.md)
+See the [dated publication and behavior observations](../integration/companion-gpt-observations.md)
 for what was verified. Saved configuration does not establish that every live
 workflow has passed. Conversation and artifacts still use the host's model and
 available tools; native grounding is attributed to the Action's returned evidence.
 This update does not establish private memory or plugin migration. Maintainers
 can follow the [existing GPT guide](../integration/chatgpt-setup.md) for later changes.
+
+</details>
+
+## Install the free companion
+
+The [Coherence Companion 0.6.3 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.3)
+contains a small plugin ZIP, the existing Coherence icon, and `SHA256SUMS` for
+checking the download. The optional MCP package remains in the
+[0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0).
+The plugin is Apache-2.0 source and adds no charge. You need no
+Coherence account, payment or API key for ordinary assistance. Your chosen host's
+availability, plans, tools and retention still apply.
+
+The bundle carries instructions, references and artwork. It contains no API
+credentials, automatically connected MCP service or publisher-funded inference
+proxy. People use their own host account; installing this package does not give
+them access to the publisher's OpenAI API credits. Directory publisher
+verification is separate from recipients' usage.
+
+For a Codex CLI with plugin support:
+
+```sh
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.3 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin add coherence-companion@coherence-network
+```
+
+Start a new chat and ask: **“Use Coherence Companion to help me with…”** Describe
+the result you want. The installed skill works without Node, Python or the
+optional MCP. You can ask for a three-line continuation brief to take elsewhere;
+saving that brief is your choice.
+
+In a host supporting plugin archive import, use `coherence-companion-0.6.3.zip`.
+For a skills-only host, use the archive's complete `skills/coherence-network/`
+folder, including its references. Host install controls vary; the release is
+publicly downloadable but does not imply acceptance into a universal directory.
+See [official plugin installation and packaging](https://developers.openai.com/plugins/build/plugins).
+
+The bundle includes one everyday skill, with no startup hooks or automatically
+connected services. Optional network access is configured separately below.
+
+### Update an earlier installation
+
+Release pins keep the installed guidance predictable. A marketplace pinned to
+an earlier tag stays on that release when refreshed. To move an existing
+`coherence-network` registration to 0.6.3, use:
+
+```sh
+codex plugin marketplace remove coherence-network
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.3 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin add coherence-companion@coherence-network
+codex plugin list --marketplace coherence-network --json
+```
+
+The first command removes this marketplace registration; the following commands
+register the selected release and update its installed companion. Check that the
+last result reports version `0.6.3`, installed and enabled. On the observed CLI,
+adding a different release pin over an existing registration returns “already
+added from a different source”; the remove/add sequence resolved that condition.
+The remove/add sequence was verified for the 0.6.0 → 0.6.2 update on October 21,
+2026: all eight installed files matched the reviewed 0.6.2 release, and
+configuration outside this plugin and marketplace stayed byte-for-byte unchanged.
+Other hosts may offer their own update controls.
+
+## Read with a link
 
 Give a browsing-capable assistant this message:
 

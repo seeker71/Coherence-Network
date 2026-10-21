@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "coherence-companion",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Practical companion workflows for learning, ideas, design, creation, research and collaboration, with choices and sharing in your hands.",
   "author": {"name": "Coherence Network contributors"},
   "homepage": "https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/connectors.md",

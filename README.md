@@ -27,6 +27,7 @@ This can also help your own repo. Ask your agent to receive the Coherence Networ
 
 Useful doors:
 
+- Everyday help: [start with the companion](docs/front-door/connectors.md) in ChatGPT or your own assistant
 - Web: [coherencycoin.com/come-in](https://coherencycoin.com/come-in)
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`
@@ -230,6 +231,14 @@ Validation follows the changed claim and stays small.
   source/diff observation only.
 - No routine kernel suite, bootstrap comparison, broad Python suite, or broad
   web build is required merely because the submodule advanced.
+
+A pull request carries one standing proof: when it touches `api/`, the `form`
+gitlink, `Dockerfile.api` or `scripts/fkwu_run.sh`, the Test workflow runs the
+API suite (`cd api && pytest -q --ignore=tests/holdout`, ~400 tests, under a
+minute) on the PR, after building the kernel seed the suite runs recipes on;
+when it touches `web/`, the web build and test. Routes the native host owns
+(`api/config/native_api.json`) are not read by that suite — their proof is the
+native observations beside the recipes.
 
 Failures are work. Follow the first exact failure to its source, repair it there,
 and rerun only the observation that gained new work.

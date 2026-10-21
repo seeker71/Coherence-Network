@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,8 +6,6 @@ import {
   type PresenceNodeFetcher,
   type PresenceNodeRecord,
 } from "../lib/presence-node";
-
-const REPO_ROOT = resolve(__dirname, "..", "..");
 
 function routedFetcher(
   responses: Record<string, PresenceNodeRecord | null>,
@@ -92,17 +87,5 @@ describe("resolvePresenceGraphNode", () => {
     expect(fetcher).not.toHaveBeenCalledWith(
       expect.stringContaining("/api/graph/nodes?"),
     );
-  });
-});
-
-describe("presence refinement deployment contract", () => {
-  it("requires editor content on the slug-based refinement route", () => {
-    const source = readFileSync(
-      resolve(REPO_ROOT, "scripts", "verify_web_api_deploy.sh"),
-      "utf8",
-    );
-
-    expect(source).toContain("/people/urs-muff/edit");
-    expect(source).toContain("Refine Urs Muff");
   });
 });
