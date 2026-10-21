@@ -261,3 +261,35 @@ self-correction "not a collapsing, a merging" — turned out to be exact
 quaternion-rotation shapes (a Hopf fiber, an octave-ratio double cover, and a
 fixed-axis-free isoclinic rotation) once the body had the vocabulary to
 check.
+
+## frontier-q-0011 — 2026-10-21
+
+**Question**: What one word names a cost that was really paid and measured
+correctly, yet credited to the wrong body — the seconds of
+`/api/inventory/flow` reported as "cold vs warm" as if the kernel's JIT had
+spent them, when the Python compatibility host had?
+
+**Native attempt**: asked first. The body holds the measurement whole
+(cProfile on the deployed build: 8.3 s loading 16,706 task rows from
+PostgreSQL to read 1,742 active fingerprints, 1.2 s deep-copying a 16 MB
+payload on every cache hit), the route's owner (`api/app/routers/inventory.py`
+→ `inventory_service.build_spec_process_implementation_validation_flow`, no
+recipe on the path), and the correcting entry (PR #4128's evidence record). It
+already has *misattribution* (`form/learn/homecoming-distillation-corpus.fk`)
+for the general act of blaming the wrong cause. It has no word for this
+narrower ledger shape — the amount is right, only the account is wrong.
+Honest ack: nothing.
+
+**Rented answer**: **misposting** — bookkeeping's word for an entry recorded
+in the correct amount to the wrong account. Nothing about the measurement
+needs correcting; the correcting entry only moves it to the account that
+spent it. Urs's "with JIT to RAM in place, that cannot take seconds" was the
+auditor's question that finds a misposting: the amount could not belong to
+that account. (Anthropic `claude-fable-5-1`, 2026-10-21. Verified fresh:
+"mispost" appears nowhere in docs/, CLAUDE.md, or form/ before this entry.)
+
+**Substrate**: pending — the correcting entry is
+[`commit_evidence_2026-10-21_inventory_flow_store_read_and_cache_clone.json`](../system_audit/commit_evidence_2026-10-21_inventory_flow_store_read_and_cache_clone.json),
+which posts the seconds to the Python host and names what remains there
+(`list_ideas` 2.6 s, the 16 MB response) for the route's move to the native
+owner.
