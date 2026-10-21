@@ -17,7 +17,8 @@
     "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
     "skills/coherence-network/references/companion-workflows.md",
     "specs/companion-gpt-rollout.md",
-    "web/public/llms.txt"
+    "web/public/llms.txt",
+    ".github/workflows/test.yml"
   ],
   "change_files": [
     "README.md",
@@ -34,7 +35,8 @@
     "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
     "skills/coherence-network/references/companion-workflows.md",
     "specs/companion-gpt-rollout.md",
-    "web/public/llms.txt"
+    "web/public/llms.txt",
+    ".github/workflows/test.yml"
   ],
   "change_intent": "runtime_fix",
   "idea_ids": [
@@ -71,7 +73,7 @@
       "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
       "form-run git diff --check"
     ],
-    "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README."
+    "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README. Public API, web and CORS smoke passed. Web CI path detection repaired after observed skipped build."
   },
   "ci_validation": {
     "status": "pending",
@@ -132,6 +134,11 @@
       "exit": 1,
       "output": "GraphQL: Merge commits are not allowed on this repository. (mergePullRequest)",
       "repair": "Used repository-supported squash merge; PR623 merged."
+    },
+    {
+      "command": "PR4126 Test run39551164946 Web build job119060443649",
+      "output": "Changed paths step success; Set up Node.js and Build and test the web both skipped although web/public/llms.txt changed. Job log: fatal: bad object d2e7ac9b03aac7d9507cb949bb975c7077c37d2a",
+      "repair": "Fetch complete history for base/head comparison; run git diff separately so missing revisions fail instead of reporting no web changes. Verify the subsequent job actually builds/tests."
     }
   ],
   "sovereignty_receipt": {

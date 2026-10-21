@@ -73,6 +73,8 @@ waves, preserving the owner's existing public identity and actual tool scope.
   plugin copy: proportional business exploration.
 - `specs/companion-gpt-rollout.md`: the bounded rollout and observed waves.
 - `docs/system_audit/`: minimal fictional results, publication evidence and ledger.
+- `.github/workflows/test.yml`: repair observed skipped web proof by fetching
+  comparison history and failing visibly when changed-file detection fails.
 - `form` gitlink: landed canonical GPT instructions, with kernel dependencies
   merged before the parent pin.
 

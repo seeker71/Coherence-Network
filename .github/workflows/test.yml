@@ -63,10 +63,21 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Changed paths
         id: changed
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" | grep -qE '^web/'; then echo "web=true" >> "$GITHUB_OUTPUT"; else echo "web=false" >> "$GITHUB_OUTPUT"; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "web=true" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > "$RUNNER_TEMP/web-changed-paths"
+            if grep -qE '^web/' "$RUNNER_TEMP/web-changed-paths"; then
+              echo "web=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "web=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
       - name: Set up Node.js
         if: steps.changed.outputs.web == 'true'
         uses: actions/setup-node@v6
