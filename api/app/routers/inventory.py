@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
+from fastapi.responses import JSONResponse
 
 from app.adapters.graph_store import GraphStore
 from app.config_loader import get_bool
@@ -409,13 +410,17 @@ def _cached_flow(
     commit_evidence_limit: int,
     runtime_event_limit: int,
     list_item_limit: int,
+    detail: bool = False,
+    unblock_queue_limit: int | None = inventory_service.FLOW_UNBLOCK_QUEUE_DEFAULT_LIMIT,
+    include_items: bool = True,
 ) -> dict:
-    """Memoized flow aggregation.
+    """Memoized flow aggregation, projected to the shape the caller asked for.
 
-    Cached at 30 s TTL per unique argument tuple. The 11 query parameters
+    Cached at 30 s TTL per unique argument tuple. The query parameters
     mean the key space is technically huge, but in practice clients call
     this endpoint with the defaults 99% of the time, so the hot path is
-    a single cache entry.
+    a single cache entry. The projection (inventory_service.project_flow_payload)
+    runs once per miss and is cached with the aggregation.
 
     Bypass the cache by exporting `COHERENCE_TTL_CACHE_DISABLED=1`
     (tests do this via the autouse conftest fixture reset).
@@ -423,7 +428,7 @@ def _cached_flow(
     contributor_rows, asset_rows, contribution_rows = _build_flow_compat_rows(
         contributor_limit, asset_limit, contribution_limit
     )
-    return inventory_service.build_spec_process_implementation_validation_flow(
+    payload = inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
         include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
@@ -437,12 +442,18 @@ def _cached_flow(
         runtime_event_limit=runtime_event_limit,
         list_item_limit=list_item_limit,
     )
+    return inventory_service.project_flow_payload(
+        payload,
+        detail=detail,
+        unblock_queue_limit=unblock_queue_limit,
+        include_items=include_items,
+    )
 
 
 @router.get("/inventory/flow", summary="Spec Process Implementation Validation Flow")
 def spec_process_implementation_validation_flow(
     request: Request,
-    idea_id: str | None = Query(default=None),
+    idea_id: str | None = Query(default=None, description="One idea, answered in the detail shape unless detail=false."),
     include_internal_ideas: bool = Query(False),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     contributor_limit: int = Query(120, ge=1, le=10000),
@@ -454,8 +465,26 @@ def spec_process_implementation_validation_flow(
     commit_evidence_limit: int = Query(200, ge=1, le=3000),
     runtime_event_limit: int = Query(600, ge=1, le=5000),
     list_item_limit: int = Query(12, ge=1, le=200),
-) -> dict:
-    return _cached_flow(
+    detail: bool | None = Query(
+        default=None,
+        description=(
+            "true answers every item in the builder's full shape (list totals and truncation flags, "
+            "chain, by_role_meta, task fingerprint and next-unblock direction); false the list shape "
+            "the pages read. Unset: the detail shape for idea_id=, the list shape otherwise."
+        ),
+    ),
+    unblock_queue_limit: int = Query(
+        inventory_service.FLOW_UNBLOCK_QUEUE_DEFAULT_LIMIT,
+        ge=1,
+        le=10000,
+        description="Rows of the unblock queue carried; summary.queue_items stays the whole count.",
+    ),
+    include_items: bool = Query(True, description="false answers the summary and queue without items."),
+) -> JSONResponse:
+    # The payload is JSON-shaped already (the inventory cache clones it by JSON round-trip);
+    # handing it to the response directly skips FastAPI's encoder walk, measured at 0.9 s
+    # over the 4,597-item payload on every cache hit.
+    payload = _cached_flow(
         idea_id=idea_id,
         include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
@@ -468,7 +497,11 @@ def spec_process_implementation_validation_flow(
         commit_evidence_limit=commit_evidence_limit,
         runtime_event_limit=runtime_event_limit,
         list_item_limit=list_item_limit,
+        detail=bool(idea_id) if detail is None else detail,
+        unblock_queue_limit=unblock_queue_limit,
+        include_items=include_items,
     )
+    return JSONResponse(content=payload)
 
 
 @router.post("/inventory/flow/next-unblock-task", summary="Next Unblock Task")

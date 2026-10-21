@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/zen-engelbart-a44acd",
+  "commit_scope": "/api/inventory/flow answers in the shape its readers read: per idea the keys the /flow, /specs, /specs/{spec_id}, /contributors and /demo pages use, a queue bounded by unblock_queue_limit (default 50; summary.queue_items keeps the whole count), and the summary alone on include_items=false. The builder's full row — list totals and truncation flags, chain, by_role_meta, assets, phase_gate, deploy counts, registry contribution fields, per-item queue scores, task_fingerprint and the next-unblock direction paragraph — is the detail shape, answered for one idea (idea_id=) or on detail=true. The route hands the JSON-shaped payload to the response directly, skipping FastAPI's encoder walk. Measured on the production payload: 15,007,625 wire bytes before, 4,379,089 after.",
+  "files_owned": [
+    "api/app/services/inventory_service.py",
+    "api/app/routers/inventory.py",
+    "api/tests/test_flow_core_api.py",
+    "web/app/flow/types.ts",
+    "web/app/flow/FlowUnblockQueue.tsx",
+    "web/app/flow/load-flow-data.ts",
+    "web/lib/egress.ts",
+    "web/app/demo/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "external-presence"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "api-warm-window"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "measure",
+        "cut at the source",
+        "prove"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Where the bytes were (production container, docker exec PYTHONPATH=/app, the route's own _cached_flow with its defaults, 2026-10-21): build 3.75 s, json.dumps 0.16 s; 4,597 items 12,009,991 bytes and a 4,596-row unblock_queue 2,999,359 bytes of a 15,009,797-byte compact body (16,101,507 with default separators). Per item section: interdependencies 2,677,090 (next_unblock_task.direction 1,201,814, task_fingerprint 303,340), process 1,885,526, validation 1,408,334, implementation 1,282,435, contributions 951,579, chain 726,326, contributors 684,543, idea_signals 442,319, assets 430,169. Queue rows: direction 1,050,142 bytes, task_fingerprint 303,336. Only 84 of the 4,597 ideas carried anything tracked; the other 4,513 items were 2.6 KB each of zeros, empty lists, totals of zero, truncation flags of false and a direction paragraph.",
+    "Edge before (curl from the VPS, https://api.coherencycoin.com/api/inventory/flow?runtime_window_seconds=86400, three runs): total 7.49 / 3.09 / 3.87 s, time to first byte 4.56 / 0.84 / 0.78 s, 15,007,625 bytes each. FastAPI's jsonable_encoder over the payload: 0.914 s per request against json.dumps 0.07 s — the encoder walk was most of a cache hit's server time.",
+    "Who reads what (grep inventory/flow in web/): /flow (load-flow-data.ts, FlowItemCard, FlowSummaryCards, FlowUnblockQueue, page filters) reads tracked flags, spec_ids, task_ids, validation local/ci/e2e pass, contributors.all and total_unique, runtime_events_count, usage_events_count, interdependencies blocked/blocking_stage/estimated_unblock_cost, idea_signals confidence/value_gap, summary and 12 queue rows; /specs and /contributors read spec_ids, task_ids, implementation_refs, contributors.all and by_role; /specs/{spec_id} adds thread_branches, source_files, evidence_refs, lineage_ids, public_endpoints; /demo reads the summary (first call) and one idea's spec_ids/task_ids/implementation_refs (idea_id=); /ideas/{idea_id} (IdeaDetailTabs) reads one idea by idea_id=. No page read chain, any *_total or *_truncated key, by_role_meta, assets, phase_gate, the deploy counts, registry contribution fields, task_fingerprint or next_unblock_task. The Python-side readers (next_unblock_task_from_flow, _idea_cards_flow_index, sync_spec_implementation_gap_tasks, the startup warm in main.py) call the builder directly and keep its full row.",
+    "Heal: inventory_service._FLOW_LIST_SECTION_KEYS is the list shape as data (one table, readers named beside each key); flow_list_item and project_flow_payload project the builder's payload; routers/inventory._cached_flow projects once per miss and caches the projection; the route gains detail (unset: detail for idea_id=, list otherwise), unblock_queue_limit (1..10000, default 50) and include_items, records them in the response's filter block, and returns JSONResponse(content=payload) so the encoder walk is skipped. Web: FlowItem's task_fingerprint and next_unblock_task become optional (detail shape), the /flow loader asks for unblock_queue_limit=12 (UNBLOCK_QUEUE_PREVIEW_LIMIT, shared with FlowUnblockQueue, whose overflow now counts from summary.queue_items), buildFlowSearchParams takes includeItems and the demo page's summary call passes include_items=false.",
+    "After, on the captured production payload (same renderer the route uses): default 4,379,089 bytes (4,597 items, 50 queue rows; items ~0.95 KB each); the /flow page's call (unblock_queue_limit=12) 4,351,924; include_items=false 36,378; detail=true 15,007,687. Projection 0.18 s per cache miss, render 0.12 s. Per item section after: validation 714,183, implementation 625,064, process 446,011, interdependencies 317,710, contributions 307,999, contributors 263,186 — the remaining bytes are the keys the /flow page reads for every idea, 4,513 of which are untracked; the next honest cut is which ideas the page lists, a product question this heal leaves open.",
+    "Native owner: form/form/apps/coherence-network/api.bml already carries api_inventory_flow (inventory-flow-summary-sql and inventory-flow-items-sql over graph_nodes, spec_registry_entries, runtime_events, contribution_ledger, graph_edges; the canary idea __native_inventory_canary__), unlisted in api/config/native_api.json, with its own residual named in inventory-flow-native-observation-json: active-task and commit-evidence deep lists remain outside its core projection. Its item json emits the full shape (totals, truncation flags, chain). The list shape named here is the one it needs to serve for the pages; the summary and the list are a SQL projection it already has, so the route's move is a route-table and shape decision, not a rebuild. Nothing in the kernel is changed by this heal.",
+    "Proof: test_inventory_flow_answers_the_list_shape_and_idea_id_reaches_the_detail (a fresh idea's list item equals its expected literal; idea_id= answers the full row with chain, totals, by_role_meta, next_unblock_task.direction and a queue row carrying the same task_fingerprint; include_items=false answers the same summary without items; the filter block records the shape); the flow file stays under the child-CPU budget of test_developer_quick_start.py; the whole API suite; web tsc, lint, vitest and next build.",
+    "Readers of the route outside this repository that read chain, totals, truncation flags, assets or the direction text per idea now pass detail=true; the detail shape is unchanged."
+  ],
+  "change_files": [
+    "api/app/services/inventory_service.py",
+    "api/app/routers/inventory.py",
+    "api/tests/test_flow_core_api.py",
+    "web/app/flow/types.ts",
+    "web/app/flow/FlowUnblockQueue.tsx",
+    "web/app/flow/load-flow-data.ts",
+    "web/lib/egress.ts",
+    "web/app/demo/page.tsx",
+    "docs/system_audit/commit_evidence_2026-10-21_inventory_flow_list_shape.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "The new claim passes; the whole API suite: 406 passed, 1 failed — test_flow_tests_run_under_10_seconds read 10.39 s of child CPU while the web build ran beside it (load 42). Re-measured alone at load 27 with the suite's interpreter: the flow file reads 11.58 / 11.35 s with the new claim and 11.59 / 10.13 s without it — the meter follows the Mac's load, not this claim; CI arbitrates the 10-s budget. Web: tsc clean, vitest 24 files / 153 tests passed, next build passed (next lint is not runnable in this checkout: the installed Next has no `lint` command; unchanged here)."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite and the web build."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "After the merge rolls out: the same three curls at the edge, default and detail=true, bytes and timings beside the before numbers above."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The default /api/inventory/flow body drops from 15.0 MB to about 4.4 MB and a cache hit loses the 0.9 s encoder walk; the /flow, /specs, /specs/{spec_id}, /contributors, /demo and /ideas/{idea_id} pages render as before; detail=true returns the former body.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/inventory/flow",
+      "https://coherencycoin.com/flow"
+    ],
+    "test_flows": [
+      "curl -s -o /dev/null -w '%{time_total} %{time_starttransfer} %{size_download}' 'https://api.coherencycoin.com/api/inventory/flow?runtime_window_seconds=86400'",
+      "curl -s -o /dev/null -w '%{size_download}' 'https://api.coherencycoin.com/api/inventory/flow?runtime_window_seconds=86400&detail=true'"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check."
+  }
+}

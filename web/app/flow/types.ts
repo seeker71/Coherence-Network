@@ -88,8 +88,9 @@ export type FlowItem = {
     estimated_unblock_cost: number;
     estimated_unblock_value: number;
     unblock_priority_score: number;
-    task_fingerprint: string | null;
-    next_unblock_task: { task_type: string; direction: string } | null;
+    /** Detail shape only (idea_id= or detail=true); the list the pages read leaves them out. */
+    task_fingerprint?: string | null;
+    next_unblock_task?: { task_type: string; direction: string } | null;
   };
   idea_signals: {
     value_gap: number;
@@ -99,6 +100,9 @@ export type FlowItem = {
     actual_value: number;
   };
 };
+
+/** Rows of the unblock queue the page shows; the request asks for exactly these. */
+export const UNBLOCK_QUEUE_PREVIEW_LIMIT = 12;
 
 export type FlowResponse = {
   summary: {
