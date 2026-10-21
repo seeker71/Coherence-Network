@@ -55,7 +55,11 @@ Idea → Research → Spec → Implementation → Review → Usage → Payout
        └────────── coherence scores at every stage ─────────┘
 ```
 
-Every stage is scored for **coherence** (0.0-1.0): source, proof, edges, runtime evidence, witness readings, and whether a future human or agent can inspect the trace. Contributors are paid proportionally to the energy they invested and the coherence their work can carry.
+The contribution design connects **coherence** signals (0.0–1.0) with source,
+proof, relationships, runtime evidence, and an inspectable trace. Proposed
+payout allocation uses recorded contributions and their evidence; a design or
+preview is distinct from an observed payment. Each operational claim needs its
+own receipt.
 
 The working rhythm is the same in every surface:
 

@@ -48,6 +48,11 @@ The operational guide below gives the next-command shape for shipping safely. Th
 
 ## Project Summary
 
+The [mission](docs/VISION.md) is a living commons for play, exploration,
+learning, creation, and connection through shared paths and values, growing
+joy, trust, vitality, and sovereignty. A complete encounter can be a game,
+a discovery, or time enjoyed together; contribution is a chosen path.
+
 Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → `fkwu` JIT realization → observed route/runtime proof. Retired carriers are bootstrap history, not siblings or validation authorities. The current application still includes Next.js, PostgreSQL, and a Python compatibility host while their live seams move into Form/BML.
 
 ## Workflow

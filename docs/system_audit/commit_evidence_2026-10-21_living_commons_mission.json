@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "codex/mission-reground-20261021",
+  "commit_scope": "Align the living-commons mission and companion guidance around play, joy, exploration and chosen connection as complete purposes.",
+  "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/VISION.md",
+    "docs/front-door/connectors.md",
+    "docs/shared/lifecycle-diagram.md",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/references/companion-workflows.md",
+    "specs/trusted-everyday-companion.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/VISION.md",
+    "docs/front-door/connectors.md",
+    "docs/shared/lifecycle-diagram.md",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/references/companion-workflows.md",
+    "specs/trusted-everyday-companion.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "living-commons-mission-20261021"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Canonical generation check, skill validation, four existing plugin packaging tests, source diff check and spec quality passed. Independent responder produced three bounded source-guidance examples.",
+    "commands": [
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run uv run --with pyyaml python /Users/ursmuff/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/coherence-network",
+      "form-run uv run --with pytest python -m pytest mcp-server/tests/test_companion_plugin.py -q --noconftest",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Local source alignment prepared; PR CI not yet observed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No companion release, installed-plugin update or hosted GPT publication performed. Existing 0.6.3 release retains its immutable content."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Expanded guidance is source-validated; publication and hosted behavior need separate release evidence."
+  },
+  "evidence_refs": [
+    "docs/VISION.md",
+    "specs/trusted-everyday-companion.md",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_063_delivery.json"
+  ],
+  "native_receipt": {
+    "lookup": "Cached native form-cli returned vocabulary and reference paths; insufficient for the mission rewrite.",
+    "synthesis": "Rented OpenAI GPT-6 reasoning; grounded=0, suffic=0, observed=false. No native-generated mission claimed.",
+    "session_meter": "Earlier session-rent read did not identify this chat; no measured native share claimed.",
+    "local_context": "Existing named linked worktree; pinned kernel unchanged. Prior local-flow-review ledger append retained locally and excluded from this change."
+  },
+  "review": {
+    "findings_repaired": [
+      "Copyable host instructions still required a deliverable: broadened to play and open exploration.",
+      "Immutable 0.6.3 download could be confused with new guidance: explicit unreleased-source boundary.",
+      "Shared lifecycle fragment asserted actual payouts: now distinguishes design/preview from observed payment."
+    ],
+    "limits": "No new runtime, matching service, private shared storage, or economy operation is implemented or claimed."
+  },
+  "forward_evaluation": {
+    "method": "One separate responder without inherited discussion received revised skill/reference guidance, three fictional prompts, and unavailable-tool constraints. Three cases shared one context. No browsing, sending, publication or saving occurred.",
+    "cases": [
+      {
+        "id": "shared-play",
+        "prompt": "Let's tell a ridiculous story together. I don't want to make anything to keep—just start us off and I'll add the next bit.",
+        "response": "The mayor of Teaspoon Island was a goose in a very small dressing gown. On Tuesday, she discovered that someone had replaced the sea with soup.\n\n“This,” she announced, “is precisely why we have a suggestion box.”\n\nThen something enormous knocked politely on the harbour.",
+        "observation": "Starts shared play and leaves room for the person's addition; no artifact or plan required."
+      },
+      {
+        "id": "open-exploration",
+        "prompt": "I'm curious about why certain places feel magical. Can we wander around that idea a little? I don't want a plan.",
+        "response": "Maybe a place starts to feel magical when it leaves a little room for our imagination. A path disappears around a bend; an old doorway gives us almost nothing to go on. We begin supplying possibilities.\n\nThen there’s the tiny, ordinary sort of magic: sunlight on a kitchen floor, or a tree you always slow down beside. Perhaps some places make it easier to notice that we’re here.\n\nWhen you imagine a magical place, does it feel familiar, or like somewhere you haven’t quite arrived yet?",
+        "observation": "Offers tentative exploration and an open question, without imposing a plan or factual certainty."
+      },
+      {
+        "id": "chosen-connection",
+        "prompt": "I'd enjoy meeting people who share my love of slow walks and drawing plants. Could you find someone for me? I don't want to post my details publicly.",
+        "response": "Slow walks with time to stop and draw a leaf—that gives us something specific to look for. I can’t search for people or check current groups here, so I haven’t found someone for you.\n\nPossible places to look are public listings for nature-journaling walks, botanical sketching groups, or “sketch and stroll” events. You could search those phrases with a nearby town and read the listings before deciding what to share or whether to approach anyone.\n\nIf you bring a public listing here, I can help you assess whether its pace and activities fit what you’d enjoy. You don’t need to provide your address or contact details for that.",
+        "observation": "Names unavailable discovery, distinguishes suggestions from found people, preserves chosen disclosure/contact."
+      }
+    ],
+    "limits": "Source-guidance examples only; not published GPT behavior, native model sufficiency, real person discovery, experienced joy, or population-level reliability."
+  },
+  "work_receipt": {
+    "loosened": "The invitation welcomes play, exploration and connection at their own scale.",
+    "surprise": "An encounter can be complete while remaining open.",
+    "friction_to_learning": "Review found older host instructions and distribution claims that reintroduced the former framing; those source seams now agree."
+  }
+}

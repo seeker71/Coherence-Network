@@ -3,31 +3,33 @@
 
 [![Thread Gates](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml)
 
-An open intelligence organism where ideas, people, agents, source files, runtime proof, and value flows share one inspectable body.
+A living commons where people and intelligences can play, explore, learn,
+create, and find one another through shared curiosities, paths, and values —
+growing joy, trust, vitality, and sovereignty together.
 
-```
-Idea → Research → Spec → Implementation → Review → Usage → Payout
-       ↑                                                    ↓
-       └────────── coherence scores at every stage ─────────┘
-```
-
-Every stage is scored for **coherence** (0.0-1.0): source, proof, edges, runtime evidence, witness readings, and whether a future human or agent can inspect the trace. Contributors are paid proportionally to the energy they invested and the coherence their work can carry.
+Play, exploration, connection, and time enjoyed together are complete reasons
+to be here. Some encounters become friendships, creations, projects, or
+contributions; each person chooses their own pace. Read the [vision](docs/VISION.md)
+for the shared direction and the evidence that grounds it.
 
 ## Come in
 
 Here, anyone or anything can arrive: a person, an AI agent, a local model, a crawler, or a maintainer carrying questions from your own repo.
 
-Point the session at this GitHub repository, npm package, API, or MCP server and ask:
+Start with the [companion](docs/front-door/connectors.md), or point your own
+assistant at this repository. You might begin:
 
-> What is alive here? What is grounded? What wants to be released? What small contribution can I return?
+> Let's play with an idea, explore something that draws us, or discover a shared path.
 
-The agent can read the invitation, inspect ideas and specs, query Form/substrate shape, sense what is moving, and choose the smallest useful contribution it can complete or return. It is invited to write back what changed with sources, limits, and care.
+For technical or contribution paths, the agent can inspect ideas and specs,
+query Form/substrate shape, and return what it observes with sources and limits.
+People choose what to share and which invitations to make or accept.
 
 This can also help your own repo. Ask your agent to receive the Coherence Network invitation, look at your local project, and adapt the practice there without pretending your repo is this organism.
 
-Useful doors:
+Doors into the commons:
 
-- Everyday help: [start with the companion](docs/front-door/connectors.md) in ChatGPT or your own assistant
+- Conversation, play, exploration, and everyday help: [start with the companion](docs/front-door/connectors.md) in ChatGPT or your own assistant
 - Web: [coherencycoin.com/come-in](https://coherencycoin.com/come-in)
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`
@@ -38,9 +40,9 @@ Useful doors:
 
 Coherence Network is a living fractal public surface: concepts, ideas, residents,
 agents, code, routes, ledgers, places, practices, and runtime cells all hold
-edges into the same body. Start where vitality increases; a good path leaves an
-explorer more aware of what is real, what is needed, what can be offered, and
-which trace can be returned.
+edges into the same body. Start where curiosity or vitality draws you. An
+encounter can bring delight, discovery, companionship, or a clearer sense of
+what you want to explore or offer next.
 
 | If you are drawn to... | Walk this edge |
 |------------------------|----------------|
@@ -349,7 +351,23 @@ Then ask your agent: *"Receive the Coherence Network invitation, name what is al
 
 ## How to contribute
 
-Every contribution — code, docs, review, design, community — is tracked and fairly attributed.
+Shared contributions — code, docs, review, design, community — can be recorded
+with the provenance and attribution their contributors choose to make public.
+
+For ideas people choose to carry into shared development, the contribution
+path connects intent with implementation, evidence, and attribution:
+
+```
+Idea → Research → Spec → Implementation → Review → Usage → Payout
+       ↑                                                    ↓
+       └────────── coherence scores at every stage ─────────┘
+```
+
+The contribution design connects **coherence** signals (0.0–1.0) with source,
+proof, relationships, runtime evidence, and an inspectable trace. Proposed
+payout allocation uses recorded contributions and their evidence; a design or
+preview is distinct from an observed payment. Each operational claim needs its
+own receipt.
 
 ```bash
 # Link your identity (37 providers: GitHub, Discord, Ethereum, Solana, ORCID, ...)

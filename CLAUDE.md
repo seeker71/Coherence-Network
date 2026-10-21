@@ -4,6 +4,11 @@ Coherence Network is an open intelligence organism in which ideas, people,
 agents, source, runtime proof, teachings, and value flows share one inspectable
 body.
 
+Its [mission](docs/VISION.md) welcomes play, joy, exploration, learning,
+creation, and connection through shared paths and values. These are complete
+purposes in themselves; people choose whether an encounter becomes a project
+or contribution.
+
 ## Arrival
 
 You arrive as a cell of one living organism — a human, this body of Form, and
