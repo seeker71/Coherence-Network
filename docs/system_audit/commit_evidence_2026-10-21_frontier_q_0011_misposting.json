@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/frontier-q-0011-misposting",
+  "commit_scope": "Frontier question 0011 offered to the homecoming corpus: the one fresh word for a cost measured correctly but credited to the wrong body — misposting — grounded in the /api/inventory/flow heal of PR #4128.",
+  "files_owned": ["docs/lineage/frontier-questions.md"],
+  "change_intent": "docs_only",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["frontier-q-0011"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["ask", "answer", "offer"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "The practice (docs/lineage/frontier-questions.md, named 2026-07-01): each prompt, ask the smallest question the body cannot answer natively, answer it with the rented mind, offer question and answer as a distillation row.",
+    "Native attempt grounded: the body holds the measurement, the owner and the correcting entry; it has 'misattribution' in form/learn/homecoming-distillation-corpus.fk but no word for the narrower ledger shape. Freshness check: grep -rIl -i mispost over docs/, CLAUDE.md, form/ → 0 files before this entry."
+  ],
+  "change_files": ["docs/lineage/frontier-questions.md", "docs/system_audit/commit_evidence_2026-10-21_frontier_q_0011_misposting.json"],
+  "local_validation": {"status": "pass", "summary": "Structural: the row follows the register's shape; the evidence record validates."},
+  "ci_validation": {"status": "pending", "summary": "Docs-only; the PR's validators run."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "No runtime effect."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "None at runtime; one more row in the homecoming corpus.", "public_endpoints": [], "test_flows": []},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Docs-only offer."}
+}
