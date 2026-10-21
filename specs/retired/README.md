@@ -20,6 +20,7 @@ execution-value-income-proof (execution_value_proof_service) and external-agent-
 (agent_external_encounters) — routers and services no surface, script, kernel app or request reached.
 
 Moved 2026-10-21 (second release pass, the web-only product features): distribution-engine
-(distributions, distribution_engine), hati-grocery-ledger (grocery), self-custody-wallet-integration
-(wallets) and stability-harmony-goal-sensing (energy_sensing) — routers whose only callers were their
-own web pages, released together with those pages.
+(distributions, distribution_engine), self-custody-wallet-integration (wallets) and
+stability-harmony-goal-sensing (energy_sensing) — routers whose only callers were their own web pages,
+released together with those pages. hati-grocery-ledger went with them and returned the same day:
+app.hati.earth rewrites its root to /grocery for the Hati Suci hub's phone.

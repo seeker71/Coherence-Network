@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 101
+**Total files**: 104
 
 | File | Purpose |
 |---|---|
@@ -55,11 +55,13 @@
 | [governance.py](governance.py) | Governance review and voting API routes. |
 | [graph.py](graph.py) | Graph router — generic CRUD for nodes and edges. |
 | [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
+| [grocery.py](grocery.py) | Grocery — the shopping ledger for a Light Hub manager. |
 | [hati_mesh.py](hati_mesh.py) | Hati mesh sensing-organ presence routes. |
 | [health.py](health.py) | Health check endpoint (spec 001). |
 | [household.py](household.py) | Household — the resident-service nervous system for a Light Hub. |
 | [ideas.py](ideas.py) | Idea portfolio API routes. |
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
+| [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
 | [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
 | [kernel_breath.py](kernel_breath.py) | Transmuted /api/utils entropy / breath-balance endpoints (bodies run as Form recipes). |
@@ -79,6 +81,7 @@
 | [meta.py](meta.py) | Metadata self-discovery API routes. |
 | [models.py](models.py) | Model listing and routing configuration endpoints. |
 | [news.py](news.py) | News feed, resonance matching, and source configuration API routes. |
+| [offerings.py](offerings.py) | Offerings — services and belongings woven into the network. |
 | [onboarding.py](onboarding.py) | _no top-of-file purpose_ |
 | [peers.py](peers.py) | Peers router — contributor discovery via resonance and proximity. |
 | [personal_feed.py](personal_feed.py) | Personal feed — your corner of the organism. |

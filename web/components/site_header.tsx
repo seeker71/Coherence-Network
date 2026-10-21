@@ -39,7 +39,6 @@ const PRIMARY_NAV: NavItemKey[] = [
 const SECONDARY_NAV: NavItemKey[] = [
   { href: "/vision/recipes", labelKey: "nav.recipes" },
   { href: "/invest", labelKey: "nav.invest" },
-  { href: "/treasury", labelKey: "nav.treasury" },
   { href: "/search", labelKey: "nav.search" },
   { href: "/blog", labelKey: "nav.blog" },
 ];

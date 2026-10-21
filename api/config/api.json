@@ -355,5 +355,8 @@
   },
   "deploy_logs_url": null,
   "deployed_sha": null,
-  "github_token": null
+  "github_token": null,
+  "grocery": {
+    "sheet_id": "1Bw5jMw_oecQ1uTyQCMwp81cgw7jqJspkQV-VfImTS-o"
+  }
 }

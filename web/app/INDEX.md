@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 147
+**Total files**: 149
 
 | Route | File | Purpose |
 |---|---|---|
@@ -59,6 +59,7 @@
 | `/graph` | [page.tsx](graph/page.tsx) | _no top-of-file purpose_ |
 | `/graph/zoom/[nodeId]` | [page.tsx](graph/zoom/[nodeId]/page.tsx) | _no top-of-file purpose_ |
 | `/graphs` | [page.tsx](graphs/page.tsx) | _no top-of-file purpose_ |
+| `/grocery` | [page.tsx](grocery/page.tsx) | app.hati.earth — the grocery ledger. One number, one tap. |
 | `/hati-suci` | [page.tsx](hati-suci/page.tsx) | Hati Suci — the resident-service nervous system (first Light Hub membrane). |
 | `/here` | [page.tsx](here/page.tsx) | _no top-of-file purpose_ |
 | `/ideas/[idea_id]/edit` | [page.tsx](ideas/[idea_id]/edit/page.tsx) | Idea edit surface — mirrors the asymmetry-closing for /vision/{id}/edit. |
@@ -117,6 +118,7 @@
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settlement` | [page.tsx](settlement/page.tsx) | Daily settlement dashboard — surfaces the SettlementBatch records |
+| `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
 | `/silence/built/design-log` | [page.tsx](silence/built/design-log/page.tsx) | _no top-of-file purpose_ |
