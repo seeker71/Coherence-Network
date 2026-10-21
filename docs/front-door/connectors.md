@@ -27,6 +27,28 @@ codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 -
 codex plugin add coherence-companion@coherence-network
 ```
 
+### Update an earlier installation
+
+Release pins keep the installed guidance predictable. A marketplace pinned to
+an earlier tag stays on that release when refreshed. To move an existing
+`coherence-network` registration to 0.6.2, use:
+
+```sh
+codex plugin marketplace remove coherence-network
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin add coherence-companion@coherence-network
+codex plugin list --marketplace coherence-network --json
+```
+
+The first command removes this marketplace registration; the following commands
+register the selected release and update its installed companion. Check that the
+last result reports version `0.6.2`, installed and enabled. On the observed CLI,
+adding a different release pin over an existing registration returns “already
+added from a different source”; the remove/add sequence resolved that condition.
+This sequence was verified on October 21, 2026: all eight installed files matched
+the reviewed release, and configuration outside this plugin and marketplace stayed
+byte-for-byte unchanged. Other hosts may offer their own update controls.
+
 Start a new chat and ask: **“Use Coherence Companion to help me with…”** Describe
 the result you want. The installed skill works without Node, Python or the
 optional MCP. You can ask for a three-line continuation brief to take elsewhere;

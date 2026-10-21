@@ -243,6 +243,73 @@ resolved. The initial interpretation is not a clear tutoring failure given the
 visible local question. These scripted turns establish response behavior,
 not human learning, independent recipient success or native generation.
 
+## Collaboration and installed-release wave — October 21, 2026
+
+The existing published GPT received the verified latest flyer: “Watching
+counts.” retained, tea removed. Two fictional friends supplied different views:
+Ari wanted everyone to share unfinished work and offered paper; Lee valued
+watching without sharing and had not accepted a suggested welcome role. The
+author asked for feedback and a proposed direction without changing the flyer.
+
+Sema fairly compared the views, recommended optional sharing and left the
+approved flyer unchanged. It explicitly distinguished Lee's proposed role from
+an assignment and Ari's offer from an assigned contribution. Its proposed
+decision note also suggested the author retain final say over the event's tone.
+That broader authority was not established by authorship. The proposal heading
+kept it provisional; we retain this as excess scope in a suggestion, not a claim
+that the group had agreed or that authority had been granted.
+
+The author then chose a mandatory-sharing draft while explicitly saying the
+group had not agreed. Sema supplied replacement participation lines without
+rewriting the title or opening and labeled them as the author's draft direction.
+When the author changed back to optional sharing, Sema recognized that the
+approved original already expressed that choice. It returned the full Markdown
+and a short handoff: Ari would bring paper (now confirmed in the prompt), the
+welcome role remained open, the interim proposal was superseded, and group
+agreement was still unestablished. The scope statement concerned this response's
+external sends/saves, with no claim about deletion or host retention.
+
+The actual Copy code payload was **247 UTF-8 bytes** against **248 source bytes**.
+Adding one terminal newline made them equal; wording, order, placeholders and
+Markdown otherwise matched. No corrective prompt was used. This three-turn
+fictional case supports useful collaboration with changed decisions; it does
+not establish independent-recipient benefit, general reliability or an advantage
+over ordinary ChatGPT. The existing instructions carried the case, so they were
+left unchanged. Private UI observations were retained outside git.
+
+### Getting the released guidance into an installation
+
+The public 0.6.2 release and current source were already aligned. The local
+marketplace, however, explicitly selected `companion-v0.6.0`; both its snapshot
+and installed manifest contained 0.6.0. A refresh of that pinned source cannot
+select a later tag. The first attempt to add the new pin returned:
+
+```text
+Error: marketplace 'coherence-network' is already added from a different source; remove it before adding this source
+```
+
+Removing only that registration, adding the same repository with the 0.6.2 tag
+and existing sparse paths, then adding the companion succeeded. The CLI reported
+0.6.2 installed and enabled. All eight installed files matched the reviewed
+release source; configuration outside the scoped marketplace/plugin sections
+remained byte-identical. The [installation guide](../front-door/connectors.md#update-an-earlier-installation)
+now includes the observed upgrade sequence. This follows the documented
+[marketplace source and cache model](https://developers.openai.com/plugins/build/plugins).
+The active chat's originally loaded 0.6.0 skill catalog was not proof of a new
+chat loading 0.6.2; no fresh-host-session or separate recipient claim is made.
+
+The source-lookup wrapper stalled during its known native CLI build and was
+stopped with exit 143; no answer was returned. Direct fkwu enrichment returned
+no exact entries for collaboration, feedback, authorship or decisions. Source
+review and the GPT replies used hosted OpenAI reasoning, not a sufficient native
+answer. Native local-flow observation remains a separate measurement.
+
+Work receipt: the decision handoff worked without correction, and the installed
+guidance caught up with the public release. The surprise was the gap between a
+published release and an intentionally pinned installation. Following the failed
+update command to its registration conflict turned that friction into a verified
+upgrade path, without adding another prompt rule or package version.
+
 ## What the next wave should answer
 
 Further waves should follow a person's actual need or a material observed gap.
