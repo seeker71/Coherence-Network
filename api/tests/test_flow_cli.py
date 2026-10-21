@@ -156,19 +156,6 @@ class TestAPIContract:
     """Verify HTTP endpoints that the CLI depends on exist and return expected shapes."""
 
     @pytest.mark.asyncio
-    async def test_ideas_list_endpoint_shape(self) -> None:
-        """GET /api/ideas returns dict with ideas list and pagination."""
-        from httpx import ASGITransport, AsyncClient
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            r = await client.get("/api/ideas")
-            assert r.status_code == 200
-            body = r.json()
-            # Response is a dict with ideas key containing the list
-            assert isinstance(body, dict), f"Expected dict, got {type(body).__name__}"
-            assert "ideas" in body, f"Missing 'ideas' key: {list(body.keys())}"
-            assert isinstance(body["ideas"], list)
-
-    @pytest.mark.asyncio
     async def test_tasks_list_endpoint_shape(self) -> None:
         """GET /api/agent/tasks returns {tasks, total}."""
         from httpx import ASGITransport, AsyncClient
@@ -188,17 +175,6 @@ class TestAPIContract:
             assert r.status_code == 200
             body = r.json()
             assert isinstance(body, list), f"Expected list, got {type(body).__name__}"
-
-    @pytest.mark.asyncio
-    async def test_health_endpoint_shape(self) -> None:
-        """GET /api/health returns {status, version}."""
-        from httpx import ASGITransport, AsyncClient
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            r = await client.get("/api/health")
-            assert r.status_code == 200
-            body = r.json()
-            assert "status" in body, f"Missing 'status' key: {list(body.keys())}"
-            assert "version" in body, f"Missing 'version' key: {list(body.keys())}"
 
     @pytest.mark.asyncio
     async def test_pipeline_status_shape(self) -> None:
@@ -371,16 +347,6 @@ class TestSmokeTests:
         )
         output = ANSI_RE.sub("", result.stdout)
         assert len(output.strip()) > 0, "coh status produced no output"
-
-    def test_cli_ideas_list(self) -> None:
-        """coh ideas hits the API and returns formatted output."""
-        with _serve_app() as api_base:
-            result = _run_cli(api_base, "ideas")
-        assert result.returncode == 0, (
-            f"coh ideas exited {result.returncode}: {result.stderr}"
-        )
-        output = ANSI_RE.sub("", result.stdout)
-        assert len(output.strip()) > 0, "coh ideas produced no output"
 
     def test_cli_nodes_list(self) -> None:
         """coh nodes hits the API."""

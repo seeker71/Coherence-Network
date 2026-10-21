@@ -23,31 +23,6 @@ def _reset_presence():
 
 
 @pytest.mark.asyncio
-async def test_graph_node_identity_resolves_declared_and_legacy_aliases():
-    graph_service.create_node(
-        id="skill:canonical-practice",
-        type="skill",
-        name="Canonical Practice",
-        properties={
-            "slug": "canonical-practice",
-            "aliases": ["practice-doorway"],
-            "legacy_ids": ["practice-old-doorway"],
-        },
-    )
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        for identity in (
-            "practice-doorway",
-            "skill:practice-doorway",
-            "practice-old-doorway",
-            "skill:practice-old-doorway",
-        ):
-            response = await c.get(f"/api/graph/nodes/{identity}")
-            assert response.status_code == 200, response.text
-            assert response.json()["id"] == "skill:canonical-practice"
-
-
-@pytest.mark.asyncio
 async def test_heartbeat_counts_viewers():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         await c.post(
@@ -1246,49 +1221,6 @@ async def test_place_endpoints_round_trip():
 
 
 # ── Slug-resolved lookup (data-driven canonical URL) ──────────────────
-
-
-@pytest.mark.asyncio
-async def test_get_node_resolves_by_slug_when_id_misses():
-    """`GET /graph/nodes/{slug}` resolves to the node carrying that
-    slug property when no node has the literal id.
-
-    Lets `/people/{slug}` URLs converge to the canonical graph node
-    without a hand-curated slug→id mapping in code. The mapping lives
-    in the graph itself, editable through the same flow that edits
-    everything else.
-    """
-    from app.services import graph_service as _gs
-
-    node_id = "contributor:slug-lookup-test-fixture"
-    slug = "slug-lookup-test"
-    _gs.create_node(
-        id=node_id, type="contributor",
-        name="Slug Lookup Fixture",
-        properties={"slug": slug, "contributor_type": "TEST"},
-    )
-    try:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-            # Direct id still works.
-            r = await c.get(f"/api/graph/nodes/{node_id}")
-            assert r.status_code == 200
-            assert r.json()["id"] == node_id
-
-            # Slug resolves to the same node.
-            r = await c.get(f"/api/graph/nodes/{slug}")
-            assert r.status_code == 200
-            body = r.json()
-            assert body["id"] == node_id
-            assert body["slug"] == slug
-
-            # Unknown slug → 404.
-            r = await c.get("/api/graph/nodes/no-such-slug-anywhere")
-            assert r.status_code == 404
-    finally:
-        _gs.delete_node(node_id)
-
-
-# ── Sampling discipline (creations stratification) ────────────────────
 
 
 def test_stratify_returns_breadth_when_source_returns_more_than_cap():

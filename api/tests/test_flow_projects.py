@@ -217,8 +217,8 @@ async def test_delete_project_ideas_unaffected():
         assert r3.status_code == 404, r3.text
 
         # Idea still exists
-        r4 = await c.get(f"/api/ideas/{idea_id}")
-        assert r4.status_code == 200, r4.text
+        r4 = await c.patch(f"/api/ideas/{idea_id}", json={"confidence": 0.5}, headers=AUTH)
+        assert r4.status_code == 200, r4.text  # the idea still answers this host\'s own write
 
 
 # ---------------------------------------------------------------------------

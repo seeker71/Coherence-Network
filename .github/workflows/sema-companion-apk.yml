@@ -36,20 +36,6 @@ jobs:
         id: ver
         run: echo "code=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Native form-cli (kernel in the pocket)
-        # Best-effort: the APK ships either way; the Senses room shows the truth.
-        run: |
-          set +e
-          NDK_DIR=$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)
-          if [ -z "$NDK_DIR" ]; then
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.1.10909125" >/dev/null 2>&1
-            NDK_DIR="$ANDROID_HOME/ndk/26.1.10909125"
-          fi
-          export ANDROID_NDK_HOME="$NDK_DIR"
-          FORM_CLI_FORCE_LINK=1 bash form/form/build-android-form-cli.sh \
-            mobile/sema-companion/app/src/main/jniLibs/arm64-v8a/libform_cli_exec.so \
-            && echo "native kernel aboard" || echo "native form-cli skipped (carrier-side decisions remain honest)"
-
       - name: Build APK
         working-directory: mobile/sema-companion
         run: |

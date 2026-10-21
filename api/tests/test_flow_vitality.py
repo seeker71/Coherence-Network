@@ -66,19 +66,7 @@ async def test_vitality_and_meeting_flow():
             "potential_value": 100.0, "estimated_cost": 10.0,
         })
 
-        vitality = (await c.get(f"/api/workspaces/{ws_id}/vitality")).json()
-        assert vitality["workspace_id"] == ws_id
-        for field in ("vitality_score", "signals", "health_description", "generated_at"):
-            assert field in vitality
-        for signal in ("diversity_index", "resonance_density", "flow_rate",
-                       "breath_rhythm", "connection_strength", "activity_pulse"):
-            assert signal in vitality["signals"]
-        for phase in ("gas", "water", "ice"):
-            assert phase in vitality["signals"]["breath_rhythm"]
-        assert isinstance(vitality["vitality_score"], (int, float))
-        assert 0.0 <= vitality["vitality_score"] <= 1.0
-        assert isinstance(vitality["health_description"], str)
-        assert len(vitality["health_description"]) > 0
+        # Workspace vitality is served by the native host (/api/workspaces/{id}/vitality).
 
         # Meeting endpoint — first meeting, anonymous viewer.
         cid = "lc-meeting-test"

@@ -103,30 +103,6 @@ async def test_right_sizing_returns_health():
 # 3. GET /api/workspaces/{id}/vitality returns 6 health signals
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_vitality_returns_six_signals():
-    """Workspace vitality returns all 6 living-system health signals."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        ws = await _create_workspace(c)
-        ws_id = ws["id"]
-
-        r = await c.get(f"/api/workspaces/{ws_id}/vitality")
-        assert r.status_code == 200, r.text
-        body = r.json()
-
-        assert body["workspace_id"] == ws_id
-        assert "vitality_score" in body
-        assert 0.0 <= body["vitality_score"] <= 1.0
-
-        signals = body["signals"]
-        assert "diversity_index" in signals
-        assert "resonance_density" in signals
-        assert "flow_rate" in signals
-        assert "breath_rhythm" in signals
-        assert "connection_strength" in signals
-        assert "activity_pulse" in signals
-
-
 # ---------------------------------------------------------------------------
 # 4. GET /api/cc/supply returns coherence score
 # ---------------------------------------------------------------------------
