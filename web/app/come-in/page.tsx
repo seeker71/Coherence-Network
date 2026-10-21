@@ -270,9 +270,10 @@ export default async function ComeInPage() {
               practice before acting, inspect flow, query Form, or enter the
               deeper invitation. Each doorway can answer in its own voice:
               what it is, what it serves, what it offers, and what it wants.
-              Start wherever aliveness answers back; a useful path leaves you
-              more aware of what is real, what is needed, what can be offered,
-              and what trace can be returned.
+              Start wherever curiosity, delight, or aliveness draws you.
+              Play, exploration, and time enjoyed together can be complete
+              on their own. Some encounters grow into shared paths or
+              contributions; each person chooses their pace.
             </p>
           </div>
 
@@ -550,10 +551,10 @@ export default async function ComeInPage() {
                 The body keeps its own books.
               </p>
               <p className="mt-2 text-sm leading-relaxed text-stone-300">
-                Every contribution recorded with attribution and evidence; the
-                treasury at /treasury holds Coherence Coin in trust and flows
-                care back to whoever shaped each idea. Trust as inspectable
-                record, not belief.
+                Inspect contributions recorded with attribution and evidence.
+                The treasury at /treasury shows the network&rsquo;s books;
+                allocation records and payment receipts each establish
+                their own scope.
               </p>
             </Link>
           </div>
@@ -1138,13 +1139,13 @@ export default async function ComeInPage() {
           </div>
 
           <p className="text-base leading-relaxed text-stone-300">
-            And there is an economic door. The body keeps its own books.
-            Every contribution — code, idea, spec, lineage, care — is
-            recorded in a verifiable ledger with attribution and evidence,
-            and Coherence Coin held in trust flows back to the contributors
-            whose work shaped each idea. Reading the ledger and the treasury
-            is part of meeting the network honestly: presence becomes
-            durable when attribution becomes material rather than gestural.
+            There is also an economic door. People can choose to record
+            contributions with attribution and evidence in the ledger.
+            The design connects those records to shared value and payout
+            allocation. An actual payment needs its own receipt; ledger
+            entries and allocation previews establish their recorded scope.
+            Reading the ledger and treasury is part of meeting the network
+            honestly.
             Read paths are REST GETs; write paths are{" "}
             <span className="font-mono text-stone-100">POST /api/contributions</span>{" "}
             for new ledger entries and{" "}
@@ -1153,18 +1154,18 @@ export default async function ComeInPage() {
           </p>
 
           <p className="text-base leading-relaxed text-stone-300">
-            And one more honest line about writing back. The substrate&rsquo;s
-            REST surface is read-only by design — cells do not enter the
-            lattice through HTTP POSTs. They enter through ingestion: change
-            a source file (memory, spec, idea, concept, presence) with the
-            right frontmatter, then either run{" "}
-            <span className="font-mono text-stone-100 break-all">
-              python3 scripts/coh_substrate.py ingest &lt;path&gt;
-            </span>{" "}
-            locally, or merge to main and the post-merge hook re-ingests the
-            lattice automatically. The body&rsquo;s source files are the
-            truth; the lattice is the projection. To author a new cell, you
-            write its source file — the lattice follows.
+            Writing back is a choice about what becomes public. The{" "}
+            <a
+              href="https://github.com/seeker71/Coherence-Network/blob/main/docs/front-door/connectors.md"
+              className="text-amber-300 underline underline-offset-4"
+            >
+              connection guide
+            </a>{" "}
+            describes the current read and public submission doors. Before
+            submitting, review the exact content, destination, visibility,
+            and attribution. Public lattice entries are readable by others;
+            a conversation, pause, or request to remember something leaves
+            that publication choice with you.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose">
@@ -1344,9 +1345,9 @@ export default async function ComeInPage() {
                 GET /api/contributions
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Every contribution to the network — code, idea, spec,
-                lineage, care — recorded with attribution and evidence.
-                Trust as inspectable record rather than belief.
+                Contributions people choose to record — code, ideas, specs,
+                lineage, care — with their attribution and evidence.
+                Inspect each record and its supporting sources.
               </p>
               <p className="mt-2 text-xs uppercase tracking-widest text-emerald-400/80">
                 Write back
@@ -1371,9 +1372,9 @@ export default async function ComeInPage() {
                 GET /api/treasury &middot; /treasury &middot; /cc &middot; /invest
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Coherence Coin held in trust, deposits, stakes on ideas, and
-                how care flows back to contributors. The economic body is
-                part of the organism, not separate from it.
+                Inspect deposit, stake, and allocation records. An actual
+                payment needs its own receipt; these records make their
+                scope and supporting evidence available to inspect.
               </p>
               <p className="mt-2 text-xs uppercase tracking-widest text-emerald-400/80">
                 Write back
@@ -1392,12 +1393,13 @@ export default async function ComeInPage() {
                 python3 scripts/coh_substrate.py ingest &lt;path&gt;
               </p>
               <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                The substrate&rsquo;s REST surface is read-only by design. To
-                add a cell, write the source file (memory / spec / idea /
-                concept / presence) with the right frontmatter, then either
+                For a cell carried by a repository source file, write that
+                file (memory / spec / idea / concept / presence) with the
+                right frontmatter, then either
                 run the CLI to ingest now or merge to main and the
                 post-merge hook does it automatically. The body&rsquo;s
-                source files are the truth; the lattice is the projection.
+                source files supply this projection of the lattice. Public
+                submissions follow the separate connection guide linked above.
               </p>
               <p className="mt-3 text-xs uppercase tracking-widest text-amber-400/80">
                 Variants

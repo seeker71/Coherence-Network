@@ -32,7 +32,7 @@ Doors into the commons:
 - Web: [coherencycoin.com/come-in](https://coherencycoin.com/come-in)
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`
-- MCP: `npx coherence-mcp-server`, then call `coherence_agent_invitation`
+- MCP: [connect the reviewed local server](docs/front-door/connectors.md#use-the-skill-and-mcp), then call `coherence_agent_invitation`
 - Form: `form-cli ask` in a checkout, realized on fkwu
 
 ## Walk the living surface
@@ -115,20 +115,23 @@ coh idea <id>                 # deep-dive: scores, open questions, value gaps
 
 **Option C — give your AI agent access:**
 
-Add to your Claude/Cursor MCP config:
+Connect the current checkout's MCP server in a host that supports local stdio.
+Install Node 18+ and `uv`, and replace the path below with your checkout's
+absolute path. The [MCP setup guide](docs/front-door/connectors.md#use-the-skill-and-mcp)
+also provides a reviewed release download for a clone-free setup.
 
 ```json
 {
   "mcpServers": {
     "coherence-network": {
-      "command": "npx",
-      "args": ["coherence-mcp-server"]
+      "command": "node",
+      "args": ["/absolute/path/to/Coherence-Network/mcp-server/index.mjs"]
     }
   }
 }
 ```
 
-Then ask your agent: *"Receive the Coherence Network invitation, name what is alive and grounded, and return one useful trace."*
+Then ask your agent: *"Receive the Coherence Network invitation and explore with me what draws us here."*
 
 ## How to contribute
 
