@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "codex/companion-063-delivery-20261021",
+  "commit_scope": "Record actual0.6.3public download, installed-file integrity, source CI and public-serving outcome.",
+  "files_owned": [
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_063_delivery.json"
+  ],
+  "change_files": [
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_063_delivery.json"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "companion-063-delivery-20261021"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "verify",
+        "document"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "All8public ZIP and installed members equal merged source; checksum and artifact-review download equal; unrelated configuration byte-equal. Evidence validator and diff check before commit."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "summary": "Receipt PR4127 GitGuardian passed before final observation update; source PR4126 API suite, web build/153tests and security passed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Reviewed free plugin bytes reach the public archive and existing installation.",
+    "test_flows": [
+      "Download without GitHub authentication; compare SHA256 and every member.",
+      "Remove/re-add only the existing marketplace at0.6.3; verify installed/enabled and8files.",
+      "Compare unrelated config fingerprint before/after."
+    ],
+    "limits": "Package integrity and installation, not fresh-host invocation or broad companion behavior. GPT scope criterion remains partially failed."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "GitHub release live and public guide/llms.txt byte-equal to merged source. Hostinger deployment 39552342931 completed successfully at 2026-10-21T06:10:26Z; API container reported expected commit e9cd41e43d3a. Post-deploy API health 200, web root 200 and CORS aligned. No directory, billing, API-credit or migration change.",
+    "run": "https://github.com/seeker71/Coherence-Network/actions/runs/39552342931",
+    "command": "form-run ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_reason": null,
+    "scope": "Package and public delivery complete. Full GPT behavioral scope remains unmet on unsolicited imagery; recorded separately, not promoted to a pass."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/pull/4126",
+    "https://github.com/seeker71/coherence-kernel/pull/623",
+    "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.3",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/39551986154"
+  ],
+  "release": {
+    "source_commit": "e9cd41e43d3a86fe4d2fba2ece121145127a7c9a",
+    "archive": "coherence-companion-0.6.3.zip",
+    "sha256": "cc1ed04ae92cc8d40a58d60f658fa827a0841b424edd8473e282e8afd4c5e88c",
+    "bytes": 18308,
+    "all8_public_members_equal_source": true,
+    "review_download_equal": true
+  },
+  "installation": {
+    "before": "0.6.2",
+    "after": "0.6.3",
+    "installed": true,
+    "enabled": true,
+    "all8_files_equal_source": true,
+    "unrelated_configuration_byte_equal": true,
+    "fresh_host_session": "Unobserved"
+  },
+  "delivery_complete": true,
+  "public_discovery": {
+    "guide_byte_equal": true,
+    "llms_url": "https://coherencycoin.com/llms.txt",
+    "llms_byte_equal": true,
+    "plugin_ref": "companion-v0.6.3",
+    "optional_mcp_ref": "companion-v0.6.0",
+    "observed_at": "2026-10-21T06:09:56Z"
+  }
+}
