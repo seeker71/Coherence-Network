@@ -4,49 +4,39 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 151
+**Total files**: 124
 
 | File | Purpose |
 |---|---|
 | [accessible_ontology.py](accessible_ontology.py) | Accessible ontology API — non-technical contributors extend the ontology naturally. |
 | [activity.py](activity.py) | Activity feed routes — read-only workspace activity streams. |
 | [agent.py](agent.py) | Agent orchestration API routes. Composes sub-routers and Telegram webhook. |
-| [agent_auto_heal_routes.py](agent_auto_heal_routes.py) | Agent auto-heal stats route. |
 | [agent_diagnostics_routes.py](agent_diagnostics_routes.py) | Agent diagnostics routes. |
 | [agent_execute_routes.py](agent_execute_routes.py) | Agent task execute and pickup-and-execute routes. |
-| [agent_external_encounters.py](agent_external_encounters.py) | External agent encounter records. |
 | [agent_grounded_metrics_routes.py](agent_grounded_metrics_routes.py) | Routes for grounded idea portfolio metrics (spec 116). |
 | [agent_helpers.py](agent_helpers.py) | Shared helpers for agent router and sub-routers. No routes. |
 | [agent_issues_routes.py](agent_issues_routes.py) | Agent fatal issues, monitor issues, metrics, effectiveness, collective-health routes. |
 | [agent_monitor_helpers.py](agent_monitor_helpers.py) | Monitor and status-report helpers for agent routes. No routes. |
-| [agent_prompt_ab_routes.py](agent_prompt_ab_routes.py) | Agent prompt A/B ROI stats route. |
 | [agent_question_routes.py](agent_question_routes.py) | Agent question routes — sub-agent questions with SSE answers. |
 | [agent_relationship.py](agent_relationship.py) | Agent relationship API — the runtime invocation surface. |
 | [agent_route_telegram_routes.py](agent_route_telegram_routes.py) | Agent route (routing) and Telegram diagnostics routes. |
 | [agent_run_state_routes.py](agent_run_state_routes.py) | Agent run-state and runner registry routes. |
 | [agent_smart_reap_routes.py](agent_smart_reap_routes.py) | Smart-reap routes: diagnose stuck tasks before marking them timed_out. |
 | [agent_status_routes.py](agent_status_routes.py) | Agent status-report and pipeline-status routes. |
-| [agent_task_chain_routes.py](agent_task_chain_routes.py) | Agent task-chain stats endpoint (spec: cross-task-outcome-correlation, R6). |
 | [agent_task_log_routes.py](agent_task_log_routes.py) | Agent task log route. |
 | [agent_tasks_routes.py](agent_tasks_routes.py) | Agent task CRUD and list routes. |
-| [agent_telegram.py](agent_telegram.py) | Telegram webhook routes for agent operations. |
 | [agent_telegram_format.py](agent_telegram_format.py) | Pure formatting / URL / classification helpers for the Telegram agent router. |
-| [agent_timeout_routes.py](agent_timeout_routes.py) | Agent timeout sample and recommendation routes. |
 | [agent_usage_routes.py](agent_usage_routes.py) | Agent usage, visibility, orchestration guidance, and integration routes. |
 | [assets.py](assets.py) | Assets router — backed by graph_nodes (type=asset). |
-| [audit.py](audit.py) | Audit ledger router -- spec 123. |
 | [auth_keys.py](auth_keys.py) | Per-contributor API key management. |
 | [automation_usage.py](automation_usage.py) | Automation provider usage and capacity endpoints. |
 | [beliefs.py](beliefs.py) | Beliefs router — per-contributor worldview, interests, and concept preferences. |
 | [blueprints.py](blueprints.py) | Blueprints router — project roadmap templates. |
 | [breath.py](breath.py) | Breath surface — the body's present-tense felt voice, observable to any cell. |
-| [brief.py](brief.py) | Brief router — daily engagement brief endpoints. |
 | [cc_economics.py](cc_economics.py) | CC Economics Router — endpoints for supply, exchange rate, and staking. |
-| [cc_exchange.py](cc_exchange.py) | CC Exchange Router — bridge to external exchanges (New Earth, CES). |
 | [coherence.py](coherence.py) | Coherence score endpoint — real-time computed coherence signal depth. |
 | [concepts.py](concepts.py) | Concepts router — CRUD for the ontology. All data lives in graph DB. |
 | [constellation.py](constellation.py) | Constellation view routes — network graph data for visualization. |
-| [content.py](content.py) | Content router — direct file access for index-oriented memory. |
 | [contributions.py](contributions.py) | Contributions router — backed by graph_nodes + graph_edges. |
 | [contributor_identity.py](contributor_identity.py) | Contributor Identity endpoints — link accounts, verify via OAuth/signature. |
 | [contributor_recognition.py](contributor_recognition.py) | _no top-of-file purpose_ |
@@ -55,12 +45,9 @@
 | [creator_economy.py](creator_economy.py) | Creator economy router — public stats, proof cards, featured listings. |
 | [creator_resonance.py](creator_resonance.py) | Creator resonance report routes. |
 | [credentials.py](credentials.py) | API router for Repo Credentials. |
-| [data_retention.py](data_retention.py) | Data retention management API routes. |
 | [debug.py](debug.py) | Debug mode toggle — runtime log-level control and diagnostic flags. |
 | [deploy.py](deploy.py) | Deploy log surface — public visibility into auto-deploy progress on the VPS. |
 | [deployment_observer.py](deployment_observer.py) | GitHub-OIDC-authenticated public deployment observation endpoints. |
-| [dialogues.py](dialogues.py) | Unlisted public dialogue cells over the VPC Form-native CPU worker. |
-| [dif_feedback.py](dif_feedback.py) | DIF feedback router — track verification accuracy for quality improvement. |
 | [discord_votes.py](discord_votes.py) | Discord reaction vote endpoint (spec-164 API Changes). |
 | [discovery.py](discovery.py) | Discovery router — Serendipity Discovery feed endpoints. |
 | [distributions.py](distributions.py) | Distributions router — backed by graph_nodes + graph_edges. |
@@ -68,11 +55,8 @@
 | [energy_sensing.py](energy_sensing.py) | Energy sensing — the organism sees itself as frequencies and harmonies. |
 | [entity_views.py](entity_views.py) | Generic entity-views router — one API for language views of any entity type. |
 | [evidence.py](evidence.py) | Evidence router — implementation evidence for asset CC-multiplier bonus. |
-| [execution_value.py](execution_value.py) | Routes for execution value and income proof. |
 | [explore.py](explore.py) | Explore queue — serendipitous meetings, one after another. |
-| [fallbacks.py](fallbacks.py) | Fallback visibility — read the witness of silent degradation paths. |
 | [federation.py](federation.py) | Federation API routes for cross-instance data exchange. |
-| [field_relay.py](field_relay.py) | Field relay — one always-open connection across networks (breath 1 transport carrier). |
 | [field_stories.py](field_stories.py) | Field story router — source-backed narrative and frequency artifacts. |
 | [flow_renderer.py](flow_renderer.py) | Flow renderer data — real energy flows for visualization. |
 | [flow_simulator.py](flow_simulator.py) | Flow simulator — visualize how CC moves through the community. |
@@ -82,9 +66,7 @@
 | [geolocation.py](geolocation.py) | Geolocation router — contributor location, nearby search, local news resonance. |
 | [governance.py](governance.py) | Governance review and voting API routes. |
 | [graph.py](graph.py) | Graph router — generic CRUD for nodes and edges. |
-| [graph_health.py](graph_health.py) | Graph health API — structural diagnostics and convergence guards (spec-172). |
 | [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
-| [graph_zoom.py](graph_zoom.py) | Fractal zoom navigation router (Spec 182). |
 | [grocery.py](grocery.py) | Grocery — the shopping ledger for a Light Hub manager. |
 | [hati_mesh.py](hati_mesh.py) | Hati mesh sensing-organ presence routes. |
 | [health.py](health.py) | Health check endpoint (spec 001). |
@@ -105,10 +87,8 @@
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
 | [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |
 | [mcp_remote.py](mcp_remote.py) | No-auth remote MCP endpoint for connector clients. |
-| [me_portfolio.py](me_portfolio.py) | Authenticated portfolio routes — same payloads as /api/contributors/{id}/… via X-API-Key. |
 | [meetings.py](meetings.py) | Meeting endpoint — the felt state of a viewer meeting an entity. |
 | [memberships.py](memberships.py) | Workspace membership routes — team edges between contributors and workspaces. |
-| [memory.py](memory.py) | Memory router — exposes the write/manage/read loop. |
 | [messages.py](messages.py) | Contributor messaging endpoints (Phase 3). |
 | [meta.py](meta.py) | Metadata self-discovery API routes. |
 | [models.py](models.py) | Model listing and routing configuration endpoints. |
@@ -116,11 +96,8 @@
 | [notifications.py](notifications.py) | Notifications — quiet witnesses of response. |
 | [offerings.py](offerings.py) | Offerings — services and belongings woven into the network. |
 | [onboarding.py](onboarding.py) | _no top-of-file purpose_ |
-| [openclaw_node_bridge.py](openclaw_node_bridge.py) | WebSocket bridge for OpenClaw ↔ federation node messages (real-time, alongside SSE). |
 | [peers.py](peers.py) | Peers router — contributor discovery via resonance and proximity. |
 | [personal_feed.py](personal_feed.py) | Personal feed — your corner of the organism. |
-| [pipeline.py](pipeline.py) | Pipeline status routes for the agent pipeline loop. |
-| [pipeline_policies.py](pipeline_policies.py) | Pipeline policy CRUD endpoints. |
 | [places.py](places.py) | Places router — where presences are rooted. |
 | [practice.py](practice.py) | The organism's daily practice, served as a first-class endpoint. |
 | [presence.py](presence.py) | Presence — soft heartbeat + read endpoints. |
@@ -131,12 +108,10 @@
 | [providers.py](providers.py) | Task execution provider routes. |
 | [push.py](push.py) | Web Push router — subscribe, unsubscribe, send. |
 | [reactions.py](reactions.py) | Reactions router — emoji + comment on any entity. |
-| [registry_discovery.py](registry_discovery.py) | Discovery registry submission inventory routes. |
 | [render_events.py](render_events.py) | Render Events Router — log a render, attribute CC, aggregate analytics. |
 | [renderers.py](renderers.py) | Renderer Router — pluggable asset renderer registry. |
 | [resonance.py](resonance.py) | Resonance router — structural cross-domain concept attraction endpoints. |
 | [reward_policies.py](reward_policies.py) | Reward policy CRUD endpoints — community-configurable reward formulas. |
-| [rooms.py](rooms.py) | Encrypted-room dead-drop carrier — a thin, opaque ciphertext key-value store. |
 | [runtime.py](runtime.py) | Runtime telemetry API routes. |
 | [sensings.py](sensings.py) | Sensings — the organism's moments of noticing, stored in the living graph. |
 | [service_registry_router.py](service_registry_router.py) | Service registry introspection endpoints. |
@@ -147,7 +122,6 @@
 | [traceability.py](traceability.py) | spec: full-code-traceability |
 | [translations.py](translations.py) | Translations router — POST submitted or generated translations for any entity. |
 | [treasury.py](treasury.py) | Implements: spec-122 (crypto treasury bridge) |
-| [ui_preferences.py](ui_preferences.py) | UI Preferences router — spec ux-tabs-mobile-friendly. |
 | [utils.py](utils.py) | _no top-of-file purpose_ |
 | [value_lineage.py](value_lineage.py) | API routes for value lineage and payout attribution. |
 | [vedic.py](vedic.py) | Vedic (jyotisha) chart — a birth-moment cast by the native vedic-chat.fk cell on fkwu as a chart (JSON) or answered in words; Python only carries the data. |
@@ -158,4 +132,3 @@
 | [wellness.py](wellness.py) | Wellness — the body sensing itself, surfaced outward. |
 | [workspace_projects.py](workspace_projects.py) | Workspace Project routes — group ideas within a workspace. |
 | [workspaces.py](workspaces.py) | Workspace CRUD routes — the tenant primitive. |
-| [world_lens.py](world_lens.py) | World lens — see the world through a concept's or contributor's frequency. |

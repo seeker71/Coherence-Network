@@ -305,7 +305,6 @@ async def test_native_form_message_offer_keeps_the_event_loop_available(monkeypa
 
 @pytest.mark.asyncio
 async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypatch):
-    from app.services import dialogue_service
 
     started = threading.Event()
     release = threading.Event()
@@ -326,11 +325,6 @@ async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypa
 
     monkeypatch.setattr(native_federation_graph_service, "offer", offer)
     monkeypatch.setattr(federation_router, "_store_message", lambda message: message)
-    monkeypatch.setattr(
-        dialogue_service,
-        "get_dialogue",
-        lambda dialogue_id: {"id": dialogue_id, "state": "miss"},
-    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
         offers = [
@@ -350,10 +344,6 @@ async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypa
         try:
             assert await asyncio.to_thread(started.wait, 1)
             await asyncio.sleep(0.05)
-            dialogue = await asyncio.wait_for(
-                client.get("/api/dialogues/dlg_concurrent"),
-                timeout=1,
-            )
             assert len(starts) == 1
             release.set()
             responses = await asyncio.gather(*offers)
@@ -361,8 +351,6 @@ async def test_native_form_waiters_do_not_occupy_the_shared_worker_pool(monkeypa
             release.set()
             await asyncio.gather(*offers, return_exceptions=True)
 
-    assert dialogue.status_code == 200
-    assert dialogue.json()["state"] == "miss"
     assert all(response.status_code == 201 for response in responses)
 
 

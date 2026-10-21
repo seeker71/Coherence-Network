@@ -196,16 +196,6 @@ async def test_energy_invitations_and_fallback_witness_flow():
         assert "stabilizes without control" in goal_inv["invitation"]
         assert "WARNING" not in goal_inv["invitation"].upper()
 
-        # Fallback witness records + filters + summarises.
-        fw.clear()
-        fw.witness(source="test:example", reason="demo", context={"k": "v"})
-        fw.witness(source="test:other", reason="second")
-        all_fb = (await c.get("/api/fallbacks")).json()
-        assert all_fb["count"] >= 2
-        assert {"test:example", "test:other"} <= {e["source"] for e in all_fb["events"]}
-        filtered = (await c.get("/api/fallbacks?source=test:ex")).json()["events"]
-        assert all(e["source"].startswith("test:ex") for e in filtered)
-        assert (await c.get("/api/fallbacks/summary")).json()["total"] >= 2
 
     # Translator with no backend → source text + witness event.
     fw.clear()

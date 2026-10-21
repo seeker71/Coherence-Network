@@ -42,9 +42,6 @@ async def test_agent_invitation_api_shape() -> None:
     assert "docs/presences/codex.md" in lineage_sources
     assert "docs/presences/claude.md" in lineage_sources
     assert "docs/presences/grok.md" in lineage_sources
-    assert "/api/agent/external-encounters" in "\n".join(
-        body["agent_presence_lineage"]["find_and_interact"]
-    )
     assert "trust" in body["inside_outside_boundary"]["circulation"]
     assert "private consciousness" in body["inside_outside_boundary"]["guardrail"]
     assert body["self_orientation_contract"]["summary"]

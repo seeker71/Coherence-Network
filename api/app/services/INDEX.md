@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 256
+**Total files**: 243
 
 | File | Purpose |
 |---|---|
@@ -47,14 +47,11 @@
 | [app_mode.py](app_mode.py) | Application runtime mode helpers backed by config, not environment. |
 | [attunement_scheduler.py](attunement_scheduler.py) | Attunement scheduler — re-attune every presence so newly added concepts |
 | [audit_ledger_service.py](audit_ledger_service.py) | Transparent Audit Ledger service -- spec 123. |
-| [auto_heal_service.py](auto_heal_service.py) | Auto-heal from diagnostics: maps error categories to heal strategies. Spec 114. |
 | [automation_usage_service.py](automation_usage_service.py) | Provider usage adapters, normalized snapshots, and alert evaluation. |
 | [belief_service.py](belief_service.py) | Belief service — business logic for contributor belief profiles and resonance scoring. |
 | [breath_service.py](breath_service.py) | Breath Service — gas/water/ice phase distribution per idea. |
-| [brief_service.py](brief_service.py) | Brief service — daily engagement brief generation and feedback tracking. |
 | [capability_probe.py](capability_probe.py) | Auto-discover node executors, tools, hardware, and routed models. |
 | [cc_economics_service.py](cc_economics_service.py) | CC Economics Service — orchestrator for supply, exchange, and staking. |
-| [cc_exchange_adapter.py](cc_exchange_adapter.py) | CC Exchange Adapter Service — pluggable bridge to external exchanges. |
 | [cc_fiat_bridge.py](cc_fiat_bridge.py) | CC Fiat Bridge — pure-logic pieces of the financial-integration spec. |
 | [cc_oracle_service.py](cc_oracle_service.py) | CC Oracle Service — cached exchange rate fetching with 5-minute TTL. |
 | [cc_staking_service.py](cc_staking_service.py) | CC Staking Service — create positions, unstake with cooldown tiers, attribution. |
@@ -88,7 +85,6 @@
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
 | [creator_resonance_service.py](creator_resonance_service.py) | Creator resonance report scoring. |
 | [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
-| [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
 | [deployment_observation.py](deployment_observation.py) | Persistent, content-bound deployment observations in the Form substrate. |
 | [deployment_observer_oidc.py](deployment_observer_oidc.py) | Verify GitHub Actions OIDC identity for the public deployment observer. |
 | [deployment_observer_service.py](deployment_observer_service.py) | One-time external deployment challenges and byte-bound observations. |
@@ -102,7 +98,6 @@
 | [energy_goal_recipe_service.py](energy_goal_recipe_service.py) | Goal-aware recipes for energy sensing responses. |
 | [entity_view_attribution_service.py](entity_view_attribution_service.py) | Attribution bridge for editable entity views. |
 | [evidence_service.py](evidence_service.py) | Evidence service — submission, verification, and retrieval for asset implementation evidence. |
-| [execution_value_proof_service.py](execution_value_proof_service.py) | Compose execution, grounded value, and paid-read income proof. |
 | [explore_queue_service.py](explore_queue_service.py) | Explore queue — a curated stream of entities the viewer hasn't met yet. |
 | [failed_task_diagnostics_service.py](failed_task_diagnostics_service.py) | Failed-task diagnostics: error classification and completeness tracking. Spec 113. |
 | [failure_taxonomy_service.py](failure_taxonomy_service.py) | Shared failure taxonomy for consistent bucketing and signatures. |
@@ -128,7 +123,6 @@
 | [geolocation_service.py](geolocation_service.py) | Geolocation service — city-level contributor location storage and proximity search. |
 | [github_client.py](github_client.py) | GitHub API client — spec 029. |
 | [governance_service.py](governance_service.py) | Governance service for reviewable change requests and voting. |
-| [graph_health_service.py](graph_health_service.py) | Graph shape diagnostics: entropy, concentration, gravity wells, orphan clusters (spec-172). |
 | [graph_service.py](graph_service.py) | Universal graph service — CRUD for nodes and edges. |
 | [grounded_idea_metrics_service.py](grounded_idea_metrics_service.py) | Grounded idea portfolio metrics — replace hand-typed numbers with real data. |
 | [grounded_measurement_service.py](grounded_measurement_service.py) | Grounded cost & value measurement for prompt A/B ROI (spec 115). |
@@ -170,7 +164,6 @@
 | [mcp_tool_registry.py](mcp_tool_registry.py) | MCP tool registry: maps tool names to handlers, schemas, and descriptions. |
 | [meeting_service.py](meeting_service.py) | Meeting — the combined-organism sense of viewer + content. |
 | [membership_service.py](membership_service.py) | Membership service — team edges between contributors and workspaces. |
-| [memory_service.py](memory_service.py) | Memory service — the write/manage/read loop from the agent-memory-system spec. |
 | [message_service.py](message_service.py) | Contributor messaging service — graph-backed message nodes and edges. |
 | [meta_service.py](meta_service.py) | Metadata self-discovery service. |
 | [metrics_service.py](metrics_service.py) | Task metrics: persistence and aggregation. Spec 026 Phase 1. |
@@ -195,7 +188,6 @@
 | [pipeline_advance_service.py](pipeline_advance_service.py) | Pipeline auto-advance + auto-retry + smart escalation. |
 | [pipeline_policy_service.py](pipeline_policy_service.py) | Pipeline policy service — data-driven pipeline configuration. |
 | [pipeline_pulse_service.py](pipeline_pulse_service.py) | Pipeline pulse — self-awareness digest for the idea→spec→impl→verify pipeline. |
-| [pipeline_service.py](pipeline_service.py) | Shared state and helpers for the agent pipeline loop (spec 139). |
 | [place_service.py](place_service.py) | Place service — where presences are rooted. |
 | [portfolio_service.py](portfolio_service.py) | Portfolio service — aggregates contributor personal view data (spec 174). |
 | [presence_invitation_service.py](presence_invitation_service.py) | Graph-backed invitation surface for living presences. |
@@ -210,8 +202,6 @@
 | [quality_awareness_service.py](quality_awareness_service.py) | Guidance-first quality awareness summary derived from maintainability audits. |
 | [reaction_service.py](reaction_service.py) | Reactions — a lightweight surface for expressing care on anything. |
 | [read_tracking_service.py](read_tracking_service.py) | Read sensing service — records asset reads as daily aggregated counters, |
-| [registry_discovery_service.py](registry_discovery_service.py) | Registry submission inventory backed by static repo-tracked evidence. |
-| [registry_stats_service.py](registry_stats_service.py) | Registry install/download count fetching service with file-based cache. |
 | [release_gate_service.py](release_gate_service.py) | Release gate checks for PR status, collective review, and public validation. |
 | [render_attribution_service.py](render_attribution_service.py) | Render attribution service. |
 | [repo_credential_service.py](repo_credential_service.py) | Repo Credential Service — per-contributor, per-repo credential tracking. |
@@ -235,15 +225,12 @@
 | [stake_compute_service.py](stake_compute_service.py) | Stake-to-compute service: when CC is staked on an idea, determine and create tasks. |
 | [story_protocol_bridge.py](story_protocol_bridge.py) | Story Protocol Bridge — pure-logic pieces of the story-protocol-integration spec. |
 | [task_activity_service.py](task_activity_service.py) | Task activity log — in-memory ring buffer for live task visibility. |
-| [task_chain_correlation_service.py](task_chain_correlation_service.py) | Cross-task outcome correlation — chain linkage, resolution, and effectiveness scoring. |
 | [task_dedup_service.py](task_dedup_service.py) | Task deduplication service — prevents duplicate tasks for the same idea+phase. |
 | [telegram_adapter.py](telegram_adapter.py) | Telegram adapter — outbound alerts and inbound webhook handling. |
-| [telegram_deploy_service.py](telegram_deploy_service.py) | Deploy verification command handlers for Telegram webhook. |
 | [telegram_diagnostics.py](telegram_diagnostics.py) | In-memory diagnostics for Telegram webhook and send_reply — inspect via GET /api/agent/telegram/diagnostics. |
 | [telegram_report_formatter.py](telegram_report_formatter.py) | Formatting helpers for Telegram status/task replies. |
 | [telemetry_persistence_service.py](telemetry_persistence_service.py) | DB-backed telemetry persistence for automation usage and friction events. |
 | [time_pledge_service.py](time_pledge_service.py) | Time pledge service — convert pledged labor hours into CC equivalents. |
-| [timeout_adaptive_service.py](timeout_adaptive_service.py) | Data-driven task timeout samples and recommendations. |
 | [traceability_service.py](traceability_service.py) | spec: full-code-traceability |
 | [translate_service.py](translate_service.py) | Concept translation service — reframe ideas and concepts through worldview lenses. |
 | [translation_cache_service.py](translation_cache_service.py) | Concept views — equal-status language renderings of a concept, idea, or |

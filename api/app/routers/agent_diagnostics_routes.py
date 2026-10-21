@@ -12,7 +12,6 @@ from pydantic import BaseModel, Field
 from app import config_loader
 from app.middleware.auth import require_admin_key
 from app.services import (
-    auto_heal_service,
     agent_execution_hooks,
     agent_runner_registry_service,
     agent_service,
@@ -290,18 +289,13 @@ def _diagnostics_task_payload(
         row for row in recent_rows
         if str(row.get("status") or "").strip().lower() == "running"
     ]
-    runner_gap = auto_heal_service.summarize_runner_gap(
-        task_counts=counts,
-        runner_rows=runner_rows,
-        running_tasks=active_rows,
-    )
     return {
         "counts": counts,
         "recent_total": recent_total,
         "recent": recent_rows,
         "active": active_rows,
         "context_budget": context_hygiene_service.summarize_recent_tasks(recent_rows),
-        "anomalies": [runner_gap] if runner_gap["open"] else [],
+        "anomalies": [],
         "attention_total": attention_total,
         "attention": attention_rows,
         "log_previews": [_task_log_preview(row) for row in recent_rows[:3]],

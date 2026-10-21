@@ -12,3 +12,9 @@ Moved 2026-10-20; the senses read 84 missing source paths across these eighteen 
 
 `project-manager-pipeline.md` joined them on 2026-10-20 when `api/scripts/project_manager.py`
 and the overnight lane around it left (see `docs/retired/README.md`).
+
+Moved 2026-10-21 (release of the compatibility host's unreached routers): auto-heal-from-diagnostics,
+heal-completion-issue-resolution and incident-response-and-self-healing (auto_heal_service),
+cc-new-earth-exchange-bridge (cc_exchange_adapter), coherence-network-agent-pipeline (pipeline_service),
+execution-value-income-proof (execution_value_proof_service) and external-agent-encounter-records
+(agent_external_encounters) — routers and services no surface, script, kernel app or request reached.

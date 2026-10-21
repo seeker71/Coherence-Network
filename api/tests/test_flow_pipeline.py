@@ -106,33 +106,6 @@ class TestPhaseConfiguration:
         assert pas._PHASE_TASK_TYPE["deploy"] == TaskType.DEPLOY
         assert pas._PHASE_TASK_TYPE["verify-production"] == TaskType.VERIFY
 
-    @pytest.mark.asyncio
-    async def test_pipeline_status_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """GET /api/pipeline/status returns running state; GET /api/pipeline/summary always 200."""
-        from app.routers import pipeline
-
-        app = FastAPI()
-        app.include_router(pipeline.router, prefix="/api")
-
-        # When running: status returns 200
-        monkeypatch.setattr(
-            "app.services.pipeline_service.get_status",
-            lambda: {"running": True, "uptime_seconds": 10, "cycle_count": 1},
-        )
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/api/pipeline/status")
-            assert resp.status_code == 200
-            assert resp.json()["running"] is True
-
-        # Summary always returns 200, even when not running
-        monkeypatch.setattr(
-            "app.services.pipeline_service.get_status",
-            lambda: {"running": False, "uptime_seconds": 0, "cycle_count": 0},
-        )
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/api/pipeline/summary")
-            assert resp.status_code == 200
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Code Review Gate (4 tests)

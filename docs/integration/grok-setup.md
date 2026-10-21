@@ -74,7 +74,6 @@ Step 10: Check CC balance  → GET /api/cc/supply
 | Idea lifecycle | GET | `/api/ideas/{id}/lifecycle` |
 | Idea rollup | GET | `/api/ideas/{id}/rollup` |
 | Right-sizing | GET | `/api/ideas/right-sizing` |
-| Task chains | GET | `/api/agent/task-chains/stats` |
 
 ## MCP Server (If Grok Supports MCP in the Future)
 
