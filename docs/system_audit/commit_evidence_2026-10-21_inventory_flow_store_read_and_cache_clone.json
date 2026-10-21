@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/inventory-flow-store-read",
+  "commit_scope": "The residual seconds of /api/inventory/flow named and healed: an uncached build loaded the whole agent task store from PostgreSQL (16,706 rows, 8.3 s of a 13.9 s build) to read the 1,742 active rows' fingerprints, and every cache hit deep-copied the 16 MB payload (1.2 s). The fingerprint index now reads the active rows with one status-filtered query (0.45 s); the inventory cache clones by JSON round-trip (0.35 s).",
+  "files_owned": ["api/app/services/agent_task_store_service.py", "api/app/services/agent_service_active_task.py", "api/app/services/inventory_service.py", "api/tests/test_agent_task_claims.py"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["api-warm-window"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["observe", "root cause", "heal"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "This route is served by the Python compatibility host (api/app/routers/inventory.py → inventory_service.build_spec_process_implementation_validation_flow); no fkwu recipe and no page JIT is on its path. The cold/warm reading reported after #4125 (17–20 s, ~3 s) was these two Python costs, not kernel behavior.",
+    "The body's timing instrument on the deployed build (docker exec, PYTHONPATH=/app): build 10.6 s, unblock_sort=7,435 ms — a timer that spans the per-idea loop, which itself is cheap. cProfile of the same build (13.9 s): agent_service_active_task.active_tasks_by_fingerprint 8.3 s, all of it agent_service_store._load_store_from_disk → agent_task_store_service.load_tasks: 16,706 rows, 26,914 json.loads (3.0 s) and psycopg wait (3.3 s); idea_read.list_ideas 2.6 s; _write_inventory_cache 2.0 s of copy.deepcopy; the store reloads every 300 s (db_reload_ttl_seconds clamps to 300), so the load returns to every fifth minute's build.",
+    "Measured in the production container: tasks by status completed 4,567 / failed 9,357 / timed_out 1,040 / needs_decision 1,667 / pending 75; a status-filtered minimal-column query of the 1,742 active rows 0.454 s; the flow payload is 16,090,862 bytes of JSON; copy.deepcopy of it 1.202 s, json.dumps+json.loads 0.353 s; a cache-hit build 1.23 s (the deepcopy).",
+    "Heal: agent_task_store_service.load_active_tasks(statuses) — one query filtered on the indexed status column, no output or command columns; active_tasks_by_fingerprint reads it when the store is database-backed and keeps the in-memory pass otherwise; inventory_service._clone_payload clones cache reads and writes by JSON round-trip and deep-copies a payload that is not JSON-shaped.",
+    "Proof: test_active_fingerprint_index_reads_active_rows_from_the_database (persist+use_db on the test SQLite store; _load_store_from_disk replaced by a function that raises; the active fingerprint is in the index with status PENDING and no output, the completed one is not); test_inventory_cache_clone_is_independent_and_keeps_non_json_payloads; the whole suite after the change (count in the suite log of this push).",
+    "Named, not changed: idea_read.list_ideas 2.6 s per uncached build, and the 16 MB response itself — its size is the next honest signal for this route and belongs to its move into the native owner, not to this heal."
+  ],
+  "change_files": ["api/app/services/agent_task_store_service.py", "api/app/services/agent_service_active_task.py", "api/app/services/inventory_service.py", "api/tests/test_agent_task_claims.py", "docs/system_audit/commit_evidence_2026-10-21_inventory_flow_store_read_and_cache_clone.json"],
+  "local_validation": {"status": "pass", "summary": "The two new claims and the claims file pass (16); the whole API suite passes after the change."},
+  "ci_validation": {"status": "pending", "summary": "The PR's Test workflow runs the suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "After the merge rolls out: the timing instrument and /api/inventory/flow timed at the edge, uncached and cached."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "An uncached /api/inventory/flow build drops from ~14 s to ~5 s (ideas 2.6 s remaining); a cache hit from ~1.2 s to ~0.4 s before serialization.", "public_endpoints": ["https://api.coherencycoin.com/api/inventory/flow", "https://api.coherencycoin.com/api/ping"], "test_flows": ["curl -s -o /dev/null -w '%{time_total}' 'https://api.coherencycoin.com/api/inventory/flow?runtime_window_seconds=86400'"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The rollout is the live check."}
+}
