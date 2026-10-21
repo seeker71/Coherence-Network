@@ -82,8 +82,9 @@
     "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README. Public API, web and CORS smoke passed. Web CI path detection repaired after observed skipped build. Focused web rerun:21passed after the migration checks were repaired. Public native Pulse HTML verified."
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "API suite and build passed on57e8b3547. Actual web test execution exposed three stale migration checks; repaired and awaiting focused/local plus full CI proof."
+    "status": "pass",
+    "summary": "PR4126 finalhead46ec5b843: API suite, web build/153tests, GitGuardian passed. Source merged e9cd41e43.",
+    "run": "https://github.com/seeker71/Coherence-Network/actions/runs/39551986154"
   },
   "e2e_validation": {
     "status": "fail",
@@ -100,11 +101,12 @@
   },
   "deploy_validation": {
     "status": "pending",
-    "summary": "Existing GPT final7531characters published and read back2026-10-21T05:41:06.393Z. Skill0.6.3 release/download and public llms serving pending."
+    "summary": "GPT7531chars published/readback. Release0.6.3 download/all8files and installed0.6.3/all8files verified; unrelated config byte-equal. GitHub guide readback equal. Public website deployment in progress.",
+    "run": "https://github.com/seeker71/Coherence-Network/actions/runs/39552342931"
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_reason": "Delivery pending and full behavioral scope criterion remains unmet; no full-readiness claim."
+    "blocked_reason": "Full behavioral scope criterion remains unmet; public web serving proof pending. Narrow source/release improvements are verified separately."
   },
   "evidence_refs": [
     "docs/integration/companion-gpt-observations.md",
@@ -154,7 +156,7 @@
   ],
   "sovereignty_receipt": {
     "reasoning": "OpenAI-hosted Codex and ChatGPT; exact serving variants/task tokens unavailable.",
-    "native": "Native orientation and observations ran; no sufficient business answer or native generation claimed.",
+    "native": "Native orientation and observations ran; no sufficient business answer or native generation claimed. Closing local-flow and session-rent observations completed; session-rent measured3changed transcripts/kept97, not task-specific token usage.",
     "trust_matrix": {
       "path": "oracle",
       "grounded": 0,

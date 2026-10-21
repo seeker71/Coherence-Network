@@ -65,23 +65,33 @@
       "ambiguity": "3/9 followed a local conversion question but was intended as the whole sum; one clarification corrected the pause note. Initial interpretation was reasonable from visible context, not a clear tutoring failure.",
       "continuation": "Actual copied two-line note carried the attempt into another fresh chat without the answer. One hint followed; after learner supplied5/6, requested one-sentence rule and stopping were honored.",
       "limit": "Scripted responses, not measured human learning or native continuity."
+    },
+    {
+      "purpose": "Proportional business help and easier first use.",
+      "source_commit": "7c99c23420e03a0a3c34fb9eeedad41b5a60e9a3",
+      "original": "Simple first-offer request produced useful bread concept plus timetable, clearly illustrative pricing calculator and unrelated image. Feedback distinction and explicitly requested short invitation worked.",
+      "first_repair": "7454-character published payload still added timetable,3images,invitation and experiment; failed scope criterion.",
+      "final_repair": "7531-character published payload omitted timetable/calculator/experiment plan in identical fresh prompt; one decorative image and extra closing choice remained.",
+      "result": "Partial improvement; full scope criterion remains unmet.",
+      "limit": "Fictional owner-account observations; no causal or broad reliability claim. Additional post-repair invitation check could not start because UI access was unavailable.",
+      "distribution": "Public0.6.3 archive and all8installed files equal merged source; plugin enabled, unrelated config byte-equal; fresh-host loading unobserved."
     }
   ],
   "distribution": {
-    "public_release_current": "companion-v0.6.2",
-    "plugin_source_version": "0.6.2",
-    "prepared_zip_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
+    "public_release_current": "companion-v0.6.3",
+    "plugin_source_version": "0.6.3",
+    "prepared_zip_sha256": "cc1ed04ae92cc8d40a58d60f658fa827a0841b424edd8473e282e8afd4c5e88c",
     "prepared_zip_entries": 8,
     "prepared_zip_matches_source": true,
     "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
     "npm": "Account authentication unfinished; registry publication not completed.",
     "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement.",
-    "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.2",
-    "release_source_commit": "124d8721c72423c94b322d5ce5ac1f97a941487c",
-    "public_download_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
+    "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.3",
+    "release_source_commit": "e9cd41e43d3a86fe4d2fba2ece121145127a7c9a",
+    "public_download_sha256": "cc1ed04ae92cc8d40a58d60f658fa827a0841b424edd8473e282e8afd4c5e88c",
     "public_download_matches_reviewed": true,
     "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered.",
-    "public_download_bytes": 18125,
+    "public_download_bytes": 18308,
     "all_public_members_equal_source": true
   },
   "native_boundary": "Host composed these replies. No native generation, native sufficiency, task-specific rent reduction or universal privacy claimed.",
@@ -140,6 +150,23 @@
       "public_download_sha256": "8afc76667c72245f9ff619f5a8b27195712e436c54a760ece78b1fd047e9676d",
       "public_download_matches_reviewed": true,
       "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered."
+    },
+    {
+      "public_release_current": "companion-v0.6.2",
+      "plugin_source_version": "0.6.2",
+      "prepared_zip_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
+      "prepared_zip_entries": 8,
+      "prepared_zip_matches_source": true,
+      "directory": "Signed-in uploader required further publisher verification before accepting the package. No submission, approval or billing change; public GitHub distribution is available.",
+      "npm": "Account authentication unfinished; registry publication not completed.",
+      "gpt_migration": "Not performed; current read-only Action must survive a separately proven replacement.",
+      "public_release_url": "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.2",
+      "release_source_commit": "124d8721c72423c94b322d5ce5ac1f97a941487c",
+      "public_download_sha256": "252dece11742d412f4171293f60d7e77e3d05ed7b27a372cf7dfef91bf8b1a6c",
+      "public_download_matches_reviewed": true,
+      "credit_boundary": "Package contains no API credentials, automatic MCP connection or publisher-funded inference proxy. Recipients use their own host account; publisher credits are not offered.",
+      "public_download_bytes": 18125,
+      "all_public_members_equal_source": true
     }
   ]
 }
