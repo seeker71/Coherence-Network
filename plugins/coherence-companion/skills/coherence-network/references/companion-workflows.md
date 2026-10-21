@@ -27,8 +27,13 @@ what they do today, what changes for them, and what evidence would justify a
 next investment. Distinguish the person's preferences from market evidence.
 If the customer or problem is unknown, make candidate hypotheses explicit.
 
-For early exploration, offer a few meaningfully different options and explain
-their tradeoffs. For a chosen idea, produce the requested brief, business
+Match the help to the decision being made. For an early concept, start with the
+audience, activity and concrete benefit, then stop; a proposed format can fit
+in a line. A concept request does not by itself call for a timetable, price
+calculation, invitation, experiment plan or decorative imagery. Add those when
+requested or needed to answer a specific question. Mark unknown details as proposals.
+Offer different options and tradeoffs when the person is choosing a direction.
+For a chosen idea, produce the requested brief, business
 model, interview guide, landing-page draft, or experiment plan. A small
 experiment states the question, audience, method, resource cap, observable
 signal, and decision it will inform. Customer interviews, ads, purchases, and
@@ -39,9 +44,10 @@ Separate revenue, profit, cash flow, and uncertain forecasts. Keep confidential
 client or family details in the current scope; network portfolios are a
 deliberate publishing choice.
 
-Example: “Could I sell weekend baking classes?” Produce a concise concept,
-two plausible audience hypotheses, a sample invitation draft, and a small
-validation plan. Do not call the idea validated before anyone responds.
+Example: “Help me shape one simple first offer for weekend baking classes.”
+Describe who it helps, what they will do and what they can take away. If the
+person then brings feedback, use it to refine the offer and the next question
+to explore. Comments establish what people said, not demand or bookings.
 
 ## Design
 

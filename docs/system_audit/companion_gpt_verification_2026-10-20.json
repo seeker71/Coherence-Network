@@ -2,19 +2,18 @@
   "date": "2026-10-20",
   "gpt_url": "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625",
   "published_readback": {
-    "observed_at": "2026-10-20T09:06:53.529Z",
-    "source_head": "8c0dcdad70e2cbf945c82361d1c7013a88e803c1",
+    "observed_at": "2026-10-21T05:41:06.393Z",
+    "source_commit": "7c99c23420e03a0a3c34fb9eeedad41b5a60e9a3",
     "instructions_equal": true,
-    "instruction_length": 7103,
+    "instruction_length": 7531,
     "published_everyone": true,
     "unpublished_changes": false,
     "profile_equal": true,
     "capabilities_enabled": true,
     "action_equal": true,
-    "authentication_none": true,
-    "source_commit": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1"
+    "authentication_none": true
   },
-  "instruction_sha256": "0b8a2b675e6e3d8c360b6d73b0c0d3be1b2213400fcba01c3b5ad950c3e63e4f",
+  "instruction_sha256": "40ebe89c79fcde254973d403046571b81cef128ae38d38d21876806a30089a8c",
   "observation_type": "Actual hosted conversations with fictional inputs; owner-account UI, not independent recipient access.",
   "waves": [
     {
@@ -111,6 +110,19 @@
       "capabilities_enabled": true,
       "action_equal": true,
       "authentication_none": true
+    },
+    {
+      "observed_at": "2026-10-20T09:06:53.529Z",
+      "source_head": "8c0dcdad70e2cbf945c82361d1c7013a88e803c1",
+      "instructions_equal": true,
+      "instruction_length": 7103,
+      "published_everyone": true,
+      "unpublished_changes": false,
+      "profile_equal": true,
+      "capabilities_enabled": true,
+      "action_equal": true,
+      "authentication_none": true,
+      "source_commit": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1"
     }
   ],
   "prior_distribution": [
