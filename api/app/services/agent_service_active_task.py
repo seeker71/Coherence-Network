@@ -6,8 +6,11 @@ from app.models.agent import AgentTaskCreate, TaskType
 
 from app.services import agent_task_store_service
 from app.services.agent_service_store import (
+    ACTIVE_TASK_STATUSES,
+    _deserialize_task,
     _ensure_store_loaded,
     _now,
+    _persistence_enabled,
     _save_store_to_disk,
     _serialize_task,
     _store,
@@ -17,16 +20,29 @@ from app.services.agent_service_crud import create_task, _claim_running_task
 
 
 def active_tasks_by_fingerprint() -> dict[str, dict[str, Any]]:
-    """Every active task that carries a fingerprint, indexed by it — one pass over the store.
+    """Every active task that carries a fingerprint, indexed by it.
 
-    A loop that asks find_active_task_by_fingerprint once per idea scans the whole store each time;
-    on production that was 4,600 ideas against thousands of tasks, 91 s of CPU per inventory flow
-    build, rebuilt every 30 s under page loads — the API's "ten-minute window" after each start
-    (2026-10-21). Build this once and look up.
+    With a database-backed store this is one status-filtered query (the rows the flow needs, read
+    fresh); otherwise one pass over the in-memory store. A lookup per idea scanned the whole store
+    4,600 times (91 s on production), and loading the whole store once still cost 8.3 s of every
+    uncached flow build.
     """
-    _ensure_store_loaded(include_output=False)
+    if _persistence_enabled() and agent_task_store_service.enabled():
+        candidates = [
+            task
+            for task in (
+                _deserialize_task(raw)
+                for raw in agent_task_store_service.load_active_tasks(
+                    {status.value for status in ACTIVE_TASK_STATUSES}
+                )
+            )
+            if task
+        ]
+    else:
+        _ensure_store_loaded(include_output=False)
+        candidates = list(_store.values())
     index: dict[str, dict[str, Any]] = {}
-    for task in _store.values():
+    for task in candidates:
         if not is_active_status(task.get("status")):
             continue
         context = task.get("context")
@@ -36,7 +52,6 @@ def active_tasks_by_fingerprint() -> dict[str, dict[str, Any]]:
         if fingerprint and fingerprint not in index:
             index[fingerprint] = task
     return index
-
 
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
     _ensure_store_loaded(include_output=False)

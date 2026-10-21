@@ -227,3 +227,57 @@ def test_service_claim_and_fingerprint_dedup():
                  "question_fingerprint": fp_q, "task_fingerprint": fp_q},
     ))
     assert fp_q in _active_impl_question_fingerprints()
+
+
+def test_active_fingerprint_index_reads_active_rows_from_the_database(set_config, monkeypatch):
+    # With a database-backed store the index is one status-filtered query — it never loads the whole
+    # store. On production the store holds 16,706 tasks (1,742 active); loading all of them cost 8.3 s
+    # of every uncached /api/inventory/flow build, the active rows alone read in 0.45 s.
+    from app.services import agent_service, agent_service_store, agent_task_store_service
+
+    set_config("agent_tasks", "persist", True)
+    set_config("agent_tasks", "use_db", True)
+    assert agent_task_store_service.enabled()
+
+    fp_active = f"db-active-{uuid4().hex[:8]}"
+    fp_done = f"db-done-{uuid4().hex[:8]}"
+    active = agent_service.create_task(AgentTaskCreate(
+        direction="db active", task_type=TaskType.IMPL, context={"task_fingerprint": fp_active},
+    ))
+    done = agent_service.create_task(AgentTaskCreate(
+        direction="db done", task_type=TaskType.IMPL, context={"task_fingerprint": fp_done},
+    ))
+    agent_service.update_task(done["id"], status=TaskStatus.COMPLETED, output="Done")
+
+    def _whole_store_is_not_loaded(*args, **kwargs):
+        raise AssertionError("active_tasks_by_fingerprint loaded the whole task store")
+
+    monkeypatch.setattr(agent_service_store, "_load_store_from_disk", _whole_store_is_not_loaded)
+    index = agent_service.active_tasks_by_fingerprint()
+
+    assert index[fp_active]["id"] == active["id"]
+    assert index[fp_active]["status"] == TaskStatus.PENDING
+    assert index[fp_active]["output"] is None  # the narrow read carries no output column
+    assert fp_done not in index
+
+
+def test_inventory_cache_clone_is_independent_and_keeps_non_json_payloads():
+    # The inventory cache clones by JSON round-trip (0.35 s on the 16 MB flow payload where deepcopy
+    # took 1.2 s — the whole "warm" cost of the route); a payload that is not JSON-shaped is still
+    # deep-copied rather than dropped.
+    from app.services import inventory_service as inv
+
+    payload = {"items": [{"idea_id": "a", "roi": 1.5, "flags": [True, None]}], "summary": {"count": 1}}
+    clone = inv._clone_payload(payload)
+    assert clone == payload and clone is not payload
+    clone["items"][0]["idea_id"] = "b"
+    assert payload["items"][0]["idea_id"] == "a"
+
+    odd = {"ids": {"a", "b"}}
+    odd_clone = inv._clone_payload(odd)
+    assert odd_clone == odd and odd_clone["ids"] is not odd["ids"]
+
+    inv._write_inventory_cache("flow", "clone-claim", payload)
+    cached = inv._read_inventory_cache("flow", "clone-claim")
+    assert cached == payload and cached is not payload
+    inv._INVENTORY_CACHE.pop("flow", None)
