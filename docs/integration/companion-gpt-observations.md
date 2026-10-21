@@ -353,9 +353,9 @@ The useful offer and the successful short invitation in the original
 conversation do not erase that failed first-response comparison.
 
 A second source repair then made the stopping point more explicit, bringing
-the payload to **7,531 characters**. Its publication verification and
-fresh same-prompt observation are **pending in this record**. No successful
-retry, causal improvement or general reliability claim is made for that repair.
+the payload to **7,531 characters**. Its publication verification and fresh
+same-prompt observation are recorded below. No fully successful retry, causal
+improvement or general reliability claim is made for that repair.
 
 The original three turns and failed retry are actual hosted responses to
 fictional requests. They do not establish real customer demand, bookings,
