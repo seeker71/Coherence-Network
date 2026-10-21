@@ -33,17 +33,12 @@ describe("public stewardship pages", () => {
       "COPY docs/stewardship ./docs/stewardship",
     );
 
-    for (const workflow of [
-      "hostinger-auto-deploy.yml",
-      "public-deploy-contract.yml",
-    ]) {
-      expect(
-        readFileSync(
-          join(REPO_ROOT, ".github", "workflows", workflow),
-          "utf8",
-        ),
-      ).toContain("- 'docs/stewardship/**'");
-    }
+    expect(
+      readFileSync(
+        join(REPO_ROOT, ".github", "workflows", "hostinger-auto-deploy.yml"),
+        "utf8",
+      ),
+    ).toContain("- 'docs/stewardship/**'");
   });
 
   it("serves both stewardship links emitted by the Urs profile", () => {

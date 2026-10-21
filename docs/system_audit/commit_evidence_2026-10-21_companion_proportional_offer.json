@@ -79,7 +79,7 @@
       "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
       "form-run git diff --check"
     ],
-    "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README. Public API, web and CORS smoke passed. Web CI path detection repaired after observed skipped build."
+    "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README. Public API, web and CORS smoke passed. Web CI path detection repaired after observed skipped build. Focused web rerun:21passed after the migration checks were repaired. Public native Pulse HTML verified."
   },
   "ci_validation": {
     "status": "pending",
@@ -149,7 +149,7 @@
     {
       "command": "CI run39551338407: cd web && npm ci --allow-git=none && npm run build && npm run test",
       "output": "Build passed; tests:3failed151passed. Internal links rejected four/pulse references; presence/stewardship expected retired shell probes.",
-      "repair": "Link discovery reads exact native route registrations from existing Compose care. Remove stale assertions requiring probes intentionally retired by962549a32; retain node resolution, real stewardship corpus/navigation, packaging and deploy-path checks."
+      "repair": "Link discovery reads exact native route registrations from existing Compose care. Remove stale assertions requiring probes intentionally retired by962549a32; retain node resolution, real stewardship corpus/navigation, packaging and deploy-path checks. Focused rerun exposed one further masked assertion: public-deploy-contract is manual-only since a0413e758; deployment-trigger assertion now checks the actual Hostinger owner only."
     }
   ],
   "sovereignty_receipt": {
