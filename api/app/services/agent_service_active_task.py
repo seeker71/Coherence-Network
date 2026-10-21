@@ -16,6 +16,28 @@ from app.services.agent_service_task_derive import is_active_status
 from app.services.agent_service_crud import create_task, _claim_running_task
 
 
+def active_tasks_by_fingerprint() -> dict[str, dict[str, Any]]:
+    """Every active task that carries a fingerprint, indexed by it — one pass over the store.
+
+    A loop that asks find_active_task_by_fingerprint once per idea scans the whole store each time;
+    on production that was 4,600 ideas against thousands of tasks, 91 s of CPU per inventory flow
+    build, rebuilt every 30 s under page loads — the API's "ten-minute window" after each start
+    (2026-10-21). Build this once and look up.
+    """
+    _ensure_store_loaded(include_output=False)
+    index: dict[str, dict[str, Any]] = {}
+    for task in _store.values():
+        if not is_active_status(task.get("status")):
+            continue
+        context = task.get("context")
+        if not isinstance(context, dict):
+            continue
+        fingerprint = str(context.get("task_fingerprint") or "").strip()
+        if fingerprint and fingerprint not in index:
+            index[fingerprint] = task
+    return index
+
+
 def find_active_task_by_fingerprint(task_fingerprint: str) -> dict[str, Any] | None:
     _ensure_store_loaded(include_output=False)
     fingerprint = (task_fingerprint or "").strip()

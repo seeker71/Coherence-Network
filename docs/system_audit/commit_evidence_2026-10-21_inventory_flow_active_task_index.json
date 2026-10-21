@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/reflection-since-april-f7eac5",
+  "commit_scope": "Root cause and heal of the API's ten-minute CPU window after every start: /api/inventory/flow looked up the active task for every blocked idea with a full scan of the in-memory task store (4,600 ideas × thousands of tasks, 91 s of CPU per build, rebuilt every 30 s under page loads); the flow now builds one fingerprint index per build and the three smaller candidate loops use the same.",
+  "files_owned": ["api/app/services/agent_service_active_task.py", "api/app/services/agent_service.py", "api/app/services/inventory_service.py", "api/app/services/inventory/spec_discovery.py", "api/tests/test_agent_task_claims.py"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["external-presence"],
+  "spec_ids": ["transmuted-field-surfaces"],
+  "task_ids": ["api-warm-window"],
+  "contributors": [{"contributor_id": "anthropic-claude-fable-5-1", "contributor_type": "machine", "roles": ["observe", "root cause", "heal"]}],
+  "agent": {"name": "Claude (Sema)", "version": "Fable 5.1"},
+  "evidence_refs": [
+    "Observed in production's log of its last start (2026-10-20 09:53 UTC): in the first twelve minutes /api/inventory/flow was requested 8 times with durations up to 292 s while every other route read 3–14 s; the API container sat at ~100 % CPU on two threads; the web's specs, contributors and demo pages request that route on load.",
+    "Read in api/app/routers/inventory.py: the flow is memoized 30 s per argument tuple (ttl_cached); api/app/services/inventory_service.py builds it per request. The body's own timing instrument (inventory.timing_enabled) run once inside the production container (docker exec, PYTHONPATH=/app, a separate process): elapsed 92,966 ms, of which unblock_sort=91,381 ms — a timer that spans the per-idea loop above the sort. compat rows 0.6 s; every other stage under 1.3 s.",
+    "In that loop, for every blocked idea: agent_service.find_active_task_by_fingerprint(fingerprint) — which calls _ensure_store_loaded and then scans every task in the in-memory store (api/app/services/agent_service_active_task.py) comparing context.task_fingerprint. Ideas × tasks, pure CPU: the window. The per-call cache in the loop keyed by fingerprint never hit, since fingerprints are unique per idea.",
+    "Heal: active_tasks_by_fingerprint() — one pass over the store, active tasks indexed by fingerprint — exported through agent_service; the flow loop and the three candidate loops (inventory_service 913 and 1738, inventory/spec_discovery 349) read the index. find_active_task_by_fingerprint stays for single lookups.",
+    "Proof: test_service_claim_and_fingerprint_dedup asserts the index holds the active fingerprint and not the completed one; the flow built through the route with find_active_task_by_fingerprint replaced by a function that raises — 200, 0 per-idea lookups, 33 queue rows (local data). Locally the flow takes 0.2 s against sqlite; the production number after rollout is the live check: api container CPU in the first ten minutes after start, and /api/inventory/flow under a few seconds.",
+    "The 30 s memo and the request stampede stay as they are: with a build of a second or two they are harmless; a longer memo would hide live changes to the queue."
+  ],
+  "change_files": ["api/app/services/agent_service_active_task.py", "api/app/services/agent_service.py", "api/app/services/inventory_service.py", "api/app/services/inventory/spec_discovery.py", "api/tests/test_agent_task_claims.py", "docs/system_audit/commit_evidence_2026-10-21_inventory_flow_active_task_index.json"],
+  "local_validation": {"status": "pass", "summary": "The index claim passes; the flow builds with the per-idea lookup forbidden; the whole suite passes after the change (count in the suite log of this push)."},
+  "ci_validation": {"status": "pending", "summary": "The PR's Test workflow runs the suite."},
+  "deploy_validation": {"status": "pending", "environment": "Hostinger", "summary": "After the merge rolls out: /api/inventory/flow timed at the edge and the api container's CPU in the first ten minutes after start."},
+  "e2e_validation": {"status": "pending", "expected_behavior_delta": "No ten-minute window after a start: the container idles within a minute and /api/inventory/flow answers in seconds.", "public_endpoints": ["https://api.coherencycoin.com/api/inventory/flow", "https://api.coherencycoin.com/api/ping"], "test_flows": ["curl -s -o /dev/null -w '%{time_total}' 'https://api.coherencycoin.com/api/inventory/flow?runtime_window_seconds=86400'", "docker stats --no-stream coherence-network-api-1"]},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "The rollout is the live check."}
+}

@@ -343,10 +343,11 @@ def sync_spec_implementation_gap_tasks(create_task: bool = False, limit: int = 2
     ordered_gaps: list[dict[str, Any]] = []
     created_tasks: list[dict[str, Any]] = []
     skipped_existing_count = 0
+    active_tasks = agent_service.active_tasks_by_fingerprint()
     for candidate in candidates:
         row = dict(candidate)
         fingerprint = str(row.get("task_fingerprint") or "").strip()
-        active = agent_service.find_active_task_by_fingerprint(fingerprint) if fingerprint else None
+        active = active_tasks.get(fingerprint) if fingerprint else None
         if isinstance(active, dict):
             row["active_task"] = {
                 "id": active.get("id"),
