@@ -2816,7 +2816,6 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     sign = client.post(f"/api/profile/{spend_id}/sign")
     resonant = client.get(f"/api/profile/{spend_id}/resonant")
     resonance = client.post("/api/resonance", json={"a": spend_id, "b": other_id})
-    zoom = client.get(f"/api/graph/zoom/{spend_id}")
     edge_create = client.post(
         "/api/edges",
         json={"from_id": spend_id, "to_id": other_id, "type": "depends-on"},
@@ -2928,7 +2927,6 @@ def test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation(
     assert sign.status_code == 403
     assert resonant.status_code == 403
     assert resonance.status_code == 403
-    assert zoom.status_code == 404
     assert edge_create.status_code == 404
     assert duplicate_create.status_code == 422
     assert duplicate_create.json() == {
@@ -3029,7 +3027,6 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     public_entity_edges = client.get(f"/api/entities/{public_id}/edges")
     public_entity_neighbors = client.get(f"/api/entities/{public_id}/neighbors")
     public_profile = client.get(f"/api/profile/{public_id}")
-    public_zoom = client.get(f"/api/graph/zoom/{public_id}?depth=2")
     concept_edges = client.get(f"/api/concepts/{concept_id}/edges")
     contributions = client.get("/api/contributions")
     inventory_flow = client.get("/api/inventory/flow?contribution_limit=100")
@@ -3051,8 +3048,6 @@ def test_generic_graph_traversals_prune_private_grocery_cells(client, monkeypatc
     assert public_entity_edges.json()["items"] == []
     assert public_entity_neighbors.json()["neighbors"] == []
     assert public_profile.status_code == 200
-    assert public_zoom.status_code == 200
-    assert spend_id not in public_zoom.text
     assert concept_edges.status_code == 200
     assert concept_edges.json() == []
     assert contributions.status_code == 200

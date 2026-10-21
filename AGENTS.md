@@ -308,11 +308,7 @@ Use the `command` from the POST response to run Claude Code. Patch the task when
 
 ### Telegram Integration
 
-Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying `api/config/api.json`): `bot_token`, `chat_ids`, `allowed_user_ids`, `failed_alert_max_per_window`, `failed_alert_window_seconds`. When a task is marked `needs_decision` or `failed`, the router sends an alert to Telegram. To receive and send commands from Telegram:
-
-1. Create bot via @BotFather, get token. Get your chat ID from @userinfobot.
-2. Set webhook: `curl "https://api.telegram.org/bot{TOKEN}/setWebhook?url={API_URL}/api/agent/telegram/webhook"`
-3. Commands: `/status`, `/tasks`, `/task {id}`, `/direction "..."` or type a direction to create a task.
+Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying `api/config/api.json`): `bot_token`, `chat_ids`, `allowed_user_ids`. The API sends to Telegram; `GET /api/agent/telegram/diagnostics` shows the configured state and `POST /api/agent/telegram/test-send` proves delivery. The inbound webhook and its bot commands were released on 2026-10-21 with the unreached routers.
 
 ## Cursor Cloud specific instructions
 

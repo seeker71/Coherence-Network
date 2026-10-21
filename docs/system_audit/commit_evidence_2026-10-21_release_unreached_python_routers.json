@@ -1,0 +1,161 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/release-python-paths",
+  "commit_scope": "First release pass over the Python compatibility host: 27 routers (83 routes), 13 services and 11 test files that no web page, CI workflow, script, kernel app, experiment or production request reached are gone; the app serves 773 routes instead of 856. Seven specs whose sources left are retired; docs that named the released routes are tended.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_diagnostics_routes.py",
+    "api/app/services/agent_invitation_lineage.py"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "release-python-paths-1"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "decide",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Ground: the app's own route list (856 APIRoutes across 145 modules, read from app.main:app under the test configuration) joined with four reference sets \u2014 the web (web/app, 93 /api path families), CI/scripts/Makefile/.claude/deploy/bin, the kernel's apps (form/form/apps, api/app/form_recipes, api/config/native_api.json, the stdlib bml) and experiments/cli \u2014 plus production's access log (uvicorn lines since the container's last start, 8,678 requests over eleven hours: web page loads, CI canaries, the companion's mesh posts; the slow-request log alone was not traffic). A router with zero in every set is released: world_lens, agent_external_encounters, dialogues, agent_telegram, audit, me_portfolio, ui_preferences, pipeline_policies, rooms, brief, cc_exchange, dif_feedback, registry_discovery, memory, graph_health, data_retention, graph_zoom, content, fallbacks, agent_timeout_routes, agent_auto_heal_routes, execution_value, pipeline, agent_prompt_ab_routes, agent_task_chain_routes, field_relay, openclaw_node_bridge.",
+    "Exclusive services (imported by one released router and by nothing else, checked by an AST scan over api/app, api/tests and scripts after a grep missed parenthesized imports): telegram_deploy_service, brief_service, cc_exchange_adapter, registry_stats_service, registry_discovery_service, memory_service, graph_health_service, data_retention_service, timeout_adaptive_service, auto_heal_service, execution_value_proof_service, pipeline_service, task_chain_correlation_service. The agent diagnostics overview no longer reports the auto-heal runner-gap anomaly (its only remaining importer).",
+    "Kept on purpose: api/app/routers/utils.py (the kernel family's mount point, zero routes of its own), agent_monitor_helpers, agent_telegram_format, agent_helpers and kernel_shared (imported by reached routers). Telegram inbound webhook and bot commands are released; sending, diagnostics and test-send remain (agent_route_telegram_routes).",
+    "Tests released whole (their subject left): test_cc_exchange, test_timeout_adaptive_service, test_registry_discovery, test_agent_memory_loop, test_public_dialogues, test_external_agent_encounters, test_execution_value_proof, test_auto_heal_service, test_field_relay, test_task_chain_correlation, test_agent_pipeline. Shared tests lose only their released lines: test_flow_pipeline (the pipeline router endpoint test), test_flow_vitality (the /api/fallbacks block), test_grocery_ledger (graph/zoom reads), test_federation_layer (the dialogue side-probe in the concurrency test), test_agent_invitation (the external-encounters assertion; the invitation text no longer names that route).",
+    "Specs retired to specs/retired (sources gone): auto-heal-from-diagnostics, heal-completion-issue-resolution, incident-response-and-self-healing, cc-new-earth-exchange-bridge, coherence-network-agent-pipeline, execution-value-income-proof, external-agent-encounter-records. Indexes regenerated (specs/INDEX.md, api/tests/INDEX.md, api/app/routers/INDEX.md, api/app/services/INDEX.md, MANIFEST.md). AGENTS.md Telegram section and docs/integration/grok-setup.md tended.",
+    "README.template.md carries the first agent question again ('What is alive here? \u2026'): #4130 had dropped it while test_agent_invitation still asserts the public entry surfaces share it; README.md is rebuilt from the template.",
+    "Local suite after the release: 405 passed, 0 failed (29.95 s). One claim is environment-bound and left for CI to judge: test_grocery_ledger's GET /api/graph/nodes/count?type=grocery_spend expects 403; locally it reads 405 on origin/main as well (the local pytest shim runs starlette 0.52 under Homebrew python3.14; CI installs fastapi 0.156 / starlette 1.x and passed the same claim on #4128). The Python host declares no GET count route; the native owner serves that path.",
+    "Named, not done: config sections for released features still sit in api/config/api.json (telegram webhook keys, pipeline, audit_ledger, data_retention); the second pass decides the product families the web still calls but no one uses (grocery, household, gatherings, federation, wallets, treasury, vedic, push, marketplace, creator economy, cc economics, rooms) together with their web pages.",
+    "Two follow-up heals on the same branch: mcp-server/README.template.md (rewritten 2026-10-20 by #4113 without the shared Come in paragraph) carries it again with README.md rebuilt, and the MCP package and registry manifests describe themselves as inviting anyone or anything to ask what is alive \u2014 the invitation test reads all of them as public entry surfaces."
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "MANIFEST.md",
+    "README.md",
+    "README.template.md",
+    "api/app/main.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_auto_heal_routes.py",
+    "api/app/routers/agent_diagnostics_routes.py",
+    "api/app/routers/agent_external_encounters.py",
+    "api/app/routers/agent_prompt_ab_routes.py",
+    "api/app/routers/agent_task_chain_routes.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/routers/agent_timeout_routes.py",
+    "api/app/routers/audit.py",
+    "api/app/routers/brief.py",
+    "api/app/routers/cc_exchange.py",
+    "api/app/routers/content.py",
+    "api/app/routers/data_retention.py",
+    "api/app/routers/dialogues.py",
+    "api/app/routers/dif_feedback.py",
+    "api/app/routers/execution_value.py",
+    "api/app/routers/fallbacks.py",
+    "api/app/routers/field_relay.py",
+    "api/app/routers/graph_health.py",
+    "api/app/routers/graph_zoom.py",
+    "api/app/routers/me_portfolio.py",
+    "api/app/routers/memory.py",
+    "api/app/routers/openclaw_node_bridge.py",
+    "api/app/routers/pipeline.py",
+    "api/app/routers/pipeline_policies.py",
+    "api/app/routers/registry_discovery.py",
+    "api/app/routers/rooms.py",
+    "api/app/routers/ui_preferences.py",
+    "api/app/routers/world_lens.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/auto_heal_service.py",
+    "api/app/services/brief_service.py",
+    "api/app/services/cc_exchange_adapter.py",
+    "api/app/services/data_retention_service.py",
+    "api/app/services/execution_value_proof_service.py",
+    "api/app/services/graph_health_service.py",
+    "api/app/services/memory_service.py",
+    "api/app/services/pipeline_service.py",
+    "api/app/services/registry_discovery_service.py",
+    "api/app/services/registry_stats_service.py",
+    "api/app/services/task_chain_correlation_service.py",
+    "api/app/services/telegram_deploy_service.py",
+    "api/app/services/timeout_adaptive_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_agent_invitation.py",
+    "api/tests/test_agent_memory_loop.py",
+    "api/tests/test_agent_pipeline.py",
+    "api/tests/test_auto_heal_service.py",
+    "api/tests/test_cc_exchange.py",
+    "api/tests/test_execution_value_proof.py",
+    "api/tests/test_external_agent_encounters.py",
+    "api/tests/test_federation_layer.py",
+    "api/tests/test_field_relay.py",
+    "api/tests/test_flow_pipeline.py",
+    "api/tests/test_flow_vitality.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_public_dialogues.py",
+    "api/tests/test_registry_discovery.py",
+    "api/tests/test_task_chain_correlation.py",
+    "api/tests/test_timeout_adaptive_service.py",
+    "docs/integration/grok-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-21_release_unreached_python_routers.json",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/package.json",
+    "mcp-server/server.json",
+    "specs/INDEX.md",
+    "specs/retired/README.md",
+    "specs/retired/auto-heal-from-diagnostics.md",
+    "specs/retired/cc-new-earth-exchange-bridge.md",
+    "specs/retired/coherence-network-agent-pipeline.md",
+    "specs/retired/execution-value-income-proof.md",
+    "specs/retired/external-agent-encounter-records.md",
+    "specs/retired/heal-completion-issue-resolution.md",
+    "specs/retired/incident-response-and-self-healing.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "app.main imports with 773 routes; the suite passes 405/405 on the released tree; the grocery count claim is environment-bound (405 locally on origin/main too) and CI judges it."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite on CI's dependency set."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "After the merge rolls out: /api/ping, /api/health and the web's pages still answering; the released paths 404."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "83 unreached routes stop existing; every reached route answers as before; the API image is smaller by 27 routers and 13 services.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://api.coherencycoin.com/api/health",
+      "https://api.coherencycoin.com/api/agent/diagnostics/overview"
+    ],
+    "test_flows": [
+      "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/memory/recall",
+      "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/ping"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check; the second pass follows."
+  }
+}

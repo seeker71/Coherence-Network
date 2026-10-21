@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 210
+**Total files**: 199
 
 | File | Purpose |
 |---|---|
@@ -15,9 +15,7 @@
 | [test_agent_execute_endpoint.py](test_agent_execute_endpoint.py) | Tests for the agent-execution-lifecycle-hooks spec |
 | [test_agent_integration_api.py](test_agent_integration_api.py) | Tests for the agent-orchestration-api spec |
 | [test_agent_invitation.py](test_agent_invitation.py) | Agent invitation tests for API, CLI, web, and MCP entry surfaces. |
-| [test_agent_memory_loop.py](test_agent_memory_loop.py) | Flow tests for the agent-memory-system spec. |
 | [test_agent_monitor_helpers.py](test_agent_monitor_helpers.py) | _no top-of-file purpose_ |
-| [test_agent_pipeline.py](test_agent_pipeline.py) | Tests for the coherence-network-agent-pipeline spec |
 | [test_agent_pipeline_status_diagnostics_api.py](test_agent_pipeline_status_diagnostics_api.py) | Tests for the attention-heuristics-pipeline-status spec |
 | [test_agent_question_sse.py](test_agent_question_sse.py) | _no top-of-file purpose_ |
 | [test_agent_relationship.py](test_agent_relationship.py) | Agent relationship runtime — registration, continuation, durable memory. |
@@ -33,14 +31,12 @@
 | [test_attribution_middleware.py](test_attribution_middleware.py) | Tests for the attribution middleware. |
 | [test_audit_vision_image_candidates.py](test_audit_vision_image_candidates.py) | _no top-of-file purpose_ |
 | [test_auth_keys_api.py](test_auth_keys_api.py) | Tests for the /api/auth/keys HTTP layer. |
-| [test_auto_heal_service.py](test_auto_heal_service.py) | Tests for the auto-heal-from-diagnostics spec |
 | [test_automation_usage_api.py](test_automation_usage_api.py) | _no top-of-file purpose_ |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
 | [test_canonical_words.py](test_canonical_words.py) | Tests for the canonical-word lexicon interner. |
 | [test_cc_economics.py](test_cc_economics.py) | Tests for CC Economics and Value Coherence. |
-| [test_cc_exchange.py](test_cc_exchange.py) | Tests for the CC ↔ External Exchange bridge. |
 | [test_cc_scoring.py](test_cc_scoring.py) | Tests for the coherence-algorithm-spec (specs/coherence-algorithm-spec.md). |
 | [test_check_generated_vision_assets.py](test_check_generated_vision_assets.py) | _no top-of-file purpose_ |
 | [test_check_pr_followthrough.py](test_check_pr_followthrough.py) | _no top-of-file purpose_ |
@@ -65,8 +61,6 @@
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
-| [test_execution_value_proof.py](test_execution_value_proof.py) | _no top-of-file purpose_ |
-| [test_external_agent_encounters.py](test_external_agent_encounters.py) | External agent encounter record tests. |
 | [test_external_presence.py](test_external_presence.py) | Acceptance tests for spec: external-presence-bots-and-news (idea: external-presence). |
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
@@ -80,7 +74,6 @@
 | [test_federation_substrate_exchange.py](test_federation_substrate_exchange.py) | Acceptance tests for the federated substrate canonical exchange. |
 | [test_federation_value_flow.py](test_federation_value_flow.py) | Acceptance tests for the federated value flow. |
 | [test_federation_value_flow_e2e.py](test_federation_value_flow_e2e.py) | End-to-end federated value flow across two sovereign instances. |
-| [test_field_relay.py](test_field_relay.py) | Field relay WS endpoint — open join, consent-gated, content-blind (breath 1 transport). |
 | [test_field_story_agent_surface.py](test_field_story_agent_surface.py) | _no top-of-file purpose_ |
 | [test_field_story_runtime_docs.py](test_field_story_runtime_docs.py) | _no top-of-file purpose_ |
 | [test_field_story_trace_index.py](test_field_story_trace_index.py) | _no top-of-file purpose_ |
@@ -151,12 +144,10 @@
 | [test_presence_invitation.py](test_presence_invitation.py) | Acceptance tests for the graph-backed Presence invitation surface. |
 | [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
 | [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
-| [test_public_dialogues.py](test_public_dialogues.py) | _no top-of-file purpose_ |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |
 | [test_read_tracking_settlement_bridge.py](test_read_tracking_settlement_bridge.py) | Tests for the read → render-event bridge. |
-| [test_registry_discovery.py](test_registry_discovery.py) | Tests for the mcp-skill-registry-submission spec. |
 | [test_release_gate_service.py](test_release_gate_service.py) | Tests for the pure-helper layer of release_gate_service (spec: release-gates). |
 | [test_render_events_router.py](test_render_events_router.py) | Tests for POST /api/render-events — the economic loop closure. |
 | [test_renderers_router.py](test_renderers_router.py) | Route-level tests for /api/renderers/* endpoints. |
@@ -190,9 +181,7 @@
 | [test_substrate_surprise_adjacency.py](test_substrate_surprise_adjacency.py) | Tests for the substrate-surprise adjacency refinement. |
 | [test_super_idea_rollup.py](test_super_idea_rollup.py) | Tests for super-idea rollup criteria (spec: super-idea-rollup-criteria). |
 | [test_sync_kb_to_db.py](test_sync_kb_to_db.py) | _no top-of-file purpose_ |
-| [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |
 | [test_task_dedup_service.py](test_task_dedup_service.py) | Tests for the task dedup service — prevents duplicate tasks per idea+phase. |
-| [test_timeout_adaptive_service.py](test_timeout_adaptive_service.py) | _no top-of-file purpose_ |
 | [test_tool_embodiment_rows.py](test_tool_embodiment_rows.py) | Real tool telemetry groups into the rows the Form embodiment gate consumes. |
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |

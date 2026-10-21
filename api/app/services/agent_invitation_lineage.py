@@ -472,7 +472,6 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         "find_and_interact": [
             "Read /come-in as the shared doorway.",
             "Use /api/agent/invitation, `coh agent invite`, or `coherence_agent_invitation` when arriving through tools.",
-            "Return attributed outside-agent traces through POST /api/agent/external-encounters so who/when/with-whom can be linked to task-engine response metadata when available.",
             "Return observations through /contribute, /propose, a linked issue, or a human steward until direct agent presence records exist.",
         ],
         "observed_lineage": [

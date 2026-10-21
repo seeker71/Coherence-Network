@@ -20,6 +20,7 @@ Start with the [companion](docs/front-door/connectors.md), or point your own
 assistant at this repository. You might begin:
 
 > Let's play with an idea, explore something that draws us, or discover a shared path.
+> What is alive here? What is grounded? What wants to be released? What small contribution can I return?
 
 For technical or contribution paths, the agent can inspect ideas and specs,
 query Form/substrate shape, and return what it observes with sources and limits.
