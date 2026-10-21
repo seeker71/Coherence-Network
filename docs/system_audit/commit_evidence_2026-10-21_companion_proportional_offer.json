@@ -18,7 +18,10 @@
     "skills/coherence-network/references/companion-workflows.md",
     "specs/companion-gpt-rollout.md",
     "web/public/llms.txt",
-    ".github/workflows/test.yml"
+    ".github/workflows/test.yml",
+    "web/tests/internal-page-links.test.ts",
+    "web/tests/presence-node.test.ts",
+    "web/tests/stewardship-pages.test.ts"
   ],
   "change_files": [
     "README.md",
@@ -36,7 +39,10 @@
     "skills/coherence-network/references/companion-workflows.md",
     "specs/companion-gpt-rollout.md",
     "web/public/llms.txt",
-    ".github/workflows/test.yml"
+    ".github/workflows/test.yml",
+    "web/tests/internal-page-links.test.ts",
+    "web/tests/presence-node.test.ts",
+    "web/tests/stewardship-pages.test.ts"
   ],
   "change_intent": "runtime_fix",
   "idea_ids": [
@@ -77,7 +83,7 @@
   },
   "ci_validation": {
     "status": "pending",
-    "summary": "Parent API/web workflow will run for gitlink and web/public changes. Kernel PR623 GitGuardian passed."
+    "summary": "API suite and build passed on57e8b3547. Actual web test execution exposed three stale migration checks; repaired and awaiting focused/local plus full CI proof."
   },
   "e2e_validation": {
     "status": "fail",
@@ -139,6 +145,11 @@
       "command": "PR4126 Test run39551164946 Web build job119060443649",
       "output": "Changed paths step success; Set up Node.js and Build and test the web both skipped although web/public/llms.txt changed. Job log: fatal: bad object d2e7ac9b03aac7d9507cb949bb975c7077c37d2a",
       "repair": "Fetch complete history for base/head comparison; run git diff separately so missing revisions fail instead of reporting no web changes. Verify the subsequent job actually builds/tests."
+    },
+    {
+      "command": "CI run39551338407: cd web && npm ci --allow-git=none && npm run build && npm run test",
+      "output": "Build passed; tests:3failed151passed. Internal links rejected four/pulse references; presence/stewardship expected retired shell probes.",
+      "repair": "Link discovery reads exact native route registrations from existing Compose care. Remove stale assertions requiring probes intentionally retired by962549a32; retain node resolution, real stewardship corpus/navigation, packaging and deploy-path checks."
     }
   ],
   "sovereignty_receipt": {

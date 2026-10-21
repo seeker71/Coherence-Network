@@ -50,6 +50,17 @@ const redirectSources = new Set(
   ),
 );
 
+// Exact native web routes are registered by Compose care, outside Next's tree.
+const nativeRouteSources = new Set(
+  Array.from(
+    readFileSync(
+      resolve(WEB_ROOT, "..", "api/app/form_recipes/deployment_compose_care.bml"),
+      "utf8",
+    ).matchAll(/Path\(`(\/[^`]+)`\)/g),
+    (match) => match[1],
+  ),
+);
+
 function cleanPath(href: string): string {
   return href.split("#", 1)[0].split("?", 1)[0];
 }
@@ -60,6 +71,7 @@ function resolvesInternally(href: string): boolean {
     return true;
   }
   if (redirectSources.has(pathname)) return true;
+  if (nativeRouteSources.has(pathname)) return true;
   if (existsSync(join(PUBLIC_ROOT, pathname.slice(1)))) return true;
   return routePatterns.some((pattern) => pattern.test(pathname));
 }

@@ -28,20 +28,9 @@ function segmentsFromHref(href: string): string[] {
 }
 
 describe("public stewardship pages", () => {
-  it("ships the public source corpus and production probes", () => {
+  it("ships the public source corpus and deploys its changes", () => {
     expect(readFileSync(join(REPO_ROOT, "Dockerfile.web"), "utf8")).toContain(
       "COPY docs/stewardship ./docs/stewardship",
-    );
-
-    const deployVerifier = readFileSync(
-      join(REPO_ROOT, "scripts", "verify_web_api_deploy.sh"),
-      "utf8",
-    );
-    expect(deployVerifier).toContain(
-      "https://hati.earth/stewardship/registry",
-    );
-    expect(deployVerifier).toContain(
-      "https://hati.earth/stewardship/onboarded-assets/2026-04-29-tesla-model-3-longmont",
     );
 
     for (const workflow of [

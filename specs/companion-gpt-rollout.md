@@ -75,6 +75,9 @@ waves, preserving the owner's existing public identity and actual tool scope.
 - `docs/system_audit/`: minimal fictional results, publication evidence and ledger.
 - `.github/workflows/test.yml`: repair observed skipped web proof by fetching
   comparison history and failing visibly when changed-file detection fails.
+- `web/tests/internal-page-links.test.ts`, `presence-node.test.ts` and
+  `stewardship-pages.test.ts`: follow native route registrations and retire
+  assertions for deliberately removed shell probes exposed by the restored CI.
 - `form` gitlink: landed canonical GPT instructions, with kernel dependencies
   merged before the parent pin.
 
