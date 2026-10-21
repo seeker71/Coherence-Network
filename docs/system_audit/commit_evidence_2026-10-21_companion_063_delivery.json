@@ -41,8 +41,8 @@
     "summary": "All8public ZIP and installed members equal merged source; checksum and artifact-review download equal; unrelated configuration byte-equal. Evidence validator and diff check before commit."
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "This receipt-only PR pending. Source PR4126 API/web153tests/security passed at46ec5b843."
+    "status": "pass",
+    "summary": "Receipt PR4127 GitGuardian passed before final observation update; source PR4126 API suite, web build/153tests and security passed."
   },
   "e2e_validation": {
     "status": "pass",
@@ -55,12 +55,15 @@
     "limits": "Package integrity and installation, not fresh-host invocation or broad companion behavior. GPT scope criterion remains partially failed."
   },
   "deploy_validation": {
-    "status": "pending",
-    "summary": "GitHub release live; public web rollout pending. No directory, billing, API-credit or migration change."
+    "status": "pass",
+    "summary": "GitHub release live and public guide/llms.txt byte-equal to merged source. Hostinger deployment 39552342931 completed successfully at 2026-10-21T06:10:26Z; API container reported expected commit e9cd41e43d3a. Post-deploy API health 200, web root 200 and CORS aligned. No directory, billing, API-credit or migration change.",
+    "run": "https://github.com/seeker71/Coherence-Network/actions/runs/39552342931",
+    "command": "form-run ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Public website delivery/receipt CI pending; behavioral gap remains separate."
+    "can_move_next_phase": true,
+    "blocked_reason": null,
+    "scope": "Package and public delivery complete. Full GPT behavioral scope remains unmet on unsolicited imagery; recorded separately, not promoted to a pass."
   },
   "evidence_refs": [
     "https://github.com/seeker71/Coherence-Network/pull/4126",
@@ -85,5 +88,13 @@
     "unrelated_configuration_byte_equal": true,
     "fresh_host_session": "Unobserved"
   },
-  "delivery_complete": false
+  "delivery_complete": true,
+  "public_discovery": {
+    "guide_byte_equal": true,
+    "llms_url": "https://coherencycoin.com/llms.txt",
+    "llms_byte_equal": true,
+    "plugin_ref": "companion-v0.6.3",
+    "optional_mcp_ref": "companion-v0.6.0",
+    "observed_at": "2026-10-21T06:09:56Z"
+  }
 }
