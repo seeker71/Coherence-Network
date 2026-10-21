@@ -37,7 +37,7 @@
   "change_intent": "runtime_fix",
   "local_validation": {
     "status": "pass",
-    "summary": "Generated parity, skill frontmatter, spec quality, 4 plugin packaging tests and 9 selected web invitation source-contract tests passed. esbuild parsed/transpiled the changed TSX. Four independent fictional source-guidance scenarios completed; no full web build or browser render was performed for this prose-only page change.",
+    "summary": "Generated parity, skill frontmatter, spec quality, 4 plugin packaging tests and 9 selected web invitation source-contract tests passed. esbuild parsed/transpiled the changed TSX. Four independent fictional source-guidance scenarios completed; no full web build or browser render was performed for this prose-only page change. All 21 local links in the edited entry docs and spec resolve. The independent final source review is clear after repairing repeated economic and ingestion claims in the web cards.",
     "commands": [
       "form-run python3 scripts/build_readmes.py --check",
       "form-run uv run --with pytest python -m pytest mcp-server/tests/test_companion_plugin.py -q --noconftest",
@@ -48,8 +48,9 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Prepared for follow-up PR; checks will be inspected before merge."
+    "status": "pass",
+    "summary": "PR 4132 API suite, Web build and GitGuardian Security Checks passed on source commit 1bf34b30929052f4f22f17b0eadf051154092026. Merge is held during the separately authorized coordinated history cleanup. A rewritten commit will be identified separately.",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/39585420337"
   },
   "deploy_validation": {
     "status": "pending",
@@ -172,12 +173,25 @@
       "suffic": 0,
       "observed": false
     },
-    "measurement_limit": "Existing local-flow review records historical lane observations. Session-rent has no identified chat measurement; no measured native share or zero-rental claim is made.",
-    "contenders": "Native fkwu retrieval and Metal voice lanes exist; this pass did not run a champion/challenger comparison."
+    "measurement_limit": "Closing local-flow review still shows 162 historical options, 71 band green, 9 locally verified successes across 22 attempted gaps, 8 gaps with verification unread and 81 options unmeasured. These are historical lane observations. Closing session-rent returned an empty session identifier and measured 0, kept 0, refused 0; this is missing chat attribution, not zero rental.",
+    "contenders": "Native fkwu retrieval and Metal voice lanes exist; this pass did not run a champion/challenger comparison.",
+    "payload": "Local source excerpts and diffs from the linked entry points and skill, plus four fictional prompts; exact rented token counters unavailable."
   },
   "work_receipt": {
     "loosened": "The public entry contracts now let play, exploration and stopping be complete.",
     "surprise": "A welcoming mission can still lead into an older contract one click later.",
     "friction_to_learning": "Independent review exposed the actual handoff seams; repairing those existing instructions made the invitation more consistent without adding another system."
+  },
+  "review": {
+    "status": "clear",
+    "scope": "Independent fresh-reader source review of touched entry points; no runtime or deployment claim.",
+    "last_repair": "Aligned the repeated ledger/treasury cards and the source-file ingestion card with the qualified main paragraph and maintained submission guide."
+  },
+  "history_migration": {
+    "old_source_head": "1bf34b30929052f4f22f17b0eadf051154092026",
+    "rewritten_source_head": "38caa1436281122e713b5cc0093bff0c6966c3fe",
+    "rewritten_base": "8e6f23023e5221aca466ca2372dd2ffe076c5f0a",
+    "rewritten_kernel_pin": "0c960e328e0d6030705963adaeb757f3eba67d96",
+    "verification": "All 15 authored task files are byte-identical between original and rewritten source heads. The only whole-tree changes are the mapped form gitlink and removal of generated web/tsconfig.tsbuildinfo. Original and rewritten pinned kernel trees are identical. Local evidence changes and excluded native observation receipts were preserved."
   }
 }
