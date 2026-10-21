@@ -1,7 +1,7 @@
 {
   "date": "2026-10-21",
   "thread_branch": "claude/release-leftovers",
-  "commit_scope": "Two leftovers of #4134 named by review: the vision community directory still read the released interest routes, and the global navigation still listed the treasury page. The interest router, its service and the join form return (the vision pages join, lived and aligned all point at the directory); the treasury entry and the explore prefix leave the navigation.",
+  "commit_scope": "Two leftovers of #4134 named by review: the vision community directory still read the released interest routes, and the global navigation still listed the treasury page. The interest router, its service and the join form return (the vision pages join, lived and aligned all point at the directory); the treasury entry and the explore prefix leave the navigation. And the grocery ledger returns whole: app.hati.earth rewrites its root to /grocery (web/middleware.ts) for the Hati Suci hub's phone, so it was never web-only; #4134 had released it.",
   "files_owned": [
     "api/app/main.py",
     "web/components/site_header.tsx",
@@ -34,23 +34,31 @@
   "evidence_refs": [
     "Review of #4134 (Codex, commit b7779cdb1): web/app/vision/community/page.tsx:93-105 fetches /api/interest/community and /api/interest/stats; web/components/site_header.tsx:42 lists /treasury in SECONDARY_NAV; web/tests/hati-grocery-layout.test.ts read the grocery page (that one was released before the merge).",
     "Decision: the community directory is woven into the vision pages (join, lived, aligned link to /vision/community) the way the share door is, so interest comes back whole \u2014 router, interest_service, InterestForm and the join page's form, test_interest_registration \u2014 restored from 56e1bff2a; the cross-device claim in test_flow_core_api keeps its graduate start. The treasury navigation entry and the mobile nav's explore prefix are released.",
-    "Proof: app.main imports with 683 routes; test_interest_registration, test_flow_core_api and the suite-budget test pass (25); npx tsc --noEmit passes; vitest 141 passed."
+    "Proof: app.main imports with 683 routes; test_interest_registration, test_flow_core_api and the suite-budget test pass (25); npx tsc --noEmit passes; vitest 141 passed.",
+    "A sweep for string literals (not only href attributes) found web/lib/hati-grocery-handoff.ts and web/lib/contained-surface.ts still naming /grocery; web/middleware.ts rewrites app.hati.earth's root to /grocery, and the Hati Suci page hands validated members to it. The grocery router, page, ledger test, layout test, api.json sheet section and the hati-grocery-ledger spec return from 56e1bff2a; the ledger test loses only the released flow renderer's read. The count claim (403 expected, 405 read locally) stays for CI as in #4133."
   ],
   "change_files": [
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
     "api/app/main.py",
-    "api/app/routers/interest.py",
-    "api/app/services/interest_service.py",
-    "api/tests/test_interest_registration.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/grocery.py",
+    "api/app/services/INDEX.md",
+    "api/config/api.json",
+    "api/tests/INDEX.md",
+    "api/tests/test_grocery_ledger.py",
     "docs/system_audit/commit_evidence_2026-10-21_release_leftovers_interest_and_nav.json",
-    "web/app/vision/join/page.tsx",
-    "web/components/mobile-bottom-nav.tsx",
-    "web/components/site_header.tsx",
-    "web/components/vision/InterestForm.tsx",
-    "web/components/vision/index.ts"
+    "specs/INDEX.md",
+    "specs/hati-grocery-ledger.md",
+    "specs/retired/README.md",
+    "web/app/INDEX.md",
+    "web/app/grocery/layout.tsx",
+    "web/app/grocery/page.tsx",
+    "web/tests/hati-grocery-layout.test.ts"
   ],
   "local_validation": {
     "status": "pass",
-    "summary": "683 routes; 25 focused tests pass; web tsc and vitest pass."
+    "summary": "697 routes; grocery ledger tests 97 passed with the one environment-bound count claim left to CI; web tsc and vitest (153) pass."
   },
   "ci_validation": {
     "status": "pending",
@@ -66,7 +74,8 @@
     "expected_behavior_delta": "The vision community directory reads its members again; the global navigation offers no released page.",
     "public_endpoints": [
       "https://api.coherencycoin.com/api/interest/stats",
-      "https://coherencycoin.com/vision/community"
+      "https://coherencycoin.com/vision/community",
+      "https://api.coherencycoin.com/api/grocery/totals"
     ],
     "test_flows": [
       "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/interest/stats"

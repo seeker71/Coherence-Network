@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 193
+**Total files**: 195
 
 | File | Purpose |
 |---|---|
@@ -102,6 +102,7 @@
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
+| [test_grocery_ledger.py](test_grocery_ledger.py) | Flow test for the grocery ledger (api/app/routers/grocery.py). |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
@@ -113,6 +114,7 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_ingest_lock_retry.py](test_ingest_lock_retry.py) | Stone: retry the ingest on a lock-timeout cancellation (2026-07-02). |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
+| [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_intern_count_stone.py](test_intern_count_stone.py) | Stones for the substrate write-lane wedge (2026-07-02). |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
