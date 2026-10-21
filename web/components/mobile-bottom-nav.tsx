@@ -33,7 +33,6 @@ const BOTTOM_NAV = [
 // still works and the header still carries the "Me" door.
 const HIDDEN_ON_PREFIXES = [
   "/meet/",
-  "/explore/",
   "/propose",
 ];
 

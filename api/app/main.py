@@ -938,6 +938,9 @@ app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
+# Living Collective interest registration — privacy-first community gathering
+from app.routers import interest as interest_router  # noqa: E402
+app.include_router(interest_router.router, tags=["interest"])
 
 
 
