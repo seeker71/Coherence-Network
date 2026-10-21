@@ -1,0 +1,186 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "claude/release-python-paths-2",
+  "commit_scope": "Second release pass: the product features whose only callers were their own web pages, with no user to call them \u2014 22 routers (95 routes), 11 exclusive services, their web pages and components, 8 test files and 4 specs. The app serves 678 routes instead of 773; the web typechecks and its unit tests run.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/services/agent_invitation_surfaces.py",
+    "api/config/api.json",
+    "web/app/come-in/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "release-python-paths-2"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "decide",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Ground: the same dependency table as #4133 (the app's route list joined with the web's calls, CI/scripts, the kernel's apps and experiments, plus eleven hours of production access log). This pass takes routers with zero CI, script, kernel and experiment references and zero or bot-level traffic, reached only by their own web pages: grocery, wallets, treasury, distributions, reward_policies, interest, vedic, push, notifications, explore, energy_sensing, flow_renderer, flow_simulator, breath, wellness, deploy, creator_resonance, blueprints, debug, credentials, traceability, accessible_ontology.",
+    "Exclusive services released with them (AST importer scan over api/app, api/tests and scripts): community_pulse_service, creator_resonance_service, distribution_engine, energy_goal_recipe_service, explore_queue_service, interest_service, notification_service, push_subscription_service, traceability_service, treasury_service. Three routers first in the set stay for pass three because held tissue imports them: render_events (creator_economy router, read_tracking and render_attribution services), renderers (render_events) and settlement with settlement_service (the federation value-flow proofs); models and native_training_receipts stay because the learning dashboard serves the native training lane.",
+    "Web: pages grocery, settings/wallet, treasury, energy-flow (page, sense, simulate), vedic, alive (page and flow), now, wellness, deploy, creators/resonance, ontology, explore/[entityType] leave with components wallet/WalletConnect, VedicChart, EnablePush, NotificationBell, SinceLastVisit, ExplorePager, vision/InterestForm; feed, feed/you, here, asking, vision/join, settings, the home footer, vision/economy, cc, creators, come-in and ProposeForm lose only the links and sentences that pointed at them. `npx tsc --noEmit` passes.",
+    "Tests released whole: test_grocery_ledger, test_creator_resonance_report, test_distribution_engine, test_vedic_chat, test_interest_registration, test_flow_notifications; test_views_and_wallets keeps its view-tracking classes as test_views_tracking. Shared tests lose only released lines: test_flow_core_api (the cross-device claim starts from graduate instead of the interest registration), test_flow_vitality (the energy and explore blocks; the tests are renamed to what remains), test_flow_proposals (the explore test), test_agent_invitation (the treasury surface, which the invitation no longer lists). tests/core_suite.txt follows.",
+    "Specs retired (sources gone): distribution-engine, hati-grocery-ledger, self-custody-wallet-integration, stability-harmony-goal-sensing. api/config/api.json loses the grocery sheet section. Indexes regenerated (specs, MANIFEST, api/app/data/web_routes.json, web INDEX files).",
+    "Local suite after the release: 397 passed, 0 failed. Named, not done: pass three over the held families with CI, CLI or kernel references (marketplace, creator economy, practice, cc economics, mcp_remote, deployment observer, proprioception, household, gatherings, memberships, geolocation, places, federation, investments, discord votes, messages, friction, onboarding, entity views, beliefs, graph questions, settlement, render events, renderers) and the web pages that use them.",
+    "Held on a second look: offerings and the /share page \u2014 the vision texts of all six locales point at /share as where what a cell carries becomes visible (42 localized links, kept by web/tests/internal-page-links), and the router has no exclusive service; the door stays. web/tests/hati-grocery-layout.test.ts left with the grocery page.",
+    "Seen in production's log after #4133 rolled out and healed here: idea_dashboards.get_idea_activity had called value_lineage_service since #1243 without importing it (every idea-activity read logged the NameError and dropped its lineage section); the import returns."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "api/app/main.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/accessible_ontology.py",
+    "api/app/routers/blueprints.py",
+    "api/app/routers/breath.py",
+    "api/app/routers/creator_resonance.py",
+    "api/app/routers/credentials.py",
+    "api/app/routers/debug.py",
+    "api/app/routers/deploy.py",
+    "api/app/routers/distributions.py",
+    "api/app/routers/energy_sensing.py",
+    "api/app/routers/explore.py",
+    "api/app/routers/flow_renderer.py",
+    "api/app/routers/flow_simulator.py",
+    "api/app/routers/grocery.py",
+    "api/app/routers/interest.py",
+    "api/app/routers/notifications.py",
+    "api/app/routers/push.py",
+    "api/app/routers/reward_policies.py",
+    "api/app/routers/traceability.py",
+    "api/app/routers/treasury.py",
+    "api/app/routers/vedic.py",
+    "api/app/routers/wallets.py",
+    "api/app/routers/wellness.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/agent_invitation_surfaces.py",
+    "api/app/services/community_pulse_service.py",
+    "api/app/services/creator_resonance_service.py",
+    "api/app/services/distribution_engine.py",
+    "api/app/services/energy_goal_recipe_service.py",
+    "api/app/services/explore_queue_service.py",
+    "api/app/services/idea_dashboards.py",
+    "api/app/services/interest_service.py",
+    "api/app/services/notification_service.py",
+    "api/app/services/push_subscription_service.py",
+    "api/app/services/traceability_service.py",
+    "api/app/services/treasury_service.py",
+    "api/config/api.json",
+    "api/tests/INDEX.md",
+    "api/tests/core_suite.txt",
+    "api/tests/test_agent_invitation.py",
+    "api/tests/test_creator_resonance_report.py",
+    "api/tests/test_distribution_engine.py",
+    "api/tests/test_flow_core_api.py",
+    "api/tests/test_flow_notifications.py",
+    "api/tests/test_flow_proposals.py",
+    "api/tests/test_flow_vitality.py",
+    "api/tests/test_grocery_ledger.py",
+    "api/tests/test_interest_registration.py",
+    "api/tests/test_vedic_chat.py",
+    "api/tests/test_views_and_wallets.py",
+    "api/tests/test_views_tracking.py",
+    "docs/system_audit/commit_evidence_2026-10-21_release_web_only_product_features.json",
+    "specs/INDEX.md",
+    "specs/retired/README.md",
+    "specs/retired/distribution-engine.md",
+    "specs/retired/hati-grocery-ledger.md",
+    "specs/retired/self-custody-wallet-integration.md",
+    "specs/retired/stability-harmony-goal-sensing.md",
+    "web/app/INDEX.md",
+    "web/app/alive/flow/page.tsx",
+    "web/app/alive/page.tsx",
+    "web/app/alive/spectrum/page.tsx",
+    "web/app/asking/page.tsx",
+    "web/app/cc/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/app/creators/page.tsx",
+    "web/app/creators/resonance/_components/CreatorResonanceBuilder.tsx",
+    "web/app/creators/resonance/page.tsx",
+    "web/app/deploy/_components/DeployLogViewer.tsx",
+    "web/app/deploy/page.tsx",
+    "web/app/energy-flow/page.tsx",
+    "web/app/energy-flow/sense/page.tsx",
+    "web/app/energy-flow/simulate/page.tsx",
+    "web/app/explore/[entityType]/page.tsx",
+    "web/app/feed/page.tsx",
+    "web/app/feed/you/page.tsx",
+    "web/app/grocery/layout.tsx",
+    "web/app/grocery/page.tsx",
+    "web/app/here/page.tsx",
+    "web/app/now/LiveWitness.tsx",
+    "web/app/now/page.tsx",
+    "web/app/ontology/page.tsx",
+    "web/app/page.tsx",
+    "web/app/settings/page.tsx",
+    "web/app/settings/wallet/page.tsx",
+    "web/app/treasury/TreasuryDepositForm.tsx",
+    "web/app/treasury/page.tsx",
+    "web/app/vedic/page.tsx",
+    "web/app/vision/economy/page.tsx",
+    "web/app/vision/join/page.tsx",
+    "web/app/wellness/_components/WellnessRefresh.tsx",
+    "web/app/wellness/page.tsx",
+    "web/components/EnablePush.tsx",
+    "web/components/ExplorePager.tsx",
+    "web/components/INDEX.md",
+    "web/components/NotificationBell.tsx",
+    "web/components/ProposeForm.tsx",
+    "web/components/SinceLastVisit.tsx",
+    "web/components/VedicChart.tsx",
+    "web/components/page_context_links.tsx",
+    "web/components/vision/InterestForm.tsx",
+    "web/components/vision/index.ts",
+    "web/components/wallet/WalletConnect.tsx",
+    "web/components/wallet/WalletProvider.tsx",
+    "web/tests/hati-grocery-layout.test.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "app.main imports with 678 routes; API suite 397 passed; web tsc passes; vitest passes after the share door stayed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite and the web build and tests."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "After the merge rolls out: /api/ping, the home page and come-in answering; the released paths 404."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "95 routes and 13 web pages stop existing; every reached route and page answers as before.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://coherencycoin.com/come-in"
+    ],
+    "test_flows": [
+      "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/grocery/totals",
+      "curl -s -o /dev/null -w '%{http_code}' https://coherencycoin.com/come-in"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check; pass three follows."
+  }
+}

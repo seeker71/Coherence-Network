@@ -27,16 +27,6 @@ export default function SettingsPage() {
           </div>
         </Link>
 
-        <Link
-          href="/settings/wallet"
-          className="block rounded border border-stone-800 bg-stone-950/40 p-4 hover:border-amber-500/40 transition-colors"
-        >
-          <div className="text-lg font-light text-white">Wallet</div>
-          <div className="text-sm text-stone-400 mt-1">
-            Bring your own self-custody wallet — link an address, verify
-            ownership, view linked wallets. Keys stay yours.
-          </div>
-        </Link>
       </div>
 
       <ConfigEditor />

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 243
+**Total files**: 233
 
 | File | Purpose |
 |---|---|
@@ -62,7 +62,6 @@
 | [collective_health_service.py](collective_health_service.py) | Collective health scoring for coherence, resonance, flow, and friction. |
 | [commit_evidence_registry_service.py](commit_evidence_registry_service.py) | DB-backed commit evidence registry and file import utilities. |
 | [commit_evidence_service.py](commit_evidence_service.py) | Persistence service for commit evidence records. |
-| [community_pulse_service.py](community_pulse_service.py) | Community pulse service — sensing the felt experience of the organism. |
 | [concept_auto_tagger.py](concept_auto_tagger.py) | Concept auto-tagger -- matches ideas against the Living Codex ontology. |
 | [concept_resonance_kernel.py](concept_resonance_kernel.py) | Concept Resonance Kernel (CRK) + Optimal Transport (OT-φ). |
 | [concept_service.py](concept_service.py) | Concept ontology service — graph DB is the single source of truth. |
@@ -83,7 +82,6 @@
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
 | [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
-| [creator_resonance_service.py](creator_resonance_service.py) | Creator resonance report scoring. |
 | [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [deployment_observation.py](deployment_observation.py) | Persistent, content-bound deployment observations in the Form substrate. |
 | [deployment_observer_oidc.py](deployment_observer_oidc.py) | Verify GitHub Actions OIDC identity for the public deployment observer. |
@@ -93,12 +91,9 @@
 | [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
 | [discovery_reward_service.py](discovery_reward_service.py) | Discovery reward service — CC flows to contributors who bring attention. |
 | [discovery_service.py](discovery_service.py) | Discovery service — Serendipity Discovery feed. |
-| [distribution_engine.py](distribution_engine.py) | Distribution engine — reads contributions from graph edges. |
 | [effectiveness_service.py](effectiveness_service.py) | Pipeline effectiveness: throughput, issue resolution, goal proximity. Composes metrics + monitor data. |
-| [energy_goal_recipe_service.py](energy_goal_recipe_service.py) | Goal-aware recipes for energy sensing responses. |
 | [entity_view_attribution_service.py](entity_view_attribution_service.py) | Attribution bridge for editable entity views. |
 | [evidence_service.py](evidence_service.py) | Evidence service — submission, verification, and retrieval for asset implementation evidence. |
-| [explore_queue_service.py](explore_queue_service.py) | Explore queue — a curated stream of entities the viewer hasn't met yet. |
 | [failed_task_diagnostics_service.py](failed_task_diagnostics_service.py) | Failed-task diagnostics: error classification and completeness tracking. Spec 113. |
 | [failure_taxonomy_service.py](failure_taxonomy_service.py) | Shared failure taxonomy for consistent bucketing and signatures. |
 | [fallback_witness_service.py](fallback_witness_service.py) | Fallback witness — honest record of when the body runs on reserve. |
@@ -152,7 +147,6 @@
 | [influence_teaching_translator_service.py](influence_teaching_translator_service.py) | Influence teaching translator for field story traces. |
 | [inspired_by_service.py](inspired_by_service.py) | Inspired-by resolver — turn a name (or URL) into a small subgraph. |
 | [instance_pulse_service.py](instance_pulse_service.py) | Instance pulse service — each coherence instance shows its own breath. |
-| [interest_service.py](interest_service.py) | Interest registration service — privacy-first community gathering. |
 | [inventory_service.py](inventory_service.py) | Unified inventory service for ideas, questions, specs, implementations, and usage. |
 | [investment_service.py](investment_service.py) | Investment service — positions, ROI projection, history. |
 | [ip_registration_service.py](ip_registration_service.py) | IP registration service — Story Protocol queue surface (first iteration). |
@@ -174,7 +168,6 @@
 | [news_ingestion_service.py](news_ingestion_service.py) | News ingestion service: fetches RSS feeds and caches results. |
 | [news_resonance_service.py](news_resonance_service.py) | News resonance service: matches news items to ideas using keyword-based resonance scoring. |
 | [node_identity_service.py](node_identity_service.py) | Node identity derivation and local persistence. |
-| [notification_service.py](notification_service.py) | Soft notifications — someone spoke back. |
 | [onboarding_service.py](onboarding_service.py) | Onboarding Service -- Trust-on-First-Use (TOFU) MVP. |
 | [openclaw_node_bridge_service.py](openclaw_node_bridge_service.py) | OpenClaw node bridge: WebSocket delivery for federation messages (Spec 156 Phase 3). |
 | [openrouter_client.py](openrouter_client.py) | Minimal OpenRouter client for server-side task execution. |
@@ -198,7 +191,6 @@
 | [proposal_service.py](proposal_service.py) | Proposals — short suggestions the collective can vote on by meeting. |
 | [proprioception_service.py](proprioception_service.py) | Proprioception service — auto-sensing system state. |
 | [public_dialogue_store.py](public_dialogue_store.py) | Durable cells for the unlisted public dialogue lane. |
-| [push_subscription_service.py](push_subscription_service.py) | Web Push subscription storage + send. |
 | [quality_awareness_service.py](quality_awareness_service.py) | Guidance-first quality awareness summary derived from maintainability audits. |
 | [reaction_service.py](reaction_service.py) | Reactions — a lightweight surface for expressing care on anything. |
 | [read_tracking_service.py](read_tracking_service.py) | Read sensing service — records asset reads as daily aggregated counters, |
@@ -231,12 +223,10 @@
 | [telegram_report_formatter.py](telegram_report_formatter.py) | Formatting helpers for Telegram status/task replies. |
 | [telemetry_persistence_service.py](telemetry_persistence_service.py) | DB-backed telemetry persistence for automation usage and friction events. |
 | [time_pledge_service.py](time_pledge_service.py) | Time pledge service — convert pledged labor hours into CC equivalents. |
-| [traceability_service.py](traceability_service.py) | spec: full-code-traceability |
 | [translate_service.py](translate_service.py) | Concept translation service — reframe ideas and concepts through worldview lenses. |
 | [translation_cache_service.py](translation_cache_service.py) | Concept views — equal-status language renderings of a concept, idea, or |
 | [translator_backends.py](translator_backends.py) | Attunement backends — concrete translators the view system can delegate to. |
 | [translator_service.py](translator_service.py) | Translator — renders a concept/idea/contribution into a target language |
-| [treasury_service.py](treasury_service.py) | Treasury Service — simple crypto deposit ledger with CC conversion. |
 | [unified_db.py](unified_db.py) | Unified database — single source of truth for all Coherence Network persistence. |
 | [unified_models.py](unified_models.py) | All ORM models registered on the unified Base. |
 | [value_lineage_service.py](value_lineage_service.py) | Service for persistent value lineage and payout attribution previews. |

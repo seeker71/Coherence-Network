@@ -20,7 +20,7 @@ from app.models.idea import (
     ProgressDashboard,
     StageBucket,
 )
-from app.services import spec_registry_service
+from app.services import spec_registry_service, value_lineage_service
 from app.services.idea_internal_filter import is_internal_idea_id
 
 logger = logging.getLogger(__name__)

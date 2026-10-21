@@ -20,7 +20,6 @@ tests/test_flow_enforcement.py
 tests/test_flow_memberships.py
 tests/test_flow_messages.py
 tests/test_flow_multilingual.py
-tests/test_flow_notifications.py
 tests/test_flow_personal_feed.py
 tests/test_flow_pipeline.py
 tests/test_flow_presence.py

@@ -512,10 +512,11 @@ async def test_multi_device_identity_flow():
     """
     email = f"flow+{uuid4().hex[:6]}@example.com"
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        # Laptop — /vision/join carries the full consent state.
-        r1 = await c.post("/api/interest/register", json={
-            "name": "Traveler",
+        # Laptop — the first graduate call carries the full consent state.
+        r1 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Traveler",
             "email": email,
+            "device_fingerprint": "laptop-fp",
             "resonant_roles": ["frequency-holder"],
             "locale": "en",
             "consent_findable": True,
@@ -523,7 +524,7 @@ async def test_multi_device_identity_flow():
         })
         assert r1.status_code == 200, r1.text
         cid = r1.json()["contributor_id"]
-        assert cid, "register must return contributor_id for localStorage persistence"
+        assert cid, "graduate must return contributor_id for localStorage persistence"
 
         # Phone — graduate with different fingerprint + partial
         # update (just name + locale; consent fields omitted).

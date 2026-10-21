@@ -4,16 +4,13 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 164
+**Total files**: 147
 
 | Route | File | Purpose |
 |---|---|---|
 | `/activity` | [page.tsx](activity/page.tsx) | _no top-of-file purpose_ |
 | `/agent` | [page.tsx](agent/page.tsx) | _no top-of-file purpose_ |
 | `/agent/questions` | [page.tsx](agent/questions/page.tsx) | _no top-of-file purpose_ |
-| `/alive/flow` | [page.tsx](alive/flow/page.tsx) | _no top-of-file purpose_ |
-| `/alive` | [page.tsx](alive/page.tsx) | _no top-of-file purpose_ |
-| `/alive/spectrum` | [page.tsx](alive/spectrum/page.tsx) | _no top-of-file purpose_ |
 | `/analytics` | [page.tsx](analytics/page.tsx) | _no top-of-file purpose_ |
 | `/api-coverage` | [page.tsx](api-coverage/page.tsx) | _no top-of-file purpose_ |
 | `/api-health` | [page.tsx](api-health/page.tsx) | _no top-of-file purpose_ |
@@ -45,18 +42,12 @@
 | `/contributors/[id]/portfolio/tasks/[task_id]` | [page.tsx](contributors/[id]/portfolio/tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |
 | `/contributors` | [page.tsx](contributors/page.tsx) | _no top-of-file purpose_ |
 | `/creators` | [page.tsx](creators/page.tsx) | _no top-of-file purpose_ |
-| `/creators/resonance` | [page.tsx](creators/resonance/page.tsx) | _no top-of-file purpose_ |
 | `/creators/submit` | [page.tsx](creators/submit/page.tsx) | _no top-of-file purpose_ |
 | `/dashboard` | [page.tsx](dashboard/page.tsx) | _no top-of-file purpose_ |
 | `/demo` | [page.tsx](demo/page.tsx) | _no top-of-file purpose_ |
-| `/deploy` | [page.tsx](deploy/page.tsx) | /deploy — real-time deploy log viewer. Phone-first surface for the |
 | `/diagnostics` | [page.tsx](diagnostics/page.tsx) | _no top-of-file purpose_ |
 | `/discover` | [page.tsx](discover/page.tsx) | _no top-of-file purpose_ |
 | `/discover/resonance` | [page.tsx](discover/resonance/page.tsx) | _no top-of-file purpose_ |
-| `/energy-flow` | [page.tsx](energy-flow/page.tsx) | _no top-of-file purpose_ |
-| `/energy-flow/sense` | [page.tsx](energy-flow/sense/page.tsx) | _no top-of-file purpose_ |
-| `/energy-flow/simulate` | [page.tsx](energy-flow/simulate/page.tsx) | _no top-of-file purpose_ |
-| `/explore/[entityType]` | [page.tsx](explore/[entityType]/page.tsx) | _no top-of-file purpose_ |
 | `/federation` | [page.tsx](federation/page.tsx) | Federation surface — a window into the peer-to-peer geometry the network |
 | `/feed` | [page.tsx](feed/page.tsx) | _no top-of-file purpose_ |
 | `/feed/you` | [page.tsx](feed/you/page.tsx) | _no top-of-file purpose_ |
@@ -68,7 +59,6 @@
 | `/graph` | [page.tsx](graph/page.tsx) | _no top-of-file purpose_ |
 | `/graph/zoom/[nodeId]` | [page.tsx](graph/zoom/[nodeId]/page.tsx) | _no top-of-file purpose_ |
 | `/graphs` | [page.tsx](graphs/page.tsx) | _no top-of-file purpose_ |
-| `/grocery` | [page.tsx](grocery/page.tsx) | app.hati.earth — the grocery ledger. One number, one tap. |
 | `/hati-suci` | [page.tsx](hati-suci/page.tsx) | Hati Suci — the resident-service nervous system (first Light Hub membrane). |
 | `/here` | [page.tsx](here/page.tsx) | _no top-of-file purpose_ |
 | `/ideas/[idea_id]/edit` | [page.tsx](ideas/[idea_id]/edit/page.tsx) | Idea edit surface — mirrors the asymmetry-closing for /vision/{id}/edit. |
@@ -95,9 +85,7 @@
 | `/news` | [page.tsx](news/page.tsx) | _no top-of-file purpose_ |
 | `/nodes/[id]` | [page.tsx](nodes/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/nodes` | [page.tsx](nodes/page.tsx) | _no top-of-file purpose_ |
-| `/now` | [page.tsx](now/page.tsx) | _no top-of-file purpose_ |
 | `/one-sheet` | [page.tsx](one-sheet/page.tsx) | _no top-of-file purpose_ |
-| `/ontology` | [page.tsx](ontology/page.tsx) | _no top-of-file purpose_ |
 | `/` | [page.tsx](page.tsx) | _no top-of-file purpose_ |
 | `/peers` | [page.tsx](peers/page.tsx) | _no top-of-file purpose_ |
 | `/people/[id]/edit` | [page.tsx](people/[id]/edit/page.tsx) | _no top-of-file purpose_ |
@@ -128,9 +116,7 @@
 | `/sense` | [page.tsx](sense/page.tsx) | sense.hati.earth — the download door for Coherence Sense. Detects the visitor's |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
-| `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |
 | `/settlement` | [page.tsx](settlement/page.tsx) | Daily settlement dashboard — surfaces the SettlementBatch records |
-| `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
 | `/silence/built/design-log` | [page.tsx](silence/built/design-log/page.tsx) | _no top-of-file purpose_ |
@@ -149,9 +135,7 @@
 | `/tasks` | [page.tsx](tasks/page.tsx) | _no top-of-file purpose_ |
 | `/teams` | [page.tsx](teams/page.tsx) | _no top-of-file purpose_ |
 | `/today` | [page.tsx](today/page.tsx) | _no top-of-file purpose_ |
-| `/treasury` | [page.tsx](treasury/page.tsx) | _no top-of-file purpose_ |
 | `/usage` | [page.tsx](usage/page.tsx) | _no top-of-file purpose_ |
-| `/vedic` | [page.tsx](vedic/page.tsx) | /vedic — Urs's Vedic (jyotisha) chart, cast natively: the square, the placements, the dasha cycle. |
 | `/verify` | [page.tsx](verify/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]/edit` | [page.tsx](vision/[conceptId]/edit/page.tsx) | _no top-of-file purpose_ |
 | `/vision/[conceptId]` | [page.tsx](vision/[conceptId]/page.tsx) | _no top-of-file purpose_ |
@@ -170,5 +154,4 @@
 | `/vitality` | [page.tsx](vitality/page.tsx) | _no top-of-file purpose_ |
 | `/weave` | [page.tsx](weave/page.tsx) | _no top-of-file purpose_ |
 | `/welcome` | [page.tsx](welcome/page.tsx) | /welcome — the naming gesture. A visitor names themselves, the server |
-| `/wellness` | [page.tsx](wellness/page.tsx) | Wellness — the body sensing itself, breathing outward. |
 | `/with-us` | [page.tsx](with-us/page.tsx) | _no top-of-file purpose_ |

@@ -18,3 +18,8 @@ heal-completion-issue-resolution and incident-response-and-self-healing (auto_he
 cc-new-earth-exchange-bridge (cc_exchange_adapter), coherence-network-agent-pipeline (pipeline_service),
 execution-value-income-proof (execution_value_proof_service) and external-agent-encounter-records
 (agent_external_encounters) — routers and services no surface, script, kernel app or request reached.
+
+Moved 2026-10-21 (second release pass, the web-only product features): distribution-engine
+(distributions, distribution_engine), hati-grocery-ledger (grocery), self-custody-wallet-integration
+(wallets) and stability-harmony-goal-sensing (energy_sensing) — routers whose only callers were their
+own web pages, released together with those pages.

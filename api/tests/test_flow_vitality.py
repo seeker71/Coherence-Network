@@ -158,44 +158,12 @@ async def test_concept_voices_flow():
 
 
 @pytest.mark.asyncio
-async def test_energy_invitations_and_fallback_witness_flow():
-    """Energy recommend returns warm invitations (no ERROR/WARNING
-    language); fallback witness records events and reads them back;
+async def test_fallback_witness_flow():
+    """Fallback witness records events and reads them back;
     translator falls back to source text when no backend, and the
     fallback is witnessed."""
     from app.services import fallback_witness_service as fw
     from app.services import translator_service as _tsvc
-
-    # Energy recommendations use frequency words, not warnings.
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        rec = (await c.get("/api/energy/recommend")).json()
-        assert "invitations" in rec and "count" in rec
-        for inv in rec["invitations"]:
-            assert "invitation" in inv
-            assert inv["felt_as"] in ("tender", "quiet", "dormant", "resting")
-            assert "ERROR" not in inv["invitation"].upper()
-            assert "WARNING" not in inv["invitation"].upper()
-
-        goal_rec = (
-            await c.get("/api/energy/recommend?current_goal=create%20stability%20and%20harmony")
-        ).json()
-        assert goal_rec["current_goal"] == "create stability and harmony"
-        recipe = goal_rec["goal_recipe"]
-        assert recipe["id"] == "stability-harmony"
-        assert recipe["goal_match"] == "stability_harmony"
-        assert "breathe(longer_exhale)" in recipe["form"]
-        assert "concept:spiral-pivot-coherence" in recipe["source_concepts"]
-        assert "concept:field-stabilizing-transmission" in recipe["source_concepts"]
-        assert recipe["sensing"]["overall_vitality"] in (
-            "thriving", "growing", "resting", "quiet",
-        )
-        assert recipe["steps"][0]["id"] == "sense_field"
-        goal_inv = goal_rec["invitations"][0]
-        assert goal_inv["signal_id"] == "stability_harmony_goal"
-        assert goal_inv["recipe_id"] == "stability-harmony"
-        assert "stabilizes without control" in goal_inv["invitation"]
-        assert "WARNING" not in goal_inv["invitation"].upper()
-
 
     # Translator with no backend → source text + witness event.
     fw.clear()
@@ -213,29 +181,13 @@ async def test_energy_invitations_and_fallback_witness_flow():
 
 
 @pytest.mark.asyncio
-async def test_explore_queue_and_localized_errors_flow():
-    """Explore queue surfaces entities the viewer hasn't met (reacted
-    to) and skips ones they have. Unsupported entity types return
-    400 localized on both /explore and /meeting surfaces."""
+async def test_meeting_localized_errors_flow():
+    """Unsupported entity types return 400 localized on the /meeting surface."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         for cid in ("lc-explore-a", "lc-explore-b"):
             await _seed_concept(c, cid)
 
-        viewer = "walker-one"
-        await c.post("/api/reactions/concept/lc-explore-a",
-                     json={"author_name": "Walker", "emoji": "💛", "author_id": viewer})
-        queue = (await c.get(
-            f"/api/explore/concept?limit=20&contributor_id={viewer}",
-        )).json()["queue"]
-        ids = {q["entity_id"] for q in queue}
-        assert "lc-explore-a" not in ids  # already met — skipped
-        assert "lc-explore-b" in ids      # still to meet
-
-        # Unsupported types return 400 localized on both surfaces.
-        explore_err = await c.get("/api/explore/lobster", headers={"accept-language": "es"})
-        assert explore_err.status_code == 400
-        assert "tipo de entidad" in explore_err.json()["detail"]
-
+        # Unsupported types return 400 localized on the meeting surface.
         meeting_err = await c.get("/api/meeting/lobster/soup",
                                   headers={"accept-language": "de"})
         assert meeting_err.status_code == 400

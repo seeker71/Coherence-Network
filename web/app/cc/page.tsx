@@ -359,9 +359,6 @@ export default async function CCPage() {
           <Link href="/vitality" className="text-emerald-400 hover:underline">
             Vitality
           </Link>
-          <Link href="/treasury" className="text-amber-400 hover:underline">
-            Treasury
-          </Link>
           <Link href="/contributions" className="text-purple-400 hover:underline">
             Contributions
           </Link>

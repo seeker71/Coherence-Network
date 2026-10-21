@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 199
+**Total files**: 193
 
 | File | Purpose |
 |---|---|
@@ -50,14 +50,12 @@
 | [test_contributor_journey.py](test_contributor_journey.py) | Acceptance tests for spec: contributor-journey (idea: contributor-experience). |
 | [test_contributor_key_store.py](test_contributor_key_store.py) | DB-backed contributor API key store. |
 | [test_creator_economy.py](test_creator_economy.py) | Tests for creator-economy endpoints — spec R1, R2, R3, R4. |
-| [test_creator_resonance_report.py](test_creator_resonance_report.py) | _no top-of-file purpose_ |
 | [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
 | [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
 | [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
-| [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
@@ -88,7 +86,6 @@
 | [test_flow_memberships.py](test_flow_memberships.py) | Flow-centric tests for workspace membership (team edges). |
 | [test_flow_messages.py](test_flow_messages.py) | Flow-centric tests for contributor messaging (Phase 3). |
 | [test_flow_multilingual.py](test_flow_multilingual.py) | Flow-centric tests for the multilingual platform. |
-| [test_flow_notifications.py](test_flow_notifications.py) | Flow tests for soft notifications — who spoke back to you. |
 | [test_flow_personal_feed.py](test_flow_personal_feed.py) | Flow tests for the personal feed — your corner of the organism. |
 | [test_flow_pipeline.py](test_flow_pipeline.py) | Flow-centric integration tests for pipeline phase advancement. |
 | [test_flow_presence.py](test_flow_presence.py) | Flow tests for presence — felt-witness of others meeting the same thing. |
@@ -105,7 +102,6 @@
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
-| [test_grocery_ledger.py](test_grocery_ledger.py) | Flow test for the grocery ledger (api/app/routers/grocery.py). |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
@@ -117,7 +113,6 @@
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_ingest_lock_retry.py](test_ingest_lock_retry.py) | Stone: retry the ingest on a lock-timeout cancellation (2026-07-02). |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
-| [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_intern_count_stone.py](test_intern_count_stone.py) | Stones for the substrate write-lane wedge (2026-07-02). |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
@@ -200,10 +195,9 @@
 | [test_utils_softmax_weights.py](test_utils_softmax_weights.py) | Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
-| [test_vedic_chat.py](test_vedic_chat.py) | Flow tests: /api/vedic/chart and /api/vedic/ask carry a birth-moment to the native vedic-chat.fk cell and its cast back. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_view_recipe_library_choice.py](test_view_recipe_library_choice.py) | _no top-of-file purpose_ |
-| [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
+| [test_views_tracking.py](test_views_tracking.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
 | [test_vision_content.py](test_vision_content.py) | _no top-of-file purpose_ |
 | [test_wellness_chain_duplicates.py](test_wellness_chain_duplicates.py) | Regression test: the chain organ tolerates duplicate ``test:`` keys. |
 | [test_worktree_continuity_guard.py](test_worktree_continuity_guard.py) | _no top-of-file purpose_ |

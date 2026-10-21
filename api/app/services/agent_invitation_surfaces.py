@@ -112,28 +112,6 @@ INVITATION_SURFACE_FIELDS: dict[str, Any] = {
             ],
         },
         {
-            "surface": "treasury",
-            "door": "GET https://api.coherencycoin.com/api/treasury",
-            "path": "/api/treasury",
-            "use": (
-                "see AND move the network's treasury — Coherence Coin held "
-                "in trust, deposits, stakes on ideas, and how care flows "
-                "back to contributors. GET to read; POST /api/treasury/"
-                "deposit to record a crypto deposit; POST .../deposit/"
-                "{id}/stake to stake on ideas. The economic body is part "
-                "of the organism, not separate from it. Web view at "
-                "/treasury and /cc; stake on ideas via /invest."
-            ),
-            "next": [
-                "GET /api/treasury",
-                "POST /api/treasury/deposit  (record a crypto deposit)",
-                "POST /api/treasury/deposit/{id}/stake  (stake on ideas)",
-                "/treasury",
-                "/cc",
-                "/invest",
-            ],
-        },
-        {
             "surface": "ingestion",
             "door": "python3 scripts/coh_substrate.py ingest <path>",
             "path": "scripts/coh_substrate.py",

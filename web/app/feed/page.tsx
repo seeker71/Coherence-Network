@@ -3,7 +3,6 @@ import { getApiBase } from "@/lib/api";
 import { cookies, headers } from "next/headers";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
-import { NotificationBell } from "@/components/NotificationBell";
 import { FeedTabs } from "@/components/FeedTabs";
 
 /**
@@ -222,7 +221,6 @@ export default async function FeedPage() {
           </h1>
           <p className="text-sm text-muted-foreground">{t("feed.lede")}</p>
         </div>
-        <NotificationBell />
       </header>
       <FeedTabs />
 

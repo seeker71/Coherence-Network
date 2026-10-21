@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
-import { InterestForm } from "@/components/vision";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
 
@@ -144,7 +143,6 @@ export default async function JoinPage() {
           </p>
         </div>
 
-        <InterestForm />
       </section>
 
       {/* Footer */}
