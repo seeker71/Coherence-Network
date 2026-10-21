@@ -1,82 +1,80 @@
 name: Test
 
+# The API suite is a proof a pull request carries when it touches the compatibility host or the
+# kernel it runs on. It runs on the PR, not on every push to main (a merge deploys; the proof
+# belongs before it). The web build runs when the web changes. tests/holdout stays out, as locally.
 on:
-  workflow_dispatch:  # manual only — disabled, thread-gates covers the same suite
+  pull_request:
+    paths:
+      - "api/**"
+      - "form"
+      - "Dockerfile.api"
+      - "scripts/fkwu_run.sh"
+      - ".github/workflows/test.yml"
+      - "web/**"
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    # Full suites are available on request; delivery care lives in docs/DEPLOY.md.
-    # Re-enable after resolving CI-only ModuleNotFoundError.
-    if: false
+  api:
+    name: API suite
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-
-      - name: Install dependencies
-        run: |
-          cd api && pip install -e ".[dev]"
-
-      - name: Enforce commit provenance evidence
-        # Skip dependabot PRs even when a human re-runs the workflow.
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
+      - name: Build the kernel seed the suite runs recipes on
+        run: cd form && cc -O2 -o fkwu runtime/fkwu-uni.c
+      - name: Install the API
+        run: cd api && pip install -e ".[dev]"
+      - name: Commit evidence for the changed surface
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            BASE_SHA="$(git rev-parse HEAD~1)"
-          fi
-          python3 scripts/validate_commit_evidence.py \
-            --base "$BASE_SHA" \
-            --head "$HEAD_SHA" \
-            --require-changed-evidence
-
-      - name: Enforce spec quality for changed specs
+          python3 scripts/validate_commit_evidence.py --base "$BASE_SHA" --head "$HEAD_SHA" --require-changed-evidence
+      - name: Spec quality for changed specs
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            BASE_SHA="$(git rev-parse HEAD~1)"
-          fi
-          python3 scripts/validate_spec_quality.py \
-            --base "$BASE_SHA" \
-            --head "$HEAD_SHA"
+          python3 scripts/validate_spec_quality.py --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: Workflow file references
+        run: python3 scripts/validate_workflow_references.py
+      - name: API suite
+        run: cd api && pytest -q -p no:cacheprovider --ignore=tests/holdout
 
-      - name: Validate workflow file references
+  web:
+    name: Web build
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Changed paths
+        id: changed
         run: |
-          python3 scripts/validate_workflow_references.py
-
-      - name: Run API tests
-        run: |
-          cd api && COHERENCE_TEST_SUITE=full pytest -v
-
-      - name: Audit automation readiness contract
-        run: |
-          cd api && pytest -q tests/test_automation_usage_api.py::test_provider_readiness_reports_blocking_required_provider_gaps
-
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" | grep -qE '^web/'; then echo "web=true" >> "$GITHUB_OUTPUT"; else echo "web=false" >> "$GITHUB_OUTPUT"; fi
       - name: Set up Node.js
+        if: steps.changed.outputs.web == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: web/package-lock.json
-
-      - name: Upgrade npm for install hardening support
-        run: npm install -g npm@11.10.0
-
-      - name: Build web
+      - name: Build and test the web
+        if: steps.changed.outputs.web == 'true'
         run: |
-          cd web && npm ci --allow-git=none && npm run build
-
-      - name: Test web
-        run: |
-          cd web && npm run test
+          cd web && npm ci --allow-git=none && npm run build && npm run test

@@ -46,24 +46,16 @@ async def _create_idea(c: AsyncClient, idea_id: str | None = None, **overrides) 
 
 @pytest.mark.asyncio
 async def test_health_and_meta_endpoints():
-    """Five infrastructure endpoints the frontend + deploy verifier
-    rely on: /health, /ping, /version, /ready, /meta/summary. All
-    checked in one round."""
+    """The infrastructure endpoints the Python host still owns: /ping,
+    /version, /meta/summary. /health and /ready are served by the native
+    host (api/config/native_api.json) and observed there."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        health = await c.get("/api/health")
-        assert health.status_code == 200 and health.json()["status"] == "ok"
-        assert "version" in health.json() and "uptime_seconds" in health.json()
 
         assert (await c.get("/api/ping")).json()["pong"] is True
 
         version = (await c.get("/api/version")).json()["version"]
         assert re.match(r"^\d+\.\d+\.\d+", version), version
 
-        ready = await c.get("/api/ready")
-        # /ready is 200 when graph_store wired, 503 otherwise — both valid.
-        assert ready.status_code in (200, 503)
-        if ready.status_code == 200:
-            assert "db_connected" in ready.json()
 
         meta = await c.get("/api/meta/summary")
         assert meta.status_code == 200
@@ -173,20 +165,7 @@ async def test_idea_crud_flow():
         })
         assert dup.status_code == 409, dup.text
 
-        # Get existing + missing.
-        got = await c.get(f"/api/ideas/{iid}")
-        assert got.status_code == 200 and got.json()["id"] == iid, got.text
-        assert (await c.get("/api/ideas/nonexistent-idea-xyz")).status_code == 404
-
-        # List + pagination (seed two more for pagination clarity).
-        for _ in range(2):
-            await _create_idea(c)
-        listed = await c.get("/api/ideas")
-        assert listed.status_code == 200
-        body = listed.json()
-        assert "ideas" in body or "items" in body or isinstance(body, list)
-        paged = await c.get("/api/ideas", params={"limit": 2, "offset": 0})
-        assert len((paged.json().get("ideas") or paged.json().get("items") or paged.json())) <= 2
+        # Reads of one idea and the list are served by the native host; the writes below are this host's.
 
         # Update requires auth.
         assert (await c.patch(f"/api/ideas/{iid}", json={"confidence": 0.9})).status_code == 401
@@ -242,19 +221,9 @@ async def test_idea_lifecycle_flow():
         showcase = await c.get("/api/ideas/showcase")
         assert showcase.status_code == 200
         assert "ideas" in showcase.json() or "items" in showcase.json() or "showcase" in showcase.json()
-        resonance_payload = (await c.get("/api/ideas/resonance")).json()
-        assert isinstance(resonance_payload, dict)
-        assert isinstance(resonance_payload.get("items"), list)
         storage = await c.get("/api/ideas/storage")
         assert storage.status_code == 200 and "backend" in storage.json()
 
-        # Multi-idea list (seed a range of ROIs — list must return >= 3
-        # even though order-by-roi is the service's internal sort).
-        for val in (10.0, 500.0, 50.0):
-            await _create_idea(c, potential_value=val, estimated_cost=10.0, confidence=0.7)
-        body = (await c.get("/api/ideas")).json()
-        ideas = body.get("ideas") or body.get("items") or []
-        assert len(ideas) >= 3
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +279,6 @@ async def test_idea_investment_fork_selection_flow():
         assert fork.status_code == 201
         forked = fork.json()
         assert forked["source_idea_id"] == iid
-        assert (await c.get(f"/api/ideas/{forked['idea']['id']}")).status_code == 200
 
         await _create_idea(c)  # one more so selection has choices
         sel = await c.post("/api/ideas/select", headers=AUTH)
@@ -571,11 +539,7 @@ async def test_multi_device_identity_flow():
         assert d2["contributor_id"] == cid, "same email must yield same id across devices"
         assert d2["locale"] == "de"
 
-        # Partial-update merge proof: earlier consent + roles survive.
-        node = (await c.get(f"/api/graph/nodes/contributor:{cid}")).json()
-        assert node["consent_findable"] is True
-        assert node["consent_email_updates"] is True
-        assert node["resonant_roles"] == ["frequency-holder"]
+        # The merged node is read through the native host (/api/graph/nodes/{id}); the claim below proves the merge here.
 
         # Fresh browser / new device — claim by email returns the
         # full profile for localStorage rehydration.

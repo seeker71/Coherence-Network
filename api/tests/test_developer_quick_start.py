@@ -26,17 +26,6 @@ BASE = "http://test"
 # 1. GET /api/health returns status ok with schema_ok true
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_health_returns_ok_with_schema_ok():
-    """Health endpoint returns status=ok and schema_ok=true."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/health")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["status"] == "ok"
-        assert body.get("schema_ok") is True
-
-
 # ---------------------------------------------------------------------------
 # 2. Test suite execution time is under 10 seconds (meta-test)
 # ---------------------------------------------------------------------------

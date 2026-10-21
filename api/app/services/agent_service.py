@@ -58,6 +58,7 @@ from app.services.agent_service_completion_tracking import (
 
 # Active task
 from app.services.agent_service_active_task import (
+    active_tasks_by_fingerprint,
     find_active_task_by_fingerprint,
     find_active_task_by_session_key,
     upsert_active_task,

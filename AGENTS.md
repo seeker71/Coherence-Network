@@ -188,9 +188,8 @@ python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbr
 # Spec quality gate (run when changing specs)
 python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
 
-# Tests (CI runs full; PM validation excludes holdout)
-cd api && pytest -v
-cd api && pytest -v --ignore=tests/holdout   # agent validation
+# Tests — the same suite a pull request runs in CI (api/, form, Dockerfile.api, scripts/fkwu_run.sh); holdout stays out
+cd api && pytest -q --ignore=tests/holdout
 
 # Agent-task lane status (the executor is off by config — agent_executor.auto_execute, disable_codex_executor)
 cd api && .venv/bin/python scripts/check_pipeline.py --json       # pipeline status
@@ -223,7 +222,7 @@ Pattern: `~/.coherence-network/config.json` → `api/config/api.json` → sensib
 
 ### Other Conventions
 
-- **Holdout tests** — `api/tests/holdout/` excluded from agent context; CI runs full suite
+- **Holdout tests** — `api/tests/holdout/` stay out of agent context and of the PR suite; run them by hand when a change asks
 - **Spec cross-links** — specs have "See also" sections
 - **Ruff** — `ruff check .` in api/; per-file ignores in pyproject.toml
 

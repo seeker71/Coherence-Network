@@ -192,6 +192,13 @@ def test_service_claim_and_fingerprint_dedup():
     agent_service.update_task(completed["id"], status=TaskStatus.COMPLETED, output="Done " * 50)
     assert agent_service.find_active_task_by_fingerprint(fp_completed) is None
 
+    # The one-pass index the inventory flow reads (one store scan for every idea, not one per idea):
+    # the active fingerprint is in it, the completed one is not, and the flow builds without any
+    # per-idea lookup at all.
+    index = agent_service.active_tasks_by_fingerprint()
+    assert index[fp_active]["id"] == active_task["id"]
+    assert fp_completed not in index
+
     fp_reuse = f"reuse-{uuid4().hex[:8]}"
     first = agent_service.create_task(AgentTaskCreate(
         direction="first", task_type=TaskType.IMPL,

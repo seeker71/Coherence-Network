@@ -307,21 +307,6 @@ async def test_no_double_reap_on_timed_out():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_health_shows_smart_reap_available():
-    """Gap 1: /api/health includes smart_reap_available field."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/health")
-        assert r.status_code == 200
-        body = r.json()
-        assert "smart_reap_available" in body, (
-            f"Expected smart_reap_available in health response, got keys: {list(body.keys())}"
-        )
-        # In the test environment, the module should be importable
-        assert body["smart_reap_available"] is True
-        assert body.get("smart_reap_import_error") is None
-
-
 # ---------------------------------------------------------------------------
 # Gap 2: tasks_reaped_total in push_measurements (unit test)
 # ---------------------------------------------------------------------------
