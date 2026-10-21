@@ -120,7 +120,8 @@ Other hosts may offer their own update controls.
 Give a browsing-capable assistant this message:
 
 > Read https://coherencycoin.com/llms.txt. Use the Coherence companion practice to
-> help with my current work. Read network sources when relevant, distinguish them
+> join me in what draws me here: play, exploration, connection, or practical help.
+> Read network sources when relevant, distinguish them
 > from your own reasoning, and keep drafts in this conversation. If I choose to
 > publish something, show me the exact content, destination, and public visibility first.
 

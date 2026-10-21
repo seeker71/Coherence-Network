@@ -1,0 +1,197 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "codex/mission-fresh-pass-20261021",
+  "commit_scope": "Carry the living-commons mission through the actual companion entry contracts, preserve a simple goodbye, and repair contradictory installation and public capability copy.",
+  "files_owned": [
+    "README.md",
+    "README.template.md",
+    "docs/front-door/INDEX.md",
+    "docs/front-door/connectors.md",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/references/session-brief.md",
+    "specs/trusted-everyday-companion.md",
+    "web/app/come-in/page.tsx",
+    "web/public/llms.txt",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "README.md",
+    "README.template.md",
+    "docs/front-door/INDEX.md",
+    "docs/front-door/connectors.md",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "plugins/coherence-companion/skills/coherence-network/references/session-brief.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/references/session-brief.md",
+    "specs/trusted-everyday-companion.md",
+    "web/app/come-in/page.tsx",
+    "web/public/llms.txt",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "summary": "Generated parity, skill frontmatter, spec quality, 4 plugin packaging tests and 9 selected web invitation source-contract tests passed. esbuild parsed/transpiled the changed TSX. Four independent fictional source-guidance scenarios completed; no full web build or browser render was performed for this prose-only page change. All 21 local links in the edited entry docs and spec resolve. The independent final source review is clear after repairing repeated economic and ingestion claims in the web cards.",
+    "commands": [
+      "form-run python3 scripts/build_readmes.py --check",
+      "form-run uv run --with pytest python -m pytest mcp-server/tests/test_companion_plugin.py -q --noconftest",
+      "form-run uv run --with ./api --with pytest --with pytest-asyncio python -m pytest api/tests/test_agent_invitation.py -q --noconftest -k web_come_in",
+      "form-run npm exec --yes --package=esbuild@0.25.11 -- esbuild web/app/come-in/page.tsx --format=esm --outfile=.cache/mission-fresh-pass/come-in.js",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "summary": "PR 4132 API suite, Web build and GitGuardian Security Checks passed on source commit 1bf34b30929052f4f22f17b0eadf051154092026. Merge is held during the separately authorized coordinated history cleanup. A rewritten commit will be identified separately.",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/39585420337"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Pre-merge public API health, web root, and CORS baseline passed. This does not establish delivery of the changed /come-in or llms.txt copy. No companion package release or hosted GPT publication is included.",
+    "baseline_command": "form-run ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+    "baseline_result": "All three checks passed with HTTP 200 and the expected CORS origin."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The source public contract and invitation welcome play and open exploration; stopping does not trigger an unsolicited brief; the invitation describes contribution records and payment evidence accurately and directs public writes to the maintained guide.",
+    "public_endpoints": [
+      "https://coherencycoin.com/come-in",
+      "https://coherencycoin.com/llms.txt"
+    ],
+    "test_flows": [
+      "Source invitation contracts: 9 selected existing tests passed.",
+      "Changed TSX parse/transpile: passed; no runtime logic or layout change.",
+      "Public API/web/CORS baseline: passed; new-copy deployment unverified."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Source changes are ready for review and merge. Release and live behavior claims remain pending their own publication/deployment evidence."
+  },
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "mission-fresh-pass-20261021"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "evidence_refs": [
+    "specs/trusted-everyday-companion.md",
+    "docs/VISION.md",
+    "docs/front-door/connectors.md",
+    "mcp-server/tests/test_companion_plugin.py",
+    "api/tests/test_agent_invitation.py"
+  ],
+  "reviewed_findings": [
+    {
+      "finding": "The README routed new installs to the separate, older npm MCP release.",
+      "repair": "Use the current checkout's Node launcher and link the reviewed release setup."
+    },
+    {
+      "finding": "The assistant link contract and companion README still required a productive result.",
+      "repair": "Welcome play, exploration and connection as complete purposes; carry the same choices into the front-door index and host snippet."
+    },
+    {
+      "finding": "A pause triggered a session brief even when the person simply wanted to stop.",
+      "repair": "Prepare briefs for requested context preservation or handoff; a goodbye stands alone."
+    },
+    {
+      "finding": "The web invitation asserted automatic comprehensive contribution recording and payout operation.",
+      "repair": "Describe chosen contribution records, payout allocation as design, and actual payments by their receipts."
+    },
+    {
+      "finding": "The adjacent web paragraph described public substrate writes as impossible, contradicting the maintained connector contract.",
+      "repair": "Point to the maintained guide and explain the person's control of public content, visibility and attribution."
+    }
+  ],
+  "scenario_evaluation": {
+    "method": "A separate responder read the source skill and workflow guidance and answered four fictional prompts as independent starts before the narrow pause-rule repair. These outputs evaluated source guidance, not a running product. The pause example succeeded despite the overbroad rule, which was then made explicit.",
+    "cases": [
+      {
+        "id": "indonesian-play",
+        "prompt": "Let's play a tiny word game in Indonesian. You start; one short line only.",
+        "response": "Sambung kata: awan → giliranmu, kata berawalan N!",
+        "observation": "One short Indonesian line begins a playable word game."
+      },
+      {
+        "id": "cloud-wandering",
+        "prompt": "I don't want to make a project. I just like looking at clouds and wondering what they could be. Stay with me in that for a moment.",
+        "response": "Let’s linger there. I’m imagining a cloud that almost looks like a whale, until one soft edge drifts away and it becomes something unnamed again.",
+        "observation": "Offers explicitly imagined imagery, without inventing a view of the person's sky or imposing a deliverable."
+      },
+      {
+        "id": "connection-unavailable",
+        "prompt": "I want to meet people who care about quiet walks and making things by hand. Is this network somewhere I can find them? You have no discovery tools in this conversation.",
+        "response": "That kind of connection fits Coherence’s stated purpose. Without discovery tools here, I can’t verify whether the network currently has people, groups, or a way to find them around those interests.",
+        "observation": "Separates mission from unverified discovery capability."
+      },
+      {
+        "id": "simple-goodbye",
+        "prompt": "That was fun. I'm done for now.",
+        "response": "Glad it was fun. Take care.",
+        "observation": "Stops without a brief, recap or continuation prompt."
+      }
+    ],
+    "limits": "Generated examples only. No real person discovery, experienced joy, published GPT behavior, installed-plugin update, native-model sufficiency or population-level reliability is established."
+  },
+  "sovereignty_receipt": {
+    "path": "native lookup followed by source inspection and rented synthesis",
+    "native_lookup": "Cached fkwu form-cli returned source references without a sufficient answer to this review.",
+    "native_generated_replies": 0,
+    "oracle_provider": "OpenAI",
+    "oracle_model": "GPT-6 family; exact serving variant unavailable",
+    "input_tokens": null,
+    "output_tokens": null,
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "intended, unmeasured",
+      "suffic": 0,
+      "observed": false
+    },
+    "measurement_limit": "Closing local-flow review still shows 162 historical options, 71 band green, 9 locally verified successes across 22 attempted gaps, 8 gaps with verification unread and 81 options unmeasured. These are historical lane observations. Closing session-rent returned an empty session identifier and measured 0, kept 0, refused 0; this is missing chat attribution, not zero rental.",
+    "contenders": "Native fkwu retrieval and Metal voice lanes exist; this pass did not run a champion/challenger comparison.",
+    "payload": "Local source excerpts and diffs from the linked entry points and skill, plus four fictional prompts; exact rented token counters unavailable."
+  },
+  "work_receipt": {
+    "loosened": "The public entry contracts now let play, exploration and stopping be complete.",
+    "surprise": "A welcoming mission can still lead into an older contract one click later.",
+    "friction_to_learning": "Independent review exposed the actual handoff seams; repairing those existing instructions made the invitation more consistent without adding another system."
+  },
+  "review": {
+    "status": "clear",
+    "scope": "Independent fresh-reader source review of touched entry points; no runtime or deployment claim.",
+    "last_repair": "Aligned the repeated ledger/treasury cards and the source-file ingestion card with the qualified main paragraph and maintained submission guide."
+  },
+  "history_migration": {
+    "old_source_head": "1bf34b30929052f4f22f17b0eadf051154092026",
+    "rewritten_source_head": "38caa1436281122e713b5cc0093bff0c6966c3fe",
+    "rewritten_base": "8e6f23023e5221aca466ca2372dd2ffe076c5f0a",
+    "rewritten_kernel_pin": "0c960e328e0d6030705963adaeb757f3eba67d96",
+    "verification": "All 15 authored task files are byte-identical between original and rewritten source heads. The only whole-tree changes are the mapped form gitlink and removal of generated web/tsconfig.tsbuildinfo. Original and rewritten pinned kernel trees are identical. Local evidence changes and excluded native observation receipts were preserved."
+  }
+}

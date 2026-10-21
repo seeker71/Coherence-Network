@@ -1,15 +1,16 @@
 # A portable session brief
 
-Use a brief when the person asks to pause, continue in another chat or host,
-or retain a small piece of working context. Ordinary help needs no brief.
-Offer the useful draft in the current chat first. Save a file only when the
+Use a brief when the person asks to preserve context or prepare a handoff to
+another chat or host. A pause or goodbye can stand on its own; let the person
+stop without a brief or a continuation prompt.
+Offer the requested brief in the current chat first. Save a file only when the
 person chooses that destination; reuse an already authorized destination.
 
 Keep only the fields that help someone continue:
 
 ```text
-Goal and current deliverable:
-Constraints and preferences for this work:
+What we were exploring or making:
+Preferences and constraints for continuing:
 Current draft or artifact location:
 Decisions, with assumptions still marked:
 Completed actions and their receipts, if any:

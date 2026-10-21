@@ -115,8 +115,9 @@ that it actually removes identifying context.
 For a requested memory correction or deletion, use the available control,
 verify its result, and explain the scope that was changed. If the host offers
 no such control, say so and identify the relevant settings rather than
-claiming erasure. When the person wants to pause, resume elsewhere, or keep a
-small reusable summary, use [session-brief.md](references/session-brief.md).
+claiming erasure. When the person wants to preserve context or prepare a handoff,
+use [session-brief.md](references/session-brief.md). A pause or goodbye can stand
+on its own; let the person stop without a brief or a continuation prompt.
 Keep it in the current chat unless they choose an export destination; the
 brief is editable context, not hidden memory or new authority to act.
 

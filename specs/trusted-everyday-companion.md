@@ -97,6 +97,9 @@ separate observed client lifecycle and permission-preserving handoff.
   pace without requiring an artifact, plan or productivity goal. Discovery
   uses actual available sources and tools; no invented people, matches or
   capabilities. Preserve each person's choice over disclosure and contact.
+  A pause or goodbye is complete; prepare a continuation brief when preserving
+  context or a handoff is requested. Carry this practice through the public
+  assistant contract and the companion's linked entry guidance.
 
 ## Implementation plan and ownership
 
@@ -240,6 +243,13 @@ retains the prompts, replies, checks, and limits. This establishes only the
 observed source-guidance examples; the expanded guidance is awaiting release
 and has not been evaluated in the published GPT or native model. The earlier
 six-workflow evaluation does not establish this broader behavior.
+
+The fresh entry-point pass on the same date carries R9 into the public assistant
+contract, front-door index, and companion README, and narrows the brief trigger
+to requested context preservation or handoff. Four further fictional scenarios
+cover a short Indonesian word game, cloud-gazing, unavailable discovery, and
+stopping. The [fresh-pass receipt](../docs/system_audit/commit_evidence_2026-10-21_mission_fresh_pass.json)
+records these examples, the entry-point repairs, and their verification limits.
 
 ## Out of Scope
 
