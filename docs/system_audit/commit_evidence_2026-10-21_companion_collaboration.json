@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "codex/companion-collaboration-wave-20261021",
+  "commit_scope": "Document an observed pinned-plugin upgrade and a bounded collaboration continuation in the existing Sema GPT.",
+  "files_owned": [
+    "docs/front-door/connectors.md",
+    "docs/integration/companion-gpt-observations.md",
+    "specs/companion-gpt-rollout.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_collaboration.json"
+  ],
+  "change_files": [
+    "docs/front-door/connectors.md",
+    "docs/integration/companion-gpt-observations.md",
+    "specs/companion-gpt-rollout.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_collaboration.json"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "companion-collaboration-wave-20261021"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Installed 0.6.2 manifest and CLI state verified; all eight files equal reviewed source; unrelated configuration bytes unchanged. Existing GPT/skill source unchanged, so previous bundle checks reused. Documentation/spec/evidence validators and diff check run for this change.",
+    "commands": [
+      "form-run codex plugin list --marketplace coherence-network --json",
+      "Compare all eight installed files with plugins/coherence-companion source; assert unrelated config hash unchanged",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-21_companion_collaboration.json",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Automated CI results are not yet reported for this documentation-only wave; no CI pass claimed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Observe existing collaboration behavior without changing instructions; make the reviewed release reachable from an earlier pinned installation.",
+    "test_flows": [
+      "Fictional conflicting feedback: approved flyer untouched, welcome role unaccepted, paper offered. Broader event-tone authority suggested provisionally, not established.",
+      "Interim mandatory-sharing draft: replacement participation lines and explicit author-draft/group-agreement distinction.",
+      "Return to optional sharing: approved source restored, Ari paper commitment confirmed in prompt, welcome open, interim choice superseded and group agreement unestablished.",
+      "Actual copied Markdown equals approved source after adding one terminal newline: 247 copied UTF-8 bytes versus 248 source bytes.",
+      "CLI update from pinned 0.6.0 to pinned 0.6.2: install/enabled state and all eight files verified."
+    ],
+    "limits": "Three scripted turns in one existing GPT conversation, no corrective prompts; no separate recipient, fresh host-session skill loading, human learning, causal superiority or broad reliability claim. GPT saved-editor proof from 2026-10-20 is reused; no GPT configuration changes made."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Existing local companion installation updated to the already-public 0.6.2 release through supported CLI commands. No new GPT publication, package version, runtime deployment, directory submission, billing or credential change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Automated CI evidence is unreported. Bounded live behavior and installed-file effects are verified separately; this receipt makes no broader readiness claim."
+  },
+  "evidence_refs": [
+    "docs/front-door/connectors.md",
+    "docs/integration/companion-gpt-observations.md",
+    "specs/companion-gpt-rollout.md",
+    "https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.2",
+    "https://developers.openai.com/plugins/build/plugins"
+  ],
+  "installed_release": {
+    "before": "0.6.0",
+    "after": "0.6.2",
+    "marketplace_ref": "companion-v0.6.2",
+    "installed": true,
+    "enabled": true,
+    "source_commit": "124d8721c72423c94b322d5ce5ac1f97a941487c",
+    "matching_files": 8,
+    "unrelated_configuration_byte_equal": true,
+    "active_chat_skill_catalog": "Originally loaded 0.6.0; a new host session was not observed."
+  },
+  "observed_failures": [
+    {
+      "command": "form-run sh -c 'codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.2 --sparse .agents/plugins --sparse plugins/coherence-companion --json 2>&1'",
+      "exit": 1,
+      "output": "Error: marketplace 'coherence-network' is already added from a different source; remove it before adding this source",
+      "repair": "Remove only coherence-network marketplace registration, re-add same source at companion-v0.6.2 with same sparse paths, add coherence-companion, verify bytes and scope."
+    },
+    {
+      "command": "form-run form-cli ask 'companion collaboration feedback authorship approved decisions plugin update'",
+      "exit": 143,
+      "output": "No answer on stdout; owned process tree stopped during native CLI source build. Final metadata: @form form-cli 143 0 131 131.",
+      "continuation": "Working direct fkwu enrichment returned no exact entries for collaboration, feedback, authorship or decisions. No identical retry; native build repair remains outside this companion change."
+    }
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "OpenAI-hosted Codex reasoning and GPT replies; exact serving variants and task token totals unavailable.",
+    "native": "Native local-flow observation completed; exact-term enrichment supplied no sufficient answer. No native generated collaboration answer claimed. Closing local-flow and session-rent observations completed; session-rent measured one changed transcript and retained 99, which is not task-specific token usage.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear intent; qualitative review",
+      "suffic": 0,
+      "observed": false
+    },
+    "native_contender": "Existing fkwu companion/native-voice lanes were not retested for this collaboration case; no native parity claim."
+  },
+  "work_receipt": {
+    "loosened": "The current collaboration instructions carried changed decisions without corrective intervention; installed guidance moved to the reviewed release.",
+    "tight": "One terminal newline still omitted; first proposal suggested broader event authority; fresh-host and independent-recipient experience unobserved.",
+    "surprise": "Public availability and pinned installation can diverge despite correct package source.",
+    "friction_to_lesson": "The CLI registration conflict exposed the missing upgrade sequence; existing conversation guidance needed no new rule."
+  },
+  "delivery_complete": true,
+  "review": {
+    "status": "pass",
+    "scope": "Independent installation-path, observation/spec and trust/privacy reviews; corrected an ambiguous configuration qualifier to name GPT configuration explicitly."
+  }
+}
