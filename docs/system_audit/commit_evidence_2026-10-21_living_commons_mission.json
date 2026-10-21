@@ -75,8 +75,8 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Local source alignment prepared; PR CI not yet observed."
+    "status": "pass",
+    "summary": "PR 4130 GitGuardian Security Checks passed on source commit 1d6d268b73b24364c8ae2c0156ea8a4ac7836170. GitHub reported CLEAN and MERGEABLE; this documentation/guidance scope has no application runtime or kernel changes."
   },
   "deploy_validation": {
     "status": "pending",
@@ -87,6 +87,7 @@
     "blocked_reason": "Expanded guidance is source-validated; publication and hosted behavior need separate release evidence."
   },
   "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/pull/4130",
     "docs/VISION.md",
     "specs/trusted-everyday-companion.md",
     "docs/system_audit/commit_evidence_2026-10-21_companion_063_delivery.json"
