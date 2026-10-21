@@ -20,6 +20,7 @@ This can also help your own repo. Ask your agent to receive the Coherence Networ
 
 Useful doors:
 
+- Everyday help: [start with the companion](docs/front-door/connectors.md) in ChatGPT or your own assistant
 - Web: [coherencycoin.com/come-in](https://coherencycoin.com/come-in)
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`

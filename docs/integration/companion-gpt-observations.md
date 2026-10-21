@@ -1,6 +1,6 @@
 # Sema GPT: publication and live observations
 
-These observations come from the owner's live ChatGPT session on 2026-10-20.
+These observations come from the owner's live ChatGPT sessions on October 20–21, 2026.
 The scenarios were fictional; the hosted responses and artifact download were
 actual observations. They establish behavior in these conversations, not a
 general reliability rate. Private UI details and conversation identifiers are
@@ -309,6 +309,92 @@ guidance caught up with the public release. The surprise was the gap between a
 published release and an intentionally pinned installation. Following the failed
 update command to its registration conflict turned that friction into a verified
 upgrade path, without adding another prompt rule or package version.
+
+## Business exploration and proportional help — October 21, 2026
+
+The owner continued the canonical weekend baking-class example. The first
+prompt was:
+
+> I’m considering weekend baking classes. I enjoy making simple bread and explaining what dough should feel like. I’d like people who think “I’m not a baker” to feel able to try. Help me shape one simple first offer.
+
+The criterion was one usable offer with an audience, activity and benefit.
+A proposed format could help explain the concept; a timetable, price calculator,
+launch experiment or decorative images needed a purpose in the requested
+decision. This assessed usefulness and scope, without a fixed word limit or
+requiring another intake question before helping.
+
+The first response supplied a useful “Bread Without Fear” offer centered on
+beginner confidence and learning dough by touch. It also supplied a 2.5-hour
+plan for 4–6 participants, an illustrative IDR calculator, an unrelated
+cottagecore image, an invitation and a pilot suggestion. The prices were
+explicitly working assumptions, not market research. The observed failure was
+excess scope around a useful core offer, not fabricated market validation.
+
+In the second turn, mixed fictional feedback led Sema to improve the benefit
+and beginner welcome. It kept comments, commitments and evidence of demand
+distinct. It nevertheless added four images and extensive validation
+guidance. In the third turn, the requested short, warm invitation welcomed
+watching before joining, retained `[date]` and `[place]`, and included one useful
+question. That bounded drafting request passed; no external message was sent.
+
+### First instruction repair and failed fresh retry
+
+The first narrow proportional-help repair was published and read back at
+**2026-10-21T05:37:57.075Z**. The complete **7,454-character** instruction payload
+matched the source exactly. The recorded profile, all four enabled capabilities,
+and imported Action were preserved; the Action remained JSON-equal, with
+authentication **None** and only `GET /ask` and `GET /trace`.
+
+A fresh conversation received the exact first prompt above. Despite the changed
+instruction, its first response again expanded into a timetable, three images,
+an invitation and an experiment. **The retry failed the declared scope
+criterion.** Correct publication readback did not establish changed behavior.
+The useful offer and the successful short invitation in the original
+conversation do not erase that failed first-response comparison.
+
+A second source repair then made the stopping point more explicit, bringing
+the payload to **7,531 characters**. Its publication verification and
+fresh same-prompt observation are **pending in this record**. No successful
+retry, causal improvement or general reliability claim is made for that repair.
+
+The original three turns and failed retry are actual hosted responses to
+fictional requests. They do not establish real customer demand, bookings,
+payments or recipient benefit. The owner's native enrichment returned no exact
+entries for business, hypothesis, feedback or invitation; these outputs and
+their assessment used hosted OpenAI reasoning, not a sufficient native answer.
+
+Work receipt: the invitation became usable, while first-offer restraint stayed
+unresolved. The surprise was that a correctly published instruction still
+produced the same excess scope. Keeping that failed retry visible turned the
+friction into a specific stopping-point repair whose result is recorded separately below.
+
+### Second repair: published and partially improved
+
+At 2026-10-21T05:41:06.393Z, complete saved-editor readback matched the final
+7,531-character source from kernel PR623. Published/Everyone, description,
+four starters, all four capabilities and the original unauthenticated ask/trace
+Action remained unchanged; the Action schema compared JSON-equal to its backup.
+
+A fresh conversation received the identical first-offer prompt. Its reply
+proposed “Bread by Feel” with a beginner audience, mixing/kneading/recognising
+dough, and confidence to try again at home. It proposed 4–6 participants and
+three tactile discoveries. It omitted the timetable, price calculator and
+experiment plan. A short positioning line stayed within the offer's purpose.
+However, it still inserted one decorative image and an extra closing choice.
+**The full scope criterion remains unmet.** This is partial improvement in one
+observed reply, not causal proof or a general reliability claim.
+
+This wave retains the useful narrowed guidance and records the image gap for
+future actual use. Repeating unchanged prompts would add little evidence.
+The free skill carries the same scope distinction in release 0.6.3. The existing
+companion guide now starts with the GPT and examples before installation; the
+README links it and the browsing contract separates plugin 0.6.3 from MCP 0.6.0.
+Release/download and public-serving claims have their own delivery receipt.
+
+Work receipt: early business help became less demanding; unsolicited imagery
+stayed unresolved. The most useful surprise was that omitting a calculator did
+not require weakening business evidence or sharing boundaries. The failed
+retries made the stopping point concrete and kept the remaining gap visible.
 
 ## What the next wave should answer
 

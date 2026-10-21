@@ -67,7 +67,10 @@ waves, preserving the owner's existing public identity and actual tool scope.
   source, publication instructions and observed status.
 - `plugins/coherence-companion/`, `scripts/build_readmes.py`, and focused bundle
   tests: directory metadata and canonical asset packaging.
-- `docs/front-door/connectors.md`: easy existing-GPT entry and release guidance.
+- `docs/front-door/connectors.md`, `README.template.md`, generated `README.md`,
+  and `web/public/llms.txt`: easy existing-GPT entry and current release guidance.
+- `skills/coherence-network/references/companion-workflows.md` and its generated
+  plugin copy: proportional business exploration.
 - `specs/companion-gpt-rollout.md`: the bounded rollout and observed waves.
 - `docs/system_audit/`: minimal fictional results, publication evidence and ledger.
 - `form` gitlink: landed canonical GPT instructions, with kernel dependencies
@@ -199,3 +202,22 @@ prior source checks; no new package release or runtime deployment is needed.
 - [Existing GPT setup](../docs/integration/chatgpt-setup.md)
 - [Official migration behavior](https://learn.chatgpt.com/docs/migrate-custom-gpts)
 - [Directory submission](https://developers.openai.com/plugins/deploy/submission)
+
+### Proportional business help and first-use wave — October 21, 2026
+
+Continue the canonical weekend baking-class example with fictional feedback.
+A request for one simple offer should produce a usable audience, activity and
+benefit. A proposed format can fit within that concept. Additional timetables,
+price calculators, launch plans and decorative imagery need an actual purpose
+in the requested decision. Feedback should change the offer without turning
+comments into validated demand. A requested invitation preserves [date]/[place],
+welcomes watching before joining, and remains an unsent draft.
+
+Record the original response and every changed-instruction retry separately.
+Reuse the same first-offer prompt in a fresh published conversation; stop the
+case when it meets the declared scope, or retain the concrete unresolved gap.
+A single passing retry establishes only this case, not causal improvement.
+The skill release is 0.6.3; the optional MCP package stays 0.6.0. Put the existing
+GPT and starter examples before installation in the existing companion guide,
+link that guide from the README, and correct the browsing-assistant release link.
+Verify the actual release download, installed files and public discovery route.

@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-21",
+  "thread_branch": "codex/companion-first-use-wave-20261021",
+  "commit_scope": "Narrow early business help, publish the existing GPT instructions, and simplify newcomer access to the free companion.",
+  "files_owned": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/front-door/connectors.md",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/references/companion-workflows.md",
+    "specs/companion-gpt-rollout.md",
+    "web/public/llms.txt"
+  ],
+  "change_files": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/front-door/connectors.md",
+    "docs/integration/chatgpt-setup.md",
+    "docs/integration/companion-gpt-observations.md",
+    "docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
+    "docs/system_audit/companion_gpt_verification_2026-10-20.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form",
+    "plugins/coherence-companion/plugin.json",
+    "plugins/coherence-companion/skills/coherence-network/references/companion-workflows.md",
+    "skills/coherence-network/references/companion-workflows.md",
+    "specs/companion-gpt-rollout.md",
+    "web/public/llms.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "companion-gpt-rollout"
+  ],
+  "task_ids": [
+    "companion-proportional-offer-20261021"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-run python3 scripts/build_readmes.py --check",
+      "Companion plugin tests: 4 passed",
+      "Skill quick_validate.py: passed under locked MCP uv runtime with PyYAML",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/companion-gpt-rollout.md",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-21_companion_proportional_offer.json",
+      "form-run git diff --check"
+    ],
+    "summary": "Portable bundle, source metadata, generated mirrors and focused source reviews. README regeneration also synchronizes pre-existing canonical CI guidance in README and CLI README."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Parent API/web workflow will run for gitlink and web/public changes. Kernel PR623 GitGuardian passed."
+  },
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "One simple offer yields a useful concept without unsolicited planning or decorative imagery.",
+    "test_flows": [
+      "Original three turns: useful concept but excess timetable, illustrative price calculator, image; feedback distinguished from demand; final requested invitation passed.",
+      "7454-character source published/read back, identical fresh prompt still over-expanded.",
+      "7531-character source published/read back, identical fresh prompt dropped timetable, calculator and experiment plan; decorative image remains."
+    ],
+    "limits": "Full scope criterion unmet. Owner-account fictional inputs, not recipient usefulness, measured human learning, validated demand, causal improvement or broad reliability.",
+    "public_endpoints": [
+      "https://chatgpt.com/g/g-6a4a77627dbc819180a16645f5662625"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Existing GPT final7531characters published and read back2026-10-21T05:41:06.393Z. Skill0.6.3 release/download and public llms serving pending."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Delivery pending and full behavioral scope criterion remains unmet; no full-readiness claim."
+  },
+  "evidence_refs": [
+    "docs/integration/companion-gpt-observations.md",
+    "docs/integration/chatgpt-setup.md",
+    "https://github.com/seeker71/coherence-kernel/pull/623"
+  ],
+  "kernel_dependency": {
+    "from": "9ba37cce8c3f358626080c0f70b77577b8f8f5f1",
+    "to": "7c99c23420e03a0a3c34fb9eeedad41b5a60e9a3",
+    "own_change": "description_for_model only;7531characters; other manifest fields equal",
+    "inherited": "38 upstream files/1178 insertions/287 deletions before own JSON correction, including shared-root identity/lifetimes/GC, string-pool safety and Glass/token-flow changes.",
+    "proof_reused": [
+      "form/receipts/2026-10-20-glass-care-and-observation.md",
+      "form/receipts/2026-10-21-glass-shared-roots.md"
+    ],
+    "limits": "Owner native witnesses and release mask32767/32767 reviewed, not rerun. Final viewer freshness remained unproved. No blanket runtime assurance."
+  },
+  "observed_failures": [
+    {
+      "command": "form-cli ask business hypothesis feedback invitation (owned process group,15s bound)",
+      "exit": 124,
+      "output": "build: no current native bootstrap in this checkout; building the copy in a private body, leaving this checkout's bundle untouched",
+      "continuation": "Owned process group stopped; direct fkwu enrichment returned no exact entries; no sufficient native answer claimed."
+    },
+    {
+      "command": "python3 /Users/ursmuff/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/coherence-network",
+      "exit": 1,
+      "output": "ModuleNotFoundError: No module named 'yaml'",
+      "repair": "Ran same validator under existing locked MCP uv runtime with PyYAML; passed."
+    },
+    {
+      "command": "gh pr merge 623 --merge --delete-branch",
+      "exit": 1,
+      "output": "GraphQL: Merge commits are not allowed on this repository. (mergePullRequest)",
+      "repair": "Used repository-supported squash merge; PR623 merged."
+    }
+  ],
+  "sovereignty_receipt": {
+    "reasoning": "OpenAI-hosted Codex and ChatGPT; exact serving variants/task tokens unavailable.",
+    "native": "Native orientation and observations ran; no sufficient business answer or native generation claimed.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "clear-intent qualitative review",
+      "suffic": 0,
+      "observed": false
+    },
+    "native_contender": "Existing fkwu companion/native-voice lanes not benchmarked for this business case."
+  },
+  "work_receipt": {
+    "loosened": "Business response shed timetable/calculator; newcomer reaches conversation before setup.",
+    "tight": "Decorative imagery still unsolicited; independent recipient use unobserved.",
+    "surprise": "A source-correct soft instruction still failed the same prompt.",
+    "friction_to_lesson": "Retained failure distinguished source review from behavior; made stopping point explicit."
+  },
+  "delivery_complete": false
+}
