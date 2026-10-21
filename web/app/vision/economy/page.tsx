@@ -241,12 +241,6 @@ export default async function EconomyPage() {
               Trace energy across forms
             </Link>
             <Link
-              href="/energy-flow"
-              className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-emerald-200 transition-colors hover:border-emerald-400/40 hover:text-emerald-100"
-            >
-              Sense live energy
-            </Link>
-            <Link
               href="/verify"
               className="rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-violet-200 transition-colors hover:border-violet-400/40 hover:text-violet-100"
             >
@@ -456,12 +450,6 @@ export default async function EconomyPage() {
           <div className="flex flex-wrap gap-4 text-sm">
             <Link href="/analytics" className="text-stone-500 transition-colors hover:text-amber-300/80">
               Attention flow
-            </Link>
-            <Link href="/energy-flow" className="text-stone-500 transition-colors hover:text-teal-300/80">
-              Energy map
-            </Link>
-            <Link href="/alive" className="text-stone-500 transition-colors hover:text-violet-300/80">
-              Community pulse
             </Link>
           </div>
         </section>

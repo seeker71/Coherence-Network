@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 54
+**Total files**: 49
 
 | File | Purpose |
 |---|---|
@@ -12,8 +12,6 @@
 | [AskingThread.tsx](AskingThread.tsx) | _no top-of-file purpose_ |
 | [AssetRenderer.tsx](AssetRenderer.tsx) | _no top-of-file purpose_ |
 | [ChromeGate.tsx](ChromeGate.tsx) | ChromeGate — hides the site-wide chrome (header, bottom nav, badge) on |
-| [EnablePush.tsx](EnablePush.tsx) | _no top-of-file purpose_ |
-| [ExplorePager.tsx](ExplorePager.tsx) | _no top-of-file purpose_ |
 | [FeedTabs.tsx](FeedTabs.tsx) | _no top-of-file purpose_ |
 | [FirstTimeWelcome.tsx](FirstTimeWelcome.tsx) | _no top-of-file purpose_ |
 | [InspiredByPreview.tsx](InspiredByPreview.tsx) | _no top-of-file purpose_ |
@@ -31,7 +29,6 @@
 | [MeetingSurface.tsx](MeetingSurface.tsx) | _no top-of-file purpose_ |
 | [MessagesProvider.tsx](MessagesProvider.tsx) | _no top-of-file purpose_ |
 | [MorningNudge.tsx](MorningNudge.tsx) | _no top-of-file purpose_ |
-| [NotificationBell.tsx](NotificationBell.tsx) | _no top-of-file purpose_ |
 | [Panel.tsx](Panel.tsx) | _no top-of-file purpose_ |
 | [PersonInspiredBy.tsx](PersonInspiredBy.tsx) | _no top-of-file purpose_ |
 | [PersonalFeed.tsx](PersonalFeed.tsx) | _no top-of-file purpose_ |
@@ -42,9 +39,7 @@
 | [RecentlyAlive.tsx](RecentlyAlive.tsx) | _no top-of-file purpose_ |
 | [SecondaryLayerNav.tsx](SecondaryLayerNav.tsx) | _no top-of-file purpose_ |
 | [ShareButton.tsx](ShareButton.tsx) | _no top-of-file purpose_ |
-| [SinceLastVisit.tsx](SinceLastVisit.tsx) | _no top-of-file purpose_ |
 | [SubstrateBadge.tsx](SubstrateBadge.tsx) | SubstrateBadge — every page reveals what cells compose it. |
-| [VedicChart.tsx](VedicChart.tsx) | _no top-of-file purpose_ |
 | [active_nav_link.tsx](active_nav_link.tsx) | _no top-of-file purpose_ |
 | [expert-mode-context.tsx](expert-mode-context.tsx) | _no top-of-file purpose_ |
 | [hash-scroller.tsx](hash-scroller.tsx) | _no top-of-file purpose_ |

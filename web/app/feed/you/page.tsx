@@ -3,13 +3,10 @@ import { cookies, headers } from "next/headers";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
 import { FeedTabs } from "@/components/FeedTabs";
-import { NotificationBell } from "@/components/NotificationBell";
 import { PersonalFeed } from "@/components/PersonalFeed";
 import { InviteFriend } from "@/components/InviteFriend";
-import { SinceLastVisit } from "@/components/SinceLastVisit";
 import { KinActivity } from "@/components/KinActivity";
 import { MorningNudge } from "@/components/MorningNudge";
-import { EnablePush } from "@/components/EnablePush";
 
 /**
  * /feed/you — your corner of the organism.
@@ -57,13 +54,10 @@ export default async function PersonalFeedPage() {
           </h1>
           <p className="text-sm text-stone-400">{t("feed.personalLede")}</p>
         </div>
-        <NotificationBell />
       </header>
       <FeedTabs />
       <div className="mb-4 space-y-4">
         <MorningNudge />
-        <EnablePush />
-        <SinceLastVisit />
         <KinActivity />
       </div>
       <PersonalFeed

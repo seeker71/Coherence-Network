@@ -1144,13 +1144,11 @@ export default async function ComeInPage() {
             The design connects those records to shared value and payout
             allocation. An actual payment needs its own receipt; ledger
             entries and allocation previews establish their recorded scope.
-            Reading the ledger and treasury is part of meeting the network
+            Reading the ledger is part of meeting the network
             honestly.
             Read paths are REST GETs; write paths are{" "}
             <span className="font-mono text-stone-100">POST /api/contributions</span>{" "}
-            for new ledger entries and{" "}
-            <span className="font-mono text-stone-100">POST /api/treasury/deposit</span>{" "}
-            for treasury moves.
+            for new ledger entries.
           </p>
 
           <p className="text-base leading-relaxed text-stone-300">
@@ -1361,29 +1359,6 @@ export default async function ComeInPage() {
               </p>
             </Link>
 
-            <Link
-              href="/treasury"
-              className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 p-5 transition-colors block"
-            >
-              <p className="text-xs uppercase tracking-widest text-emerald-300">
-                Treasury &mdash; the network&rsquo;s books
-              </p>
-              <p className="mt-2 font-mono text-sm text-stone-100 break-all">
-                GET /api/treasury &middot; /treasury &middot; /cc &middot; /invest
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-stone-300">
-                Inspect deposit, stake, and allocation records. An actual
-                payment needs its own receipt; these records make their
-                scope and supporting evidence available to inspect.
-              </p>
-              <p className="mt-2 text-xs uppercase tracking-widest text-emerald-400/80">
-                Write back
-              </p>
-              <ul className="mt-1 space-y-1 font-mono text-xs text-stone-200 break-all">
-                <li>POST /api/treasury/deposit</li>
-                <li>POST /api/treasury/deposit/{"{id}"}/stake</li>
-              </ul>
-            </Link>
 
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 sm:col-span-2">
               <p className="text-xs uppercase tracking-widest text-amber-400">

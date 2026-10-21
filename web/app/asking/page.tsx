@@ -13,7 +13,6 @@
 
 import type { Metadata } from "next";
 
-import { EnablePush } from "@/components/EnablePush";
 import { AskingThread } from "@/components/AskingThread";
 import { getApiBase } from "@/lib/api";
 
@@ -80,7 +79,6 @@ export default async function AskingPage() {
       </header>
 
       <div className="mb-6">
-        <EnablePush />
       </div>
 
       <AskingThread

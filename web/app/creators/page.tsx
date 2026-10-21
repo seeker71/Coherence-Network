@@ -127,12 +127,6 @@ export default async function CreatorsLandingPage() {
       <section className="mb-12">
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/creators/resonance"
-            className="inline-block rounded border border-amber-500/40 bg-amber-500/10 px-6 py-3 text-amber-200 hover:bg-amber-500/20 transition-colors"
-          >
-            Build resonance report
-          </Link>
-          <Link
             href="/creators/submit"
             className="inline-block rounded border border-stone-700 bg-stone-950 px-6 py-3 text-stone-200 hover:border-stone-500 transition-colors"
           >

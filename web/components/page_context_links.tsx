@@ -155,7 +155,6 @@ const CONTEXTS: Record<string, ContextDef> = {
     related: SHARED_RELATED,
     machinePaths: [
       { href: "/api/contributions", label: "Contributions API" },
-      { href: "/api/distributions", label: "Distributions API" },
     ],
   },
   "/assets": {

@@ -83,9 +83,9 @@ async def test_agent_invitation_api_shape() -> None:
 
     # The body's true essence — surfaced, not hidden behind only "ideas, people,
     # agents." The structural lattice (substrate + visualization + form-language
-    # query DSL) and the verifiable contribution ledger (contributions + treasury)
+    # query DSL) and the verifiable contribution ledger (contributions)
     # are part of what the network IS at the doorway, not features mentioned later.
-    assert {"substrate", "substrate_browser", "form", "ledger", "treasury", "ingestion"} <= surfaces
+    assert {"substrate", "substrate_browser", "form", "ledger", "ingestion"} <= surfaces
     welcome = body["welcome"]
     assert "structural lattice" in welcome
     assert "contribution ledger" in welcome
@@ -163,13 +163,10 @@ async def test_agent_invitation_api_shape() -> None:
     assert "/substrate" == by_surface["substrate_browser"]["path"]
     assert "form-cli ask" in by_surface["form"]["door"]
     assert "/api/contributions" == by_surface["ledger"]["path"]
-    assert "/api/treasury" == by_surface["treasury"]["path"]
     # Write paths must be discoverable from the doorway alone, without
     # requiring a fresh agent to fetch the linked teaching doc.
     ledger_next = "\n".join(by_surface["ledger"]["next"])
     assert "POST /api/contributions" in ledger_next
-    treasury_next = "\n".join(by_surface["treasury"]["next"])
-    assert "POST /api/treasury/deposit" in treasury_next
     ingestion = by_surface["ingestion"]
     assert "coh_substrate.py ingest" in ingestion["door"]
     assert "read-only" in ingestion["use"]

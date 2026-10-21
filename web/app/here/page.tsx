@@ -5,7 +5,6 @@ import { getApiBase } from "@/lib/api";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
 import { FeedTabs } from "@/components/FeedTabs";
-import { NotificationBell } from "@/components/NotificationBell";
 
 /**
  * /here — a map of the organism's current attention.
@@ -152,7 +151,6 @@ export default async function HerePage() {
           </h1>
           <p className="text-sm text-muted-foreground">{t("here.lede")}</p>
         </div>
-        <NotificationBell />
       </header>
 
       <FeedTabs />

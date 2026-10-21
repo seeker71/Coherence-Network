@@ -4,6 +4,5 @@
  */
 export { ConceptSectionCard } from "./ConceptSectionCard";
 export { GalleryGrid } from "./GalleryGrid";
-export { InterestForm } from "./InterestForm";
 export { StoryCard } from "./StoryCard";
 export { VisionCard } from "./VisionCard";

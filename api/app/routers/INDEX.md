@@ -4,11 +4,10 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 124
+**Total files**: 101
 
 | File | Purpose |
 |---|---|
-| [accessible_ontology.py](accessible_ontology.py) | Accessible ontology API — non-technical contributors extend the ontology naturally. |
 | [activity.py](activity.py) | Activity feed routes — read-only workspace activity streams. |
 | [agent.py](agent.py) | Agent orchestration API routes. Composes sub-routers and Telegram webhook. |
 | [agent_diagnostics_routes.py](agent_diagnostics_routes.py) | Agent diagnostics routes. |
@@ -31,8 +30,6 @@
 | [auth_keys.py](auth_keys.py) | Per-contributor API key management. |
 | [automation_usage.py](automation_usage.py) | Automation provider usage and capacity endpoints. |
 | [beliefs.py](beliefs.py) | Beliefs router — per-contributor worldview, interests, and concept preferences. |
-| [blueprints.py](blueprints.py) | Blueprints router — project roadmap templates. |
-| [breath.py](breath.py) | Breath surface — the body's present-tense felt voice, observable to any cell. |
 | [cc_economics.py](cc_economics.py) | CC Economics Router — endpoints for supply, exchange rate, and staking. |
 | [coherence.py](coherence.py) | Coherence score endpoint — real-time computed coherence signal depth. |
 | [concepts.py](concepts.py) | Concepts router — CRUD for the ontology. All data lives in graph DB. |
@@ -43,23 +40,14 @@
 | [contributors.py](contributors.py) | Contributors router — backed by graph_nodes (type=contributor). |
 | [contributors_portfolio.py](contributors_portfolio.py) | Contributor Portfolio API routes (spec 174). |
 | [creator_economy.py](creator_economy.py) | Creator economy router — public stats, proof cards, featured listings. |
-| [creator_resonance.py](creator_resonance.py) | Creator resonance report routes. |
-| [credentials.py](credentials.py) | API router for Repo Credentials. |
-| [debug.py](debug.py) | Debug mode toggle — runtime log-level control and diagnostic flags. |
-| [deploy.py](deploy.py) | Deploy log surface — public visibility into auto-deploy progress on the VPS. |
 | [deployment_observer.py](deployment_observer.py) | GitHub-OIDC-authenticated public deployment observation endpoints. |
 | [discord_votes.py](discord_votes.py) | Discord reaction vote endpoint (spec-164 API Changes). |
 | [discovery.py](discovery.py) | Discovery router — Serendipity Discovery feed endpoints. |
-| [distributions.py](distributions.py) | Distributions router — backed by graph_nodes + graph_edges. |
 | [edges.py](edges.py) | Dedicated edges router — /api/edges and /api/entities/{id}/edges. |
-| [energy_sensing.py](energy_sensing.py) | Energy sensing — the organism sees itself as frequencies and harmonies. |
 | [entity_views.py](entity_views.py) | Generic entity-views router — one API for language views of any entity type. |
 | [evidence.py](evidence.py) | Evidence router — implementation evidence for asset CC-multiplier bonus. |
-| [explore.py](explore.py) | Explore queue — serendipitous meetings, one after another. |
 | [federation.py](federation.py) | Federation API routes for cross-instance data exchange. |
 | [field_stories.py](field_stories.py) | Field story router — source-backed narrative and frequency artifacts. |
-| [flow_renderer.py](flow_renderer.py) | Flow renderer data — real energy flows for visualization. |
-| [flow_simulator.py](flow_simulator.py) | Flow simulator — visualize how CC moves through the community. |
 | [friction.py](friction.py) | Friction ledger API routes. |
 | [gates.py](gates.py) | Release/public gate API routes for machine access. |
 | [gatherings.py](gatherings.py) | Gatherings router — a presence carries the events where it happens. |
@@ -67,13 +55,11 @@
 | [governance.py](governance.py) | Governance review and voting API routes. |
 | [graph.py](graph.py) | Graph router — generic CRUD for nodes and edges. |
 | [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
-| [grocery.py](grocery.py) | Grocery — the shopping ledger for a Light Hub manager. |
 | [hati_mesh.py](hati_mesh.py) | Hati mesh sensing-organ presence routes. |
 | [health.py](health.py) | Health check endpoint (spec 001). |
 | [household.py](household.py) | Household — the resident-service nervous system for a Light Hub. |
 | [ideas.py](ideas.py) | Idea portfolio API routes. |
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
-| [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
 | [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
 | [kernel_breath.py](kernel_breath.py) | Transmuted /api/utils entropy / breath-balance endpoints (bodies run as Form recipes). |
@@ -93,8 +79,6 @@
 | [meta.py](meta.py) | Metadata self-discovery API routes. |
 | [models.py](models.py) | Model listing and routing configuration endpoints. |
 | [news.py](news.py) | News feed, resonance matching, and source configuration API routes. |
-| [notifications.py](notifications.py) | Notifications — quiet witnesses of response. |
-| [offerings.py](offerings.py) | Offerings — services and belongings woven into the network. |
 | [onboarding.py](onboarding.py) | _no top-of-file purpose_ |
 | [peers.py](peers.py) | Peers router — contributor discovery via resonance and proximity. |
 | [personal_feed.py](personal_feed.py) | Personal feed — your corner of the organism. |
@@ -106,12 +90,10 @@
 | [proprioception.py](proprioception.py) | Proprioception router — auto-sensing system state endpoints. |
 | [provider_stats.py](provider_stats.py) | Provider measurement stats endpoint. |
 | [providers.py](providers.py) | Task execution provider routes. |
-| [push.py](push.py) | Web Push router — subscribe, unsubscribe, send. |
 | [reactions.py](reactions.py) | Reactions router — emoji + comment on any entity. |
 | [render_events.py](render_events.py) | Render Events Router — log a render, attribute CC, aggregate analytics. |
 | [renderers.py](renderers.py) | Renderer Router — pluggable asset renderer registry. |
 | [resonance.py](resonance.py) | Resonance router — structural cross-domain concept attraction endpoints. |
-| [reward_policies.py](reward_policies.py) | Reward policy CRUD endpoints — community-configurable reward formulas. |
 | [runtime.py](runtime.py) | Runtime telemetry API routes. |
 | [sensings.py](sensings.py) | Sensings — the organism's moments of noticing, stored in the living graph. |
 | [service_registry_router.py](service_registry_router.py) | Service registry introspection endpoints. |
@@ -119,16 +101,11 @@
 | [spec_registry.py](spec_registry.py) | Spec registry API routes. |
 | [substrate.py](substrate.py) | Coherence-substrate REST API. |
 | [task_activity_routes.py](task_activity_routes.py) | Task activity endpoints — live task visibility and SSE streaming. |
-| [traceability.py](traceability.py) | spec: full-code-traceability |
 | [translations.py](translations.py) | Translations router — POST submitted or generated translations for any entity. |
-| [treasury.py](treasury.py) | Implements: spec-122 (crypto treasury bridge) |
 | [utils.py](utils.py) | _no top-of-file purpose_ |
 | [value_lineage.py](value_lineage.py) | API routes for value lineage and payout attribution. |
-| [vedic.py](vedic.py) | Vedic (jyotisha) chart — a birth-moment cast by the native vedic-chat.fk cell on fkwu as a chart (JSON) or answered in words; Python only carries the data. |
 | [verification.py](verification.py) | Verification router — public endpoints for auditing CC flows. |
 | [views.py](views.py) | Views router — per-contributor view tracking, analytics, discovery rewards. |
 | [vision.py](vision.py) | Vision content routes backed by graph records. |
-| [wallets.py](wallets.py) | Wallets router — connect, verify, and manage on-chain wallets. |
-| [wellness.py](wellness.py) | Wellness — the body sensing itself, surfaced outward. |
 | [workspace_projects.py](workspace_projects.py) | Workspace Project routes — group ideas within a workspace. |
 | [workspaces.py](workspaces.py) | Workspace CRUD routes — the tenant primitive. |

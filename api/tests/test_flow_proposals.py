@@ -173,14 +173,3 @@ async def test_non_resonant_proposal_refuses_to_lift():
         assert r.status_code == 400
 
 
-@pytest.mark.asyncio
-async def test_explore_proposal_returns_open_proposals():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await c.post(
-            "/api/proposals",
-            json={"title": "Walk me", "body": "", "author_name": "P"},
-        )
-        r = await c.get("/api/explore/proposal?limit=20")
-        assert r.status_code == 200
-        titles = {q["title"] for q in r.json()["queue"]}
-        assert "Walk me" in titles
