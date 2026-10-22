@@ -33,7 +33,7 @@
     "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "three": "^0.185.0",
+    "three": "^0.185.1",
     "viem": "^2.53.1",
     "wagmi": "^2.14.0"
   },
