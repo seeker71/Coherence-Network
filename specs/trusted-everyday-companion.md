@@ -112,6 +112,18 @@ separate observed client lifecycle and permission-preserving handoff.
   it makes no claim about whether compatible people exist or are available.
   Result labels remain readable against the selected theme.
 
+- [x] **R11 — Attention serves the encounter:** The native companion's shared
+  covenant directs expression toward trust, sovereignty and vitality. It
+  receives the person's actual invitation and keeps their inner meaning and
+  next choice with them. Acknowledgment, clearly framed play and an accepted
+  pause can be complete outcomes; questions and teachings are optional.
+  Appreciation stays specific to the offered image or action. Retrieval
+  limits factual claims without imposing a disclaimer on poetry or play.
+  Observation informs proportionate care and preserves consequential facts;
+  it does not require repeating or inventing an unwanted interpretation.
+  Authored move checks and actual native response observations remain
+  separate evidence; neither establishes how the person feels.
+
 ### Encounter observation — 2026-10-23
 
 The mission is broader than the evidence of the current experience. Read the
@@ -124,7 +136,7 @@ part of that experience; a person's account of vitality remains theirs.
 | Find something around an interest | `/presences` uses `PeopleSearch` and surviving `POST /api/resolve/query`; the graph directory has a native read owner. | The browser conflated failed requests with empty results and allowed older responses to overwrite newer input. Observe and repair R10 with fictional fixtures. Matching remains a keyword heuristic requiring two shared terms; a single interest can return nothing. |
 | Find people who welcome connection | `/vision/community` and aggregate interest statistics returned HTTP 200 on 2026-10-23; the interest directory source filters entries by findability consent. | This consent boundary belongs to the interest directory; graph search has a different source. Availability of either page does not establish a meaningful match, current presence or permission to contact. A later chosen trial must verify discovery through a consented connection without inventing availability or sending an unsolicited message. |
 | Play and stop with the companion | R9 exists in source guidance. The latest observed companion release is still 0.6.3; the broadened guidance has separate release and hosted verification work. | Observe a fictional game, a chosen change of direction and a simple stop through the actual installed entry. Record correction burden and unwanted continuation, then repair the first failed boundary. |
-| Carry the encounter natively | The pinned kernel has `observe/companion-run.bml`, retrieval and local voice lanes. Its existing `companion-ground-band.bml` returned `3`: known teaching retrieval and an honest miss both passed. | This entry always retains its local conversation, has no conversation identifier and drops voice completion/release/failure detail. Owner-controlled memory and inspectable failure need care before using personal material. The grounding check establishes neither fictional play quality nor human benefit. |
+| Carry the encounter natively | The pinned kernel has `observe/companion-run.bml`, retrieval and local voice lanes. Its existing `companion-ground-band.bml` returned `3`: known teaching retrieval and an honest miss both passed. | The entry attempts to retain local conversation, has no conversation identifier and drops voice completion/release/failure detail. An absent `.hearth` parent can leave that append unwritten. Owner-controlled memory and inspectable failure need care before relying on continuity. Grounding checks establish neither fictional play quality nor human benefit. |
 
 The first iteration belongs to R10 in the existing web carrier. Native graph
 reads and compatibility interest matching retain their current owners; this

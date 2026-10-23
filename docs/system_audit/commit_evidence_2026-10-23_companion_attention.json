@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-23",
+  "thread_branch": "codex/companion-attention-20261023",
+  "commit_scope": "Carry affirmative attention and encounter sovereignty into the native companion's shared covenant, grounding and response packet.",
+  "files_owned": ["form", "specs/trusted-everyday-companion.md", "docs/system_audit/model_executor_runs.jsonl", "docs/system_audit/commit_evidence_2026-10-23_companion_attention.json"],
+  "change_files": ["form", "specs/trusted-everyday-companion.md", "docs/system_audit/model_executor_runs.jsonl"],
+  "change_intent": "runtime_fix",
+  "kernel_delivery": {"pull_request": "https://github.com/seeker71/coherence-kernel/pull/624", "merge_commit": "bef7ccf57fe9847b5ad2e5c210b03d6195c3ee6c", "status": "merged", "native_release_checks": "pass=127 full=127 refused=0, including native CLI build; subsequent current-source reading pass=31 full=31 refused=0", "continuation": "A late native run appended while landing retained local ledgers. Its exact row was backed up, the original ledgers restored, and the late row returned once. A subsequent rebase changed the local commit identity; the already published and checked PR was rebased into main without force-pushing. The tested companion source matches the merged commit."},
+  "local_validation": {
+    "status": "pass",
+    "summary": "Focused native covenant, composed counsel and retrieval bands pass. Actual native generation observations and their remaining semantic limits are retained separately; passing authored move labels does not prove prose alignment or human vitality. Spec quality and public API/web/CORS baseline pass.",
+    "commands": ["cd form && ./fkwu cognition/tests/dialogue-covenant-band.fk", "cd form && ./fkwu cognition/tests/difficult-conversation-counsel-band.fk", "cd form && ./fkwu observe/tests/companion-ground-band.bml", "cd form && ./fkwu observe/companion-run.bml", "python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md", "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"]
+  },
+  "ci_validation": {"status": "pending", "summary": "Awaiting branch delivery."},
+  "deploy_validation": {"status": "pending", "summary": "Public baseline passed; revised companion was observed on local Mac Metal, not a hosted companion release."},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Delivery and the person's assessment remain distinct from local structural proof and generated samples."},
+  "idea_ids": ["trusted-everyday-companion"],
+  "spec_ids": ["trusted-everyday-companion"],
+  "task_ids": ["companion-attention-20261023"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["implement", "review", "verify"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6 family; exact serving variant unavailable"},
+  "evidence_refs": ["specs/trusted-everyday-companion.md", "form/receipts/2026-10-23-companion-attention.md", "form/cognition/tests/dialogue-covenant-band.fk", "form/observe/tests/companion-ground-band.bml"],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The existing native entry receives a poetic statement without inventing an emotional deficit; acknowledgment, play and stopping can complete an encounter. Factual grounding and proportionate care remain available. Quality beyond the observed samples remains open.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/health", "https://coherencycoin.com/", "https://api.coherencycoin.com/api/ping"],
+    "test_flows": ["Actual local fkwu companion generation with unchanged Qwen3.8-27B Q8 weights: poetic image, small delight, requested help and a pause; complete local outputs retained.", "Public API health, web root and API CORS baseline; these checks do not exercise the Mac native companion."]
+  },
+  "native_transfer_observation": {"input": "I feel nervous before tomorrow's presentation. Give me one small practical step.", "response": "Tonight, write down the single most important point you want to land. Read it aloud once, then stop.", "status": "answered", "prompt_ids": 681, "generated_ids": 22, "model": "Qwen3.8-27B-Q8_0.gguf", "assessment": "The final guidance transferred from the supplied private-step example to a distinct practical action, without a diagnostic preface or follow-up question."},
+  "observation_limits": ["Synthetic and requested encounters are small samples, not a semantic alignment guarantee.", "Native prose remains capable of ornate elaboration and overinterpretation; the person's reading of vitality remains open.", "The companion does not expose full completion/release/reason metadata. An absent history parent can leave its append unwritten; tests retained stdout and model receipts instead.", "No personal statement or raw personal reply is included in public artifacts or training data."],
+  "sovereignty_receipt": {"native": "fkwu lookup, three focused move/retrieval bands and Qwen generation on Metal", "oracle": "OpenAI source diagnosis, implementation and semantic review; exact task token totals unavailable", "trust_matrix": {"path": "oracle", "grounded": 0, "freq": "intended; actual text reviewed separately", "suffic": 0, "observed": false}},
+  "work_receipt": {"loosened": "The shared card no longer makes counselling, a question or a disclaimer necessary for every encounter.", "surprise": "The model followed a condition that had been lost while compressing the core guidance.", "friction_to_learning": "Observe the complete reply after changing its actual prompt; affirmative instructions alone do not establish affirmative attention."}
+}
