@@ -78,12 +78,6 @@ export default async function ProjectsPage() {
             Ideas
           </Link>
           <Link
-            href="/teams"
-            className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
-          >
-            Team
-          </Link>
-          <Link
             href="/activity"
             className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
           >

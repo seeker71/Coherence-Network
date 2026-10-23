@@ -20,8 +20,8 @@ source:
 # aggregator. During implementation the contract collapsed —
 # `run_daily_settlement()` carries the full path (filter events by
 # date, group by asset, apply evidence multiplier, split by concept
-# weight, return frozen `SettlementBatch`). The router calls it once
-# per `POST /api/settlement/run`; there is no remaining role for a
+# weight, return frozen `SettlementBatch`). The read-tracking bridge and
+# the value-flow proofs call it directly; there is no remaining role for a
 # separate sub-batch primitive. Storage and retrieval live in the
 # sibling helpers `store_batch` / `get_batch` / `list_batches`. If a
 # finer-grained batching contract returns (e.g. hourly rollups,
@@ -37,13 +37,6 @@ source:
     symbols: [DistributionEngine.distribute()]
   - file: api/app/services/belief_service.py
     symbols: [get_belief_profile()]
-  - file: api/app/routers/settlement.py
-    symbols: [run_settlement(), get_settlement()]
-# Evolution note (2026-05-24): handler names follow the URL pattern
-# they serve — `run_settlement` for `POST /api/settlement/run`,
-# `get_settlement` for `GET /api/settlement/{date}`. Original spec
-# proposed `trigger_settlement` / `get_settlement_status` before the
-# routes were finalized; the URL-aligned names landed instead.
   - file: api/app/routers/evidence.py
     symbols: [submit_evidence(), list_evidence()]
   - file: api/app/models/settlement.py
@@ -54,8 +47,6 @@ source:
     symbols: [AssetDetailPage, IPStatusBadge, StorageLinks]
   - file: web/app/assets/upload/page.tsx
     symbols: [UploadForm, ConceptTagger]
-  - file: web/app/settlement/page.tsx
-    symbols: [SettlementDashboard]
 requirements:
   - "Asset creation registers IP on Story Protocol and stores IP Asset ID on graph node"
   - "Content uploaded to Arweave (permanent) and IPFS (retrieval) with TX ID and CID on asset node"
@@ -113,9 +104,6 @@ done_when:
   - 'file_exists("api/app/services/distribution_engine.py")'
   - 'file_exists("api/app/services/belief_service.py")'
   - 'symbol_in_file("api/app/services/belief_service.py", "get_belief_profile")'
-  - 'file_exists("api/app/routers/settlement.py")'
-  - 'symbol_in_file("api/app/routers/settlement.py", "run_settlement")'
-  - 'symbol_in_file("api/app/routers/settlement.py", "get_settlement")'
   - 'file_exists("api/app/routers/evidence.py")'
   - 'symbol_in_file("api/app/routers/evidence.py", "submit_evidence")'
   - 'symbol_in_file("api/app/routers/evidence.py", "list_evidence")'
@@ -134,8 +122,6 @@ done_when:
   - 'file_exists("web/app/assets/upload/page.tsx")'
   - 'symbol_in_file("web/app/assets/upload/page.tsx", "UploadForm")'
   - 'symbol_in_file("web/app/assets/upload/page.tsx", "ConceptTagger")'
-  - 'file_exists("web/app/settlement/page.tsx")'
-  - 'symbol_in_file("web/app/settlement/page.tsx", "SettlementDashboard")'
   - 'pytest_passes("api/tests/test_story_protocol.py")'
   - 'pytest_passes("api/tests/test_settlement.py")'
   - 'pytest_passes("api/tests/test_evidence.py")'
@@ -730,7 +716,6 @@ contributor --[attested_evidence {evidence_id}]--> evidence
 - `api/app/services/read_tracking_service.py` -- Non-blocking read event recording, HyperLogLog unique counting, concept resonance snapshots
 - `api/app/services/settlement_service.py` -- Daily batch aggregation, concept pool computation, Merkle hash chain, CC distribution
 - `api/app/services/evidence_service.py` -- Evidence submission, GPS distance check, attestation verification, multiplier application
-- `api/app/routers/settlement.py` -- Settlement batch endpoints
 - `api/app/routers/evidence.py` -- Evidence submission and listing endpoints
 - `api/app/models/settlement.py` -- SettlementBatch, SettlementEntry, ConceptPool Pydantic models
 - `api/app/models/evidence.py` -- ImplementationEvidence, EvidenceCreate, EvidenceVerification Pydantic models
@@ -739,7 +724,6 @@ contributor --[attested_evidence {evidence_id}]--> evidence
 - `api/tests/test_settlement.py` -- Daily settlement, concept pools, Merkle chain, evidence multiplier
 - `api/tests/test_evidence.py` -- Evidence submission, verification logic, GPS check
 - `web/app/assets/upload/page.tsx` -- Upload form with concept tagging
-- `web/app/settlement/page.tsx` -- Settlement dashboard showing daily batches
 
 ### Modified files
 - `api/app/models/asset.py` -- Extend AssetType enum, add concept_tags, IP fields, storage fields, derivative fields

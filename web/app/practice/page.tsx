@@ -317,9 +317,6 @@ export default async function PracticePage() {
           <Link href="/coherence" className="text-indigo-400 hover:underline">
             {t("practice.linkCoherence")}
           </Link>
-          <Link href="/cc" className="text-amber-400 hover:underline">
-            {t("practice.linkCC")}
-          </Link>
           <Link href="/flow" className="text-blue-400 hover:underline">
             {t("practice.linkFlow")}
           </Link>

@@ -63,10 +63,10 @@ done_when:
   - 'file_exists("api/app/services/distribution_engine.py")'
   - 'symbol_in_file("api/app/services/distribution_engine.py", "DistributionEngine")'
   - 'symbol_in_file("api/app/services/distribution_engine.py", "distribute")'
-  - 'pytest_passes("api/tests/test_cc_economics.py")'
+  - 'pytest_passes("api/tests/test_portfolio_governance.py")'
   - 'pytest_passes("api/tests/test_right_sizing.py")'
   - 'pytest_passes("api/tests/test_flow_vitality.py")'
-test: "python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q"
+test: "python3 -m pytest api/tests/test_portfolio_governance.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q"
 ---
 
 > **Parent idea**: [portfolio-governance](../ideas/portfolio-governance.md)
@@ -112,7 +112,7 @@ The portfolio governance layer spans seven service files implementing six interl
 ## Acceptance Tests
 
 ```bash
-python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
+python3 -m pytest api/tests/test_portfolio_governance.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
 ```
 
 ## Out of Scope
@@ -141,6 +141,6 @@ python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py 
 ## Verification
 
 ```bash
-python3 -m pytest api/tests/test_cc_economics.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
+python3 -m pytest api/tests/test_portfolio_governance.py api/tests/test_right_sizing.py api/tests/test_flow_vitality.py -q
 ```
 

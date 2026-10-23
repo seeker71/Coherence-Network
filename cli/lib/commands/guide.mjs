@@ -5,7 +5,7 @@
 
 import { get, post } from "../api.mjs";
 import { loadKeys, saveKeys } from "../config.mjs";
-import { onboardingRegister } from "./onboarding.mjs";
+import { setup } from "./setup.mjs";
 import { credentialsAdd } from "./credentials.mjs";
 import { shareIdea } from "./ideas.mjs";
 import { listTasks, showTask } from "./tasks.mjs";
@@ -44,7 +44,7 @@ async function welcome(nonInteractive) {
   console.log(`  4. Track the ${B}Flow${R} from idea to merged PR`);
   console.log();
   if (!nonInteractive) {
-    console.log(`  To start, run: ${G}coh guide register --handle <your-name>${R}`);
+    console.log(`  To start, run: ${G}coh guide register --name <your-name> --provider github --id <handle>${R}`);
   } else {
     console.log(`  Non-interactive mode: Use the subcommands with required flags.`);
   }
@@ -55,9 +55,13 @@ async function registerStep(args, nonInteractive) {
   console.log(`\n${B}${C}  STEP 1: REGISTRATION${R}`);
   console.log(`  ${"─".repeat(50)}`);
   
-  // Call onboardingRegister but we might need to capture its output or 
-  // do it slightly differently to save keys locally.
-  await onboardingRegister(args);
+  // Registration goes through the one-shot onboard door (POST /api/onboard):
+  // it creates the contributor, links an identity and saves the API key
+  // locally. `--handle <name>` is accepted as the setup `--name`.
+  const mapped = args.flatMap((a, i) =>
+    a === "--handle" ? ["--name"] : (a === "register" && i === 0) ? [] : [a],
+  );
+  await setup(mapped.filter((a) => a !== "register"));
   
   console.log(`  Next, setup your repo credentials:`);
   console.log(`  ${G}coh guide credentials --contributor-id <id> --repo <url> --token <token>${R}`);

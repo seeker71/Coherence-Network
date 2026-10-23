@@ -187,17 +187,6 @@ class TestAPIContract:
             for key in ("running", "pending", "recent_completed"):
                 assert key in body, f"Missing '{key}' key in pipeline-status response"
 
-    @pytest.mark.asyncio
-    async def test_providers_endpoint_shape(self) -> None:
-        """GET /api/providers returns list of providers."""
-        from httpx import ASGITransport, AsyncClient
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            r = await client.get("/api/providers")
-            assert r.status_code == 200
-            body = r.json()
-            assert "providers" in body, f"Missing 'providers' key: {list(body.keys())}"
-            assert isinstance(body["providers"], list)
-
 
 # ---------------------------------------------------------------------------
 # Smoke Tests (subprocess against real CLI binary)

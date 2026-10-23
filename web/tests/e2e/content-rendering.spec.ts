@@ -25,26 +25,9 @@ test('vitality page shows score', async ({ page }) => {
   expect(bodyText).toMatch(/vitality|health|diversity|resonance|flow/i);
 });
 
-test('discover page shows resonance content', async ({ page }) => {
-  await page.goto('/discover', GOTO_OPTS);
-  const bodyText = await page.locator('body').innerText();
-  expect(bodyText).toMatch(/resonan|discover|idea/i);
-});
-
-test('constellation page has visualization elements', async ({ page }) => {
-  await page.goto('/constellation', GOTO_OPTS);
-  const visualElements = await page.locator('svg, [style*="position: absolute"]').count();
-  expect(visualElements).toBeGreaterThan(0);
-});
-
 test('breath page shows gas/water/ice', async ({ page }) => {
   await page.goto('/breath', GOTO_OPTS);
   const bodyText = await page.locator('body').innerText();
   expect(bodyText).toMatch(/gas|water|ice|breath/i);
 });
 
-test('cc page shows coherence credit info', async ({ page }) => {
-  await page.goto('/cc', GOTO_OPTS);
-  const bodyText = await page.locator('body').innerText();
-  expect(bodyText).toMatch(/cc|coherence credit|supply|minted/i);
-});

@@ -34,11 +34,9 @@ from app.routers import (
     ideas,
     inventory,
     lenses,
-    marketplace,
     mcp_remote,
     news,
     peers,
-    providers,
     spec_registry,
     runtime,
     auth_keys,
@@ -46,7 +44,6 @@ from app.routers import (
     value_lineage,
     contributors_portfolio,
 )
-from app.routers import cc_economics as cc_economics_router
 from app.routers import beliefs
 from app.routers import concepts
 from app.routers import substrate as substrate_router
@@ -56,24 +53,17 @@ from app.routers import locales as locales_router
 from app.routers import entity_views as entity_views_router
 from app.routers import hati_mesh as hati_mesh_router
 from app.routers import models as models_router
-from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
-from app.routers import graph_questions
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import verification as verification_router
-from app.routers import onboarding as onboarding_router
-from app.routers import memberships as memberships_router
 from app.routers import activity as activity_router
-from app.routers import messages as messages_router
 from app.routers import workspaces as workspaces_router
 from app.routers import workspace_projects as workspace_projects_router
 from app.routers import provider_stats
 from app.routers import service_registry_router
-from app.routers import constellation as constellation_router
 from app.routers import inspired_by as inspired_by_router
-from app.routers import investments as investments_router
 from app.routers import gatherings as gatherings_router
 from app.routers import presence_resonance as presence_resonance_router
 from app.routers import places as places_router
@@ -838,12 +828,9 @@ app.include_router(contributor_identity.router, prefix="/api", tags=["identity"]
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
-app.include_router(investments_router.router, prefix="/api", tags=["investments"])
 app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
-app.include_router(messages_router.router, prefix="/api", tags=["messages"])
 app.include_router(activity_router.router, prefix="/api", tags=["activity"])
 app.include_router(workspace_projects_router.router, prefix="/api", tags=["projects"])
-app.include_router(memberships_router.router, prefix="/api", tags=["memberships"])
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
@@ -866,7 +853,6 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
-app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
 app.include_router(mcp_remote.router, tags=["mcp"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
@@ -880,11 +866,9 @@ app.include_router(places_router.router, prefix="/api", tags=["places"])
 from app.routers import utils as utils_router
 app.include_router(utils_router.router, prefix="/api", tags=["utils"])
 
-app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(provider_stats.router)
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
-app.include_router(cc_economics_router.router, prefix="/api", tags=["cc-economics"])
 from app.routers import renderers as renderers_router
 app.include_router(renderers_router.router, prefix="/api", tags=["renderers"])
 from app.routers import render_events as render_events_router
@@ -893,11 +877,6 @@ from app.routers import translations as translations_router
 app.include_router(translations_router.router, prefix="/api", tags=["translations"])
 from app.routers import evidence as evidence_router
 app.include_router(evidence_router.router, prefix="/api", tags=["evidence"])
-from app.routers import settlement as settlement_router
-app.include_router(settlement_router.router, prefix="/api", tags=["settlement"])
-from app.routers import creator_economy as creator_economy_router
-app.include_router(creator_economy_router.router, prefix="/api", tags=["creator-economy"])
-app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["creator-economy"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(substrate_router.router, prefix="/api/substrate", tags=["substrate"])
 app.include_router(
@@ -910,15 +889,12 @@ app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
-app.include_router(graph_questions.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
-app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 app.include_router(verification_router.router, prefix="/api", tags=["verification"])
 app.include_router(models_router.router, prefix="/api", tags=["models"])
 
 # Constellation view — network graph visualization data
-app.include_router(constellation_router.router, prefix="/api", tags=["constellation"])
 
 
 # Cross-domain resonance (CRK) endpoints
@@ -926,35 +902,16 @@ from app.routers import resonance as resonance_router  # noqa: E402
 app.include_router(resonance_router.router, prefix="/api", tags=["resonance"])
 
 # Serendipity Discovery feed
-from app.routers import discovery as discovery_router  # noqa: E402
-app.include_router(discovery_router.router, prefix="/api", tags=["discovery"])
-
-# Proprioception — auto-sensing system state
-from app.routers import proprioception as proprioception_router  # noqa: E402
-app.include_router(proprioception_router.router, prefix="/api", tags=["proprioception"])
-
-# Discord bot vote endpoint (spec-164)
-from app.routers import discord_votes  # noqa: E402
-app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 
 
-# Identity-driven onboarding - TOFU MVP (spec-168)
-app.include_router(onboarding_router.router, tags=["onboarding"])
 # Living Collective interest registration — privacy-first community gathering
 from app.routers import interest as interest_router  # noqa: E402
 app.include_router(interest_router.router, tags=["interest"])
 
 
-
 # View tracking — per-contributor view events, trending, discovery chains
 from app.routers import views as views_router  # noqa: E402
 app.include_router(views_router.router, prefix="/api", tags=["views"])
-
-
-
-
-
-
 
 
 # Reactions — emoji + comment on any entity

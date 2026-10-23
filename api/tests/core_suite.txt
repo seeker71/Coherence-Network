@@ -13,12 +13,8 @@ tests/test_federation_substrate_exchange.py
 tests/test_flow_activity.py
 tests/test_flow_agent_lifecycle.py
 tests/test_flow_cli.py
-tests/test_flow_constellation.py
 tests/test_flow_core_api.py
-tests/test_flow_discovery.py
 tests/test_flow_enforcement.py
-tests/test_flow_memberships.py
-tests/test_flow_messages.py
 tests/test_flow_multilingual.py
 tests/test_flow_personal_feed.py
 tests/test_flow_pipeline.py
@@ -32,7 +28,6 @@ tests/test_flow_workspaces.py
 tests/test_mvp_acceptance.py
 tests/test_persistence_contract_config.py
 tests/test_portfolio_governance.py
-tests/test_proprioception.py
 tests/test_pytest_suite_budget.py
 tests/test_request_outcomes_middleware.py
 tests/test_right_sizing.py

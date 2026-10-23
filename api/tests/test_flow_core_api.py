@@ -389,20 +389,6 @@ async def test_federation_node_messaging_flow():
 
 
 # ---------------------------------------------------------------------------
-# Providers (2 tests)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_list_providers_returns_at_least_one():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/providers")
-        assert r.status_code == 200, r.text
-        providers = r.json()["providers"]
-        assert isinstance(providers, list) and len(providers) >= 1
-
-
-# ---------------------------------------------------------------------------
 # Spec Registry — Delete (2 tests)
 # ---------------------------------------------------------------------------
 

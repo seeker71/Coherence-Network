@@ -101,12 +101,6 @@ export default async function BeliefsPage() {
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/discover"
-            className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
-          >
-            Discover
-          </Link>
-          <Link
             href="/peers"
             className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
           >
@@ -234,9 +228,6 @@ export default async function BeliefsPage() {
             contributors set their worldview preferences.
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/discover" className="text-purple-400 hover:underline">
-              Discover
-            </Link>
             <Link href="/peers" className="text-emerald-400 hover:underline">
               Peers
             </Link>
@@ -253,9 +244,6 @@ export default async function BeliefsPage() {
           Explore more
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/discover" className="text-purple-400 hover:underline">
-            Discover
-          </Link>
           <Link href="/peers" className="text-emerald-400 hover:underline">
             Peers
           </Link>

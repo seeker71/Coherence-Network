@@ -25,7 +25,6 @@ done_when:
   - "GET /api/cc/staking/{user_id} returns all positions with attribution values"
   - "Coherence score invariant enforced -- minting pauses when score < 1.0"
   - "1% spread applied and visible in exchange rate response"
-  - "All tests pass in test_cc_economics.py"
   - 'file_exists("api/app/models/coherence_credit.py")'
   - 'symbol_in_file("api/app/models/coherence_credit.py", "CostVector")'
   - 'symbol_in_file("api/app/models/coherence_credit.py", "ValueVector")'
@@ -86,14 +85,12 @@ Spec 119 introduced CC as an internal unit of account. This spec defines the eco
 ```yaml
 goal: Implement CC economics with treasury backing, idea staking, and exchange endpoints
 files_allowed:
-  - api/app/routers/cc_economics.py
   - api/app/services/cc_economics_service.py
   - api/app/services/cc_treasury_service.py
   - api/app/services/cc_staking_service.py
   - api/app/services/cc_oracle_service.py
   - api/app/models/cc_economics.py
   - api/app/services/unified_models.py
-  - api/tests/test_cc_economics.py
   - specs/cc-economics-and-value-coherence.md
 done_when:
   - GET /api/cc/supply returns total_minted, total_burned, outstanding, coherence_score
@@ -103,9 +100,7 @@ done_when:
   - GET /api/cc/staking/{user_id} returns all positions with attribution values
   - Coherence score invariant enforced -- minting pauses when score < 1.0
   - 1% spread applied and visible in exchange rate response
-  - All tests pass in test_cc_economics.py
 commands:
-  - python3 -m pytest api/tests/test_cc_economics.py -x -v
   - python3 -m pytest api/tests/test_coherence_credit.py -x -q
 constraints:
   - No unbacked CC may ever exist -- treasury invariant is a hard constraint
@@ -346,30 +341,10 @@ StakePositionRow (SQLAlchemy):
 - `api/app/services/cc_treasury_service.py` - Treasury ledger: mint, burn, balance tracking, coherence score invariant enforcement
 - `api/app/services/cc_staking_service.py` - Staking logic: create position, unstake with cooldown tiers, attribution calculation from value_lineage
 - `api/app/services/cc_oracle_service.py` - CoinGecko oracle: cached rate fetch, 5-min TTL, stale detection
-- `api/app/routers/cc_economics.py` - FastAPI router: GET /api/cc/supply, GET /api/cc/exchange-rate, POST /api/cc/stake, POST /api/cc/unstake, GET /api/cc/staking/{user_id}
 - `api/app/services/unified_models.py` - Add TreasuryLedgerEntry and StakePositionRow SQLAlchemy models
-- `api/tests/test_cc_economics.py` - Tests covering all requirements
-
-## Acceptance Tests
-
-- `api/tests/test_cc_economics.py::test_supply_coherence_score_above_one`
-- `api/tests/test_cc_economics.py::test_mint_on_deposit_burn_on_withdrawal`
-- `api/tests/test_cc_economics.py::test_no_mint_when_coherence_below_one`
-- `api/tests/test_cc_economics.py::test_stake_into_idea_creates_position`
-- `api/tests/test_cc_economics.py::test_stake_insufficient_balance_rejected`
-- `api/tests/test_cc_economics.py::test_unstake_cooldown_instant_under_100`
-- `api/tests/test_cc_economics.py::test_unstake_cooldown_24h_100_to_1000`
-- `api/tests/test_cc_economics.py::test_unstake_cooldown_72h_over_1000`
-- `api/tests/test_cc_economics.py::test_unstake_already_cooling_rejected`
-- `api/tests/test_cc_economics.py::test_attribution_grows_with_usage_events`
-- `api/tests/test_cc_economics.py::test_attribution_flat_without_usage`
-- `api/tests/test_cc_economics.py::test_exchange_rate_includes_spread`
-- `api/tests/test_cc_economics.py::test_exchange_rate_cached_5min`
-- `api/tests/test_cc_economics.py::test_exchange_rate_stale_detection`
-- `api/tests/test_cc_economics.py::test_quality_gate_deposit_returned_on_evidence`
-- `api/tests/test_cc_economics.py::test_quality_gate_deposit_retained_without_evidence`
-- `api/tests/test_cc_economics.py::test_user_staking_summary_aggregation`
-- `api/tests/test_cc_economics.py::test_treasury_ledger_audit_trail`
+The `/api/cc` routes and `api/tests/test_cc_economics.py` left on 2026-10-23 with the
+compatibility host release pass (no surface reached them); `cc_economics_service` remains
+the federation economics gate and `api/tests/test_portfolio_governance.py` covers it.
 
 ## Concurrency Behavior
 
@@ -380,7 +355,6 @@ StakePositionRow (SQLAlchemy):
 ## Verification
 
 ```bash
-python3 -m pytest api/tests/test_cc_economics.py -x -v
 python3 -m pytest api/tests/test_coherence_credit.py -x -q
 python3 scripts/validate_spec_quality.py specs/cc-economics-and-value-coherence.md
 ```

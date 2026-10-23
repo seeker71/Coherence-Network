@@ -30,14 +30,6 @@ def _uid(prefix: str = "test") -> str:
     return f"{prefix}-{uuid4().hex[:8]}"
 
 
-async def _register(c: AsyncClient, handle: str | None = None) -> dict:
-    h = handle or _uid("contrib")
-    r = await c.post("/api/onboarding/register",
-                     json={"handle": h, "email": f"{h}@test.dev"})
-    assert r.status_code == 200, r.text
-    return r.json()
-
-
 async def _graph_contributor(c: AsyncClient, name: str | None = None) -> str:
     n = name or _uid("user")
     r = await c.post("/api/contributors",
@@ -65,32 +57,6 @@ async def _idea_create_cr(
     }, headers=AUTH)
     assert cr.status_code == 201, cr.text
     return cr.json()["id"]
-
-
-@pytest.mark.asyncio
-async def test_onboarding_flow():
-    """Register contributor → appears in list → duplicate handle 409
-    → session_token resolves back to the profile."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        handle = _uid("alice")
-        reg = await _register(c, handle)
-        assert reg["created"] is True
-        assert reg["handle"] == handle
-        assert reg["trust_level"] == "tofu"
-        assert reg["contributor_id"] and reg["session_token"]
-
-        listing = (await c.get("/api/onboarding/contributors")).json()
-        assert handle in [item["handle"] for item in listing]
-
-        # Duplicate handle → 409.
-        dup = await c.post("/api/onboarding/register", json={"handle": handle})
-        assert dup.status_code == 409
-
-        # Session token round-trips to profile.
-        sess = (await c.get("/api/onboarding/session",
-                            headers={"Authorization": f"Bearer {reg['session_token']}"})).json()
-        assert sess["contributor_id"] == reg["contributor_id"]
-        assert sess["handle"] == handle
 
 
 @pytest.mark.asyncio

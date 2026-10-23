@@ -1094,7 +1094,6 @@
     "title": "Federasi",
     "lede": "Setiap instansi menunjukkan napasnya sendiri, menamai kemampuannya sendiri, dan bertemu sesama sebagai setara. Ini adalah jendela ke geometri yang dirasakan — bukan panel kendali.",
     "linkNodes": "Simpul",
-    "linkConstellation": "Konstelasi",
     "linkVitality": "Vitalitas",
     "exploreMore": "Jelajahi lebih",
     "unknown": "tidak diketahui",
@@ -1830,7 +1829,6 @@
     "wholeRelatedLabel": "Halaman terkait",
     "linkVitality": "Vitalitas",
     "linkCoherence": "Koherensi",
-    "linkCC": "Ekonomi CC",
     "linkFlow": "Aliran"
   },
   "meWork": {

@@ -1094,7 +1094,6 @@
     "title": "Federación",
     "lede": "Cada instancia muestra su propio aliento, nombra sus propias capacidades y se encuentra con sus pares como iguales. Esto es una ventana a la geometría sentida — no un panel de control.",
     "linkNodes": "Nodos",
-    "linkConstellation": "Constelación",
     "linkVitality": "Vitalidad",
     "exploreMore": "Explorar más",
     "unknown": "desconocido",
@@ -1830,7 +1829,6 @@
     "wholeRelatedLabel": "Páginas relacionadas",
     "linkVitality": "Vitalidad",
     "linkCoherence": "Coherencia",
-    "linkCC": "Economía CC",
     "linkFlow": "Flujo"
   },
   "meWork": {

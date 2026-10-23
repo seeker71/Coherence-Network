@@ -24,3 +24,12 @@ Moved 2026-10-21 (second release pass, the web-only product features): distribut
 stability-harmony-goal-sensing (energy_sensing) — routers whose only callers were their own web pages,
 released together with those pages. hati-grocery-ledger went with them and returned the same day:
 app.hati.earth rewrites its root to /grocery for the Hati Suci hub's phone.
+
+Moved 2026-10-23 (third release pass, the held families whose only consumers were the npm CLI, the
+MCP server and `scripts/cc.py`): contributor-journey and contributor-onboarding-and-governed-change-flow
+(onboarding, memberships, messages), identity-driven-onboarding-tofu (onboarding), investment-ux-stake-cc-on-ideas
+(the investments router, InvestModal and the portfolio investments page; `investment_service` stays as the
+ideas stake dry-run contract), creator-economy-promotion (creator_economy, the /creators pages and the asset
+proof page) and creator-resonance-report (its router, service, page and test had already left; the last model
+went with the creators pages). The governance claims these specs carried live on in portfolio-governance-health
+and `api/tests/test_governance_change_flow.py`.

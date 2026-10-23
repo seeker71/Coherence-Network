@@ -115,6 +115,8 @@ A viewer who has named themselves exists at:
 
 ## The eight contributor-discovery surfaces
 
+(Two of the eight — `/creators` and `/teams` — left on 2026-10-23 with the compatibility host release pass; the lens row now carries four.)
+
 - [/people](../../../web/app/people/page.tsx) — generic directory of every presence. Now has structural sort/filter (PR #1524).
 - [/contributors](../../../web/app/contributors/page.tsx) — paged contributor listing. Different lens.
 - [/creators](../../../web/app/creators/page.tsx) — creator economy framing.

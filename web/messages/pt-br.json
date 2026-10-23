@@ -1147,7 +1147,6 @@
     "title": "Federação",
     "lede": "Cada instância mostra sua própria respiração, nomeia suas próprias capacidades e encontra seus pares como iguais. Esta é uma janela para a geometria sentida — não um painel de controle.",
     "linkNodes": "Nós",
-    "linkConstellation": "Constellation",
     "linkVitality": "Vitalidade",
     "exploreMore": "Explorar mais",
     "unknown": "desconhecido",
@@ -1920,7 +1919,6 @@
     "wholeRelatedLabel": "Páginas relacionadas",
     "linkVitality": "Vitalidade",
     "linkCoherence": "Coerência",
-    "linkCC": "Economia CC",
     "linkFlow": "Fluxo"
   },
   "meWork": {

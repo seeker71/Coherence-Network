@@ -373,12 +373,6 @@ export default async function FederationPage() {
           >
             {t("federation.linkNodes")}
           </Link>
-          <Link
-            href="/constellation"
-            className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
-          >
-            {t("federation.linkConstellation")}
-          </Link>
         </div>
       </header>
 
@@ -1020,9 +1014,6 @@ export default async function FederationPage() {
         <div className="flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/nodes" className="text-blue-400 hover:underline">
             {t("federation.linkNodes")}
-          </Link>
-          <Link href="/constellation" className="text-purple-400 hover:underline">
-            {t("federation.linkConstellation")}
           </Link>
           <Link href="/vitality" className="text-emerald-400 hover:underline">
             {t("federation.linkVitality")}

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 58
+**Total files**: 48
 
 | File | Purpose |
 |---|---|
@@ -24,33 +24,23 @@
 | [contribution.py](contribution.py) | _no top-of-file purpose_ |
 | [contributor.py](contributor.py) | _no top-of-file purpose_ |
 | [contributor_recognition.py](contributor_recognition.py) | _no top-of-file purpose_ |
-| [creator_economy.py](creator_economy.py) | Creator economy models — public stats, proof cards, featured listings. |
-| [creator_resonance.py](creator_resonance.py) | Creator resonance report models. |
 | [credentials.py](credentials.py) | Pydantic models for Repo Credentials. |
-| [discord_vote.py](discord_vote.py) | Pydantic models for Discord reaction voting on idea open questions (spec-164). |
-| [discovery.py](discovery.py) | Discovery feed models — Serendipity Discovery service. |
 | [distribution.py](distribution.py) | _no top-of-file purpose_ |
 | [error.py](error.py) | _no top-of-file purpose_ |
 | [evidence.py](evidence.py) | Evidence models — implementation evidence for assets, per story-protocol-integration R9. |
 | [execution_value.py](execution_value.py) | Models for execution value and income proof surfaces. |
 | [federation.py](federation.py) | Federation models for cross-instance data exchange. |
 | [friction.py](friction.py) | Friction event and report models. |
-| [geocoding.py](geocoding.py) | Models for forward geocoding and geographically filtered agent tasks. |
 | [geolocation.py](geolocation.py) | Geolocation models — city-level privacy-first contributor location sharing. |
 | [github_contributor.py](github_contributor.py) | GitHub Contributor model — spec 029. |
 | [github_organization.py](github_organization.py) | GitHub Organization model — spec 029. |
 | [governance.py](governance.py) | Governance and review models for change requests and voting. |
 | [graph.py](graph.py) | Universal Node + Edge data model. |
 | [graph_health.py](graph_health.py) | Pydantic models for graph health (fractal-self-balance / spec-172). |
-| [graph_zoom.py](graph_zoom.py) | Pydantic response models for fractal zoom navigation (Spec 182). |
 | [idea.py](idea.py) | Idea portfolio models for federated prioritization. |
 | [import_stack.py](import_stack.py) | Import stack models — spec 022. |
-| [investment.py](investment.py) | Investment models — positions, portfolio, time pledges, history events. |
 | [lens_translation.py](lens_translation.py) | Pydantic models for worldview lens registry and translations (spec-181). |
-| [marketplace.py](marketplace.py) | Marketplace models for the OpenClaw Idea Marketplace (spec 121). |
-| [membership.py](membership.py) | Pydantic models for workspace membership (team edges). |
 | [memory.py](memory.py) | Models for the agent-memory-system spec. |
-| [message.py](message.py) | Pydantic models for contributor messaging (Phase 3). |
 | [meta.py](meta.py) | Models for metadata self-discovery - endpoint, module, and type concept nodes. |
 | [metrics.py](metrics.py) | Pydantic models for pipeline metrics API. Spec 026 Phase 1. |
 | [pagination.py](pagination.py) | _no top-of-file purpose_ |

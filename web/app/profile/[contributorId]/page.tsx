@@ -582,9 +582,6 @@ export default async function ContributorProfilePage({
           <Link href="/contributors" className="text-muted-foreground hover:text-foreground transition-colors">
             All Contributors
           </Link>
-          <Link href="/discover" className="text-purple-400 hover:underline">
-            Discover
-          </Link>
           <Link href="/resonance" className="text-amber-400 hover:underline">
             Resonance
           </Link>

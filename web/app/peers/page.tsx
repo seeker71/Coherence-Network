@@ -60,12 +60,6 @@ export default async function PeersPage() {
           >
             Beliefs
           </Link>
-          <Link
-            href="/discover"
-            className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
-          >
-            Discover
-          </Link>
         </div>
       </header>
 
@@ -197,9 +191,6 @@ export default async function PeersPage() {
         <div className="flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/beliefs" className="text-violet-400 hover:underline">
             Beliefs
-          </Link>
-          <Link href="/discover" className="text-purple-400 hover:underline">
-            Discover
           </Link>
           <Link href="/resonance" className="text-blue-400 hover:underline">
             Resonance

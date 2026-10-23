@@ -14,9 +14,7 @@ const TECHNICAL_JARGON = [
 const PUBLIC_PAGES = [
   { path: '/', name: 'Home' },
   { path: '/ideas', name: 'Ideas' },
-  { path: '/discover', name: 'Discover' },
   { path: '/vitality', name: 'Vitality' },
-  { path: '/teams', name: 'Teams' },
   { path: '/contribute', name: 'Contribute' },
 ];
 

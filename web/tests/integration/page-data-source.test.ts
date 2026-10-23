@@ -68,12 +68,6 @@ const PAGE_ASSERTIONS: PageAssertion[] = [
     dynamicHints: [/contributors\.map/, /changeRequests\.map/, /status === "loading"/],
   },
   {
-    route: "/marketplace",
-    file: "app/marketplace/page.tsx",
-    apiHints: ["/api/marketplace/browse", "getApiBase()"],
-    dynamicHints: [/listing\.idea_title/, /listing\.fork_count/, /setListings/],
-  },
-  {
     route: "/graphs",
     file: "app/graphs/page.tsx",
     apiHints: ["/api/graph/nodes", "/api/edges", "getApiBase()"],
