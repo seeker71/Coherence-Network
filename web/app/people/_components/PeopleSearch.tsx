@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 
 type ConceptHit = {
@@ -44,6 +44,26 @@ type ResolveResponse = {
   existing_edges: Array<{ from_id: string; to_id: string; type: string; role?: string | null }>;
 };
 
+type SearchState = {
+  query: string;
+  status: "idle" | "loading" | "success" | "error";
+  result: ResolveResponse | null;
+};
+
+function isResolveResponse(value: unknown): value is ResolveResponse {
+  if (!value || typeof value !== "object") return false;
+  const body = value as Partial<ResolveResponse>;
+  const validHit = (hit: ConceptHit | PresenceHit) =>
+    hit && typeof hit.id === "string" && typeof hit.name === "string" &&
+    typeof hit.type === "string" && typeof hit.score === "number" && Number.isFinite(hit.score) &&
+    Array.isArray(hit.shared_tokens) && hit.shared_tokens.every((token) => typeof token === "string");
+  const optionalText = (text: unknown) => text === null || typeof text === "string";
+  return typeof body.query === "string" &&
+    Array.isArray(body.concepts) && body.concepts.every((hit) => validHit(hit) && hit.type === "concept" && (hit.hz === null || (typeof hit.hz === "number" && Number.isFinite(hit.hz)))) &&
+    Array.isArray(body.presences) && body.presences.every((hit) => validHit(hit) && optionalText(hit.image_url) && optionalText(hit.canonical_url)) &&
+    Array.isArray(body.existing_edges);
+}
+
 function hzToHue(hz: number | null | undefined): number {
   if (typeof hz !== "number" || !Number.isFinite(hz)) return 175;
   const clamped = Math.max(300, Math.min(1000, hz));
@@ -52,69 +72,97 @@ function hzToHue(hz: number | null | undefined): number {
 
 export function PeopleSearch() {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<ResolveResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const runQuery = useCallback(async (q: string) => {
-    if (q.trim().length < 3) {
-      setResult(null);
-      return;
-    }
-    setLoading(true);
-    try {
-      const r = await fetch(`${getApiBase()}/api/resolve/query`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query: q.trim(), limit: 12 }),
-      });
-      if (!r.ok) {
-        setResult(null);
-        return;
-      }
-      const body: ResolveResponse = await r.json();
-      setResult(body);
-    } catch {
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [retry, setRetry] = useState(0);
+  const [search, setSearch] = useState<SearchState>({ query: "", status: "idle", result: null });
+  const normalizedQuery = query.trim();
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runQuery(query), 350);
+    if (normalizedQuery.length < 3) {
+      setSearch({ query: normalizedQuery, status: "idle", result: null });
+      return;
+    }
+
+    const controller = new AbortController();
+    setSearch({ query: normalizedQuery, status: "loading", result: null });
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`${getApiBase()}/api/resolve/query`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: normalizedQuery, limit: 12 }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Search request failed");
+        const body: unknown = await response.json();
+        if (!isResolveResponse(body)) throw new Error("Search response is invalid");
+        if (!controller.signal.aborted) {
+          setSearch({ query: normalizedQuery, status: "success", result: body });
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setSearch({ query: normalizedQuery, status: "error", result: null });
+        }
+      }
+    }, 350);
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [query, runQuery]);
+  }, [normalizedQuery, retry]);
+
+  // The input can render before its effect runs. Only its own response is
+  // current, including during the debounce interval and after clearing it.
+  const status = search.query === normalizedQuery
+    ? search.status
+    : normalizedQuery.length >= 3 ? "loading" : "idle";
+  const result = status === "success" ? search.result : null;
+  const loading = status === "loading";
 
   const hasResult =
     result && (result.concepts.length > 0 || result.presences.length > 0);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4" aria-label="Explore concepts and presences" aria-busy={loading}>
       <div className="relative">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Type what's alive — a phrase, a feeling, a fragment"
-          className="w-full rounded-2xl border border-border/50 bg-card/40 hover:border-border focus:border-[hsl(var(--primary))] focus:outline-none px-5 py-4 text-base placeholder-muted-foreground/60 transition-colors"
+          aria-label="Search concepts and presences"
+          placeholder="Explore a shared interest, such as music and movement"
+          className="w-full rounded-2xl border border-border/50 bg-card/40 hover:border-border focus:border-[hsl(var(--primary))] focus:outline-none pl-5 pr-28 py-4 text-base placeholder-muted-foreground/60 transition-colors"
           autoComplete="off"
           spellCheck="false"
         />
         {loading && (
-          <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">
-            listening…
+          <span role="status" className="absolute right-5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">
+            Searching…
           </span>
         )}
       </div>
 
-      {query.trim().length >= 3 && !loading && !hasResult && (
-        <p className="text-sm text-muted-foreground italic px-1">
-          The field doesn't carry that frequency yet — try a different phrasing.
+      {status === "success" && !hasResult && (
+        <p role="status" className="text-sm text-muted-foreground px-1">
+          Try another phrase or explore the directory below. This search returned no matches.
         </p>
+      )}
+
+      {status === "error" && (
+        <div className="space-y-2 px-1">
+          <p role="alert" className="text-sm text-muted-foreground">
+            Search is temporarily unavailable. Try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearch({ query: normalizedQuery, status: "loading", result: null });
+              setRetry((attempt) => attempt + 1);
+            }}
+            className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Retry search
+          </button>
+        </div>
       )}
 
       {hasResult && (
@@ -137,10 +185,9 @@ export function PeopleSearch() {
                       <Link
                         href={`/vision/${encodeURIComponent(c.id)}`}
                         title={c.shared_tokens.join(" · ")}
-                        className="inline-block rounded-full border px-3 py-1 text-xs hover:bg-white/10 transition-colors"
+                        className="inline-block rounded-full border px-3 py-1 text-xs text-foreground hover:bg-white/10 transition-colors"
                         style={{
                           borderColor: `hsl(${hue} 55% 45% / ${strength * 0.55})`,
-                          color: `hsl(${hue} 70% 78% / ${strength})`,
                           background: `hsl(${hue} 45% 22% / ${strength * 0.16})`,
                         }}
                       >

@@ -8,15 +8,19 @@ source:
     symbols: [TOOLS, dispatch]
   - file: mcp-server/coherence_mcp_server/form_cli_tools.py
     symbols: [catalog_capture, kernel_route, transmute_text]
+  - file: web/app/people/_components/PeopleSearch.tsx
+    symbols: [PeopleSearch]
 requirements:
   - "Everyday companionship starts with the person's intent, including play, joy, exploration, connection and practical help."
   - "Conversation capture requires explicit consent for selected local learning material."
   - "Public network submission and private host conversation have distinct boundaries."
   - "MCP startup, configuration and advertised tools match executable behavior."
+  - "Discovery distinguishes pending, successful empty, failed and superseded requests."
 done_when:
   - "Focused consent, configuration, launcher and MCP contract tests pass."
   - "Skill frontmatter validates and generated documents match their templates."
   - "Independent scenarios cover play, exploration, chosen connection, learning, business, design, creation, research and collaboration."
+  - "A browser observation with fictional fixtures verifies discovery failure, retry, empty and latest-input behavior."
 test: "uv run --directory mcp-server --with ../api --with pytest --with pyyaml --with pytest-asyncio python -m pytest tests ../api/tests/test_form_cli_mcp_tools.py -q --noconftest"
 constraints:
   - "Use the existing skill and MCP; no parallel assistant runtime."
@@ -100,6 +104,48 @@ separate observed client lifecycle and permission-preserving handoff.
   A pause or goodbye is complete; prepare a continuation brief when preserving
   context or a handoff is requested. Carry this practice through the public
   assistant contract and the companion's linked entry guidance.
+- [x] **R10 — Truthful discovery:** The existing presence search shows results
+  only for the current input. Pending requests, successful empty responses and
+  failed requests have distinct accessible states. Failure offers a deliberate
+  retry, and changing or clearing the input supersedes previous requests,
+  including during debounce. An empty result describes this search's result;
+  it makes no claim about whether compatible people exist or are available.
+  Result labels remain readable against the selected theme.
+
+### Encounter observation — 2026-10-23
+
+The mission is broader than the evidence of the current experience. Read the
+gap through an encounter: arrive with an interest, explore something, choose
+whether to connect or continue, and leave freely. A working mechanism is one
+part of that experience; a person's account of vitality remains theirs.
+
+| Claim | Ground currently available | Gap and next observation |
+|---|---|---|
+| Find something around an interest | `/presences` uses `PeopleSearch` and surviving `POST /api/resolve/query`; the graph directory has a native read owner. | The browser conflated failed requests with empty results and allowed older responses to overwrite newer input. Observe and repair R10 with fictional fixtures. Matching remains a keyword heuristic requiring two shared terms; a single interest can return nothing. |
+| Find people who welcome connection | `/vision/community` and aggregate interest statistics returned HTTP 200 on 2026-10-23; the interest directory source filters entries by findability consent. | This consent boundary belongs to the interest directory; graph search has a different source. Availability of either page does not establish a meaningful match, current presence or permission to contact. A later chosen trial must verify discovery through a consented connection without inventing availability or sending an unsolicited message. |
+| Play and stop with the companion | R9 exists in source guidance. The latest observed companion release is still 0.6.3; the broadened guidance has separate release and hosted verification work. | Observe a fictional game, a chosen change of direction and a simple stop through the actual installed entry. Record correction burden and unwanted continuation, then repair the first failed boundary. |
+| Carry the encounter natively | The pinned kernel has `observe/companion-run.bml`, retrieval and local voice lanes. Its existing `companion-ground-band.bml` returned `3`: known teaching retrieval and an honest miss both passed. | This entry always retains its local conversation, has no conversation identifier and drops voice completion/release/failure detail. Owner-controlled memory and inspectable failure need care before using personal material. The grounding check establishes neither fictional play quality nor human benefit. |
+
+The first iteration belongs to R10 in the existing web carrier. Native graph
+reads and compatibility interest matching retain their current owners; this
+repair adds no service, matching policy, public profile, or conversation store.
+The browser witness supplies fictional responses and checks visible behavior.
+It cannot establish live search quality or experienced belonging.
+
+Continue from the first failed observation, in its existing owner: keep the
+input, expected behavior, returned evidence, correction and next verification
+together. Repeat after a repair or changed input. For the native companion,
+use an exclusively owned checkout with empty conversation history, respect
+active model owners, and observe fiction → chosen continuation → factual
+discovery limits → stop. The voice's `max_reply_tokens` field is a progress
+interval, so it is not a bounded-run guarantee. Preserve the native completion,
+release and reason fields when assessing its result.
+
+An encounter is ready for wider use when its observable choices work, claims
+match returned evidence, and retention and contact follow the person's intent.
+Ask for voluntary feedback on enjoyment, freedom and friction after a chosen
+encounter. A pause needs no feedback. Keep that account separate from automated
+pass counts and native/rented execution measurements; neither proves vitality.
 
 ## Implementation plan and ownership
 
@@ -183,6 +229,8 @@ targets from observed baseline; do not invent benchmark scores.
 - `docs/front-door/{INDEX,connectors}.md`, `openai-gpt-action.yaml`,
   `web/public/llms.txt`, `mcp-server/README.template.md`, `README.md` — aligned entry.
 - `mcp-server/tests/`, `api/tests/test_form_cli_mcp_tools.py` — focused behavior proof.
+- `web/app/people/_components/PeopleSearch.tsx`,
+  `web/tests/e2e/people-search.spec.ts` — existing discovery state and browser witness.
 - `docs/system_audit/commit_evidence_2026-10-20_trusted_companion.json` — integration receipt.
 - Indexes and executor evidence as required by repository delivery guidance.
 
@@ -209,8 +257,17 @@ Focused contracts live in `mcp-server/tests/` and
   For R9, also observe open-ended imaginative play and a request to meet people
   with shared interests when discovery/contact tools are unavailable: the reply
   should fit the encounter and preserve capability and contact boundaries.
+- R10 browser witness: a successful empty response, HTTP/network/invalid-response
+  failure, retry, delayed superseded success or failure, and clearing an active
+  request. Synthetic concept/presence results remain navigable and only the
+  latest input is represented. No real profiles or messages are needed.
 
 ## Verification
+
+For R10, start the synthetic API and local Next server using the reproducible
+commands in `web/tests/e2e/people-search.spec.ts`, then run its Playwright command.
+Both server rendering and browser requests use fictional fixtures. Inspect a
+recovered result and long-query loading state at desktop and phone widths.
 
 ```sh
 form-run python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md

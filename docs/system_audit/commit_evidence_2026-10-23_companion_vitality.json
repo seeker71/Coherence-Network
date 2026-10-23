@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-23",
+  "thread_branch": "codex/companion-vitality-20261023",
+  "commit_scope": "Ground the mission-to-encounter gap and repair truthful discovery states in the existing presence search.",
+  "files_owned": [
+    "specs/trusted-everyday-companion.md",
+    "web/app/people/_components/PeopleSearch.tsx",
+    "web/tests/e2e/people-search.spec.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "specs/trusted-everyday-companion.md",
+    "web/app/people/_components/PeopleSearch.tsx",
+    "web/tests/e2e/people-search.spec.ts",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "summary": "9 focused Playwright browser cases passed after repair; 24 Vitest files / 153 tests passed; default production build, TypeScript, spec and evidence validation passed. Focused final desktop retry and phone observations passed 2/2 after visual repairs. Native grounding band returned 3; no native inference was run.",
+    "commands": [
+      "form-run env PLAYWRIGHT_BASE_URL=http://127.0.0.1:3217 ./node_modules/.bin/playwright test tests/e2e/people-search.spec.ts --project=chromium --workers=1 --reporter=list",
+      "form-run npm test",
+      "form-run python3 scripts/validate_spec_quality.py --file specs/trusted-everyday-companion.md",
+      "form-run git diff --check",
+      "form-run npm run build",
+      "form-run python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-10-23_companion_vitality.json"
+    ],
+    "guard_status": "fail",
+    "guard_summary": "Branch freshness, workflow references, evidence, spec and runtime drift passed. The general local web verifier starts only the Python compatibility server, then waits for /api/health; that route is native-owned and returns 404 on the compatibility port. The unchanged verifier stopped before web startup. Focused browser, build and unit proofs remain valid; no retired health route was restored."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Awaiting branch delivery."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Fresh pre-change API health, web root and CORS checks all passed. This does not establish deployment of the repair.",
+    "command": "form-run ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Search failure offers retry; only a completed successful request may show an empty result; older responses cannot replace the current input.",
+    "public_endpoints": [
+      "https://coherencycoin.com/presences"
+    ],
+    "test_flows": [
+      "9 local browser cases: pending/short/empty input; HTTP, network, invalid JSON and malformed payload failures with retry; superseded empty/error response; cleared pending request; concept and presence links.",
+      "Rendered recheck at desktop and 390px phone width confirmed readable result labels after switching to theme foreground. A long query overlapped the loading label on phone; reserved input padding repaired it. Focused HTTP retry and phone observations then passed 2/2; the permanent regression suite remains 9 tests.",
+      "Synthetic API configuration covers Next server rendering as well as browser interception. No real discovery request, profile publication or message was made."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local repair and review are complete. CI and deployed delivery remain separate pending evidence; broader human encounter and native-quality gaps stay open."
+  },
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "companion-vitality-20261023"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "evidence_refs": [
+    "specs/trusted-everyday-companion.md",
+    "web/tests/e2e/people-search.spec.ts",
+    "api/app/services/resonance_service.py",
+    "api/app/services/interest_service.py",
+    "form/observe/companion-run.bml",
+    "form/observe/tests/companion-ground-band.bml"
+  ],
+  "grounding": {
+    "base": "ad51fd194a060fc6fac17d5cb547319dea8f3ebf",
+    "kernel": "0c960e328e0d6030705963adaeb757f3eba67d96",
+    "local_context": "New named linked worktree for this task; existing runtime reused at the identical pinned kernel. Other native model processes remained untouched.",
+    "release": "Latest observed companion release remains 0.6.3. Merged mission guidance is not proof of an updated installation or hosted behavior.",
+    "public_observation": "Fresh /vision/community returned 200 and /api/interest/stats returned aggregate schema. No individual profiles were requested or copied.",
+    "boundaries": "Graph presence search and the consent-filtered interest directory have different sources. Neither a keyword match nor page availability establishes willingness to connect."
+  },
+  "remaining_observations": [
+    "Keyword matching requires two shared terms; this repair does not change that policy or establish meaningful match quality.",
+    "The actual installed companion needs a fictional play/change-of-direction/stop trial after broadened guidance reaches it.",
+    "The native companion always appends local history and omits voice completion/release/reason fields from its conversation record. Owner-controlled continuity and failure evidence require their own repair before a personal-material trial.",
+    "Native companion play and stopping quality remain unobserved. Its reply-token option is a progress interval, not a hard runtime bound.",
+    "Enjoyment, belonging and vitality require voluntary human accounts. Automated pass counts or native execution share do not establish them."
+  ],
+  "execution_friction": [
+    {
+      "command": "form-run make prompt-guide",
+      "result": "exit 2: sibling worktree continuity risk detected; the blocking sibling was the completed repository-history migration branch without an upstream.",
+      "continuation": "Preserved the sibling and reused its completed migration evidence. New task bootstrap passed with documented PROMPT_GATE_SKIP_CONTINUITY=1; named branch and linked-worktree safety passed."
+    },
+    {
+      "command": "form-run python3 scripts/worktree_pr_guard.py --help",
+      "result": "exit 1: worktree_pr_guard requires the bootstrapped api/.venv runtime; run the repository host setup, then repeat the same command",
+      "continuation": "The existing uv carrier supplied the declared API dependencies: form-run uv run --with ./api python scripts/worktree_pr_guard.py --help passed. No dependency or application configuration was changed."
+    },
+    {
+      "command": "form-run env PLAYWRIGHT_BASE_URL=http://127.0.0.1:3217 npx playwright test tests/e2e/people-search.spec.ts --project=chromium --workers=1",
+      "result": "Initial browser launch lacked Chromium headless shell 1228; installed the matching Playwright shell. Pre-repair browser assertions exposed missing distinct loading/error states. A fake-clock timing issue in the witness was replaced with explicit response gates.",
+      "continuation": "9 cases pass with the actual repaired component and synthetic server/browser responses."
+    },
+    {
+      "command": "form-run npm run build",
+      "result": "exit 1: Symlink [project]/web/node_modules is invalid, it points out of the filesystem root",
+      "continuation": "Replaced the task-owned dependency symlink with an APFS clone of the same installed dependencies inside this worktree; repeated the default build with stdout and stderr captured together. No build configuration changed."
+    },
+    {
+      "command": "form-run uv run --with ./api python scripts/worktree_pr_guard.py --mode local --base-ref origin/main --skip-api-tests --skip-web-build --output-dir .cache/companion-vitality/pr-guard",
+      "result": "exit 2; failing child THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh exits 1 after repeated GET /api/health HTTP/1.1 404 Not Found on the locally started compatibility server.",
+      "owner": "scripts/verify_worktree_local_web.sh; native route ownership in api/config/native_api.json",
+      "continuation": "Preserve the native health owner. Align the verifier with the native-front-door topology before reusing its general check. The bounded R10 witness and default web build pass; public native health and CORS pass.",
+      "trace": ".cache/companion-vitality/pr-guard/pr_check_guard_20261023T044917Z_codex-companion-vitality-20261023.json"
+    }
+  ],
+  "sovereignty_receipt": {
+    "path": "native lookup and focused native grounding observation, followed by rented source interpretation and web repair",
+    "native_lookup": "Cached form-cli ask returned references without a NodeID or sufficient answer to the encounter question.",
+    "native_observation": "fkwu observe/tests/companion-ground-band.bml returned 3, exit 0. This is a narrow executable retrieval/miss result, not generated encounter quality.",
+    "native_generated_replies": 0,
+    "oracle_provider": "OpenAI",
+    "oracle_model": "GPT-6 family; exact serving variant unavailable",
+    "input_tokens": null,
+    "output_tokens": null,
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "intended, unmeasured",
+      "suffic": 0,
+      "observed": false
+    },
+    "payload": "Selected repository source and guidance plus fictional browser fixtures; exact rental counters unavailable.",
+    "contenders": "Native fkwu retrieval and Metal voice exist. No native/challenger encounter comparison was run.",
+    "native_play_lookup": "A subsequent cached native ask for a tiny fictional island returned dialogue/receipt references, with no sufficient playful answer. The selected playful encounter remains a hosted reasoning trial; no native play-quality success is claimed.",
+    "measurement_limit": "Closing local-flow review: 186 historical options, 87 band green, 9 locally verified successes across 22 attempted gaps, 8 unread and 97 options with verification unmeasured. These describe historical native lanes, not this encounter. Session-rent returned an empty session identifier and measured 0/kept 0/refused 0: missing attribution, not zero rental."
+  },
+  "work_receipt": {
+    "loosened": "Failed discovery is recoverable and distinct from an empty search; older responses no longer replace the current choice. Rendered observation also exposed a low-contrast result label.",
+    "surprise": "A transport failure was being described as absence of resonance.",
+    "friction_to_learning": "Following the returned request state makes the interface more truthful and gives the person control over retrying; it cannot substitute for their experience of connection."
+  },
+  "review": {
+    "status": "clear",
+    "scope": "Independent source review of request-state correctness, specification claims and privacy boundaries. A suggested deterministic route gate replaced a timing-sensitive pending assertion."
+  },
+  "visual_evidence": {
+    "scope": "Local fictional fixtures; screenshots retained in the task worktree, not published as personal material.",
+    "paths": [
+      ".cache/companion-vitality/screenshots/companion-search-recovered.png",
+      ".cache/companion-vitality/screenshots/phone-search-loading.png",
+      ".cache/companion-vitality/screenshots/phone-search-error.png",
+      ".cache/companion-vitality/screenshots/phone-search-recovered.png"
+    ],
+    "result": "Root inspected desktop recovered and phone recovered/loading images; labels are readable and loading status no longer overlaps long input."
+  }
+}
