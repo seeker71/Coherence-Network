@@ -1147,7 +1147,6 @@
     "title": "Fédération",
     "lede": "Chaque instance montre son propre souffle, nomme ses propres capacités, et rencontre ses pairs en égaux. C'est une fenêtre sur la géométrie ressentie — pas un panneau de contrôle.",
     "linkNodes": "Nœuds",
-    "linkConstellation": "Constellation",
     "linkVitality": "Vitalité",
     "exploreMore": "Explorer davantage",
     "unknown": "inconnu",
@@ -1920,7 +1919,6 @@
     "wholeRelatedLabel": "Pages connexes",
     "linkVitality": "Vitalité",
     "linkCoherence": "Cohérence",
-    "linkCC": "Économie CC",
     "linkFlow": "Flux"
   },
   "meWork": {

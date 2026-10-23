@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 104
+**Total files**: 89
 
 | File | Purpose |
 |---|---|
@@ -30,19 +30,14 @@
 | [auth_keys.py](auth_keys.py) | Per-contributor API key management. |
 | [automation_usage.py](automation_usage.py) | Automation provider usage and capacity endpoints. |
 | [beliefs.py](beliefs.py) | Beliefs router — per-contributor worldview, interests, and concept preferences. |
-| [cc_economics.py](cc_economics.py) | CC Economics Router — endpoints for supply, exchange rate, and staking. |
 | [coherence.py](coherence.py) | Coherence score endpoint — real-time computed coherence signal depth. |
 | [concepts.py](concepts.py) | Concepts router — CRUD for the ontology. All data lives in graph DB. |
-| [constellation.py](constellation.py) | Constellation view routes — network graph data for visualization. |
 | [contributions.py](contributions.py) | Contributions router — backed by graph_nodes + graph_edges. |
 | [contributor_identity.py](contributor_identity.py) | Contributor Identity endpoints — link accounts, verify via OAuth/signature. |
 | [contributor_recognition.py](contributor_recognition.py) | _no top-of-file purpose_ |
 | [contributors.py](contributors.py) | Contributors router — backed by graph_nodes (type=contributor). |
 | [contributors_portfolio.py](contributors_portfolio.py) | Contributor Portfolio API routes (spec 174). |
-| [creator_economy.py](creator_economy.py) | Creator economy router — public stats, proof cards, featured listings. |
 | [deployment_observer.py](deployment_observer.py) | GitHub-OIDC-authenticated public deployment observation endpoints. |
-| [discord_votes.py](discord_votes.py) | Discord reaction vote endpoint (spec-164 API Changes). |
-| [discovery.py](discovery.py) | Discovery router — Serendipity Discovery feed endpoints. |
 | [edges.py](edges.py) | Dedicated edges router — /api/edges and /api/entities/{id}/edges. |
 | [entity_views.py](entity_views.py) | Generic entity-views router — one API for language views of any entity type. |
 | [evidence.py](evidence.py) | Evidence router — implementation evidence for asset CC-multiplier bonus. |
@@ -51,10 +46,8 @@
 | [friction.py](friction.py) | Friction ledger API routes. |
 | [gates.py](gates.py) | Release/public gate API routes for machine access. |
 | [gatherings.py](gatherings.py) | Gatherings router — a presence carries the events where it happens. |
-| [geolocation.py](geolocation.py) | Geolocation router — contributor location, nearby search, local news resonance. |
 | [governance.py](governance.py) | Governance review and voting API routes. |
 | [graph.py](graph.py) | Graph router — generic CRUD for nodes and edges. |
-| [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
 | [grocery.py](grocery.py) | Grocery — the shopping ledger for a Light Hub manager. |
 | [hati_mesh.py](hati_mesh.py) | Hati mesh sensing-organ presence routes. |
 | [health.py](health.py) | Health check endpoint (spec 001). |
@@ -63,7 +56,6 @@
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
 | [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
-| [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
 | [kernel_breath.py](kernel_breath.py) | Transmuted /api/utils entropy / breath-balance endpoints (bodies run as Form recipes). |
 | [kernel_grounded_cv.py](kernel_grounded_cv.py) | Transmuted /api/utils grounded-cost and grounded-value endpoints (bodies run as Form recipes). |
 | [kernel_grounding.py](kernel_grounding.py) | Transmuted /api/utils grounding-summary + cost/value-vector endpoints (bodies run as Form recipes). |
@@ -73,16 +65,12 @@
 | [kernel_shared.py](kernel_shared.py) | Shared scaffolding for the transmuted kernel-served /api/utils endpoints. |
 | [lenses.py](lenses.py) | Worldview lens registry — spec-181. |
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
-| [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |
 | [mcp_remote.py](mcp_remote.py) | No-auth remote MCP endpoint for connector clients. |
 | [meetings.py](meetings.py) | Meeting endpoint — the felt state of a viewer meeting an entity. |
-| [memberships.py](memberships.py) | Workspace membership routes — team edges between contributors and workspaces. |
-| [messages.py](messages.py) | Contributor messaging endpoints (Phase 3). |
 | [meta.py](meta.py) | Metadata self-discovery API routes. |
 | [models.py](models.py) | Model listing and routing configuration endpoints. |
 | [news.py](news.py) | News feed, resonance matching, and source configuration API routes. |
 | [offerings.py](offerings.py) | Offerings — services and belongings woven into the network. |
-| [onboarding.py](onboarding.py) | _no top-of-file purpose_ |
 | [peers.py](peers.py) | Peers router — contributor discovery via resonance and proximity. |
 | [personal_feed.py](personal_feed.py) | Personal feed — your corner of the organism. |
 | [places.py](places.py) | Places router — where presences are rooted. |
@@ -90,9 +78,7 @@
 | [presence.py](presence.py) | Presence — soft heartbeat + read endpoints. |
 | [presence_resonance.py](presence_resonance.py) | Presence ↔ vision-concept resonance threads. |
 | [proposals.py](proposals.py) | Proposals — light governance via the meeting gesture. |
-| [proprioception.py](proprioception.py) | Proprioception router — auto-sensing system state endpoints. |
 | [provider_stats.py](provider_stats.py) | Provider measurement stats endpoint. |
-| [providers.py](providers.py) | Task execution provider routes. |
 | [reactions.py](reactions.py) | Reactions router — emoji + comment on any entity. |
 | [render_events.py](render_events.py) | Render Events Router — log a render, attribute CC, aggregate analytics. |
 | [renderers.py](renderers.py) | Renderer Router — pluggable asset renderer registry. |
@@ -100,7 +86,6 @@
 | [runtime.py](runtime.py) | Runtime telemetry API routes. |
 | [sensings.py](sensings.py) | Sensings — the organism's moments of noticing, stored in the living graph. |
 | [service_registry_router.py](service_registry_router.py) | Service registry introspection endpoints. |
-| [settlement.py](settlement.py) | Settlement router — daily CC distribution batch per story-protocol-integration R8. |
 | [spec_registry.py](spec_registry.py) | Spec registry API routes. |
 | [substrate.py](substrate.py) | Coherence-substrate REST API. |
 | [task_activity_routes.py](task_activity_routes.py) | Task activity endpoints — live task visibility and SSE streaming. |

@@ -106,14 +106,6 @@ export default async function NewsPage() {
           ideas in the network. See which current events connect to what we are
           building.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/discover"
-            className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
-          >
-            Discover
-          </Link>
-        </div>
       </header>
 
       {/* Resonance highlights */}
@@ -247,9 +239,6 @@ export default async function NewsPage() {
           Explore more
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/discover" className="text-purple-400 hover:underline">
-            Discover
-          </Link>
           <Link href="/ideas" className="text-blue-400 hover:underline">
             Ideas
           </Link>

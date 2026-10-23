@@ -1147,7 +1147,6 @@
     "title": "Federation",
     "lede": "Each instance shows its own breath, names its own capabilities, and meets peers as equals. This is a window into the felt geometry — not a control panel.",
     "linkNodes": "Nodes",
-    "linkConstellation": "Constellation",
     "linkVitality": "Vitality",
     "exploreMore": "Explore more",
     "unknown": "unknown",
@@ -1920,7 +1919,6 @@
     "wholeRelatedLabel": "Related pages",
     "linkVitality": "Vitality",
     "linkCoherence": "Coherence",
-    "linkCC": "CC Economics",
     "linkFlow": "Flow"
   },
   "meWork": {

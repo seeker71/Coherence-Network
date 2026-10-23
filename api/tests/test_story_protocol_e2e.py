@@ -58,6 +58,29 @@ from app.services import (
 )
 
 
+def _run_settlement(batch_date) -> dict:
+    """Mirror the released settlement door: aggregate the render-events
+    store for the date, apply evidence multipliers per asset, store the
+    batch, and return it in JSON shape."""
+    from decimal import Decimal as _D
+    from app.routers.render_events import _EVENTS
+    from app.services import evidence_service as _ev
+
+    events = list(_EVENTS.values())
+    assets_on_date = {e.asset_id for e in events if e.timestamp.date() == batch_date}
+    multipliers: dict[str, _D] = {
+        asset_id: _ev.applicable_multiplier_for_asset(asset_id) for asset_id in assets_on_date
+    }
+    batch = settlement_service.run_daily_settlement(
+        batch_date=batch_date,
+        events=events,
+        asset_concept_tags={},
+        evidence_multipliers=multipliers,
+    )
+    settlement_service.store_batch(batch)
+    return batch.model_dump(mode="json")
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -236,11 +259,7 @@ def test_full_creator_to_settlement_flow(client):
     assert Decimal(verify_body["cc_multiplier_applicable"]) == Decimal("5")
 
     # --- Settlement — aggregates 3 reads and applies 5× multiplier ---
-    settle_response = client.post(
-        "/api/settlement/run", json={"batch_date": today.isoformat()}
-    )
-    assert settle_response.status_code == 201
-    batch = settle_response.json()
+    batch = _run_settlement(today)
     assert batch["batch_date"] == today.isoformat()
     assert batch["total_read_count"] == 3
     # 3 paid reads × 0.01 CC (DEFAULT_CONTENT_CC_AMOUNT) = 0.03 base CC;
@@ -268,9 +287,7 @@ def test_full_creator_to_settlement_flow(client):
     assert list_ev.status_code == 200
     assert any(e["id"] == evidence_id for e in list_ev.json())
 
-    list_settle = client.get("/api/settlement")
-    assert list_settle.status_code == 200
-    assert any(b["batch_date"] == today.isoformat() for b in list_settle.json())
+    assert any(b.batch_date == today for b in settlement_service.list_batches())
 
     # --- Per-asset evidence view exposes the multiplier ---
     asset_view = client.get(f"/api/evidence/asset/{node_id}").json()
@@ -315,9 +332,7 @@ def test_free_tier_flow(client):
     # bridge with cc_pool=0 (free reads carry no CC). The batch still
     # counts the read; CC distributed is 0 with no multiplier.
     today = _utc_today()
-    settle_body = client.post(
-        "/api/settlement/run", json={"batch_date": today.isoformat()}
-    ).json()
+    settle_body = _run_settlement(today)
     assert settle_body["total_read_count"] == 1
     assert Decimal(settle_body["total_cc_distributed"]) == Decimal("0")
     entry = next(e for e in settle_body["entries"] if e["asset_id"] == node_id)
@@ -366,9 +381,7 @@ def test_derivative_flow(client):
     # render event via the bridge, so settlement aggregates without
     # extra wiring.
     today = _utc_today()
-    batch = client.post(
-        "/api/settlement/run", json={"batch_date": today.isoformat()}
-    ).json()
+    batch = _run_settlement(today)
     deriv_entry = next(e for e in batch["entries"] if e["asset_id"] == deriv_node_id)
     assert deriv_entry["read_count"] == 1
 

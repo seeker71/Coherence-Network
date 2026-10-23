@@ -386,12 +386,6 @@ export default async function VitalityPage() {
           <Link href="/pulse" className="text-emerald-400 hover:underline">
             Pulse — the outer breath
           </Link>
-          <Link href="/discover" className="text-purple-400 hover:underline">
-            Discover
-          </Link>
-          <Link href="/constellation" className="text-blue-400 hover:underline">
-            Constellation
-          </Link>
           <Link href="/resonance" className="text-emerald-400 hover:underline">
             Resonance
           </Link>

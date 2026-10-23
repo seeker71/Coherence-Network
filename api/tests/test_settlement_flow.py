@@ -1,30 +1,17 @@
-"""Tests for settlement service + router — story-protocol-integration R8.
+"""Tests for the settlement service — story-protocol-integration R8.
 
 Service-level tests exercise the pure aggregation logic in isolation
-with crafted RenderEvent fixtures. Router tests exercise the full
-integration through the in-process render-events and evidence stores.
+with crafted RenderEvent fixtures; the read-tracking bridge and the
+federation value-flow proofs exercise the stores around it.
 """
 
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
-import pytest
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.models.renderer import RenderEvent
-from app.routers.render_events import _reset_events_for_tests, _EVENTS
-from app.services import evidence_service, settlement_service
+from app.services import settlement_service
 from app.services.story_protocol_bridge import AssetConceptTag
-
-
-@pytest.fixture
-def client():
-    _reset_events_for_tests()
-    evidence_service._reset_for_tests()
-    settlement_service._reset_for_tests()
-    return TestClient(app)
 
 
 def _event(
@@ -182,73 +169,3 @@ def test_totals_roll_up_across_assets():
     )
     assert batch.total_read_count == 2
     assert batch.total_cc_distributed == Decimal("0.30000")
-
-
-# ---------- router integration ----------
-
-
-def test_router_run_settlement_returns_201_and_aggregates(client):
-    day = date(2026, 4, 24)
-    # Seed render events directly into the in-process store
-    e = _event("asset:a1", day=day, duration_ms=10000)
-    _EVENTS[e.id] = e
-    response = client.post(
-        "/api/settlement/run", json={"batch_date": day.isoformat()}
-    )
-    assert response.status_code == 201
-    body = response.json()
-    assert body["batch_date"] == day.isoformat()
-    assert body["total_read_count"] == 1
-    assert Decimal(body["total_cc_distributed"]) == Decimal("0.10000")
-
-
-def test_router_get_settlement_roundtrip(client):
-    day = date(2026, 4, 24)
-    e = _event("asset:a1", day=day, duration_ms=10000)
-    _EVENTS[e.id] = e
-    client.post("/api/settlement/run", json={"batch_date": day.isoformat()})
-    response = client.get(f"/api/settlement/{day.isoformat()}")
-    assert response.status_code == 200
-    assert response.json()["batch_date"] == day.isoformat()
-
-
-def test_router_get_settlement_404(client):
-    response = client.get("/api/settlement/2026-01-01")
-    assert response.status_code == 404
-
-
-def test_router_list_settlements(client):
-    for day_str in ("2026-04-22", "2026-04-23", "2026-04-24"):
-        d = date.fromisoformat(day_str)
-        e = _event("asset:a1", day=d)
-        _EVENTS[e.id] = e
-        client.post("/api/settlement/run", json={"batch_date": day_str})
-    response = client.get("/api/settlement")
-    assert response.status_code == 200
-    dates = [b["batch_date"] for b in response.json()]
-    assert dates == sorted(dates, reverse=True)  # most recent first
-
-
-def test_router_uses_evidence_multiplier(client):
-    day = date(2026, 4, 24)
-    e = _event("asset:a1", day=day, duration_ms=10000)
-    _EVENTS[e.id] = e
-    # Register the verified-evidence multiplier of 5x via evidence_service
-    evidence_service.register_community_location(37.78, -122.41)
-    ev = client.post(
-        "/api/evidence",
-        json={
-            "asset_id": "asset:a1",
-            "submitter_id": "contributor:alice",
-            "photo_urls": ["https://arweave.net/tx1"],
-            "gps": {"lat": 37.78, "lng": -122.41},
-            "attestation_count": 3,
-        },
-    ).json()
-    client.post(f"/api/evidence/{ev['id']}/verify")
-    batch = client.post(
-        "/api/settlement/run", json={"batch_date": day.isoformat()}
-    ).json()
-    entry = batch["entries"][0]
-    assert Decimal(entry["evidence_multiplier"]) == Decimal("5")
-    assert Decimal(entry["effective_cc_pool"]) == Decimal("0.50000")

@@ -6,7 +6,6 @@ Covers done_when criteria:
   - POST /api/beliefs/{id}/resonance/{idea_id} returns breakdown
       (actual endpoint: GET /api/contributors/{id}/beliefs/resonance?idea_id=X)
   - GET /api/resonance/proof shows discovery health
-  - GET /api/discover/{contributor_id} returns personalized feed
 """
 
 from __future__ import annotations
@@ -155,47 +154,6 @@ async def test_resonance_proof_returns_quality():
         assert "cross_domain_pairs" in body
         assert "avg_coherence" in body
         assert "interpretation" in body
-
-
-# ---------------------------------------------------------------------------
-# 5. GET /api/discover/{contributor_id} returns personalized feed
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_discovery_feed_returns_items():
-    """Discovery feed returns items for a contributor with belief profile."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        cid = await _setup_contributor(c)
-        await _create_idea(c)
-        await _create_idea(c)
-
-        r = await c.get(f"/api/discover/{cid}", params={"limit": 30})
-        assert r.status_code == 200, r.text
-        data = r.json()
-        assert data["contributor_id"] == cid
-        assert isinstance(data["items"], list)
-        assert "total" in data
-        assert "generated_at" in data
-
-
-@pytest.mark.asyncio
-async def test_discovery_feed_item_structure():
-    """Each discovery feed item has required fields."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        cid = await _setup_contributor(c)
-        await _create_idea(c)
-
-        r = await c.get(f"/api/discover/{cid}")
-        assert r.status_code == 200
-        data = r.json()
-
-        for item in data["items"]:
-            assert "kind" in item
-            assert "score" in item
-            assert "title" in item
-            assert "entity_id" in item
-            assert isinstance(item["score"], (int, float))
-            assert 0.0 <= item["score"] <= 1.0
 
 
 # ---------------------------------------------------------------------------

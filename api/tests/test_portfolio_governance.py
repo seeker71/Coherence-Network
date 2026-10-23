@@ -5,8 +5,6 @@ Covers done_when criteria:
       (actual endpoint: GET /api/coherence/score)
   - GET /api/ideas/right-sizing returns health counts and suggestions
   - GET /api/workspaces/{id}/vitality returns 6 health signals
-  - GET /api/cc/supply returns coherence score
-  - POST /api/cc/stake creates staking position
 """
 
 from __future__ import annotations
@@ -23,11 +21,6 @@ BASE = "http://test"
 
 def _uid(prefix: str = "pg") -> str:
     return f"{prefix}-{uuid4().hex[:8]}"
-
-
-def _mint_for_user(user_id: str, amount_cc: float, deposit_usd: float) -> None:
-    from app.services import cc_treasury_service
-    cc_treasury_service.mint(user_id, amount_cc, deposit_usd, 333.33)
 
 
 def _reset_services() -> None:
@@ -102,54 +95,6 @@ async def test_right_sizing_returns_health():
 # ---------------------------------------------------------------------------
 # 3. GET /api/workspaces/{id}/vitality returns 6 health signals
 # ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# 4. GET /api/cc/supply returns coherence score
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_cc_supply_returns_coherence():
-    """CC supply endpoint returns supply data including coherence score."""
-    _reset_services()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/supply")
-        assert r.status_code == 200, r.text
-        data = r.json()
-        assert "total_minted" in data
-        assert "total_burned" in data
-        assert "outstanding" in data
-        assert "coherence_score" in data
-        assert "exchange_rate" in data
-        assert "as_of" in data
-
-
-# ---------------------------------------------------------------------------
-# 5. POST /api/cc/stake creates staking position
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_stake_creates_position():
-    """Staking CC into an idea creates an active position."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 1000.0, 10.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        r = await c.post("/api/cc/stake", json={
-            "user_id": user_id,
-            "idea_id": idea_id,
-            "amount_cc": 500.0,
-        })
-        assert r.status_code == 201, r.text
-        data = r.json()
-        assert data["stake_id"]
-        assert data["user_id"] == user_id
-        assert data["idea_id"] == idea_id
-        assert data["amount_cc"] == 500.0
-        assert data["status"] == "active"
-
 
 # ---------------------------------------------------------------------------
 # 6. GET /api/ideas/portfolio-summary returns curated super-idea rollup

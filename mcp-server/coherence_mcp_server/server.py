@@ -720,47 +720,6 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="coherence_settlement_batches",
-        description=(
-            "List recent settlement batches, most-recent-first — wraps "
-            "GET /api/settlement. Output: list of SettlementBatch with "
-            "batch_date, asset payouts, concept pools, totals. The "
-            "ledger of daily CC distributions computed from render "
-            "events + evidence multipliers (story-protocol-integration "
-            "R8). Example: coherence_settlement_batches(limit=20)."
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "number",
-                    "description": "Max batches to return (default 20, 1-365).",
-                    "default": 20,
-                },
-            },
-        },
-    ),
-    Tool(
-        name="coherence_settlement_for_date",
-        description=(
-            "Return the stored settlement batch for a specific date — "
-            "wraps GET /api/settlement/{batch_date}. Output: "
-            "SettlementBatch. 404-shape error when no batch was "
-            "computed for the date. Example: "
-            "coherence_settlement_for_date(batch_date='2026-05-24')."
-        ),
-        inputSchema={
-            "type": "object",
-            "required": ["batch_date"],
-            "properties": {
-                "batch_date": {
-                    "type": "string",
-                    "description": "ISO date, e.g. '2026-05-24'.",
-                },
-            },
-        },
-    ),
-    Tool(
         name="coherence_asset_analytics",
         description=(
             "Return aggregate render-event analytics for an asset — "
@@ -1434,70 +1393,7 @@ TOOLS: list[Tool] = [
         },
     ),
     # Team Membership
-    Tool(
-        name="coherence_list_workspace_members",
-        description="List members of a workspace with their roles and join dates.",
-        inputSchema={
-            "type": "object",
-            "required": ["workspace_id"],
-            "properties": {
-                "workspace_id": {"type": "string", "description": "Workspace slug"},
-            },
-        },
-    ),
-    Tool(
-        name="coherence_invite_member",
-        description="Invite a contributor to a workspace with an optional role.",
-        inputSchema={
-            "type": "object",
-            "required": ["workspace_id", "contributor_id"],
-            "properties": {
-                "workspace_id": {"type": "string", "description": "Workspace slug"},
-                "contributor_id": {"type": "string", "description": "Contributor to invite"},
-                "role": {"type": "string", "description": "Role: owner, admin, member (default: member)", "default": "member"},
-            },
-        },
-    ),
-    Tool(
-        name="coherence_list_my_workspaces",
-        description="List workspaces that a contributor belongs to.",
-        inputSchema={
-            "type": "object",
-            "required": ["contributor_id"],
-            "properties": {
-                "contributor_id": {"type": "string", "description": "Contributor ID"},
-            },
-        },
-    ),
     # Messaging
-    Tool(
-        name="coherence_send_message",
-        description="Send a message to a contributor (DM) or a workspace channel.",
-        inputSchema={
-            "type": "object",
-            "required": ["from_contributor_id", "body"],
-            "properties": {
-                "from_contributor_id": {"type": "string", "description": "Sender contributor ID"},
-                "to_contributor_id": {"type": "string", "description": "Recipient contributor ID (for DM)"},
-                "to_workspace_id": {"type": "string", "description": "Target workspace ID (for workspace message)"},
-                "subject": {"type": "string", "description": "Optional message subject"},
-                "body": {"type": "string", "description": "Message body text"},
-            },
-        },
-    ),
-    Tool(
-        name="coherence_get_inbox",
-        description="Get inbox messages for a contributor with optional filters.",
-        inputSchema={
-            "type": "object",
-            "required": ["contributor_id"],
-            "properties": {
-                "contributor_id": {"type": "string", "description": "Contributor ID"},
-                "limit": {"type": "number", "description": "Max messages to return (default 20)", "default": 20},
-                "unread_only": {"type": "boolean", "description": "Only return unread messages", "default": False},
-            },
-        },
-    ),
     # Activity
     Tool(
         name="coherence_get_workspace_activity",
@@ -1537,28 +1433,6 @@ TOOLS: list[Tool] = [
         },
     ),
     # ── Discovery / Living Network ──
-    Tool(
-        name="coherence_discover",
-        description="Serendipity feed — personalized discovery of resonant ideas, peers, cross-domain connections, and news. Returns what resonates with who you are.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "contributor_id": {"type": "string", "description": "Contributor to discover for (default: general feed)"},
-                "limit": {"type": "integer", "description": "Max items (default 20)"},
-            },
-        },
-    ),
-    Tool(
-        name="coherence_constellation",
-        description="Network visualization data — nodes (ideas, contributors, concepts) and edges with positions for galaxy/constellation rendering.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "max_nodes": {"type": "integer", "description": "Max nodes to return (default 80)"},
-                "workspace_id": {"type": "string", "description": "Workspace to visualize (default: coherence-network)"},
-            },
-        },
-    ),
     Tool(
         name="coherence_vitality",
         description="Workspace health as living-system signals — diversity index, resonance density, flow rate, breath rhythm, connection strength, activity pulse.",
@@ -1617,11 +1491,6 @@ TOOLS: list[Tool] = [
                 "contributor_id": {"type": "string", "description": "Contributor ID"},
             },
         },
-    ),
-    Tool(
-        name="coherence_cc_supply",
-        description="Get CC token economics — total minted, outstanding, and coherence score.",
-        inputSchema={"type": "object", "properties": {}},
     ),
     Tool(
         name="coherence_governance_requests",
@@ -1918,15 +1787,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             if not asset_id:
                 return {"error": "asset_id is required"}
             return api_get(f"/api/evidence/asset/{quote(asset_id, safe='')}")
-        case "coherence_settlement_batches":
-            return api_get(
-                "/api/settlement", {"limit": args.get("limit", 20)}
-            )
-        case "coherence_settlement_for_date":
-            batch_date = args.get("batch_date", "")
-            if not batch_date:
-                return {"error": "batch_date is required"}
-            return api_get(f"/api/settlement/{quote(batch_date, safe='')}")
         case "coherence_asset_analytics":
             asset_id = args.get("asset_id", "")
             if not asset_id:
@@ -2388,34 +2248,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 }
             else:
                 return {"error": f"Unknown action: {action}. Use 'list', 'seed_pipeline', or 'status'."}
-        # Team Membership
-        case "coherence_list_workspace_members":
-            return api_get(f"/api/workspaces/{args['workspace_id']}/members")
-        case "coherence_invite_member":
-            return api_post(f"/api/workspaces/{args['workspace_id']}/invite", {
-                "contributor_id": args["contributor_id"],
-                "role": args.get("role", "member"),
-            })
-        case "coherence_list_my_workspaces":
-            return api_get(f"/api/contributors/{args['contributor_id']}/workspaces")
-        # Messaging
-        case "coherence_send_message":
-            body: dict[str, Any] = {
-                "from_contributor_id": args["from_contributor_id"],
-                "body": args["body"],
-            }
-            if args.get("to_contributor_id"):
-                body["to_contributor_id"] = args["to_contributor_id"]
-            if args.get("to_workspace_id"):
-                body["to_workspace_id"] = args["to_workspace_id"]
-            if args.get("subject"):
-                body["subject"] = args["subject"]
-            return api_post("/api/messages", body)
-        case "coherence_get_inbox":
-            return api_get(f"/api/messages/inbox/{args['contributor_id']}", {
-                "limit": args.get("limit", 20),
-                "unread_only": args.get("unread_only", False),
-            })
         # Activity
         case "coherence_get_workspace_activity":
             return api_get(f"/api/workspaces/{args['workspace_id']}/activity", {
@@ -2431,15 +2263,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "workspace_id": args["workspace_id"],
             })
         # Discovery / Living Network
-        case "coherence_discover":
-            cid = args.get("contributor_id", "default-contributor")
-            limit: int = args.get("limit", 20)
-            return api_get(f"/api/discover/{cid}", {"limit": limit})
-        case "coherence_constellation":
-            return api_get("/api/constellation", {
-                "max_nodes": args.get("max_nodes", 80),
-                "workspace_id": args.get("workspace_id", "coherence-network"),
-            })
         case "coherence_vitality":
             ws = args.get("workspace_id", "coherence-network")
             return api_get(f"/api/workspaces/{ws}/vitality")
@@ -2456,8 +2279,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/federation/nodes")
         case "coherence_belief_profile":
             return api_get(f"/api/beliefs/{args['contributor_id']}")
-        case "coherence_cc_supply":
-            return api_get("/api/cc/supply")
         case "coherence_governance_requests":
             return api_get("/api/governance/change-requests", {"limit": args.get("limit", 20)})
         case "coherence_get_field_story":

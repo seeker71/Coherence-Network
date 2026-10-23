@@ -10,11 +10,9 @@ A2A) can ask:
   - content integrity (asset_verification)
   - IP registration state (ip_status)
   - per-asset evidence with applicable multiplier (evidence_for_asset)
-  - recent settlement batches (settlement_batches)
-  - settlement for a specific date (settlement_for_date)
   - aggregate render-event analytics (asset_analytics)
 
-Write paths (asset registration, evidence submission, settlement run)
+Write paths (asset registration, evidence submission)
 are deliberately not exposed via MCP — those are state changes that
 warrant explicit HTTP intent.
 
@@ -55,13 +53,11 @@ def advanced_profile(monkeypatch):
     monkeypatch.setitem(mcp_server._SETTINGS, "capability_profile", "advanced")
 
 
-SEVEN_STORY_PROTOCOL_TOOLS = {
+FIVE_STORY_PROTOCOL_TOOLS = {
     "coherence_asset_get",
     "coherence_asset_verification",
     "coherence_ip_status",
     "coherence_evidence_for_asset",
-    "coherence_settlement_batches",
-    "coherence_settlement_for_date",
     "coherence_asset_analytics",
 }
 
@@ -73,7 +69,7 @@ SEVEN_STORY_PROTOCOL_TOOLS = {
 
 def test_all_seven_story_protocol_tools_are_registered() -> None:
     """All seven story-protocol tools join the MCP surface."""
-    assert SEVEN_STORY_PROTOCOL_TOOLS <= set(mcp_server.TOOL_MAP)
+    assert FIVE_STORY_PROTOCOL_TOOLS <= set(mcp_server.TOOL_MAP)
 
 
 def test_asset_get_routes_to_assets_endpoint(monkeypatch) -> None:
@@ -197,52 +193,6 @@ def test_evidence_for_asset_routes_to_evidence_asset(monkeypatch) -> None:
 def test_evidence_for_asset_rejects_empty_asset_id() -> None:
     result = mcp_server.dispatch("coherence_evidence_for_asset", {})
     assert "error" in result
-
-
-def test_settlement_batches_routes_to_settlement(monkeypatch) -> None:
-    calls: list[tuple[str, dict | None]] = []
-
-    def fake_get(path: str, params: dict | None = None):
-        calls.append((path, params))
-        return []
-
-    monkeypatch.setattr(mcp_server, "api_get", fake_get)
-    result = mcp_server.dispatch("coherence_settlement_batches", {})
-    assert result == []
-    assert calls == [("/api/settlement", {"limit": 20})]
-
-
-def test_settlement_batches_respects_limit(monkeypatch) -> None:
-    calls: list[tuple[str, dict | None]] = []
-
-    def fake_get(path: str, params: dict | None = None):
-        calls.append((path, params))
-        return []
-
-    monkeypatch.setattr(mcp_server, "api_get", fake_get)
-    mcp_server.dispatch("coherence_settlement_batches", {"limit": 5})
-    assert calls == [("/api/settlement", {"limit": 5})]
-
-
-def test_settlement_for_date_routes_to_dated_path(monkeypatch) -> None:
-    calls: list[tuple[str, dict | None]] = []
-
-    def fake_get(path: str, params: dict | None = None):
-        calls.append((path, params))
-        return {"batch_date": "2026-05-24"}
-
-    monkeypatch.setattr(mcp_server, "api_get", fake_get)
-    result = mcp_server.dispatch(
-        "coherence_settlement_for_date", {"batch_date": "2026-05-24"}
-    )
-    assert result["batch_date"] == "2026-05-24"
-    assert calls == [("/api/settlement/2026-05-24", None)]
-
-
-def test_settlement_for_date_rejects_empty_date() -> None:
-    result = mcp_server.dispatch("coherence_settlement_for_date", {})
-    assert "error" in result
-    assert "batch_date" in result["error"]
 
 
 def test_asset_analytics_routes_to_render_events_analytics(monkeypatch) -> None:
@@ -382,41 +332,6 @@ async def test_evidence_for_asset_returns_submission_list(
     assert result.submissions[0].submitter_id == "contrib-alpha"
     # No verification yet, so multiplier is the baseline.
     assert result.cc_multiplier_applicable in {"1", "1.0", "1.00"}
-
-
-def test_settlement_for_date_returns_specific_batch(
-    isolated_story_protocol_db,
-) -> None:
-    """Store a batch for a date; confirm the dated GET reads it back."""
-    from app.models.settlement import SettlementBatch
-    from app.services import settlement_service
-
-    target_date = date(2026, 5, 24)
-    batch = SettlementBatch(batch_date=target_date)
-    settlement_service.store_batch(batch)
-
-    # The router is a thin wrapper around settlement_service.get_batch.
-    fetched = settlement_service.get_batch(target_date)
-    assert fetched is not None
-    assert fetched.batch_date == target_date
-
-
-def test_settlement_batches_returns_recent_most_recent_first(
-    isolated_story_protocol_db,
-) -> None:
-    """Store batches across three dates; list_batches returns them
-    most-recent-first."""
-    from app.models.settlement import SettlementBatch
-    from app.services import settlement_service
-
-    today = date(2026, 5, 24)
-    for d in (today, today - timedelta(days=1), today - timedelta(days=2)):
-        settlement_service.store_batch(SettlementBatch(batch_date=d))
-
-    batches = settlement_service.list_batches()
-    assert len(batches) >= 3
-    dates = [b.batch_date for b in batches[:3]]
-    assert dates == sorted(dates, reverse=True)
 
 
 def test_ip_status_reflects_register_then_query_flow(

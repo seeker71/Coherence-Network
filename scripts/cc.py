@@ -20,14 +20,6 @@ Usage:
   cc coherence                Show coherence score breakdown
   cc run                      Start local node runner
 
-  cc members <workspace_id>              List workspace members
-  cc invite <ws_id> <contributor> [--role member]  Invite to workspace
-  cc my-workspaces <contributor_id>      List contributor workspaces
-
-  cc send <from> <to> <body> [--subject] Send a direct message
-  cc inbox <contributor_id>              Show inbox
-  cc thread <contributor_a> <contributor_b>  Show message thread
-
   cc activity <workspace_id> [--limit 20]  Show workspace activity feed
 
   cc projects <workspace_id>             List workspace projects
@@ -39,7 +31,6 @@ Usage:
   cc federation                          Show federation nodes
   cc beliefs [contributor_id]            Show belief profile or network stats
   cc peers <contributor_id>              Find resonant peers
-  cc cc-supply                           Show CC economics
   cc governance [--limit 20]             List governance change requests
 
   cc frequency <concept_id>              Score concept for living vs institutional frequency
@@ -310,110 +301,7 @@ def cmd_run(args):
 
 # ── Team Membership ──────────────────────────────────────────────────
 
-def cmd_members(args):
-    """List members of a workspace."""
-    data = _api("GET", f"/api/workspaces/{args.workspace_id}/members")
-    if not data:
-        print("No members found")
-        return
-    members = data if isinstance(data, list) else data.get("members", [])
-    if not members:
-        print("No members found")
-        return
-    for m in members:
-        cid = m.get("contributor_id", "?")
-        role = m.get("role", "?")
-        status = m.get("status", "?")
-        joined = m.get("joined_at", "")
-        print(f"  {cid:30s}  role={role:10s}  status={status:10s}  joined={joined}")
-    print(f"\n{len(members)} members")
-
-
-def cmd_invite(args):
-    """Invite contributor to workspace."""
-    body = {"contributor_id": args.contributor_id, "role": args.role}
-    result = _api("POST", f"/api/workspaces/{args.workspace_id}/invite", body)
-    if result:
-        print(f"Invited {args.contributor_id} to workspace {args.workspace_id} as {args.role}")
-    else:
-        print("Failed to send invite")
-
-
-def cmd_my_workspaces(args):
-    """List workspaces contributor belongs to."""
-    data = _api("GET", f"/api/contributors/{args.contributor_id}/workspaces")
-    if not data:
-        print("No workspaces found")
-        return
-    workspaces = data if isinstance(data, list) else data.get("workspaces", [])
-    if not workspaces:
-        print("No workspaces found")
-        return
-    for w in workspaces:
-        wid = w.get("id", w.get("workspace_id", "?"))
-        name = w.get("name", "?")
-        role = w.get("role", "")
-        print(f"  {wid:30s}  {name:30s}  role={role}")
-    print(f"\n{len(workspaces)} workspaces")
-
-
 # ── Messaging ────────────────────────────────────────────────────────
-
-def cmd_send(args):
-    """Send a direct message."""
-    body = {
-        "from_contributor_id": args.sender,
-        "to_contributor_id": args.recipient,
-        "body": args.body,
-        "subject": args.subject or "",
-    }
-    result = _api("POST", "/api/messages", body)
-    if result:
-        print(f"Message sent to {args.recipient}")
-    else:
-        print("Failed to send message")
-
-
-def cmd_inbox(args):
-    """Show inbox for a contributor."""
-    data = _api("GET", f"/api/messages/inbox/{args.contributor_id}")
-    if not data:
-        print("Inbox empty")
-        return
-    messages = data if isinstance(data, list) else data.get("messages", [])
-    if not messages:
-        print("Inbox empty")
-        return
-    for m in messages:
-        sender = m.get("from_contributor_id", m.get("from", "?"))
-        subject = m.get("subject", "(no subject)")
-        body_preview = (m.get("body", "") or "")[:60]
-        read = "read" if m.get("read") else "unread"
-        ts = m.get("created_at", m.get("timestamp", ""))
-        print(f"  [{read:6s}] {sender:20s}  {subject:30s}  {body_preview}")
-        if ts:
-            print(f"           {ts}")
-    print(f"\n{len(messages)} messages")
-
-
-def cmd_thread(args):
-    """Show message thread between two contributors."""
-    data = _api("GET", f"/api/messages/thread/{args.contributor_a}/{args.contributor_b}")
-    if not data:
-        print("No messages in thread")
-        return
-    messages = data if isinstance(data, list) else data.get("items", data.get("messages", []))
-    if not messages:
-        print("No messages in thread")
-        return
-    for m in messages:
-        sender = m.get("from_contributor_id", m.get("from", "?"))
-        body = m.get("body", "")
-        ts = m.get("created_at", m.get("timestamp", ""))
-        print(f"  [{ts}] {sender}:")
-        print(f"    {body}")
-    print(f"\n{len(messages)} messages in thread")
-
 
 # ── Activity ─────────────────────────────────────────────────────────
 
@@ -499,61 +387,6 @@ def cmd_create_project(args):
 
 
 # ── Discovery / Living Network ────────────────────────────────────────
-
-def cmd_discover(args):
-    data = _api("GET", f"/api/discover/{args.contributor_id}?limit={args.limit}")
-    if not data:
-        print("No discovery feed available")
-        return
-    items = data.get("items", []) if isinstance(data, dict) else data
-    if not items:
-        print("Your feed is quiet — try creating ideas or setting your belief profile.")
-        return
-    profile = data.get("profile_summary", {}) if isinstance(data, dict) else {}
-    if profile:
-        axes = profile.get("top_axes", [])
-        if axes:
-            print(f"  Your vibe: {', '.join(axes[:3])}")
-    print()
-    for item in items:
-        kind = item.get("kind", "?")
-        icons = {"resonant_idea": "💡", "resonant_peer": "🤝", "cross_domain": "🌉", "resonant_news": "📰", "growth_edge": "🌱"}
-        icon = icons.get(kind, "✨")
-        score = item.get("score", 0)
-        title = item.get("title", "")[:60]
-        reason = item.get("reason", "")[:80]
-        print(f"  {icon} [{score:.0%}] {title}")
-        if reason:
-            print(f"      {reason}")
-        print()
-
-
-def cmd_constellation(args):
-    data = _api("GET", f"/api/constellation?max_nodes={args.max_nodes}")
-    if not data:
-        print("No constellation data available")
-        return
-    nodes = data.get("nodes", [])
-    edges = data.get("edges", [])
-    stats = data.get("stats", {})
-    print(f"  Constellation: {len(nodes)} nodes, {len(edges)} edges")
-    if stats:
-        print(f"  Clusters: {stats.get('clusters', '?')}")
-    print()
-    by_type = {}
-    for n in nodes:
-        t = n.get("type", "?")
-        by_type[t] = by_type.get(t, 0) + 1
-    for t, c in sorted(by_type.items(), key=lambda x: -x[1]):
-        icons = {"idea": "💡", "contributor": "👤", "concept": "🔮"}
-        print(f"  {icons.get(t, '•')} {t}: {c}")
-    print()
-    brightest = sorted(nodes, key=lambda n: n.get("brightness", 0), reverse=True)[:5]
-    if brightest:
-        print("  Brightest stars:")
-        for n in brightest:
-            print(f"    ✦ {n.get('name', '?')[:50]} ({n.get('type', '?')}, brightness={n.get('brightness', 0):.0%})")
-
 
 def cmd_vitality(args):
     data = _api("GET", f"/api/workspaces/{args.workspace_id}/vitality")
@@ -727,26 +560,6 @@ def cmd_peers(args):
 
 # ── CC Supply ───────────────────────────────────────────────────────────
 
-def cmd_cc_supply(_args):
-    """Show CC economics / token supply."""
-    data = _api("GET", "/api/cc/supply")
-    if not data:
-        print("CC supply data not available")
-        return
-    if isinstance(data, dict):
-        total = data.get("total_minted", "?")
-        outstanding = data.get("outstanding", "?")
-        coherence = data.get("coherence_score", "?")
-        print(f"  Total minted:    {total}")
-        print(f"  Outstanding:     {outstanding}")
-        print(f"  Coherence score: {coherence}")
-        for key, val in data.items():
-            if key not in ("total_minted", "outstanding", "coherence_score"):
-                print(f"  {key}: {val}")
-    else:
-        print(f"  {data}")
-
-
 # ── Governance ──────────────────────────────────────────────────────────
 
 def cmd_governance(args):
@@ -772,55 +585,6 @@ def cmd_governance(args):
 
 
 # ── Proprioception ───────────────────────────��────────────────────────
-
-def cmd_sense(args):
-    """Auto-sense system state (proprioception)."""
-    if args.apply:
-        data = _api("POST", "/api/proprioception/apply")
-    else:
-        data = _api("GET", "/api/proprioception")
-    if not data:
-        print("Could not run proprioception scan")
-        return
-    report = data.get("report", data) if isinstance(data, dict) else data
-    if not isinstance(report, dict):
-        print(f"  {report}")
-        return
-
-    health = report.get("health", "?")
-    icons = {"strong": "OK", "growing": "~~", "needs_attention": "!!"}
-    print(f"  [{icons.get(health, '?')}] Health: {health}")
-
-    specs = report.get("specs", {})
-    print(f"  Specs: {specs.get('sensed', 0)} sensed, {specs.get('with_source', 0)} with source, {specs.get('missing_source', 0)} missing source")
-    if specs.get("updated", 0) > 0:
-        print(f"    {specs['updated']} spec value updates suggested")
-
-    ideas = report.get("ideas", {})
-    print(f"  Ideas: {ideas.get('sensed', 0)} sensed, {ideas.get('advanced', 0)} stage suggestions")
-    for sug in ideas.get("suggestions", [])[:5]:
-        print(f"    {sug.get('idea_id', '?')}: {sug.get('current_stage', '?')} -> {sug.get('suggested_stage', '?')} ({sug.get('reason', '')})")
-
-    endpoints = report.get("endpoints", {})
-    print(f"  Endpoints: {endpoints.get('alive', 0)}/{endpoints.get('checked', 0)} alive")
-
-    if args.apply and "applied_specs" in data:
-        print(f"\n  Applied: {data['applied_specs']} spec updates, {data['applied_ideas']} idea advances")
-
-
-def cmd_notify_bridges(_args):
-    """Create activity events for new resonance bridges."""
-    data = _api("POST", "/api/discover/notify-bridges")
-    if not data:
-        print("Could not notify bridges")
-        return
-    count = data.get("new_bridges_notified", 0)
-    ws = data.get("workspace_id", "?")
-    if count > 0:
-        print(f"  {count} new bridge notifications created in workspace {ws}")
-    else:
-        print(f"  No new bridges to notify in workspace {ws}")
-
 
 # ── Breath ─────────────────────────────────────────────────────────────
 
@@ -1438,45 +1202,12 @@ def main():
     p_run.add_argument("--loop", action="store_true")
     p_run.add_argument("--interval", type=int, default=120)
 
-    # ── Team Membership ──
-    p_members = sub.add_parser("members", help="List members of a workspace")
-    p_members.add_argument("workspace_id")
-
-    p_invite = sub.add_parser("invite", help="Invite contributor to workspace")
-    p_invite.add_argument("workspace_id")
-    p_invite.add_argument("contributor_id")
-    p_invite.add_argument("--role", default="member")
-
-    p_myws = sub.add_parser("my-workspaces", help="List workspaces for a contributor")
-    p_myws.add_argument("contributor_id")
-
-    # ── Messaging ──
-    p_send = sub.add_parser("send", help="Send a direct message")
-    p_send.add_argument("sender", metavar="from")
-    p_send.add_argument("recipient", metavar="to")
-    p_send.add_argument("body")
-    p_send.add_argument("--subject", default="")
-
-    p_inbox = sub.add_parser("inbox", help="Show inbox")
-    p_inbox.add_argument("contributor_id")
-
-    p_thread = sub.add_parser("thread", help="Show thread between two contributors")
-    p_thread.add_argument("contributor_a")
-    p_thread.add_argument("contributor_b")
-
     # ── Activity ──
     p_activity = sub.add_parser("activity", help="Show workspace activity feed")
     p_activity.add_argument("workspace_id")
     p_activity.add_argument("--limit", type=int, default=20)
 
     # ── Discovery / Living Network ──
-    p_discover = sub.add_parser("discover", help="Serendipity feed — what resonates with you")
-    p_discover.add_argument("contributor_id", nargs="?", default="default-contributor")
-    p_discover.add_argument("--limit", type=int, default=15)
-
-    p_constellation = sub.add_parser("constellation", help="Network visualization — nodes and edges")
-    p_constellation.add_argument("--max-nodes", type=int, default=50)
-
     p_vitality = sub.add_parser("vitality", help="Workspace health as living-system signals")
     p_vitality.add_argument("workspace_id", nargs="?", default="coherence-network")
 
@@ -1514,9 +1245,6 @@ def main():
     p_peers = sub.add_parser("peers", help="Find resonant peers")
     p_peers.add_argument("contributor_id")
 
-    # ── CC Supply ──
-    sub.add_parser("cc-supply", help="Show CC economics / token supply")
-
     # ── Governance ──
     p_governance = sub.add_parser("governance", help="List governance change requests")
     p_governance.add_argument("--limit", type=int, default=20)
@@ -1527,13 +1255,6 @@ def main():
 
     # ── Flow ──
     sub.add_parser("flow", help="Show contribution flow metrics")
-
-    # ── Proprioception ──
-    p_sense = sub.add_parser("sense", help="Auto-sense system state (proprioception)")
-    p_sense.add_argument("--apply", action="store_true", help="Apply suggested updates")
-
-    # ── Bridge Notifications ──
-    sub.add_parser("notify-bridges", help="Create activity events for new resonance bridges")
 
     # ── Config ──
     sub.add_parser("config", help="Show editable config (~/.coherence-network/config.json)")
@@ -1600,26 +1321,19 @@ def main():
         "share": cmd_share, "ask": cmd_ask, "stake": cmd_stake,
         "tasks": cmd_tasks, "nodes": cmd_nodes, "specs": cmd_specs,
         "contribute": cmd_contribute, "coherence": cmd_coherence, "run": cmd_run,
-        # Team Membership
-        "members": cmd_members, "invite": cmd_invite, "my-workspaces": cmd_my_workspaces,
-        # Messaging
-        "send": cmd_send, "inbox": cmd_inbox, "thread": cmd_thread,
         # Activity
         "activity": cmd_activity,
         # Projects
         "projects": cmd_projects, "project": cmd_project, "create-project": cmd_create_project,
         # Discovery / Living Network
-        "discover": cmd_discover, "constellation": cmd_constellation,
         "vitality": cmd_vitality, "resonate": cmd_resonate,
-        # News / Federation / Beliefs / Peers / CC Supply / Governance
+        # News / Federation / Beliefs / Peers / Governance
         "news": cmd_news, "news-resonance": cmd_news_resonance,
         "federation": cmd_federation, "beliefs": cmd_beliefs,
-        "peers": cmd_peers, "cc-supply": cmd_cc_supply,
+        "peers": cmd_peers,
         "governance": cmd_governance,
         # Breath + Flow
         "breath": cmd_breath, "flow": cmd_flow,
-        # Proprioception + Bridge Notifications
-        "sense": cmd_sense, "notify-bridges": cmd_notify_bridges,
         # Stories (Living Collective)
         "stories": cmd_stories, "story": cmd_story, "story-update": cmd_story_update,
         "visuals-generate": cmd_visuals_generate,

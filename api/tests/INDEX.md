@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 195
+**Total files**: 183
 
 | File | Purpose |
 |---|---|
@@ -34,9 +34,7 @@
 | [test_automation_usage_api.py](test_automation_usage_api.py) | _no top-of-file purpose_ |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
-| [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
 | [test_canonical_words.py](test_canonical_words.py) | Tests for the canonical-word lexicon interner. |
-| [test_cc_economics.py](test_cc_economics.py) | Tests for CC Economics and Value Coherence. |
 | [test_cc_scoring.py](test_cc_scoring.py) | Tests for the coherence-algorithm-spec (specs/coherence-algorithm-spec.md). |
 | [test_check_generated_vision_assets.py](test_check_generated_vision_assets.py) | _no top-of-file purpose_ |
 | [test_check_pr_followthrough.py](test_check_pr_followthrough.py) | _no top-of-file purpose_ |
@@ -47,15 +45,12 @@
 | [test_contribution_cost_service.py](test_contribution_cost_service.py) | Tests for contribution_cost_service (spec: normalize-github-commit-cost-estimation). |
 | [test_contribution_flow.py](test_contribution_flow.py) | Tests for Contribution as Flow — resonance-weighted contribution scoring. |
 | [test_contributions.py](test_contributions.py) | Tests for the contributions-api spec (specs/contributions-api.md). |
-| [test_contributor_journey.py](test_contributor_journey.py) | Acceptance tests for spec: contributor-journey (idea: contributor-experience). |
 | [test_contributor_key_store.py](test_contributor_key_store.py) | DB-backed contributor API key store. |
-| [test_creator_economy.py](test_creator_economy.py) | Tests for creator-economy endpoints — spec R1, R2, R3, R4. |
 | [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_db_contention_probe.py](test_db_contention_probe.py) | Stone: the DB write-lane contention leading-indicator (2026-07-02). |
 | [test_deployment_observer_oidc.py](test_deployment_observer_oidc.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
-| [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
@@ -79,12 +74,8 @@
 | [test_flow_activity.py](test_flow_activity.py) | Flow-centric tests for workspace activity feeds. |
 | [test_flow_agent_lifecycle.py](test_flow_agent_lifecycle.py) | Flow-centric tests for agent task lifecycle. |
 | [test_flow_cli.py](test_flow_cli.py) | Flow-centric CLI tests: command registration, API coverage, API contract, and smoke tests. |
-| [test_flow_constellation.py](test_flow_constellation.py) | Flow-centric tests for the Constellation View API. |
 | [test_flow_core_api.py](test_flow_core_api.py) | Flow-centric integration tests for core API endpoints. |
-| [test_flow_discovery.py](test_flow_discovery.py) | Flow-centric integration tests for the Serendipity Discovery feed. |
 | [test_flow_enforcement.py](test_flow_enforcement.py) | Enforcement gate tests — file scope, task card validation, |
-| [test_flow_memberships.py](test_flow_memberships.py) | Flow-centric tests for workspace membership (team edges). |
-| [test_flow_messages.py](test_flow_messages.py) | Flow-centric tests for contributor messaging (Phase 3). |
 | [test_flow_multilingual.py](test_flow_multilingual.py) | Flow-centric tests for the multilingual platform. |
 | [test_flow_personal_feed.py](test_flow_personal_feed.py) | Flow tests for the personal feed — your corner of the organism. |
 | [test_flow_pipeline.py](test_flow_pipeline.py) | Flow-centric integration tests for pipeline phase advancement. |
@@ -116,7 +107,6 @@
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_intern_count_stone.py](test_intern_count_stone.py) | Stones for the substrate write-lane wedge (2026-07-02). |
-| [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
 | [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Production execution authority checks for c-bootstrapped fkwu. |
@@ -132,7 +122,6 @@
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
-| [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
 | [test_peer_resonance_service.py](test_peer_resonance_service.py) | _no top-of-file purpose_ |
 | [test_permanent_storage.py](test_permanent_storage.py) | Flow tests for permanent_storage_service — story-protocol-integration R3, R10. |
 | [test_persistence_contract_config.py](test_persistence_contract_config.py) | _no top-of-file purpose_ |
@@ -140,7 +129,6 @@
 | [test_portfolio_governance.py](test_portfolio_governance.py) | Acceptance tests for spec: portfolio-governance-health (idea: portfolio-governance). |
 | [test_presence_invitation.py](test_presence_invitation.py) | Acceptance tests for the graph-backed Presence invitation surface. |
 | [test_prompt_ab_roi.py](test_prompt_ab_roi.py) | Tests for prompt_ab_roi_service (spec: prompt-ab-roi-measurement). |
-| [test_proprioception.py](test_proprioception.py) | Flow-centric integration tests for the Proprioception (auto-sensing) feature. |
 | [test_pytest_suite_budget.py](test_pytest_suite_budget.py) | _no top-of-file purpose_ |
 | [test_read_tracking.py](test_read_tracking.py) | Flow tests for read_tracking_service — story-protocol-integration R5 + R6. |
 | [test_read_tracking_lineage_backend.py](test_read_tracking_lineage_backend.py) | Lineage-backend tests for read_tracking_service — story-protocol-integration R5. |
@@ -158,7 +146,7 @@
 | [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
 | [test_session_greeting.py](test_session_greeting.py) | Session greeting — detect agent + human, greet with memory, across all agents. |
-| [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
+| [test_settlement_flow.py](test_settlement_flow.py) | Tests for the settlement service — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
 | [test_spec_quality_advisory.py](test_spec_quality_advisory.py) | _no top-of-file purpose_ |

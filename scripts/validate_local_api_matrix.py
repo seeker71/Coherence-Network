@@ -49,7 +49,6 @@ API_CONTRACTS: list[EndpointContract] = [
     EndpointContract("contributions", "/api/contributions", lambda body: _is_list_payload(body, "items"), "contributions list"),
     EndpointContract("assets", "/api/assets", lambda body: _is_list_payload(body, "items"), "assets list"),
     EndpointContract("spec_registry", "/api/spec-registry", lambda body: isinstance(body, list), "spec registry list"),
-    EndpointContract("marketplace", "/api/marketplace/browse?page=1&page_size=10", lambda body: _has_keys(body, "listings", "total", "page", "page_size"), "marketplace browse"),
     EndpointContract("graph_nodes", "/api/graph/nodes", lambda body: _has_keys(body, "items", "total", "limit", "offset"), "graph nodes list"),
     EndpointContract("graph_edges", "/api/edges", lambda body: _has_keys(body, "items", "total", "limit", "offset"), "graph edges list"),
     EndpointContract("federation_nodes", "/api/federation/nodes", lambda body: isinstance(body, list), "federation nodes list"),
@@ -67,7 +66,6 @@ API_CONTRACTS: list[EndpointContract] = [
     EndpointContract("friction_events", "/api/friction/events?limit=20", lambda body: _is_list_payload(body, "items"), "friction events"),
     EndpointContract("friction_entry_points", "/api/friction/entry-points?window_days=7&limit=25", lambda body: _has_keys(body, "entry_points", "total_entry_points", "open_entry_points"), "friction entry points"),
     EndpointContract("identity_providers", "/api/identity/providers", lambda body: _has_keys(body, "categories"), "identity providers"),
-    EndpointContract("onboarding_roi", "/api/onboarding/roi", lambda body: _has_keys(body, "handle_registrations"), "onboarding ROI"),
     EndpointContract("inventory_lineage", "/api/inventory/system-lineage?runtime_window_seconds=3600", lambda body: _has_keys(body, "generated_at", "specs", "ideas", "runtime"), "system lineage"),
     EndpointContract("runtime_endpoint_summary", "/api/runtime/endpoints/summary?seconds=3600", lambda body: _has_keys(body, "window_seconds", "endpoints"), "runtime endpoint summary"),
 ]

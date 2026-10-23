@@ -5,8 +5,8 @@ import Link from "next/link";
  *
  * The network has multiple ways to look at "who is here": the
  * directory (every presence by kind), contributors (paged by
- * registration), creators (through the contribution economy), peers
- * (resonance-matched to your frequency), the guided presence walk.
+ * registration), peers (resonance-matched to your frequency), the
+ * guided presence walk.
  * Each is a different lens on the same field, not a duplicate.
  *
  * Per Urs's directive on the doorway-walk: these lenses stay; what
@@ -25,7 +25,6 @@ export type LensKey =
   // identifier — they still highlight the directory lens correctly.
   | "people"
   | "contributors"
-  | "creators"
   | "peers"
   | "presence-walk";
 
@@ -46,12 +45,6 @@ const LENSES: Array<{
     href: "/contributors",
     label: "Contributors",
     desc: "Paged through the body's registration",
-  },
-  {
-    key: "creators",
-    href: "/creators",
-    label: "Creators",
-    desc: "Through the contribution-economy lens",
   },
   {
     key: "peers",

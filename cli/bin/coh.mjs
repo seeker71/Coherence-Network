@@ -76,7 +76,6 @@ import { listChangeRequests, showChangeRequest, vote, propose } from "../lib/com
 import { handleFederation } from "../lib/commands/federation.mjs";
 import { listServices, showService, showServicesHealth, showServicesDeps } from "../lib/commands/services.mjs";
 import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
-import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
 import { handleRest } from "../lib/commands/rest.mjs";
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
@@ -104,7 +103,6 @@ import {
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { listConcepts, showConcept, linkConcepts } from "../lib/commands/concepts.mjs";
-import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
    showConfig as difConfig, setBaseUrl as difSetBaseUrl,
    whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -114,11 +112,10 @@ import {
    showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
    showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
-import { marketplacePublish, marketplaceBrowse, marketplaceFork } from "../lib/commands/marketplace.mjs";
 import { listGraphNodes, createGraphNode, listGraphEdges, createGraphEdge, getGraphNeighbors } from "../lib/commands/graph.mjs";
-import { onboardingRegister, onboardingSession, onboardingUpgrade } from "../lib/commands/onboarding.mjs";
 import { credentialsAdd, credentialsList, credentialsRemove } from "../lib/commands/credentials.mjs";
 import { guide } from "../lib/commands/guide.mjs";
+import { showProviderStats } from "../lib/commands/providers.mjs";
 import { runFocusCommand } from "../lib/commands/focus.mjs";
 import { runPeersCommand } from "../lib/commands/peers.mjs";
 import { runCollabCommand } from "../lib/commands/collab.mjs";
@@ -269,14 +266,12 @@ const COMMANDS = {
    federation:    () => handleFederation(args),
    governance:    () => handleGovernance(args),
    services:      () => handleServices(args),
-   friction:      () => handleFriction(args),
    providers:     () => handleProviders(args),
+   friction:      () => handleFriction(args),
    rest:          () => handleRest(args),
    trace:         () => handleTrace(args),   diag:          () => handleDiag(args),
    dif:           () => handleDif(args),
-   marketplace:   () => handleMarketplace(args),
    graph:         () => handleGraph(args),
-   onboarding:    () => handleOnboarding(args),
    credentials:   () => handleCredentials(args),
    guide:         () => guide(args),
   focus:         () => runFocusCommand(args),
@@ -308,8 +303,6 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   concepts:      () => listConcepts(args),
   concept:       () => handleConcept(args),
-  nearby:        () => showNearby(args),
-  location:      () => handleLocation(args),
   portfolio:     () => showPortfolio(),
   workspace:     () => handleWorkspace(args),
   workspaces:    () => handleWorkspace(["list", ...args]),
@@ -451,20 +444,17 @@ async function handleServices(args) {
   }
 }
 
+async function handleProviders(args) {
+  if (args[0] === "stats") return showProviderStats();
+  console.log("Usage: coh providers stats");
+}
+
 async function handleFriction(args) {
   const sub = args[0];
   switch (sub) {
     case "events":     return listFrictionEvents(args.slice(1));
     case "categories": return showFrictionCategories();
     default:           return showFrictionReport();
-  }
-}
-
-async function handleProviders(args) {
-  const sub = args[0];
-  switch (sub) {
-    case "stats": return showProviderStats();
-    default:      return listProviders();
   }
 }
 
@@ -559,20 +549,6 @@ async function handleAuth(args) {
    }
 }
 
-async function handleMarketplace(args) {
-   const sub = args[0];
-   switch (sub) {
-      case "publish": return marketplacePublish(args.slice(1));
-      case "browse":  return marketplaceBrowse(args.slice(1));
-      case "fork":    return marketplaceFork(args.slice(1));
-      default:
-         console.log("Usage: coh marketplace <publish|browse|fork>");
-         console.log("  coh marketplace publish --idea-id <id> --tags <tags> --author <name>");
-         console.log("  coh marketplace browse --page <n> --sort <recent|popular|value>");
-         console.log("  coh marketplace fork --listing-id <id> --forker-id <id>");
-   }
-}
-
 async function handleGraph(args) {
    const sub = args[0];
    switch (sub) {
@@ -585,17 +561,6 @@ async function handleGraph(args) {
          console.log("  coh graph edges list|create|neighbors");
          console.log("  coh graph neighbors --node-id <id>");
    }
-}
-
-async function handleOnboarding(args) {
-   const sub = args[0];
-   switch (sub) {
-      case "register": return onboardingRegister(args.slice(1));
-      case "session":  return onboardingSession(args.slice(1));
-      case "upgrade":  return onboardingUpgrade(args.slice(1));
-      default:
-         console.log("Usage: coh onboarding <register|session|upgrade>");
-  }
 }
 
 async function handleCredentials(args) {
@@ -832,8 +797,7 @@ function showHelp() {
   friction categories     Friction categories
 
 \x1b[1m${t("help.sectionProviders")}\x1b[0m
-  providers               List providers
-  providers stats         Provider statistics
+  providers stats         Provider statistics (federation node stats)
 
 \x1b[1m${t("help.sectionTraceability")}\x1b[0m
   trace                   Traceability overview
@@ -856,19 +820,9 @@ function showHelp() {
   dif config              Show DIF configuration
   dif smoke               Run DIF smoke test
 
-   \x1b[1mMarketplace:\x1b[0m
-   marketplace publish     Publish an idea to the cross-instance marketplace
-   marketplace browse      Browse marketplace listings
-   marketplace fork        Fork a marketplace listing
-
    \x1b[1mGraph:\x1b[0m
    graph nodes             Manage universal graph nodes (list, create)
    graph edges             Manage universal graph edges (list, create, neighbors)
-
-   \x1b[1mOnboarding:\x1b[0m
-   onboarding register     Register a new contributor (Trust-on-First-Use)
-   onboarding session      Get contributor profile from session token
-   onboarding upgrade      Upgrade trust level to verified (stub)
 
 \x1b[1m${t("help.sectionGlobalFlags")}\x1b[0m
   --workspace <id>        Scope commands to a specific workspace (overrides config)

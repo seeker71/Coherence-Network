@@ -1,0 +1,143 @@
+{
+  "date": "2026-10-23",
+  "thread_branch": "claude/friendly-moore-86d078",
+  "commit_scope": "Third release pass over the Python compatibility host: the families held after #4133 and #4134 because the npm CLI, the MCP server or scripts/cc.py still named them. Fifteen router families (56 routes) leave with their exclusive services and models, their pages, the CLI commands, MCP tools and cc.py subcommands that existed only to call them, twelve test files and six specs; the app serves 641 routes instead of 697. Eleven held families stay with the reason named.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/services/federation_service.py",
+    "cli/bin/coh.mjs",
+    "mcp-server/coherence_mcp_server/server.py",
+    "scripts/cc.py"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "release-python-paths-3"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "decide",
+        "release"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Ground: app.main:app imported under the test configuration reads 697 routes on origin/main fa3e78487; each router family joined with the web (app, components, lib, middleware, messages, tests), CI/scripts, the kernel's apps and native_api.json, and experiments/cli/plugins/skills/mcp-server, matching whole route paths with parameters as wildcards and page paths as string literals, not only href attributes.",
+    "Released (router, exclusive service and model, test): marketplace (+marketplace_service, which only federation_service's uncalled receive_marketplace_payload imported; that seam leaves and _merge_warning_union regains the return the seam had stranded), creator_economy (+service, model, /creators pages, the asset proof page, the LensesNav entry), cc_economics (router only; the service stays as federation's economics gate and for cc_oracle/cc_staking), proprioception (+service), memberships (+model; membership_service stays for workspace_service), geolocation (+geocoding_service, model; geolocation_service stays for peers), investments (+model, InvestModal, the portfolio investments page, the InvestButton on IdeasListView; investment_service and time_pledge_service stay for the ideas stake dry-run), discord_votes (+service, model), messages (+service, model, /messages page), onboarding (+service), graph_questions (+zoom_service, model), settlement (router and /settlement page; settlement_service stays for the read-tracking bridge and the federation value-flow proofs), providers (router; providers.mjs keeps only the federation stats reader the ops dashboard uses), discovery (+service, model, /discover pages), constellation (+service, page).",
+    "Consumers that existed only to call released routes leave with them: CLI commands marketplace, geolocation (nearby, location), onboarding and the providers list; the guide's register step now goes through the kept one-shot onboard door (coh setup); MCP tools coherence_settlement_batches, coherence_settlement_for_date, coherence_list_workspace_members, coherence_invite_member, coherence_list_my_workspaces, coherence_send_message, coherence_get_inbox, coherence_discover, coherence_constellation, coherence_cc_supply; cc.py subcommands members, invite, my-workspaces, send, inbox, thread, discover, constellation, cc-supply, sense, notify-bridges; validate_local_api_matrix loses the marketplace and onboarding ROI contracts.",
+    "Kept with reason: practice (the come-in door and the one-sheet's six locale texts link the daily practice), mcp_remote (the public-dialogue connector door, spec public-dialogue-cpu-organ active with its proof bands), deployment_observer (a reusable OIDC-pinned workflow callable from outside the repository; its service feeds substrate's native runtime observation and native_health_observation.bml reads its challenge table), household (the Hati Suci hub page reads twenty of its routes), gatherings and places (presence components, MePage met-at, the lineage scripts), friction (usage FrictionSection, diagnostics, page_context_links, the matrix validator), entity_views (scripts/sync_kb_to_db.py posts translated idea views), beliefs (peers resonance reads belief profiles through routers/peers), governance (the contribute page's change-request flow, six locales' texts, the MCP tool registry), verification (vision/economy LiveProof, join, profile), render_events and renderers (read_tracking_service and render_attribution_service write the render-events store the settlement proofs read). The grocery ledger is a living surface and was not a candidate.",
+    "Tests: twelve files leave (test_creator_economy, test_cc_economics, test_proprioception, test_flow_memberships, test_investments, test_discord_votes_heard, test_flow_messages, test_contributor_journey, test_onboarding, test_flow_discovery, test_bridge_notifications, test_flow_constellation); test_settlement_flow keeps its eight service claims; test_story_protocol_e2e runs settlement through the service the way the released door did; test_governance_change_flow, test_portfolio_governance, test_flow_cli, test_flow_core_api and test_knowledge_resonance lose only the claims on released routes; tests/core_suite.txt follows. mcp-server/tests/test_story_protocol_tools keeps five story-protocol tools.",
+    "Web: pages marketplace, creators (+submit), assets/[asset_id]/proof, cc, teams, messages, portfolio/investments, settlement, discover (+resonance), constellation leave with InvestModal; activity, projects, coherence, practice, vitality, profile, news, peers, federation and beliefs lose only the links that pointed at them; the practice.linkCC and federation.linkConstellation keys leave six locales; the e2e page lists and page-data-source follow. Specs retired: contributor-journey, contributor-onboarding-and-governed-change-flow, identity-driven-onboarding-tofu, investment-ux-stake-cc-on-ideas, creator-economy-promotion, creator-resonance-report (its other sources had already left); knowledge-resonance-engine, external-presence-bots-and-news, story-protocol-integration, cc-economics-and-value-coherence and portfolio-governance-health lose the lines that named released files or tests. Indexes regenerated.",
+    "Proof: app.main imports with 641 routes; the AST importer scan over api/app, api/tests, scripts and mcp-server finds no importer of any removed module; API suite green locally (see local_validation); mcp-server tests 139 passed; web npx tsc --noEmit passes and vitest 153 passed; generate_repo_indexes --check and validate_workflow_references clean."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "app.main imports with 641 routes; API suite 365 passed; mcp-server 139 passed; web tsc passes; vitest 153 passed; repo indexes and workflow references clean."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite and the web build and tests."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "After the merge rolls out: /api/ping, the web root and https://app.hati.earth/ answer 200; a released route answers 404; docker logs coherence-network-api-1 shows no traceback."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "56 routes and 13 web pages stop existing; every reached route and page answers as before; the Hati Suci grocery ledger and hub keep answering.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/ping",
+      "curl -s -o /dev/null -w '%{http_code}' https://api.coherencycoin.com/api/constellation",
+      "curl -s -o /dev/null -w '%{http_code}' https://coherencycoin.com/",
+      "curl -s -o /dev/null -w '%{http_code}' https://app.hati.earth/"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check."
+  },
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "api/app/main.py",
+    "api/app/models/INDEX.md",
+    "api/app/routers/INDEX.md",
+    "api/app/services/INDEX.md",
+    "api/app/services/federation_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/core_suite.txt",
+    "api/tests/test_flow_cli.py",
+    "api/tests/test_flow_core_api.py",
+    "api/tests/test_governance_change_flow.py",
+    "api/tests/test_knowledge_resonance.py",
+    "api/tests/test_portfolio_governance.py",
+    "api/tests/test_settlement_flow.py",
+    "api/tests/test_story_protocol_e2e.py",
+    "cli/bin/coh.mjs",
+    "cli/lib/commands/guide.mjs",
+    "cli/lib/commands/providers.mjs",
+    "docs/field/urs/welcoming-doorway-walk.md",
+    "docs/system_audit/commit_evidence_2026-10-23_release_held_python_families.json",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/tests/test_story_protocol_tools.py",
+    "scripts/cc.py",
+    "scripts/validate_local_api_matrix.py",
+    "specs/INDEX.md",
+    "specs/cc-economics-and-value-coherence.md",
+    "specs/external-presence-bots-and-news.md",
+    "specs/knowledge-resonance-engine.md",
+    "specs/portfolio-governance-health.md",
+    "specs/retired/README.md",
+    "specs/retired/contributor-journey.md",
+    "specs/retired/contributor-onboarding-and-governed-change-flow.md",
+    "specs/retired/creator-economy-promotion.md",
+    "specs/retired/creator-resonance-report.md",
+    "specs/retired/identity-driven-onboarding-tofu.md",
+    "specs/retired/investment-ux-stake-cc-on-ideas.md",
+    "specs/story-protocol-integration.md",
+    "web/app/INDEX.md",
+    "web/app/activity/page.tsx",
+    "web/app/beliefs/page.tsx",
+    "web/app/coherence/page.tsx",
+    "web/app/federation/page.tsx",
+    "web/app/news/page.tsx",
+    "web/app/peers/page.tsx",
+    "web/app/practice/page.tsx",
+    "web/app/profile/[contributorId]/page.tsx",
+    "web/app/projects/page.tsx",
+    "web/app/vitality/page.tsx",
+    "web/components/INDEX.md",
+    "web/components/LensesNav.tsx",
+    "web/components/ideas/IdeasListView.tsx",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/pt-br.json",
+    "web/tests/e2e/content-rendering.spec.ts",
+    "web/tests/e2e/links.spec.ts",
+    "web/tests/e2e/non-technical-audit.spec.ts",
+    "web/tests/e2e/page-loads.spec.ts",
+    "web/tests/integration/page-data-source.test.ts"
+  ]
+}

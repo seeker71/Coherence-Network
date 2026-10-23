@@ -258,9 +258,6 @@ export default async function CoherencePage() {
           <Link href="/vitality" className="text-emerald-400 hover:underline">
             Vitality
           </Link>
-          <Link href="/cc" className="text-amber-400 hover:underline">
-            CC Economics
-          </Link>
           <Link href="/specs" className="text-purple-400 hover:underline">
             Specs
           </Link>

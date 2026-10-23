@@ -5,11 +5,8 @@ const PAGES_TO_CHECK = [
   '/ideas',
   '/specs',
   '/contributors',
-  '/teams',
-  '/discover',
   '/vitality',
   '/governance',
-  '/cc',
   '/ontology',
   '/concepts/garden',
 ];

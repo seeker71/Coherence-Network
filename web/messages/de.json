@@ -1094,7 +1094,6 @@
     "title": "Föderation",
     "lede": "Jede Instanz zeigt ihren eigenen Atem, benennt ihre eigenen Fähigkeiten und begegnet anderen als Gleichberechtigte. Dies ist ein Fenster in die gefühlte Geometrie — kein Kontrollpult.",
     "linkNodes": "Knoten",
-    "linkConstellation": "Konstellation",
     "linkVitality": "Vitalität",
     "exploreMore": "Mehr erkunden",
     "unknown": "unbekannt",
@@ -1830,7 +1829,6 @@
     "wholeRelatedLabel": "Verwandte Seiten",
     "linkVitality": "Vitalität",
     "linkCoherence": "Kohärenz",
-    "linkCC": "CC-Wirtschaft",
     "linkFlow": "Fluss"
   },
   "meWork": {

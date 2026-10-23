@@ -12,8 +12,6 @@ source:
     symbols: [get_cross_domain_pairs, find_resonant_ideas, compute_pair_resonance, get_resonance_proof]
   - file: api/app/services/accessible_ontology_service.py
     symbols: [create_concept, list_concepts, get_concept, patch_concept]
-  - file: api/app/services/discovery_service.py
-    symbols: [build_discovery_feed]
   - file: api/app/routers/resonance.py
     symbols: [get_cross_domain_resonances, get_resonance_for_idea, get_resonance_proof]
   - file: api/app/routers/beliefs.py
@@ -25,14 +23,12 @@ requirements:
   - Contributor belief profiles with 6 worldview axes
   - Cross-domain resonance discovery between ideas from different domains
   - Accessible ontology -- non-technical contributors can suggest/endorse concepts
-  - Serendipity discovery feed combining 5 resonance sources
   - Resonance proof endpoint showing network health
 done_when:
   - GET /api/concepts returns 184+ concepts
   - GET /api/resonance/cross-domain returns pairs with coherence scores
   - POST /api/beliefs/{id}/resonance/{idea_id} returns breakdown
   - GET /api/resonance/proof shows discovery health
-  - GET /api/discover/{contributor_id} returns personalized feed
   - All tests pass
   - 'file_exists("api/app/services/concept_service.py")'
   - 'symbol_in_file("api/app/services/concept_service.py", "list_concepts")'
@@ -58,8 +54,6 @@ done_when:
   - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "list_concepts")'
   - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "get_concept")'
   - 'symbol_in_file("api/app/services/accessible_ontology_service.py", "patch_concept")'
-  - 'file_exists("api/app/services/discovery_service.py")'
-  - 'symbol_in_file("api/app/services/discovery_service.py", "build_discovery_feed")'
   - 'file_exists("api/app/routers/resonance.py")'
   - 'symbol_in_file("api/app/routers/resonance.py", "get_cross_domain_resonances")'
   - 'symbol_in_file("api/app/routers/resonance.py", "get_resonance_for_idea")'
@@ -68,12 +62,12 @@ done_when:
   - 'symbol_in_file("api/app/routers/beliefs.py", "get_beliefs")'
   - 'symbol_in_file("api/app/routers/beliefs.py", "patch_beliefs")'
   - 'symbol_in_file("api/app/routers/beliefs.py", "get_resonance")'
-  - 'pytest_passes("api/tests/test_flow_discovery.py")'
-test: "python3 -m pytest api/tests/test_flow_discovery.py -q"
+  - 'pytest_passes("api/tests/test_knowledge_resonance.py")'
+test: "python3 -m pytest api/tests/test_knowledge_resonance.py -q"
 ---
 
 > **Parent idea**: [knowledge-and-resonance](../ideas/knowledge-and-resonance.md)
-> **Source**: [`api/app/services/concept_service.py`](../api/app/services/concept_service.py) | [`api/app/services/concept_resonance_kernel.py`](../api/app/services/concept_resonance_kernel.py) | [`api/app/services/belief_service.py`](../api/app/services/belief_service.py) | [`api/app/services/idea_resonance_service.py`](../api/app/services/idea_resonance_service.py) | [`api/app/services/accessible_ontology_service.py`](../api/app/services/accessible_ontology_service.py) | [`api/app/services/discovery_service.py`](../api/app/services/discovery_service.py) | [`api/app/routers/resonance.py`](../api/app/routers/resonance.py) | [`api/app/routers/beliefs.py`](../api/app/routers/beliefs.py)
+> **Source**: [`api/app/services/concept_service.py`](../api/app/services/concept_service.py) | [`api/app/services/concept_resonance_kernel.py`](../api/app/services/concept_resonance_kernel.py) | [`api/app/services/belief_service.py`](../api/app/services/belief_service.py) | [`api/app/services/idea_resonance_service.py`](../api/app/services/idea_resonance_service.py) | [`api/app/services/accessible_ontology_service.py`](../api/app/services/accessible_ontology_service.py) | [`api/app/routers/resonance.py`](../api/app/routers/resonance.py) | [`api/app/routers/beliefs.py`](../api/app/routers/beliefs.py)
 
 # Knowledge and Resonance Engine -- 184 Concepts, Harmonic Matching, Belief Translation
 
@@ -113,7 +107,7 @@ The knowledge and resonance engine spans eight source files implementing four la
 ## Acceptance Tests
 
 ```bash
-python3 -m pytest api/tests/test_flow_discovery.py -q
+python3 -m pytest api/tests/test_knowledge_resonance.py -q
 ```
 
 ## Out of Scope
@@ -135,13 +129,12 @@ python3 -m pytest api/tests/test_flow_discovery.py -q
 - `api/app/services/belief_service.py`
 - `api/app/services/idea_resonance_service.py`
 - `api/app/services/accessible_ontology_service.py`
-- `api/app/services/discovery_service.py`
 - `api/app/routers/resonance.py`
 - `api/app/routers/beliefs.py`
 
 ## Verification
 
 ```bash
-python3 -m pytest api/tests/test_flow_discovery.py -q
+python3 -m pytest api/tests/test_knowledge_resonance.py -q
 ```
 

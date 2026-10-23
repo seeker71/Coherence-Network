@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 234
+**Total files**: 224
 
 | File | Purpose |
 |---|---|
@@ -68,7 +68,6 @@
 | [concept_translation_service.py](concept_translation_service.py) | Concept Translation Service — cross-view-synthesis from Living Codex. |
 | [concept_voice_service.py](concept_voice_service.py) | Concept voices — community write-back on the Living Collective KB. |
 | [config_service.py](config_service.py) | Unified configuration service backed only by JSON config files. |
-| [constellation_service.py](constellation_service.py) | Constellation service — builds network graph data optimized for visualization. |
 | [content_indexer_service.py](content_indexer_service.py) | Content indexer service — auto-link nodes to repo files. |
 | [context_hygiene_service.py](context_hygiene_service.py) | Context-efficiency heuristics for agent tasks and operator surfaces. |
 | [contribution_cost_service.py](contribution_cost_service.py) | _no top-of-file purpose_ |
@@ -81,16 +80,13 @@
 | [contributor_recognition_service.py](contributor_recognition_service.py) | _no top-of-file purpose_ |
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
 | [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
-| [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
 | [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [deployment_observation.py](deployment_observation.py) | Persistent, content-bound deployment observations in the Form substrate. |
 | [deployment_observer_oidc.py](deployment_observer_oidc.py) | Verify GitHub Actions OIDC identity for the public deployment observer. |
 | [deployment_observer_service.py](deployment_observer_service.py) | One-time external deployment challenges and byte-bound observations. |
 | [dialogue_service.py](dialogue_service.py) | Persistent public dialogue cells attended by one native CPU worker. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
-| [discord_vote_service.py](discord_vote_service.py) | Service for Discord reaction votes on idea open questions (spec-164). |
 | [discovery_reward_service.py](discovery_reward_service.py) | Discovery reward service — CC flows to contributors who bring attention. |
-| [discovery_service.py](discovery_service.py) | Discovery service — Serendipity Discovery feed. |
 | [effectiveness_service.py](effectiveness_service.py) | Pipeline effectiveness: throughput, issue resolution, goal proximity. Composes metrics + monitor data. |
 | [entity_view_attribution_service.py](entity_view_attribution_service.py) | Attribution bridge for editable entity views. |
 | [evidence_service.py](evidence_service.py) | Evidence service — submission, verification, and retrieval for asset implementation evidence. |
@@ -114,7 +110,6 @@
 | [friction_entry_points_service.py](friction_entry_points_service.py) | Friction entry-point and category rollups. |
 | [friction_service.py](friction_service.py) | Friction ledger service for API and scripts. |
 | [gatherings_importer.py](gatherings_importer.py) | Gatherings importer — scan presences for event listings, plant the missing ones. |
-| [geocoding_service.py](geocoding_service.py) | Forward geocoding: OpenCage → Nominatim → static fallback (Living Codex–style chain). |
 | [geolocation_service.py](geolocation_service.py) | Geolocation service — city-level contributor location storage and proximity search. |
 | [github_client.py](github_client.py) | GitHub API client — spec 029. |
 | [governance_service.py](governance_service.py) | Governance service for reviewable change requests and voting. |
@@ -155,11 +150,9 @@
 | [locale_projection.py](locale_projection.py) | Shared locale projection for API responses. |
 | [localized_errors.py](localized_errors.py) | Localized API error messages. |
 | [maintainability_audit_service.py](maintainability_audit_service.py) | Maintainability audit service: architecture drift + runtime placeholder debt. |
-| [marketplace_service.py](marketplace_service.py) | Marketplace service: publish, browse, fork, reputation, and federation sync. |
 | [mcp_tool_registry.py](mcp_tool_registry.py) | MCP tool registry: maps tool names to handlers, schemas, and descriptions. |
 | [meeting_service.py](meeting_service.py) | Meeting — the combined-organism sense of viewer + content. |
 | [membership_service.py](membership_service.py) | Membership service — team edges between contributors and workspaces. |
-| [message_service.py](message_service.py) | Contributor messaging service — graph-backed message nodes and edges. |
 | [meta_service.py](meta_service.py) | Metadata self-discovery service. |
 | [metrics_service.py](metrics_service.py) | Task metrics: persistence and aggregation. Spec 026 Phase 1. |
 | [mvp_baseline_service.py](mvp_baseline_service.py) | Helpers for local MVP baseline artifact discovery. |
@@ -169,7 +162,6 @@
 | [news_ingestion_service.py](news_ingestion_service.py) | News ingestion service: fetches RSS feeds and caches results. |
 | [news_resonance_service.py](news_resonance_service.py) | News resonance service: matches news items to ideas using keyword-based resonance scoring. |
 | [node_identity_service.py](node_identity_service.py) | Node identity derivation and local persistence. |
-| [onboarding_service.py](onboarding_service.py) | Onboarding Service -- Trust-on-First-Use (TOFU) MVP. |
 | [openclaw_node_bridge_service.py](openclaw_node_bridge_service.py) | OpenClaw node bridge: WebSocket delivery for federation messages (Spec 156 Phase 3). |
 | [openrouter_client.py](openrouter_client.py) | Minimal OpenRouter client for server-side task execution. |
 | [orchestrator_policy_service.py](orchestrator_policy_service.py) | Data-driven orchestrator policy configuration. |
@@ -190,7 +182,6 @@
 | [process_tree_reaper.py](process_tree_reaper.py) | Bounded process-tree termination for native Form carriers. |
 | [prompt_ab_roi_service.py](prompt_ab_roi_service.py) | Backward-compatible wrapper around SlotSelector for prompt variant selection. |
 | [proposal_service.py](proposal_service.py) | Proposals — short suggestions the collective can vote on by meeting. |
-| [proprioception_service.py](proprioception_service.py) | Proprioception service — auto-sensing system state. |
 | [public_dialogue_store.py](public_dialogue_store.py) | Durable cells for the unlisted public dialogue lane. |
 | [quality_awareness_service.py](quality_awareness_service.py) | Guidance-first quality awareness summary derived from maintainability audits. |
 | [reaction_service.py](reaction_service.py) | Reactions — a lightweight surface for expressing care on anything. |
@@ -241,4 +232,3 @@
 | [workspace_resolver.py](workspace_resolver.py) | WorkspaceResolver — the single swap point between co-located and truly isolated workspaces. |
 | [workspace_scoped_validation.py](workspace_scoped_validation.py) | Layer 1 guardrails — API-boundary validation for workspace-scoped writes. |
 | [workspace_service.py](workspace_service.py) | Workspace CRUD service. |
-| [zoom_service.py](zoom_service.py) | Zoom service — fractal subtree traversal and coherence score computation (Spec 182). |

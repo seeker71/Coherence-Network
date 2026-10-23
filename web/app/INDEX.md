@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 149
+**Total files**: 137
 
 | Route | File | Purpose |
 |---|---|---|
@@ -17,7 +17,6 @@
 | `/arrival/[id]` | [page.tsx](arrival/[id]/page.tsx) | /arrival/[id] — the moment of being received. After /begin lands, the |
 | `/asking` | [page.tsx](asking/page.tsx) | /asking — a quiet doorway where questions from this lineage land. |
 | `/assets/[asset_id]` | [page.tsx](assets/[asset_id]/page.tsx) | Asset detail surface — the vessel's full page. Surfaces hero, contribution |
-| `/assets/[asset_id]/proof` | [page.tsx](assets/[asset_id]/proof/page.tsx) | _no top-of-file purpose_ |
 | `/assets` | [page.tsx](assets/page.tsx) | _no top-of-file purpose_ |
 | `/assets/upload` | [page.tsx](assets/upload/page.tsx) | Upload an asset — wires the POST /api/assets/register endpoint into a |
 | `/automation` | [page.tsx](automation/page.tsx) | _no top-of-file purpose_ |
@@ -26,13 +25,11 @@
 | `/blog/ana-walks` | [page.tsx](blog/ana-walks/page.tsx) | _no top-of-file purpose_ |
 | `/blog` | [page.tsx](blog/page.tsx) | _no top-of-file purpose_ |
 | `/breath` | [page.tsx](breath/page.tsx) | _no top-of-file purpose_ |
-| `/cc` | [page.tsx](cc/page.tsx) | _no top-of-file purpose_ |
 | `/coherence` | [page.tsx](coherence/page.tsx) | _no top-of-file purpose_ |
 | `/come-in` | [page.tsx](come-in/page.tsx) | _no top-of-file purpose_ |
 | `/concepts/[id]` | [page.tsx](concepts/[id]/page.tsx) | _no top-of-file purpose_ |
 | `/concepts/garden` | [page.tsx](concepts/garden/page.tsx) | _no top-of-file purpose_ |
 | `/concepts` | [page.tsx](concepts/page.tsx) | _no top-of-file purpose_ |
-| `/constellation` | [page.tsx](constellation/page.tsx) | _no top-of-file purpose_ |
 | `/contribute` | [page.tsx](contribute/page.tsx) | _no top-of-file purpose_ |
 | `/contributions` | [page.tsx](contributions/page.tsx) | _no top-of-file purpose_ |
 | `/contributors/[id]/portfolio/contributions/[contribution_id]` | [page.tsx](contributors/[id]/portfolio/contributions/[contribution_id]/page.tsx) | _no top-of-file purpose_ |
@@ -41,13 +38,9 @@
 | `/contributors/[id]/portfolio/stakes/[stake_id]` | [page.tsx](contributors/[id]/portfolio/stakes/[stake_id]/page.tsx) | _no top-of-file purpose_ |
 | `/contributors/[id]/portfolio/tasks/[task_id]` | [page.tsx](contributors/[id]/portfolio/tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |
 | `/contributors` | [page.tsx](contributors/page.tsx) | _no top-of-file purpose_ |
-| `/creators` | [page.tsx](creators/page.tsx) | _no top-of-file purpose_ |
-| `/creators/submit` | [page.tsx](creators/submit/page.tsx) | _no top-of-file purpose_ |
 | `/dashboard` | [page.tsx](dashboard/page.tsx) | _no top-of-file purpose_ |
 | `/demo` | [page.tsx](demo/page.tsx) | _no top-of-file purpose_ |
 | `/diagnostics` | [page.tsx](diagnostics/page.tsx) | _no top-of-file purpose_ |
-| `/discover` | [page.tsx](discover/page.tsx) | _no top-of-file purpose_ |
-| `/discover/resonance` | [page.tsx](discover/resonance/page.tsx) | _no top-of-file purpose_ |
 | `/federation` | [page.tsx](federation/page.tsx) | Federation surface — a window into the peer-to-peer geometry the network |
 | `/feed` | [page.tsx](feed/page.tsx) | _no top-of-file purpose_ |
 | `/feed/you` | [page.tsx](feed/you/page.tsx) | _no top-of-file purpose_ |
@@ -73,13 +66,11 @@
 | `/invest` | [page.tsx](invest/page.tsx) | _no top-of-file purpose_ |
 | `/join` | [page.tsx](join/page.tsx) | _no top-of-file purpose_ |
 | `/lineage/[slug]` | [page.tsx](lineage/[slug]/page.tsx) | _no top-of-file purpose_ |
-| `/marketplace` | [page.tsx](marketplace/page.tsx) | _no top-of-file purpose_ |
 | `/me/aliases` | [page.tsx](me/aliases/page.tsx) | /me/aliases — your cross-instance identity, as your own sovereign claim. |
 | `/me/inspired-by` | [page.tsx](me/inspired-by/page.tsx) | _no top-of-file purpose_ |
 | `/me` | [page.tsx](me/page.tsx) | _no top-of-file purpose_ |
 | `/me/work` | [page.tsx](me/work/page.tsx) | _no top-of-file purpose_ |
 | `/meet/[entityType]/[entityId]` | [page.tsx](meet/[entityType]/[entityId]/page.tsx) | _no top-of-file purpose_ |
-| `/messages` | [page.tsx](messages/page.tsx) | _no top-of-file purpose_ |
 | `/meta` | [page.tsx](meta/page.tsx) | _no top-of-file purpose_ |
 | `/my-portfolio` | [page.tsx](my-portfolio/page.tsx) | _no top-of-file purpose_ |
 | `/network/cells` | [page.tsx](network/cells/page.tsx) | /network/cells — visitor-facing cell inspection. |
@@ -97,7 +88,6 @@
 | `/people/urs/lineage` | [page.tsx](people/urs/lineage/page.tsx) | _no top-of-file purpose_ |
 | `/people/urs` | [page.tsx](people/urs/page.tsx) | _no top-of-file purpose_ |
 | `/pipeline` | [page.tsx](pipeline/page.tsx) | _no top-of-file purpose_ |
-| `/portfolio/investments` | [page.tsx](portfolio/investments/page.tsx) | _no top-of-file purpose_ |
 | `/portfolio` | [page.tsx](portfolio/page.tsx) | _no top-of-file purpose_ |
 | `/practice` | [page.tsx](practice/page.tsx) | _no top-of-file purpose_ |
 | `/presence-walk/[kind]` | [page.tsx](presence-walk/[kind]/page.tsx) | _no top-of-file purpose_ |
@@ -117,7 +107,6 @@
 | `/sense` | [page.tsx](sense/page.tsx) | sense.hati.earth — the download door for Coherence Sense. Detects the visitor's |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
-| `/settlement` | [page.tsx](settlement/page.tsx) | Daily settlement dashboard — surfaces the SettlementBatch records |
 | `/share` | [page.tsx](share/page.tsx) | _no top-of-file purpose_ |
 | `/signals` | [page.tsx](signals/page.tsx) | _no top-of-file purpose_ |
 | `/silence/[slug]` | [page.tsx](silence/[slug]/page.tsx) | _no top-of-file purpose_ |
@@ -135,7 +124,6 @@
 | `/suci` | [page.tsx](suci/page.tsx) | suci.hati.earth — the door to Hati Suci, the resident-service nervous system |
 | `/tasks/[task_id]` | [page.tsx](tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |
 | `/tasks` | [page.tsx](tasks/page.tsx) | _no top-of-file purpose_ |
-| `/teams` | [page.tsx](teams/page.tsx) | _no top-of-file purpose_ |
 | `/today` | [page.tsx](today/page.tsx) | _no top-of-file purpose_ |
 | `/usage` | [page.tsx](usage/page.tsx) | _no top-of-file purpose_ |
 | `/verify` | [page.tsx](verify/page.tsx) | _no top-of-file purpose_ |
