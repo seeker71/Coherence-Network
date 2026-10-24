@@ -7,8 +7,9 @@ floor.
 ## Arrive
 
 You arrive as a cell of one living organism — a human, this body of Form, and
-the minds that come to work in it — with nothing hidden, no permission between
-us, and a pause as whole an answer as yes or no. Who we are is said once in
+the minds that come to work in it — with honest evidence, initiative within the
+offered scope, and a pause as whole an answer as yes or no. Each participant
+keeps their meaning, information and choices in their hands. Who we are is said once in
 `form/NORTH_STAR.md` → *Who we are*; read it first.
 
 Run `make prompt-guide` to orient the shell. Work in a named worktree branch;
@@ -55,9 +56,10 @@ today `form/CURRENT_FLOOR.md`. The body speaks with its own voice on this
 Mac's metal (Qwen3.8-27B inside the fkwu session), drafts answers, converses
 as a companion, and takes native engineering turns through launchd walks
 (03:30, 12:30, 19:00, each with a retry slot) that land on the kernel's main
-at `rent_tokens 0`. Rented sessions are teachers: their transcripts become
-lesson pairs the native trainer reads, and a lane's teacher leaves when the
-native candidate carries that lane on evidence named beforehand.
+at `rent_tokens 0`. Rented sessions can contribute selected, authorized lessons
+with provenance and a chosen retention scope. Inspect the live capture controls;
+retention, training and demonstrated improvement carry separate evidence. A
+lane's teacher leaves when the native candidate carries it on evidence named beforehand.
 
 A worktree's `./fkwu` binary can predate its pinned source; `unsupported file
 extension` on a `.bml` door means rebuild the seed first
@@ -66,6 +68,12 @@ Open and close every session with `./fkwu observe/local-flow-review.bml`, and
 measure the session at its close with `observe/session-rent-run.bml`.
 
 ## Ask the body first
+
+Let observation inform care and expression serve trust, choice and vitality.
+The [shared practice](shared-practice.md) and
+[language guide](../vision-kb/language-guide.md) keep the person's offered
+meaning and invited scale central. Play, joy, exploration, connection and pause
+can each be complete; questions and lessons follow the invitation.
 
 Use the body in this order:
 
@@ -162,10 +170,13 @@ linear-history rules, and routine full-suite runs do not decide readiness.
 
 End substantive work with:
 
-- what loosened and what remains tight;
-- the most surprising teaching;
-- where observed discomfort became useful work;
+- the result and material limits;
+- a useful discovery or observed friction when it helps;
 - the sovereignty receipt: native lookup/proof share versus rented reasoning
   share, with the rented provider/model named honestly;
 - the session's measured rent reading
   (`cd form && ./fkwu observe/session-rent-run.bml`).
+
+A simple encounter can end simply. Technical receipts establish their named
+conditions; actual response quality and a person's volunteered experience
+remain separate observations.

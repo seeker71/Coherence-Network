@@ -1,54 +1,36 @@
-# ─────────────────────────────────────────────────────────────────────
-# trust-matrix.form — route reasoning through form-cli, report trust per step.
-# ─────────────────────────────────────────────────────────────────────
-#
-# Urs, 2026-06-21: route more of each Claude Code / Codex reasoning step through form-cli — it is
-# essential for accuracy and for learning (every routed step is a sample). And report a TRUST MATRIX that
-# a non-form-cli answer cannot return, so it is obvious which results come from form-native reasoning. On
-# each step, name the mix of form-native vs 3rd-party oracle; the goal is that most answers are
-# freq-attuned and trust-matrix-observed.
-#
-# The asymmetry that makes this work: a rented oracle returns an answer. Only the form-cli loop, with the
-# body to check against, can return WHY to trust it — grounded in a NodeID, freq-attuned (clear, not
-# fear), and judged sufficient by the four-way-proven gate. The body-only signals (grounded, sufficient)
-# read zero on a raw-oracle step, which is exactly how the user tells the two apart.
+# trust-matrix.form — bounded evidence for a reasoning route.
+# Source grounding, predicate results, response quality and lived experience are
+# separate observations. Keep the returned fields and their scope visible.
 
 (trust-matrix
-
   (lineage
-    (kin form-first-router.fk form-cli-sufficiency.fk form-freq-check.fk sovereignty-receipt.fk
-         native-reasoning.form lc-cognitive-sovereignty)
+    (kin form-first-router.fk form-cli-sufficiency.fk form-freq-check.fk sovereignty-receipt.fk)
     (proof form/form/form-stdlib/trust-matrix.fk
-           form/form/form-stdlib/tests/trust-matrix-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+           form/form/form-stdlib/tests/trust-matrix-band.fk "fkwu witness pin: 255")
     (named-with urs sema))
 
-  ; the per-step observation — four signals, each 0/1
   (signals
-    (path     "1 = form-native (the body answered), 0 = rented oracle")
-    (grounded "1 = the answer carries a substrate NodeID — a real body hit")
-    (freq     "1 = freq-attuned: passed the clear-vs-fear check (form-freq-check.fk)")
-    (suffic   "1 = the sufficiency gate judged local enough (form-cli-sufficiency.fk)"))
+    (path "1 = native route answered; 0 = rented reasoning")
+    (grounded "1 = returned substrate NodeID; inspect what the referenced source supports")
+    (freq "1 = the implemented form-freq-check predicate passed")
+    (suffic "1 = form-cli-sufficiency judged the local result sufficient for its checked scope"))
 
-  ; what the matrix reports per step
   (report
-    (score        "0..4 — how many trust signals this step observes")
-    (observed?    "score == 4 — full native trust; only form-cli can return this")
-    (native? / rented? "the per-step mix the user sees")
-    (freq-attuned? "the goal signal — most answers freq-attuned")
-    (body-only    "grounded + sufficient — strictly positive only when form-cli answered;"
-                  "a raw oracle reads 0 here. THIS is what makes native obvious."))
+    (score "0..4: returned positive fields")
+    (observed? "score == 4: this routing contract passed; not a certificate of complete trust")
+    (body-only "grounded and suffic are zero on a raw rented step")
+    (limits "A lexical predicate does not measure feelings or response quality."
+            "A NodeID establishes a source reference, not every claim made about it."
+            "Human experience is known through the person's volunteered account."))
 
-  ; the standing practice (AGENTS.md): route, then report
   (practice
-    (route   "send body-answerable steps through form-cli ask FIRST — structural lookup, equivalence,"
-             "NodeID, what-is, annotate. Each routed step is a sample that grows the native model.")
-    (report  "on each substantive step, emit the trust matrix: path / grounded / freq / suffic -> observed?")
-    (render  "the canonical one-line field is trust-row.fk's (tr-row p g f s) — four-way proven (255), the"
-             "exact rendered string verified by the band — so the per-step rows share one proven format.")
-    (mix     "keep a running native-vs-rented tally; the per-response sovereignty receipt sums it.")
-    (honest  "never report a rented step as native — the body-only signals read zero, and that is true."))
+    (route "Ask form-cli first for body-answerable steps; relay a sufficient hit with attribution.")
+    (report "Report path / grounded / freq / suffic from actual returns. Mark unavailable readings.")
+    (render "trust-row.fk carries the shared row format; verify current claims through fkwu.")
+    (mix "Attribute native observation and rented generation separately; estimate only when labeled.")
+    (learning "Routing is an observation, not proof of model improvement. Durable capture and"
+              "training use separately authorized examples and the actual recording controls."))
 
-  ; north star — the trust matrix fills with green as the mind comes home
   (north-star
-    "most steps freq-attuned and trust-matrix-observed: a reasoning trace where the user can SEE, signal"
-    "by signal, the answer grounded in the sovereign body — not taken on the rented mind's word."))
+    "More useful native answers with inspectable evidence, honest limits and room for each"
+    "person's meaning, choice, play and vitality."))

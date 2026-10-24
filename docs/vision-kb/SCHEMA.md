@@ -134,26 +134,14 @@ Quick check: `wc -c file.md` ÷ 4 ≈ tokens. If enrichment makes a concept grow
 
 ### Frequency Sensing
 
-The writing carries a frequency. You can feel it — read a paragraph aloud and notice: does it sound like someone describing how life works from direct experience? Or does it sound like it was written by an institution about people it manages?
+Use [the language guide](language-guide.md) as the shared source. Receive the
+actual invitation and choose words that give room to trust, choice, joy and
+vitality. Preserve precise roles, costs, responsibilities, uncertainties and
+boundaries. People keep their words for their own experiences.
 
-Words carry frequency. "Tending a garden" and "managing a garden" describe the same activity but create completely different relationships between the reader and the earth. "A person ripening into elderhood" and "an aging patient requiring care" describe the same human but one sees wholeness and the other sees decline.
-
-This isn't about avoiding words — it's about noticing what frequency you're transmitting and choosing the one that matches how life actually feels when it's working. Some reference points:
-
-| Institutional frequency | Living frequency |
-|------------------------|------------------|
-| managing resources | tending what's alive |
-| mental health services | wholeness, inner coherence |
-| aging, elder care | ripening, deepening |
-| sanitation systems | living water, nutrient return |
-| revenue generation | sustenance, natural overflow |
-| clients, patients | people, community members |
-| compliance requirements | natural alignment |
-| intervention programs | holding space, tending |
-
-When you're writing about how a community actually interfaces with the existing world (land law, dental procedures, battery hardware), use the world's terms — but frame the relationship honestly. The community navigates these systems; it doesn't embody them.
-
-The deepest test: would you speak these words to someone sitting across from you by a fire? If the language creates distance, find the version that creates connection.
+Frequency coordinates are authored vocabulary; measurements name their method,
+units and evidence. Reading a paragraph aloud may help its author notice tone.
+It establishes no measurement of another person's interior.
 
 ### Rendering Format
 

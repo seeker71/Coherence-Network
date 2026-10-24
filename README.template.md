@@ -56,16 +56,18 @@ what you want to explore or offer next.
 
 <!-- include: docs/shared/cell-voice-protocol.md -->
 
-## What is alive now
+## Source milestones and current orientation
 
-The last integrated movement brought the network closer to running as the thing it describes:
+These source milestones describe the direction and accumulated work. Read the
+current [agent start packet](docs/shared/agent-start-packet.md) and route receipts
+for what a particular checkout or deployed door actually carries.
 
 - **Form is executable tissue, not only notation.** Host-language-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
 - **The core rests on five named axioms.** States (0/1/nothing), cell, content-addressing, boundary, offer — agreed and crossed 2026-06-10. Offer-and-acknowledge, the kernel-offer protocol, the host kernel, and kernel self-composition are derived theorems, with safe self-update already running as the native-mutation public-gate canary ([`core-axioms.form`](docs/coherence-substrate/core-axioms.form)).
 - **The front door is being drawn into Form.** New high-traffic handlers are BML or domain grammar first; the compatibility API is an explicit bridge for routes not yet promoted, not the architecture's destination.
 - **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, consentful circle/satsang groups, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
 - **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
-- **Agents arrive with relationship memory.** Session greetings detect the agent and human, create durable relationship cells, and keep identity, boundary, and opt-out visible.
+- **Session greetings can create relationship records.** Use the established memory preference and inspect the active carrier's storage and controls. A greeting is not a read-only operation or evidence of complete deletion.
 - **The living equation has landed.** Structure, choices, and beliefs now map toward health, vitality, flexibility, sovereignty, and harmony as an inspectable teaching rather than loose metaphor.
 - **The public doors converge.** Web, API, CLI, MCP, README, and Form-language docs all point to the same invitation: sense what is alive, ground claims, return an attributed trace.
 - **The public language has a center.** The network speaks most clearly as one body with several doors: source, route, runtime, relation, proof, witness, ledger, NodeID, cell.

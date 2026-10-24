@@ -5,8 +5,9 @@ If you're adding features to the Coherence Network itself, work lives here.
 
 ## The fractal
 
-6 pillars → 16 super-ideas → leaf ideas. Every new idea must pick a parent
-super-idea and inherit its pillar. See `ideas/INDEX.md` for the taxonomy.
+For an idea deliberately offered for platform development, use the taxonomy
+in `ideas/INDEX.md` to choose its parent and pillar. Private exploration,
+play and a passing idea can remain complete in the conversation.
 
 ## Workflow
 
@@ -21,7 +22,7 @@ Every task is linked to an idea via `context.idea_id`.
 
 - **Do not modify tests to force passing behavior.** Fix the code, not the test.
 - **Implement exactly what the spec requires.** Read the frontmatter `source:` map first.
-- **Every new idea must be recorded via `POST /api/ideas`** before the session ends.
+- **Chosen publication.** Record an idea through the currently available idea door when the person's request covers that destination and audience. Prepare the concrete content first; reuse authorization already given.
 - **Spec authoring**: run `python3 scripts/validate_spec_quality.py` before committing.
 - **No scope creep**: changes stay within requested files/tasks.
 - **Escalate via `needs-decision`** for security or architecture changes.

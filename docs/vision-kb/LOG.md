@@ -3,6 +3,15 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-10-24] guidance | attention, initiative and evidence
+
+Aligned the active language guide, schema, blueprint and trust/initiative
+concepts with the shared companion practice. Play and a pause can be complete;
+interpretation and lessons are invited. Established scope supports initiative,
+while each person keeps meaning, information and choices. Authored frequency
+coordinates remain vocabulary; runtime checks, response observations and lived
+experience carry their own evidence. Earlier accounts remain in history.
+
 ## [2026-08-06] concept | the same Eluña video, read again through new native ground
 
 Urs asked to re-read the already-witnessed *How Earth Fought Back Against
