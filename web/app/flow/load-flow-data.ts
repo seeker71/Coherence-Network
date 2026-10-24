@@ -1,6 +1,6 @@
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
-import type { Contributor, Contribution, FlowResponse } from "./types";
+import { UNBLOCK_QUEUE_PREVIEW_LIMIT, type Contributor, type Contribution, type FlowResponse } from "./types";
 
 const defaultFlowResponse: FlowResponse = {
   summary: {
@@ -32,7 +32,10 @@ export async function loadDataForIdea(ideaId: string): Promise<{
   contributions: Contribution[];
 }> {
   const API = getApiBase();
-  const flowParams = new URLSearchParams({ runtime_window_seconds: "86400" });
+  const flowParams = new URLSearchParams({
+    runtime_window_seconds: "86400",
+    unblock_queue_limit: String(UNBLOCK_QUEUE_PREVIEW_LIMIT),
+  });
   if (ideaId) flowParams.set("idea_id", ideaId);
   const [flowData, contributorData, contributionData] = await Promise.all([
     fetchJsonOrNull<FlowResponse>(`${API}/api/inventory/flow?${flowParams.toString()}`, { cache: "no-store" }, 5000),
