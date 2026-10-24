@@ -784,28 +784,6 @@ An append that arrives after cancellation is acknowledged without writing a
 ledger row. If this atomic receipt cannot be confirmed, the API keeps the
 original graph entry and returns a retryable error.
 
-## Repairing a run of repeats
-
-A phone that re-sent one draft before keys existed leaves a run: the same day,
-direction, amount and description, created within hours of each other. The app
-shows such runs under **Possible duplicates** on the ledger (the policy that
-names them is `api/app/form_recipes/endpoint_grocery_duplicate_groups.bml`,
-twelve hours from the run's first entry), and
-
-```
-GET  /api/grocery/duplicates?token=<any member>
-POST /api/grocery/duplicates/resolve   {"actor_token", "keep_id", "cancel_ids"}
-```
-
-are the two doors. **Keep one** keeps the oldest entry and cancels the rest
-through the same `reconcile_delete` path a deletion uses: under the script
-lock, each repeat the sheet already holds receives one `undo` row, each repeat
-gets a cancellation marker, and only then is it marked `sheet_cancelled` in
-the graph with the kept entry's id on it. Nothing is deleted. The request
-stops inside the proxy budget and returns what it has not reached, and the
-phone keeps asking until the run is one entry; a dark sheet proves nothing, so
-those entries stay and the next tap continues.
-
 ## The door out
 
 ```

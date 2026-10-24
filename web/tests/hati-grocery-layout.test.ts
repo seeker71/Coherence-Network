@@ -92,7 +92,7 @@ describe("Hati grocery balance layout", () => {
   });
 });
 
-describe("Hati grocery idempotent drafts and the repair door", () => {
+describe("Hati grocery idempotent drafts and confirmation age", () => {
   it("names every draft once so a re-sent queue records one entry", () => {
     expect(source).toContain("entry_key: string;");
     expect(source).toContain("entry_key: newEntryKey(),");
@@ -106,16 +106,5 @@ describe("Hati grocery idempotent drafts and the repair door", () => {
     expect(source).toContain("confirmationAge(confirmedAt, nowMs)");
     expect(source).toContain('[balanceKey ? t[balanceKey] : null, ageText].filter(Boolean).join(" · ")');
     expect(source).toContain("setNowMs(Date.now()), BALANCE_AGE_TICK_MS");
-  });
-
-  it("offers the duplicate review only while runs exist, and keeps one through the sheet path", () => {
-    expect(source).toContain("readJsonOnce<DuplicateReview>(`/api/grocery/duplicates?${q}`");
-    expect(source).toContain("duplicates && duplicates.groups.length > 0");
-    expect(source).toContain('fetch("/api/grocery/duplicates/resolve"');
-    expect(source).toContain("keep_id: group.keep_id, cancel_ids: remaining");
-    expect(source).toContain("remaining = body.remaining");
-    expect(source).toContain("if (body.unconfirmed.length || body.cancelled.length === 0)");
-    expect(source).toContain("window.confirm(fill(t.confirmKeepOne, { n: repeats.length }))");
-    expect(source).toContain("{duplicates.can_resolve && (");
   });
 });
