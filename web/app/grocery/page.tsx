@@ -18,14 +18,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  BALANCE_AGE_TICK_MS,
   BALANCE_REFRESH_INTERVAL_MS,
   BALANCE_REQUEST_TIMEOUT_MS,
   BALANCE_RETRY_DELAYS_MS,
   type BalanceReadState,
   baliCalendarDay,
   balanceCopyKey,
+  confirmationAge,
   isAuthorizationFailure,
   isConfirmedSheetBalance,
+  newEntryKey,
+  withEntryKeys,
 } from "@/lib/hati-grocery-balance";
 import { hatiSuciRecoveryHref } from "@/lib/hati-grocery-handoff";
 
@@ -73,6 +77,36 @@ type Totals = {
   month_count: number;
   remaining_idr: number | null;
   remaining_source: "sheet" | "unavailable";
+  // When the sheet confirmed remaining_idr (UTC ISO); null when it did not.
+  confirmed_at?: string | null;
+  pending_count?: number;
+};
+
+type DuplicateGroup = {
+  key: string;
+  spent_on: string;
+  kind: string;
+  amount_idr: number;
+  description: string;
+  entries: Spend[];
+  keep_id: string;
+  excess_idr: number;
+};
+
+type DuplicateReview = {
+  groups: DuplicateGroup[];
+  group_count: number;
+  entry_count: number;
+  excess_idr: number;
+  window_hours: number;
+  can_resolve: boolean;
+};
+
+type DuplicateResolve = {
+  keep_id: string;
+  cancelled: { id: string; was_mirrored: boolean }[];
+  remaining: string[];
+  unconfirmed: string[];
 };
 
 type SendResult =
@@ -90,6 +124,9 @@ type Draft = {
   lon: number | null;
   spent_on: string;
   kind: "buy" | "topup";
+  // Minted once per draft and kept in the queue: however many times this
+  // draft is sent, the server records it once.
+  entry_key: string;
 };
 
 const TOKEN_KEY = "hatiSuci.token";
@@ -167,7 +204,19 @@ const T = {
     balanceRetrying: "The sheet is slow — checking again…",
     balanceLastConfirmed: "Last confirmed balance · reconnecting…",
     balanceUnavailable: "Sheet temporarily unavailable",
+    confirmedNow: "confirmed just now",
+    confirmedMinutes: "confirmed {n} min ago",
+    confirmedHours: "confirmed {n} h ago",
+    confirmedDays: "confirmed {n} d ago",
     remove: "Remove",
+    duplicates: "Possible duplicates",
+    duplicatesBody:
+      "The same entry recorded more than once within {h} hours — usually a phone that resent it. Keep one; the rest are cancelled in the sheet as well.",
+    keepOne: "Keep one",
+    confirmKeepOne:
+      "Keep the oldest entry and cancel {n} repeats? The sheet gets one undo row for each repeat it already holds.",
+    resolving: "Cancelling {done} of {total}…",
+    resolveStalled: "The sheet could not confirm every cancellation yet — tap again to continue.",
   },
   id: {
     title: "Belanja",
@@ -223,9 +272,25 @@ const T = {
     balanceRetrying: "Sheet lambat — memeriksa lagi…",
     balanceLastConfirmed: "Saldo terakhir terkonfirmasi · menghubungkan lagi…",
     balanceUnavailable: "Sheet sementara tidak tersedia",
+    confirmedNow: "terkonfirmasi baru saja",
+    confirmedMinutes: "terkonfirmasi {n} mnt lalu",
+    confirmedHours: "terkonfirmasi {n} jam lalu",
+    confirmedDays: "terkonfirmasi {n} hari lalu",
     remove: "Hapus",
+    duplicates: "Kemungkinan catatan ganda",
+    duplicatesBody:
+      "Catatan yang sama tercatat lebih dari sekali dalam {h} jam — biasanya HP mengirim ulang. Simpan satu; sisanya dibatalkan juga di sheet.",
+    keepOne: "Simpan satu",
+    confirmKeepOne:
+      "Simpan catatan tertua dan batalkan {n} yang berulang? Sheet mendapat satu baris pembatalan untuk setiap ulangan yang sudah ada di sana.",
+    resolving: "Membatalkan {done} dari {total}…",
+    resolveStalled: "Sheet belum dapat mengonfirmasi semua pembatalan — ketuk lagi untuk melanjutkan.",
   },
 } as const;
+
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_m, key: string) => String(values[key] ?? ""));
+}
 
 // Rp 123.500 — Indonesian grouping, the way the manager reads a price tag.
 function rupiah(n: number): string {
@@ -349,9 +414,13 @@ export default function GroceryPage() {
   const [entriesLoading, setEntriesLoading] = useState(true);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [confirmedRemaining, setConfirmedRemaining] = useState<number | null>(null);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [balanceState, setBalanceState] = useState<BalanceReadState>("loading");
   const [queued, setQueued] = useState<Draft[]>([]);
   const [sheet, setSheet] = useState<SheetStatus | null>(null);
+  const [duplicates, setDuplicates] = useState<DuplicateReview | null>(null);
+  const [resolving, setResolving] = useState<{ key: string; done: number; total: number } | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -431,7 +500,12 @@ export default function GroceryPage() {
   const readQueue = useCallback((): Draft[] => {
     try {
       const raw = localStorage.getItem(QUEUE_KEY);
-      return raw ? (JSON.parse(raw) as Draft[]) : [];
+      const stored = raw ? (JSON.parse(raw) as Draft[]) : [];
+      // A draft queued before keys existed gets one now, so even an old
+      // queue flushes idempotently from here on.
+      const keyed = withEntryKeys(stored);
+      if (keyed !== stored) localStorage.setItem(QUEUE_KEY, JSON.stringify(keyed));
+      return keyed;
     } catch {
       return [];
     }
@@ -467,9 +541,12 @@ export default function GroceryPage() {
     setEntriesLoading(false);
     setTotals(null);
     setConfirmedRemaining(null);
+    setConfirmedAt(null);
     setBalanceState("loading");
     setQueued([]);
     setSheet(null);
+    setDuplicates(null);
+    setResolving(null);
     setShops([]);
     setFlash(null);
     setSaved(null);
@@ -523,6 +600,10 @@ export default function GroceryPage() {
         if (isConfirmedSheetBalance(attempt.value)) {
           confirmedRemainingRef.current = attempt.value.remaining_idr;
           setConfirmedRemaining(attempt.value.remaining_idr);
+          // The API stamps when the sheet confirmed; the page says how long
+          // ago that was, so a held figure is never mistaken for a fresh one.
+          setConfirmedAt(attempt.value.confirmed_at ?? new Date().toISOString());
+          setNowMs(Date.now());
           setBalanceState("ready");
           return;
         }
@@ -591,10 +672,11 @@ export default function GroceryPage() {
     }
     const run = (async () => {
       const totalsRead = loadTotals(q, forceBalance);
-      const [spendAttempt, sheetAttempt, shopsAttempt] = await Promise.all([
+      const [spendAttempt, sheetAttempt, shopsAttempt, duplicateAttempt] = await Promise.all([
         readJsonOnce<Spend[]>(`/api/grocery/spend?${q}&on=${requestedDay}`, boardController.signal),
         readJsonOnce<SheetStatus>(`/api/grocery/sheet?${q}`, boardController.signal),
         readJsonOnce<Shop[]>(`/api/grocery/shops?${q}`, boardController.signal),
+        readJsonOnce<DuplicateReview>(`/api/grocery/duplicates?${q}`, boardController.signal),
       ]);
       // A shared timeout may abort only one slow sibling after another has
       // already returned useful truth. Keep those successful results. A newer
@@ -622,6 +704,9 @@ export default function GroceryPage() {
       }
       if (sh !== null) setSheet(sh);
       if (Array.isArray(storedPlaces)) setShops(storedPlaces);
+      if (duplicateAttempt.value && Array.isArray(duplicateAttempt.value.groups)) {
+        setDuplicates(duplicateAttempt.value);
+      }
       await totalsRead;
     })();
 
@@ -672,10 +757,13 @@ export default function GroceryPage() {
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") recover();
     }, BALANCE_REFRESH_INTERVAL_MS);
+    // The confirmation age keeps counting between reads.
+    const ageTimer = window.setInterval(() => setNowMs(Date.now()), BALANCE_AGE_TICK_MS);
     return () => {
       window.removeEventListener("online", recover);
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(timer);
+      window.clearInterval(ageTimer);
     };
   }, [token, loadTotals, refresh]);
 
@@ -757,6 +845,7 @@ export default function GroceryPage() {
       lon: shop ? null : coords?.lon ?? null,
       spent_on: todayLocal(),
       kind: mode,
+      entry_key: newEntryKey(),
     };
     const result = await send(draft);
     setBusy(false);
@@ -810,6 +899,49 @@ export default function GroceryPage() {
       setFlash(t.removeUnavailable);
     }
     setBusy(false);
+  }, [token, refresh, t]);
+
+  // One tap keeps the oldest entry of a run and cancels the repeats through the
+  // sheet's own cancellation path. The API stops inside the proxy budget and
+  // names what it has not reached, so the page keeps asking until the run is
+  // one entry — or the sheet stops confirming, in which case it says so and
+  // the next tap continues from where it stopped. Nothing is removed silently.
+  const keepOne = useCallback(async (group: DuplicateGroup) => {
+    if (!token) return;
+    const repeats = group.entries.map((e) => e.id).filter((id) => id !== group.keep_id);
+    if (!repeats.length) return;
+    if (!window.confirm(fill(t.confirmKeepOne, { n: repeats.length }))) return;
+    setBusy(true);
+    setFlash(null);
+    let remaining = repeats;
+    let done = 0;
+    setResolving({ key: group.key, done, total: repeats.length });
+    try {
+      while (remaining.length) {
+        const res = await fetch("/api/grocery/duplicates/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actor_token: token, keep_id: group.keep_id, cancel_ids: remaining }),
+        });
+        if (!res.ok) {
+          setFlash(t.resolveStalled);
+          break;
+        }
+        const body = (await res.json()) as DuplicateResolve;
+        done += body.cancelled.length;
+        setResolving({ key: group.key, done, total: repeats.length });
+        if (body.unconfirmed.length || body.cancelled.length === 0) {
+          setFlash(t.resolveStalled);
+          break;
+        }
+        remaining = body.remaining;
+      }
+    } catch {
+      setFlash(t.resolveStalled);
+    }
+    setResolving(null);
+    setBusy(false);
+    void refresh(true, true);
   }, [token, refresh, t]);
 
   // A place is its name. The description the ledger writes starts as that name,
@@ -940,7 +1072,21 @@ export default function GroceryPage() {
   }
 
   const balanceKey = balanceCopyKey(balanceState, confirmedRemaining !== null);
-  const balanceStatusText = balanceKey ? t[balanceKey] : null;
+  const age = confirmedRemaining !== null ? confirmationAge(confirmedAt, nowMs) : null;
+  const ageText =
+    age === null
+      ? null
+      : age.unit === "now"
+      ? t.confirmedNow
+      : age.unit === "minutes"
+      ? fill(t.confirmedMinutes, { n: age.count })
+      : age.unit === "hours"
+      ? fill(t.confirmedHours, { n: age.count })
+      : fill(t.confirmedDays, { n: age.count });
+  // The figure always says how old its confirmation is; while reconnecting,
+  // the state line comes first and the age keeps it honest.
+  const balanceStatusText =
+    [balanceKey ? t[balanceKey] : null, ageText].filter(Boolean).join(" · ") || null;
 
   return (
     // -mb-16 cancels the layout's bottom-nav reserve: ChromeGate hides that
@@ -1327,6 +1473,49 @@ export default function GroceryPage() {
                 </li>
               ))}
             </ul>
+
+            {/* ---- the repair door ----
+                Shown only while a run of repeats exists. The manager chooses
+                the run; the oldest entry stays, the rest are cancelled in the
+                sheet first and marked in the graph after, never deleted. */}
+            {duplicates && duplicates.groups.length > 0 && (
+              <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/5 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-wider text-rose-400">
+                  {t.duplicates} · {rupiah(duplicates.excess_idr)}
+                </div>
+                <p className="mt-1 text-xs text-rose-200/70">
+                  {fill(t.duplicatesBody, { h: duplicates.window_hours })}
+                </p>
+                <ul className="mt-2 divide-y divide-rose-900/40">
+                  {duplicates.groups.map((g) => (
+                    <li key={g.key} className="flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-neutral-200">
+                          {g.description}
+                          <span className="ml-2 tabular-nums text-neutral-400">{rupiah(g.amount_idr)}</span>
+                          <span className="ml-2 text-rose-300">×{g.entries.length}</span>
+                        </div>
+                        <div className="text-xs text-neutral-600">
+                          {g.spent_on}
+                          {g.kind === "topup" ? ` · ${t.modeTop}` : ""}
+                        </div>
+                      </div>
+                      {duplicates.can_resolve && (
+                        <button
+                          onClick={() => void keepOne(g)}
+                          disabled={busy}
+                          className="min-h-[44px] shrink-0 rounded-lg border border-rose-500/50 bg-rose-500/10 px-4 text-sm text-rose-200 disabled:opacity-40"
+                        >
+                          {resolving?.key === g.key
+                            ? fill(t.resolving, { done: resolving.done, total: resolving.total })
+                            : t.keepOne}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="mt-3 flex flex-wrap gap-4">
               <a

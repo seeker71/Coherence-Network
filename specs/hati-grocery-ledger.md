@@ -3,11 +3,15 @@ idea_id: light-hub-membrane
 status: active
 source:
   - file: api/app/routers/grocery.py
-    symbols: [record_spend(), list_spends(), totals(), nearest_shop(), save_shop(), export_csv(), _to_rupiah(), _resolve_description(), _push_to_sheet()]
+    symbols: [record_spend(), list_spends(), totals(), nearest_shop(), save_shop(), export_csv(), _to_rupiah(), _resolve_description(), _push_to_sheet(), _entry_id_for_key(), _store_entry(), _mirror_entry_in_background(), _persist_snapshot_receipts(), _duplicate_groups(), review_duplicates(), resolve_duplicates()]
   - file: api/app/form_recipes/endpoint_grocery_amount.fk
     symbols: [rupiah, scale_frac, pow10]
+  - file: api/app/form_recipes/endpoint_grocery_duplicate_groups.bml
+    symbols: [GroceryDuplicatePolicy]
   - file: web/app/grocery/page.tsx
     symbols: [BalanceCard, GroceryPage, previewIdr(), todayLocal()]
+  - file: web/lib/hati-grocery-balance.ts
+    symbols: [confirmationAge(), newEntryKey(), withEntryKeys()]
   - file: web/tests/hati-grocery-layout.test.ts
     symbols: [Hati grocery balance layout]
   - file: web/middleware.ts
@@ -146,20 +150,51 @@ into a shoebox of receipts, which is the failure this replaces.
   cost the manager their entry: the web queues unsent drafts in localStorage
   and flushes them on the next connection.
 
+- [ ] **R10 — One draft is one entry, however many times it is sent.** The
+  phone mints an `entry_key` when the manager taps Record and keeps it in the
+  queued draft; `POST /grocery/spend` and `POST /grocery/topup` derive the
+  entry's id from that key, so a re-post after a timeout, a restored tab or
+  the next `online` event returns the entry already made. The dedupe is the
+  graph's primary key: it holds across restarts and races, and a draft queued
+  before keys existed receives one the first time the queue is read.
+
+- [ ] **R11 — The mirror never sits on the phone's request.** A record returns
+  as soon as the graph holds the entry. The Sheet append follows after the
+  response on its own bounded clock (`_SHEET_BACKGROUND_WRITE_TIMEOUT`); when
+  its answer is lost, one `summary` read settles whether the row landed before
+  any retry handle is written. A later `summary` that acknowledges a row the
+  graph still calls unsynced becomes a durable receipt in the totals read, and
+  totals carry `confirmed_at` so the page says how old its last confirmed
+  balance is.
+
+- [ ] **R12 — Repeats are repaired by the manager, never deleted silently.**
+  `GET /grocery/duplicates` lists runs of entries with the same day, direction,
+  amount and description created within twelve hours of the run's first entry;
+  the grouping is the Form policy `GroceryDuplicatePolicy`. A writer keeps one
+  entry and `POST /grocery/duplicates/resolve` cancels the rest through the
+  Sheet's own cancellation path (`reconcile_delete`: an `undo` row for each
+  repeat the Sheet holds, a cancellation marker for each), then marks each
+  `sheet_cancelled` with the kept entry's id. The request stops inside the
+  proxy budget and names what it did not reach, so one tap on the phone loops
+  until the run is one entry.
+
 ## Files to Create/Modify
 
-- `api/app/routers/grocery.py` — ledger routes, totals, places, export, and sheet mirror.
+- `api/app/routers/grocery.py` — ledger routes, totals, places, export, sheet mirror, and the duplicate review.
 - `api/app/form_recipes/endpoint_grocery_amount.fk` — exact thousands-to-rupiah recipe.
 - `api/app/form_recipes/endpoint_grocery_remaining.fk` — source selection and signed reconciliation policy.
+- `api/app/form_recipes/endpoint_grocery_duplicate_groups.bml` — the duplicate-run policy, lowered to `.fk` by `scripts/lower_bml_recipe.py`.
 - `api/tests/test_grocery_ledger.py` — API and ledger-flow acceptance coverage.
+- `api/tests/form/grocery-duplicate-groups-band.fk` — the policy's verdict band (127 on fkwu).
 - `web/app/grocery/page.tsx` — contained phone and laptop grocery surface.
+- `web/lib/hati-grocery-balance.ts` — balance resilience, confirmation age, draft keys.
 - `web/tests/hati-grocery-layout.test.ts` — responsive balance-placement invariant.
 - `web/middleware.ts` — `app.hati.earth` host routing.
 - `deploy/hostinger/auto-deploy.sh` — public grocery host labels.
 
 ## Acceptance Tests
 
-- `api/tests/test_grocery_ledger.py` proves exact amounts, signed totals, permissions, places, deletion, export, and sheet resilience.
+- `api/tests/test_grocery_ledger.py` proves exact amounts, signed totals, permissions, places, deletion, export, sheet resilience, one entry per draft key, the mirror off the request path with a durable receipt, and the duplicate review with keep-one through the Sheet cancellation path.
 - `web/tests/hati-grocery-layout.test.ts` proves the phone balance precedes the entry pad and the laptop balance stays in the ledger column.
 - Manual validation at a 390x844 viewport confirms the visible balance card is fully inside the first screen.
 

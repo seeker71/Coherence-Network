@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-24",
+  "thread_branch": "claude/adoring-blackwell-ee2b6f",
+  "change_intent": "runtime_fix",
+  "commit_scope": "The Hati Suci grocery ledger stops drifting from its Google Sheet mirror. (a) Every draft carries a client-minted entry_key; the server derives the entry id from it, so a re-posted draft returns the entry already made across retries, restarts and races. (b) The Sheet append leaves the phone's request path: the response returns after the graph write and a bounded background task appends on its own 30 s clock, settles a lost answer with one summary read, and always leaves a durable receipt; totals persist the Sheet's own acknowledgements and carry confirmed_at so the page says how old its confirmed balance is. (c) A duplicate review door lists runs of repeats (same day, direction, amount, description within twelve hours of the run's first entry — a Form policy lowered from BML) and lets a writer keep one and cancel the rest through the Apps Script cancellation path, marking each sheet_cancelled with the kept entry's id; nothing is deleted.",
+  "idea_ids": [
+    "light-hub-membrane"
+  ],
+  "spec_ids": [
+    "hati-grocery-ledger"
+  ],
+  "task_ids": [
+    "task-2026-10-24-grocery-ledger-idempotent-mirror"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "framing",
+        "production-diagnosis"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "form-policy",
+        "implementation",
+        "witness",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "change_files": [
+    "api/app/form_recipes/endpoint_grocery_duplicate_groups.bml",
+    "api/app/form_recipes/endpoint_grocery_duplicate_groups.fk",
+    "api/app/routers/grocery.py",
+    "api/tests/form/grocery-duplicate-groups-band.fk",
+    "api/tests/test_grocery_ledger.py",
+    "docs/grocery-sheets-setup.md",
+    "docs/system_audit/commit_evidence_2026-10-24_grocery_ledger_idempotent_mirror.json",
+    "scripts/lower_bml_recipe.py",
+    "specs/hati-grocery-ledger.md",
+    "web/app/grocery/page.tsx",
+    "web/lib/hati-grocery-balance.ts",
+    "web/tests/hati-grocery-balance-resilience.test.ts",
+    "web/tests/hati-grocery-layout.test.ts"
+  ],
+  "files_owned": [
+    "api/app/form_recipes/endpoint_grocery_duplicate_groups.bml",
+    "api/app/form_recipes/endpoint_grocery_duplicate_groups.fk",
+    "api/app/routers/grocery.py",
+    "api/tests/form/grocery-duplicate-groups-band.fk",
+    "api/tests/test_grocery_ledger.py",
+    "scripts/lower_bml_recipe.py",
+    "web/app/grocery/page.tsx",
+    "web/lib/hati-grocery-balance.ts"
+  ],
+  "evidence_refs": [
+    "ROOT CAUSE, grounded 2026-10-24 inside the production API container: the phone's offline queue treated any fetch error or timeout as offline and re-posted the draft on every mount and online event; drafts carried no id, SpendCreate had no idempotency field, and record_spend awaited the Apps Script append (up to 6.5 s) inside the request. Apps Script measured 3–30 s, so the POST outlived the phone's fetch while the entry had already landed. Graph: one 2026-10-03 run of 31, 29, 14, 10 and 6 repeats (23:31 → 06:51 next morning); excess Rp 17,985,800 in the sheet and Rp 20,154,800 in the app if each run was one purchase. Receipts: _push_to_sheet_status returned unavailable after 6.5 s although the row was written; 10 entries (Rp 11,641,200) sat in the sheet but unsynced; 3 (Rp 1,281,000) were never appended.",
+    "DEDUPE IS THE PRIMARY KEY, NOT AN INDEX: _entry_id_for_key hashes the client key into the entry id (spend-<sha256[:12]>). A repeated key reads the existing node before any kernel work; a race between two re-posts lands on create_node's IntegrityError, which the private-type path raises as ValueError, caught and answered with the existing entry. No new index, no migration, no window. Verified by test_a_repeated_entry_key_records_one_entry: four posts, one id; a topup key lives in its own lane; a malformed key is 422 before anything is written.",
+    "THE MIRROR LEAVES THE REQUEST: _store_entry writes the graph and hands _mirror_entry_in_background to Starlette BackgroundTasks, which runs after the response is sent (deterministically before TestClient returns). The background append uses _SHEET_BACKGROUND_WRITE_TIMEOUT 30 s (httpx attempt and wall clock) instead of the request-path 6.5 s. An unavailable answer triggers one _read_sheet_snapshot([id]); acknowledged → synced, cancelled → cancelled, dark → the existing retry handle (sheet_append_retry_after + yield flag) that /grocery/sheet/resync already honours. Proven by test_the_mirror_append_leaves_the_request_path (response sheet_synced false, node synced afterwards, background timeout observed), test_a_lost_append_answer_is_settled_by_the_sheets_acknowledgement, test_an_unanswered_append_leaves_a_durable_retry_handle.",
+    "TOTALS KEEP THE SHEET'S WORD: when summary acknowledges rows the graph still calls unsynced, _persist_snapshot_receipts writes sheet_synced/sheet_cancelled receipts inside the same 13 s budget, best effort, and only when there is something to write (no DB write on the common path). TotalsResponse gains confirmed_at (UTC ISO at the moment the snapshot was read; null when unavailable) and pending_count. Proven by test_totals_record_sheet_acknowledgements_and_say_when_confirmed. The setup doc's sentence that a totals read never mutates either ledger is retuned: it never OFFERS rows to the sheet; it does keep the sheet's own acknowledgement.",
+    "THE DUPLICATE POLICY IS FORM, LOWERED FROM BML: api/app/form_recipes/endpoint_grocery_duplicate_groups.bml (class GroceryDuplicatePolicy) walks an ordered wire position|signature|created_seconds and returns runs of two or more positions whose creation lies within window of the run's FIRST entry. scripts/lower_bml_recipe.py drives form-source-compile-file on the checkout's fkwu and stamps the BML SHA-256 into the .fk header; test_duplicate_recipe_is_generated_from_current_bml_source rejects drift. The band api/tests/form/grocery-duplicate-groups-band.fk reads 127 on production fkwu (run; singleton dropped; window from first not previous; inclusive edge; signatures never mix; empty wire; many runs in wire order). The Python carrier only assigns opaque signature tokens, orders by the full microsecond created_at (the whole-second wire value alone put same-second repeats out of creation order — caught by the test, fixed in the carrier) and validates the kernel's positions.",
+    "KEEP ONE, THROUGH THE SHEET: resolve_duplicates validates that every cancel id is in the keep id's run, then for each repeat, while _current_sheet_attempt_fits(deadline), calls the existing _reconcile_sheet_delete (reconcile_delete under the Apps Script lock: an undo row when the row is present, a cancellation marker always) and only then persists sheet_cancelled, sheet_cancelled_at, duplicate_of and cancelled_by_id. A None from the carrier or a failed receipt stops the loop and names the entry as unconfirmed; entries not reached are named as remaining. The page loops until remaining is empty, shows 'Cancelling n of m', and stops with a visible message when the sheet stops confirming. Proven by test_the_duplicate_review_names_runs_and_keeps_one, test_duplicate_resolve_refuses_entries_outside_the_run, test_duplicate_resolve_stops_at_the_budget_and_names_the_rest. See-only members can read the review (can_resolve false) and get 403 on resolve.",
+    "PHONE: Draft gains entry_key (newEntryKey → crypto.randomUUID, fallback random hex), minted on Record and persisted in the localStorage queue; withEntryKeys gives an older queued draft a key the first time the queue is read so even a stale queue flushes idempotently. The balance line composes the state copy with confirmationAge(confirmed_at, now) — 'confirmed 3 min ago' / 'terkonfirmasi 3 mnt lalu' — ticking every 30 s. The duplicate review renders only while runs exist, with Keep one for writers. web: tsc clean, vitest 162 passed (24 files) including the new confirmationAge, newEntryKey, withEntryKeys and page-source claims.",
+    "ENVIRONMENT NOTE: test_generic_graph_access_cannot_bypass_grocery_privacy_or_reconciliation fails on this Mac before and after this change (count route answers 405 where the claim expects 403; /api/graph/nodes/count is native-owned per api/config/native_api.json) — the parent session recorded the same local/CI difference; it was deselected in the local grocery-file runs and is not touched here. CI's default pytest collection is the core suite (api/tests/core_suite.txt), which does not list test_grocery_ledger.py; the grocery claims were run explicitly by file."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && uv run pytest -q -p no:cacheprovider --ignore=tests/holdout -> 365 passed in 66.37s",
+      "cd api && uv run pytest -q -p no:cacheprovider tests/test_grocery_ledger.py --deselect <the environment-bound count claim> -> 107 passed, 1 deselected (97 existing + 10 new)",
+      "band: endpoint_grocery_duplicate_groups.fk + tests/form/grocery-duplicate-groups-band.fk -> 127 on fkwu through app.services.form_kernel_bridge.run_kernel",
+      "python3 scripts/lower_bml_recipe.py api/app/form_recipes/endpoint_grocery_duplicate_groups.bml '(let entries_wire \"\") (let window_seconds 43200) (grocery-duplicate-main entries_wire window_seconds)'",
+      "cd web && npx tsc --noEmit -> clean",
+      "cd web && npx vitest run -> 162 passed (24 files)"
+    ],
+    "summary": "API core suite 365 passed; grocery file 107 passed with the environment-bound count claim deselected; duplicate policy band 127 on fkwu; web tsc clean and vitest 162 passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "The PR's Test workflow runs the API suite, the evidence validator and the web build and tests."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "After the merge rolls out: https://app.hati.earth/ answers 200 and its balance line shows the confirmation age; GET /api/grocery/totals carries confirmed_at; GET /api/grocery/duplicates lists the 2026-10-03, 2026-09-06, 2026-10-07 and 2026-10-16 runs for the manager; a repeated POST with one entry_key creates one entry."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A repeated POST /api/grocery/spend or /topup with the same entry_key returns the same entry instead of a new one. A record returns before the Sheet append; the append runs after the response on a 30 s clock and leaves a durable receipt (synced, cancelled, or a retry handle), and a later summary acknowledgement is kept by the totals read. Totals carry confirmed_at and pending_count; the phone's balance line says how old its confirmation is. GET /api/grocery/duplicates lists runs of repeats; POST /api/grocery/duplicates/resolve keeps one and cancels the rest through the Sheet cancellation path, bounded per request and resumable.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/grocery/totals?token=<member> — confirmed_at and pending_count beside remaining_idr",
+      "GET https://api.coherencycoin.com/api/grocery/duplicates?token=<member> — the review",
+      "https://app.hati.earth/ — the ledger with its confirmation age and the Possible duplicates card"
+    ],
+    "test_flows": [
+      "test_a_repeated_entry_key_records_one_entry",
+      "test_the_mirror_append_leaves_the_request_path",
+      "test_a_lost_append_answer_is_settled_by_the_sheets_acknowledgement",
+      "test_an_unanswered_append_leaves_a_durable_retry_handle",
+      "test_totals_record_sheet_acknowledgements_and_say_when_confirmed",
+      "test_the_duplicate_review_names_runs_and_keeps_one",
+      "test_duplicate_resolve_refuses_entries_outside_the_run",
+      "test_duplicate_resolve_stops_at_the_budget_and_names_the_rest",
+      "test_duplicate_policy_band_runs_on_production_form (127)",
+      "test_duplicate_recipe_is_generated_from_current_bml_source"
+    ],
+    "notes": "The duplicate runs recorded in production are repaired by the manager through the app after rollout, one tap per run; this change ships the door, not the repair."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout and the manager's keep-one taps on the live runs are the live check; after them, sheet and graph converge and the Sisa line carries its confirmation age."
+  }
+}

@@ -3232,3 +3232,331 @@ def test_sheet_carrier_binds_to_the_restructured_tab_identity():
     assert "const historicalDeletionSignatures = new Set();" in carrier
     assert "acknowledgedSet.has(originalId)" in carrier
     assert "historicalDeletionSignatures.has(historicalDeletion)" in carrier
+
+
+# --------------------------------------------------------------------------
+# One draft, one entry — and the mirror off the phone's request.
+# --------------------------------------------------------------------------
+
+_DUPLICATE_BML = _REPO_ROOT / "api" / "app" / "form_recipes" / "endpoint_grocery_duplicate_groups.bml"
+_DUPLICATE_RECIPE = _DUPLICATE_BML.with_suffix(".fk")
+
+
+def test_duplicate_policy_band_runs_on_production_form():
+    recipe = _DUPLICATE_RECIPE.read_text()
+    band = (
+        _REPO_ROOT / "api" / "tests" / "form" / "grocery-duplicate-groups-band.fk"
+    ).read_text()
+    band = band.replace(
+        "; preludes: ../../api/app/form_recipes/endpoint_grocery_duplicate_groups.fk\n",
+        "",
+    )
+
+    verdict, runtime = run_kernel(f"{recipe}\n{band}", parse=int, timeout=30)
+
+    assert runtime == "fkwu"
+    assert verdict == 127
+
+
+def test_duplicate_recipe_is_generated_from_current_bml_source():
+    source_digest = hashlib.sha256(_DUPLICATE_BML.read_bytes()).hexdigest()
+    recipe = _DUPLICATE_RECIPE.read_text()
+
+    assert f"; BML-SHA256: {source_digest}" in recipe.splitlines()[:3]
+    assert "(defn GroceryDuplicatePolicy" in recipe
+
+
+def _bootstrap_token(client) -> str:
+    resident = client.post("/api/household/bootstrap", json={"name": "Ita"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    return resident.json()["token"]
+
+
+def test_a_repeated_entry_key_records_one_entry(client):
+    token = _bootstrap_token(client)
+    draft = {
+        "actor_token": token, "amount": "160", "category": "fruit",
+        "entry_key": "phone-7f3a2c1e-fruit",
+    }
+
+    first = client.post("/api/grocery/spend", json=draft)
+    assert first.status_code == 200, first.text
+    # The phone's queue re-posts the same draft after a timeout, a restored tab,
+    # and the next `online` event: thirty-one posts, one market run.
+    repeats = [client.post("/api/grocery/spend", json=draft) for _ in range(3)]
+    assert all(r.status_code == 200 for r in repeats)
+    assert {r.json()["id"] for r in repeats} == {first.json()["id"]}
+    assert first.json()["entry_key"] == "phone-7f3a2c1e-fruit"
+
+    rows = client.get(f"/api/grocery/spend?token={token}").json()
+    assert [r["id"] for r in rows].count(first.json()["id"]) == 1
+    assert len(rows) == 1
+
+    # The key survives a restart because it is the entry's own id.
+    assert first.json()["id"] == grocery._entry_id_for_key("spend", "phone-7f3a2c1e-fruit")
+    assert grocery.graph_service.get_node_unfiltered(first.json()["id"])["entry_key"] == (
+        "phone-7f3a2c1e-fruit"
+    )
+
+    # A different draft is a different entry; a top-up key lives in its own lane.
+    other = client.post("/api/grocery/spend", json={**draft, "entry_key": "phone-7f3a2c1e-other"})
+    assert other.json()["id"] != first.json()["id"]
+    top = client.post("/api/grocery/topup", json={
+        "actor_token": token, "amount": "4000", "entry_key": "phone-7f3a2c1e-fruit",
+    })
+    top_again = client.post("/api/grocery/topup", json={
+        "actor_token": token, "amount": "4000", "entry_key": "phone-7f3a2c1e-fruit",
+    })
+    assert top.status_code == 200 and top.json()["kind"] == "topup"
+    assert top_again.json()["id"] == top.json()["id"]
+    assert top.json()["id"] != first.json()["id"]
+    assert len(client.get(f"/api/grocery/spend?token={token}").json()) == 3
+
+    # A key that is not a key is refused before anything is written.
+    assert client.post("/api/grocery/spend", json={**draft, "entry_key": "x"}).status_code == 422
+
+
+def test_the_mirror_append_leaves_the_request_path(client, monkeypatch):
+    appended: list[tuple[str, float | None]] = []
+
+    async def slow_append(spend, *, total_timeout=None):
+        appended.append((spend.id, total_timeout))
+        return "synced"
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", slow_append)
+    token = _bootstrap_token(client)
+
+    created = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "235.6", "category": "egg_dairy"},
+    )
+    assert created.status_code == 200, created.text
+    # The response left before the mirror: the phone's request never waits
+    # on Apps Script, so a slow append can no longer outlive it.
+    assert created.json()["sheet_synced"] is False
+    spend_id = created.json()["id"]
+    # The append ran after the response, on the background clock, and its
+    # receipt is durable in the graph.
+    assert appended == [(spend_id, grocery._SHEET_BACKGROUND_WRITE_TIMEOUT)]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is True
+    assert grocery._SHEET_BACKGROUND_WRITE_TIMEOUT > grocery._SHEET_WRITE_TOTAL_TIMEOUT
+
+
+def test_a_lost_append_answer_is_settled_by_the_sheets_acknowledgement(client, monkeypatch):
+    asked: list[list[str]] = []
+
+    async def lost_answer(_spend, *, total_timeout=None):
+        return "unavailable"
+
+    async def sheet_has_it(pending_ids):
+        asked.append(list(pending_ids))
+        return grocery._SheetSnapshot(0, frozenset(pending_ids), frozenset())
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", lost_answer)
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_has_it)
+    token = _bootstrap_token(client)
+
+    created = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "270", "note": "Nuts for granola"},
+    )
+    spend_id = created.json()["id"]
+    # The row landed while the answer was still in flight: one acknowledgement
+    # read settles it, and no retry handle is left behind.
+    assert asked == [[spend_id]]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is True
+    assert not node.get("sheet_append_retry_after")
+
+
+def test_an_unanswered_append_leaves_a_durable_retry_handle(client, monkeypatch):
+    async def lost_answer(_spend, *, total_timeout=None):
+        return "unavailable"
+
+    async def sheet_dark(_pending_ids):
+        return None
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", lost_answer)
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_dark)
+    token = _bootstrap_token(client)
+
+    spend_id = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "212.5", "note": "Ghee"},
+    ).json()["id"]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is False
+    assert node["sheet_append_retry_after"]      # resync's handle
+
+
+def test_totals_record_sheet_acknowledgements_and_say_when_confirmed(client, monkeypatch):
+    token = _bootstrap_token(client)
+    spend_id = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    ).json()["id"]
+    assert grocery.graph_service.get_node_unfiltered(spend_id)["sheet_synced"] is False
+
+    async def acknowledged(pending_ids):
+        return grocery._SheetSnapshot(5_000_000, frozenset(pending_ids), frozenset())
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", acknowledged)
+    totals = client.get(f"/api/grocery/totals?token={token}")
+    assert totals.status_code == 200, totals.text
+    body = totals.json()
+    # Sisa already contains the acknowledged row, so nothing is subtracted twice.
+    assert body["remaining_idr"] == 5_000_000
+    assert body["remaining_source"] == "sheet"
+    assert body["pending_count"] == 0
+    # The confirmation instant travels with the figure so the phone can say
+    # how old its last confirmed balance is.
+    confirmed_at = body["confirmed_at"]
+    assert confirmed_at and confirmed_at.endswith("+00:00")
+    # And the graph caught up with what the Sheet said: the receipt is kept.
+    assert grocery.graph_service.get_node_unfiltered(spend_id)["sheet_synced"] is True
+
+    async def dark(_pending_ids):
+        return None
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", dark)
+    dark_totals = client.get(f"/api/grocery/totals?token={token}").json()
+    assert dark_totals["remaining_source"] == "unavailable"
+    assert dark_totals["confirmed_at"] is None
+
+
+def test_the_duplicate_review_names_runs_and_keeps_one(client, monkeypatch):
+    reconciled: list[tuple[str, bool]] = []
+
+    async def fake_reconcile(node, _actor):
+        # The first repeat landed in the Sheet, the second never did.
+        mirrored = len(reconciled) == 0
+        reconciled.append((node["id"], mirrored))
+        return mirrored
+
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", fake_reconcile)
+    token = _bootstrap_token(client)
+    fruit = {"actor_token": token, "amount": "160", "category": "fruit"}
+    ids = [client.post("/api/grocery/spend", json=fruit).json()["id"] for _ in range(3)]
+    lone = client.post(
+        "/api/grocery/spend", json={**fruit, "amount": "204"}
+    ).json()["id"]
+
+    review = client.get(f"/api/grocery/duplicates?token={token}")
+    assert review.status_code == 200, review.text
+    body = review.json()
+    assert body["group_count"] == 1
+    assert body["entry_count"] == 2
+    assert body["excess_idr"] == 320_000
+    assert body["can_resolve"] is True
+    group = body["groups"][0]
+    assert group["amount_idr"] == 160_000
+    assert group["description"] == "Fruit"
+    assert [e["id"] for e in group["entries"]] == ids       # oldest first
+    assert group["keep_id"] == ids[0]
+    assert lone not in {e["id"] for e in group["entries"]}
+
+    # A see-only member sees the review but cannot resolve it.
+    watcher = client.post("/api/household/members", json={"name": "Kadek"}).json()["token"]
+    seen = client.get(f"/api/grocery/duplicates?token={watcher}").json()
+    assert seen["group_count"] == 1 and seen["can_resolve"] is False
+    assert client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": watcher, "keep_id": ids[0], "cancel_ids": ids[1:]},
+    ).status_code == 403
+
+    # One tap: keep the oldest, cancel the rest through the Sheet path.
+    resolved = client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": ids[0], "cancel_ids": ids[1:]},
+    )
+    assert resolved.status_code == 200, resolved.text
+    outcome = resolved.json()
+    assert outcome["cancelled"] == [
+        {"id": ids[1], "was_mirrored": True},
+        {"id": ids[2], "was_mirrored": False},
+    ]
+    assert outcome["remaining"] == [] and outcome["unconfirmed"] == []
+    assert [entry_id for entry_id, _ in reconciled] == ids[1:]
+
+    # Nothing vanished silently: the repeats stay in the graph, cancelled and
+    # pointing at the one kept; the ledger and the review no longer show them.
+    for cancelled_id in ids[1:]:
+        node = grocery.graph_service.get_node_unfiltered(cancelled_id)
+        assert node["sheet_cancelled"] is True
+        assert node["duplicate_of"] == ids[0]
+    visible = {r["id"] for r in client.get(f"/api/grocery/spend?token={token}").json()}
+    assert visible == {ids[0], lone}
+    assert client.get(f"/api/grocery/duplicates?token={token}").json()["group_count"] == 0
+    totals = client.get(f"/api/grocery/totals?token={token}").json()
+    assert totals["day_count"] == 2
+    assert totals["day_total_idr"] == 160_000 + 204_000
+
+
+def test_duplicate_resolve_refuses_entries_outside_the_run(client, monkeypatch):
+    async def never(_node, _actor):
+        pytest.fail("an entry outside the run must not reach the Sheet")
+
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", never)
+    token = _bootstrap_token(client)
+    pasar = {"actor_token": token, "amount": "444", "note": "Pasar"}
+    ids = [client.post("/api/grocery/spend", json=pasar).json()["id"] for _ in range(2)]
+    delta = client.post(
+        "/api/grocery/spend", json={"actor_token": token, "amount": "393", "note": "Delta Dewata"}
+    ).json()["id"]
+
+    assert client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": delta, "cancel_ids": ids},
+    ).status_code == 404
+    assert client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": ids[0], "cancel_ids": [ids[1], delta]},
+    ).status_code == 422
+    assert client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": ids[0], "cancel_ids": [ids[0]]},
+    ).status_code == 422
+
+
+def test_duplicate_resolve_stops_at_the_budget_and_names_the_rest(client, monkeypatch):
+    async def confirmed(_node, _actor):
+        return True
+
+    fits = iter([True, False])
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", confirmed)
+    monkeypatch.setattr(grocery, "_current_sheet_attempt_fits", lambda _deadline: next(fits))
+    token = _bootstrap_token(client)
+    ghee = {"actor_token": token, "amount": "212.5", "note": "Ghee"}
+    ids = [client.post("/api/grocery/spend", json=ghee).json()["id"] for _ in range(3)]
+
+    first = client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": ids[0], "cancel_ids": ids[1:]},
+    ).json()
+    # One repeat fit the proxy budget; the other is named, not forgotten.
+    assert [c["id"] for c in first["cancelled"]] == [ids[1]]
+    assert first["remaining"] == [ids[2]]
+
+    async def dark(_node, _actor):
+        return None
+
+    monkeypatch.setattr(grocery, "_reconcile_sheet_delete", dark)
+    monkeypatch.setattr(grocery, "_current_sheet_attempt_fits", lambda _deadline: True)
+    second = client.post(
+        "/api/grocery/duplicates/resolve",
+        json={"actor_token": token, "keep_id": ids[0], "cancel_ids": ids[2:]},
+    ).json()
+    # A dark Sheet proves nothing: the entry stays, and retrying is safe.
+    assert second["cancelled"] == [] and second["unconfirmed"] == [ids[2]]
+    assert grocery.graph_service.get_node_unfiltered(ids[2]).get("sheet_cancelled") is None

@@ -34,8 +34,10 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import hashlib
 import io
 import json
+import logging
 import re
 import threading
 import time
@@ -46,7 +48,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
@@ -71,6 +73,7 @@ from app.services.form_kernel_bridge import (
 from app.services.process_tree_reaper import ProcessTreeReapError
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 _SPEND_TYPE = "grocery_spend"
 _KIND_BUY = "buy"        # money out — a market run
@@ -94,6 +97,18 @@ _GROCERY_REQUEST_TOTAL_TIMEOUT = 13.0
 # still rests comfortably inside the web proxy's 15-second boundary.
 _GROCERY_HANDLER_CLEANUP_GRACE = 0.25
 _SHEET_APPEND_RETRY_DELAY_SECONDS = 30
+# The mirror append runs after the response has left the phone's request, so
+# it may wait out a slow Apps Script (measured 3–30 s) instead of racing the
+# 15-second proxy. One bounded task: the append, one acknowledgement read when
+# the append answer was lost, and the durable receipt.
+_SHEET_BACKGROUND_WRITE_TIMEOUT = 30.0
+_SHEET_BACKGROUND_TOTAL_TIMEOUT = 50.0
+# A phone that re-posts one market run leaves repeats within hours of each
+# other; the measured flood ran 23:31 → 06:51 the next morning.
+_DUPLICATE_WINDOW_SECONDS = 12 * 60 * 60
+# The phone mints one key per draft and keeps it in its offline queue, so every
+# re-post of the same draft names the same entry.
+_ENTRY_KEY_PATTERN = r"^[A-Za-z0-9._:-]{8,80}$"
 
 
 def _monotonic() -> float:
@@ -388,10 +403,15 @@ class SpendCreate(BaseModel):
     lat: int | None = None                                       # or raw GPS, to resolve one
     lon: int | None = None
     spent_on: str | None = Field(default=None, max_length=10)    # ISO date; today when absent
+    # The draft's own name. A re-post of the same draft — the phone's queue
+    # after a timeout, a tab restored, a retried fetch — returns the entry it
+    # already made instead of recording the market run again.
+    entry_key: str | None = Field(default=None, pattern=_ENTRY_KEY_PATTERN)
 
 
 class SpendResponse(BaseModel):
     id: str
+    entry_key: str | None = None
     amount_typed: str          # what the thumb typed — "123.5"
     amount_idr: int            # what it means — 123500
     currency: str = _CURRENCY
@@ -425,6 +445,7 @@ class CategoryOut(BaseModel):
 def _node_to_spend(node: dict) -> SpendResponse:
     return SpendResponse(
         id=node.get("id", ""),
+        entry_key=_s(node.get("entry_key")) or None,
         amount_typed=_s(node.get("amount_typed")) or "",
         amount_idr=int(node.get("amount_idr") or 0),
         currency=_s(node.get("currency")) or _CURRENCY,
@@ -505,13 +526,121 @@ async def list_categories() -> list[CategoryOut]:
     return [CategoryOut(key=k, emoji=e, en=en, id=idn) for k, e, en, idn in _CATEGORIES]
 
 
+def _entry_id_for_key(prefix: str, entry_key: str) -> str:
+    """The entry a draft names. Same key, same id — on every retry, after every restart.
+
+    The id is the dedupe: the graph's primary key refuses a second row for the
+    same draft even when two re-posts race, with no index to add and no
+    window to miss.
+    """
+    digest = hashlib.sha256(f"{prefix}:{entry_key}".encode("utf-8")).hexdigest()
+    return f"{prefix}-{digest[:12]}"
+
+
+def _new_entry_id(prefix: str, entry_key: str | None) -> str:
+    if entry_key:
+        return _entry_id_for_key(prefix, entry_key)
+    return f"{prefix}-{uuid.uuid4().hex[:12]}"
+
+
+async def _existing_entry(entry_id: str) -> SpendResponse | None:
+    """The entry already recorded under this draft's key, or ``None``."""
+    node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+    if not node or node.get("type") != _SPEND_TYPE:
+        return None
+    return _node_to_spend(node)
+
+
+async def _store_entry(
+    entry_id: str,
+    *,
+    name: str,
+    description: str,
+    props: dict[str, Any],
+    background: BackgroundTasks,
+) -> SpendResponse:
+    """Write one ledger entry to the graph and hand its mirror to the background.
+
+    The response leaves as soon as the graph holds the entry. The Sheet append
+    follows after the response, bounded on its own clock, so a slow Apps
+    Script never outlives the phone's request and re-posts the same run.
+    """
+    try:
+        await asyncio.to_thread(
+            graph_service.create_node,
+            id=entry_id,
+            type=_SPEND_TYPE,
+            name=name,
+            description=description,
+            properties=props,
+            _include_private=True,
+        )
+    except ValueError:
+        # Two re-posts of one draft raced; the primary key kept one. Return it.
+        existing = await _existing_entry(entry_id)
+        if existing is None or (
+            props.get("entry_key") and existing.entry_key != props.get("entry_key")
+        ):
+            raise HTTPException(
+                status_code=409, detail="that entry id is already taken"
+            ) from None
+        return existing
+    node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+    spend = _node_to_spend(node or {"id": entry_id, **props})
+    background.add_task(_mirror_entry_in_background, entry_id)
+    return spend
+
+
+async def _mirror_entry_in_background(entry_id: str) -> None:
+    """Append one new entry to the Sheet after its response has left.
+
+    Bounded by its own clock. When the append answer is lost but the row may
+    have landed, one acknowledgement read settles it before a retry handle is
+    written; a receipt always lands in the graph, so ``/grocery/sheet/resync``
+    and the next totals read can finish what this task could not.
+    """
+    try:
+        url, secret = _sheet_webhook()
+        if not url or not secret:
+            return
+        deadline = _monotonic() + _SHEET_BACKGROUND_TOTAL_TIMEOUT
+        node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+        if (
+            not node
+            or node.get("type") != _SPEND_TYPE
+            or node.get("sheet_synced")
+            or node.get("sheet_cancelled")
+        ):
+            return
+        spend = _node_to_spend(node)
+        status = await _push_to_sheet_status(
+            spend, total_timeout=_SHEET_BACKGROUND_WRITE_TIMEOUT
+        )
+        if status == "unavailable":
+            snapshot = await _read_sheet_snapshot([spend.id])
+            if snapshot is not None:
+                if spend.id in snapshot.cancelled_ids:
+                    status = "cancelled"
+                elif spend.id in snapshot.acknowledged_ids:
+                    status = "synced"
+        await _persist_current_sheet_append_status(node, status, deadline=deadline)
+    except Exception:  # noqa: BLE001 — a background receipt must never raise
+        log.exception("grocery mirror append for %s did not finish", entry_id)
+
+
 @router.post(
     "/grocery/spend",
     response_model=SpendResponse,
     summary="Record what was spent — one number, everything else filled in",
 )
-async def record_spend(body: SpendCreate) -> SpendResponse:
+async def record_spend(body: SpendCreate, background: BackgroundTasks) -> SpendResponse:
     actor = _require_writer(body.actor_token)
+
+    spend_id = _new_entry_id("spend", body.entry_key)
+    if body.entry_key:
+        existing = await _existing_entry(spend_id)
+        if existing is not None:
+            return existing
 
     if body.category is not None and body.category not in _CATEGORY_KEYS:
         raise HTTPException(status_code=422, detail=f"unknown category {body.category!r}")
@@ -546,8 +675,8 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
     description = _resolve_description(
         note=body.note, category=body.category, shop=shop
     )
-    spend_id = f"spend-{uuid.uuid4().hex[:12]}"
     props: dict[str, Any] = {
+        "entry_key": body.entry_key,
         "amount_typed": (body.amount or "").strip(),
         "amount_idr": amount_idr,
         "currency": _CURRENCY,
@@ -565,26 +694,15 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "sheet_synced": False,
         "sheet_protocol": _SHEET_PROTOCOL,
     }
-    graph_service.create_node(
-        id=spend_id,
-        type=_SPEND_TYPE,
+    # The mirror follows after the response. A dark or slow sheet never costs
+    # the manager their entry, and never makes the phone post it twice.
+    return await _store_entry(
+        spend_id,
         name=f"{_CURRENCY} {amount_idr:,} — {description}",
         description=description,
-        properties=props,
-        _include_private=True,
+        props=props,
+        background=background,
     )
-    node = graph_service.get_node_unfiltered(spend_id) or {"id": spend_id, **props}
-    spend = _node_to_spend(node)
-
-    # The mirror. A dark sheet never costs the manager their entry.
-    if await _push_to_sheet(spend):
-        graph_service.update_node(
-            spend_id,
-            _include_private=True,
-            properties={"sheet_synced": True},
-        )
-        spend.sheet_synced = True
-    return spend
 
 
 @router.get(
@@ -610,6 +728,7 @@ class TopUpCreate(BaseModel):
     amount: str = Field(min_length=1, max_length=20)   # thousands, same as a buy
     note: str | None = Field(default=None, max_length=200)
     spent_on: str | None = Field(default=None, max_length=10)
+    entry_key: str | None = Field(default=None, pattern=_ENTRY_KEY_PATTERN)
 
 
 @router.post(
@@ -617,7 +736,7 @@ class TopUpCreate(BaseModel):
     response_model=SpendResponse,
     summary="Money added to the float — the other direction of the same ledger",
 )
-async def record_topup(body: TopUpCreate) -> SpendResponse:
+async def record_topup(body: TopUpCreate, background: BackgroundTasks) -> SpendResponse:
     """A top-up is the same shape as a buy, pointing the other way.
 
     Keeping both in one cell type means "remaining" is a single sum rather
@@ -625,6 +744,11 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
     by hand with negative rows.
     """
     actor = _require_writer(body.actor_token)
+    topup_id = _new_entry_id("topup", body.entry_key)
+    if body.entry_key:
+        existing = await _existing_entry(topup_id)
+        if existing is not None:
+            return existing
     amount_idr, runtime = _to_rupiah(body.amount)
     if amount_idr <= 0:
         raise HTTPException(status_code=422, detail="a top-up of zero is not a top-up")
@@ -636,8 +760,8 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         raise HTTPException(status_code=422, detail=f"{spent_on!r} is not a date (YYYY-MM-DD)")
 
     note = (body.note or "").strip()
-    topup_id = f"topup-{uuid.uuid4().hex[:12]}"
     props: dict[str, Any] = {
+        "entry_key": body.entry_key,
         "amount_typed": (body.amount or "").strip(),
         "amount_idr": amount_idr,
         "currency": _CURRENCY,
@@ -655,22 +779,13 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         "sheet_synced": False,
         "sheet_protocol": _SHEET_PROTOCOL,
     }
-    graph_service.create_node(
-        id=topup_id, type=_SPEND_TYPE,
+    return await _store_entry(
+        topup_id,
         name=f"top up {_CURRENCY} {amount_idr:,}",
-        description=props["spend_description"], properties=props,
-        _include_private=True,
+        description=props["spend_description"],
+        props=props,
+        background=background,
     )
-    node = graph_service.get_node_unfiltered(topup_id) or {"id": topup_id, **props}
-    topup = _node_to_spend(node)
-    if await _push_to_sheet(topup):
-        graph_service.update_node(
-            topup_id,
-            _include_private=True,
-            properties={"sheet_synced": True},
-        )
-        topup.sheet_synced = True
-    return topup
 
 
 class DeleteResponse(BaseModel):
@@ -753,6 +868,40 @@ class TotalsResponse(BaseModel):
     month_count: int
     remaining_idr: int | None = None
     remaining_source: Literal["sheet", "unavailable"] = "unavailable"
+    # When the Sheet confirmed the figure above (UTC ISO), so the phone can say
+    # how old its last confirmed balance is; ``None`` when nothing confirmed.
+    confirmed_at: str | None = None
+    # Entries the Sheet has not acknowledged yet; the balance already counts them.
+    pending_count: int = 0
+
+
+def _persist_snapshot_receipts(
+    pending_nodes: list[dict],
+    snapshot: _SheetSnapshot,
+    *,
+    deadline: float | None = None,
+) -> set[str]:
+    """Record what the Sheet just said about rows still marked unsynced.
+
+    An append whose answer was lost in flight is acknowledged here by the
+    Sheet's own ``summary``; writing that receipt is not a mutation of the
+    ledger, only the graph catching up with it. No write when nothing changed.
+    """
+    updates = {
+        entry_id: properties
+        for node in pending_nodes
+        for entry_id in [_s(node.get("id"))]
+        for properties in [_sheet_receipt_properties(entry_id, snapshot)]
+        if entry_id and properties
+    }
+    if not updates:
+        return set()
+    return graph_service.update_node_properties_batch(
+        updates,
+        _include_private=True,
+        _source="grocery-sheet-acknowledgement",
+        _deadline=deadline,
+    )
 
 
 def _remaining_balance(
@@ -1195,6 +1344,7 @@ async def _totals_within_deadline(
                 )
             except asyncio.TimeoutError:
                 balance_snapshot = None
+    confirmed_at = _now() if balance_snapshot is not None else None
     pending_signed = [
         spend.signed_idr
         for spend in pending
@@ -1204,6 +1354,19 @@ async def _totals_within_deadline(
             and spend.id not in balance_snapshot.cancelled_ids
         )
     ]
+    if balance_snapshot is not None and len(pending_signed) < len(pending):
+        # The Sheet acknowledged rows this graph still calls unsynced — an
+        # append whose answer was lost. Keep the receipt, best effort, inside
+        # the same budget; the balance above already excludes those rows.
+        try:
+            await asyncio.to_thread(
+                _persist_snapshot_receipts,
+                pending_nodes,
+                balance_snapshot,
+                deadline=deadline,
+            )
+        except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError):
+            pass
     remaining = await asyncio.to_thread(
         _remaining_balance,
         sheet_remaining=(
@@ -1223,6 +1386,8 @@ async def _totals_within_deadline(
         month_count=len(month_rows),
         remaining_idr=remaining,
         remaining_source=remaining_source,
+        confirmed_at=confirmed_at if remaining is not None else None,
+        pending_count=len(pending_signed),
     )
 
 
@@ -1495,6 +1660,8 @@ def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
 
 async def _push_to_sheet_status(
     spend: SpendResponse,
+    *,
+    total_timeout: float | None = None,
 ) -> Literal["synced", "cancelled", "unavailable"]:
     """Append one row and distinguish acknowledgement from cancellation.
 
@@ -1502,10 +1669,20 @@ async def _push_to_sheet_status(
     spreadsheet. A shared secret authenticates it and ``entry_id`` makes
     retries idempotent. Any failure becomes ``unavailable`` on purpose: the
     graph already holds the entry, and ``sheet_synced=false`` is the retry handle.
+
+    ``total_timeout`` defaults to the request-path budget; the background
+    mirror passes its own longer clock.
     """
     url, secret = _sheet_webhook()
     if not url or not secret:
         return "unavailable"
+    if total_timeout is None:
+        total_timeout = _SHEET_WRITE_TOTAL_TIMEOUT
+    attempt_timeout = (
+        _SHEET_WRITE_ATTEMPT_TIMEOUT
+        if total_timeout <= _SHEET_WRITE_TOTAL_TIMEOUT
+        else total_timeout
+    )
     payload: dict[str, Any] = {
         "action": "append",
         "entry_id": spend.id,
@@ -1515,12 +1692,12 @@ async def _push_to_sheet_status(
     }
     try:
         async with httpx.AsyncClient(
-            timeout=_SHEET_WRITE_ATTEMPT_TIMEOUT,
+            timeout=attempt_timeout,
             follow_redirects=True,
         ) as client:
             response = await asyncio.wait_for(
                 client.post(url, json=payload),
-                timeout=_SHEET_WRITE_TOTAL_TIMEOUT,
+                timeout=total_timeout,
             )
         if response.status_code >= 400:
             return "unavailable"
@@ -1767,6 +1944,285 @@ async def resync_sheet(body: ResyncBody) -> ResyncResponse:
         synced=synced,
         configured=configured,
         blocked_legacy=blocked_legacy,
+    )
+
+
+# --------------------------------------------------------------------------
+# Duplicate review — the repair door for a phone that posted one run many times.
+# --------------------------------------------------------------------------
+
+
+class DuplicateGroup(BaseModel):
+    key: str                        # the oldest entry's id — stable across reads
+    spent_on: str
+    kind: str
+    amount_idr: int
+    description: str
+    entries: list[SpendResponse]    # oldest first
+    keep_id: str                    # the oldest — the natural one to keep
+    excess_idr: int                 # what the repeats add up to
+
+
+class DuplicateReview(BaseModel):
+    groups: list[DuplicateGroup]
+    group_count: int
+    entry_count: int                # repeats beyond the one kept, over every group
+    excess_idr: int
+    window_hours: int
+    can_resolve: bool               # does this token hold write access?
+
+
+class DuplicateResolveBody(BaseModel):
+    actor_token: str = Field(min_length=1)
+    keep_id: str = Field(min_length=1)
+    cancel_ids: list[str] = Field(min_length=1, max_length=200)
+
+
+class CancelledEntry(BaseModel):
+    id: str
+    was_mirrored: bool
+
+
+class DuplicateResolveResponse(BaseModel):
+    keep_id: str
+    cancelled: list[CancelledEntry]
+    remaining: list[str]       # not reached inside this request's budget; call again
+    unconfirmed: list[str]     # the Sheet could not prove the cancellation; retry is safe
+
+
+def _duplicate_signature(node: dict) -> tuple[str, str, int, str]:
+    return (
+        (_s(node.get("spent_on")) or "")[:10],
+        _s(node.get("kind")) or _KIND_BUY,
+        int(node.get("amount_idr") or 0),
+        (_s(node.get("spend_description")) or "").strip(),
+    )
+
+
+def _created_seconds(node: dict) -> int:
+    raw = _s(node.get("created_at")) or ""
+    try:
+        return int(datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp())
+    except ValueError:
+        return 0
+
+
+def _duplicate_groups(
+    rows: list[dict],
+    *,
+    deadline: float | None = None,
+) -> list[DuplicateGroup]:
+    """Let Form name the runs of repeats; this carrier only orders and labels.
+
+    Each distinct (day, direction, amount, description) gets an opaque token,
+    the rows go over the wire ordered by token and creation instant, and
+    ``endpoint_grocery_duplicate_groups.fk`` returns the positions that belong
+    to one run — repeats within the window of the run's first entry.
+    """
+    # Order by the full creation instant (microseconds), not the whole-second
+    # value on the wire: positions inside a run must stay in creation order so
+    # the head of each run is truly the oldest entry.
+    ordered = sorted(
+        rows,
+        key=lambda node: (
+            _duplicate_signature(node),
+            _s(node.get("created_at")) or "",
+            _s(node.get("id")) or "",
+        ),
+    )
+    tokens: dict[tuple[str, str, int, str], str] = {}
+    wire_rows: list[str] = []
+    for position, node in enumerate(ordered):
+        signature = _duplicate_signature(node)
+        token = tokens.setdefault(signature, f"s{len(tokens)}")
+        wire_rows.append(f"{position}|{token}|{_created_seconds(node)}")
+    kernel_timeout = 10.0
+    if deadline is not None:
+        remaining_timeout = _native_policy_timeout(deadline)
+        if remaining_timeout is None:
+            raise asyncio.TimeoutError
+        kernel_timeout = remaining_timeout
+    try:
+        selected, _runtime = serve_via_kernel(
+            "endpoint_grocery_duplicate_groups.fk",
+            bindings={
+                "entries_wire": ";".join(wire_rows),
+                "window_seconds": _DUPLICATE_WINDOW_SECONDS,
+            },
+            parse=json.loads,
+            timeout=kernel_timeout,
+        )
+    except RuntimeError as exc:
+        if deadline is not None and _native_policy_timed_out(exc, deadline):
+            raise asyncio.TimeoutError from exc
+        raise
+    seen: set[int] = set()
+    if not isinstance(selected, list):
+        raise RuntimeError("Form returned an invalid duplicate grouping")
+    groups: list[DuplicateGroup] = []
+    for positions in selected:
+        if (
+            not isinstance(positions, list)
+            or len(positions) < 2
+            or any(
+                not isinstance(p, int) or isinstance(p, bool)
+                or p < 0 or p >= len(ordered) or p in seen
+                for p in positions
+            )
+        ):
+            raise RuntimeError("Form returned an invalid duplicate grouping")
+        seen.update(positions)
+        entries = [_node_to_spend(ordered[p]) for p in positions]
+        spent_on, kind, amount_idr, description = _duplicate_signature(ordered[positions[0]])
+        groups.append(
+            DuplicateGroup(
+                key=entries[0].id,
+                spent_on=spent_on,
+                kind=kind,
+                amount_idr=amount_idr,
+                description=description,
+                entries=entries,
+                keep_id=entries[0].id,
+                excess_idr=amount_idr * (len(entries) - 1),
+            )
+        )
+    groups.sort(key=lambda g: (g.spent_on, g.entries[0].created_at), reverse=True)
+    return groups
+
+
+@router.get(
+    "/grocery/duplicates",
+    response_model=DuplicateReview,
+    summary="Runs of one market entry recorded many times, for the manager to review",
+)
+async def review_duplicates(token: str | None = Query(default=None)) -> DuplicateReview:
+    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
+    member = await asyncio.to_thread(_require_member, token, _deadline=deadline)
+    rows = await asyncio.to_thread(_all_spends, deadline=deadline)
+    try:
+        groups = await asyncio.to_thread(_duplicate_groups, rows, deadline=deadline)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The duplicate review is still reconnecting; retry is safe",
+        ) from exc
+    except ProcessTreeReapError as exc:
+        raise _native_cleanup_conflict() from exc
+    return DuplicateReview(
+        groups=groups,
+        group_count=len(groups),
+        entry_count=sum(len(g.entries) - 1 for g in groups),
+        excess_idr=sum(g.excess_idr for g in groups),
+        window_hours=_DUPLICATE_WINDOW_SECONDS // 3600,
+        can_resolve=bool(member.get("write_access")),
+    )
+
+
+def _persist_duplicate_cancellation(
+    node: dict,
+    keep_id: str,
+    actor: dict,
+    *,
+    deadline: float,
+) -> bool:
+    properties = {
+        "sheet_cancelled": True,
+        "sheet_cancelled_at": _now(),
+        "sheet_append_yield_legacy": False,
+        "duplicate_of": keep_id,
+        "cancelled_by_id": _s(actor.get("id")) or "",
+    }
+    persisted = graph_service.update_node_properties_batch(
+        {node["id"]: properties},
+        _include_private=True,
+        _source="grocery-duplicate-review",
+        _deadline=deadline,
+    )
+    if node["id"] not in persisted:
+        return False
+    node.update(properties)
+    return True
+
+
+@router.post(
+    "/grocery/duplicates/resolve",
+    response_model=DuplicateResolveResponse,
+    summary="Keep one entry of a duplicate run and cancel the rest, Sheet first",
+)
+async def resolve_duplicates(body: DuplicateResolveBody) -> DuplicateResolveResponse:
+    """Cancel repeats through the same Sheet path a deletion uses.
+
+    Each repeat is cancelled under the Apps Script lock — reversed in the Sheet
+    when its row landed there, marked so a late append cannot land later — and
+    only then marked ``sheet_cancelled`` in the graph. Nothing is removed
+    silently: the manager chose the run and the entry to keep, every cancelled
+    entry stays in the graph with the kept entry's id on it, and the Sheet
+    carries one ``undo`` row per repeat it had. The request stops inside the
+    proxy budget and names what it did not reach, so the phone calls again
+    until the run is one entry.
+    """
+    actor = _require_writer(body.actor_token)
+    deadline = _monotonic() + _GROCERY_REQUEST_TOTAL_TIMEOUT
+    rows = await asyncio.to_thread(_all_spends, deadline=deadline)
+    try:
+        groups = await asyncio.to_thread(_duplicate_groups, rows, deadline=deadline)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The duplicate review is still reconnecting; retry is safe",
+        ) from exc
+    except ProcessTreeReapError as exc:
+        raise _native_cleanup_conflict() from exc
+    group = next(
+        (g for g in groups if any(e.id == body.keep_id for e in g.entries)), None
+    )
+    if group is None:
+        raise HTTPException(
+            status_code=404, detail=f"entry {body.keep_id!r} is not part of a duplicate run"
+        )
+    members = {entry.id for entry in group.entries}
+    outside = [
+        entry_id for entry_id in body.cancel_ids
+        if entry_id not in members or entry_id == body.keep_id
+    ]
+    if outside:
+        raise HTTPException(
+            status_code=422,
+            detail=f"not repeats of {body.keep_id!r}: {sorted(set(outside))}",
+        )
+    by_id = {_s(node.get("id")): node for node in rows}
+    remaining = list(dict.fromkeys(body.cancel_ids))
+    cancelled: list[CancelledEntry] = []
+    unconfirmed: list[str] = []
+    while remaining and _current_sheet_attempt_fits(deadline):
+        entry_id = remaining[0]
+        node = by_id[entry_id]
+        mirrored = await _reconcile_sheet_delete(node, actor)
+        if mirrored is None:
+            unconfirmed.append(remaining.pop(0))
+            break
+        try:
+            persisted = await _run_joined_deadline(
+                lambda: _persist_duplicate_cancellation(
+                    node, body.keep_id, actor, deadline=deadline
+                ),
+                deadline=deadline,
+            )
+        except (
+            asyncio.TimeoutError,
+            graph_service.TransactionDeadlineExceeded,
+            SQLAlchemyError,
+        ):
+            persisted = False
+        if not persisted:
+            unconfirmed.append(remaining.pop(0))
+            break
+        cancelled.append(CancelledEntry(id=remaining.pop(0), was_mirrored=mirrored))
+    return DuplicateResolveResponse(
+        keep_id=body.keep_id,
+        cancelled=cancelled,
+        remaining=remaining,
+        unconfirmed=unconfirmed,
     )
 
 

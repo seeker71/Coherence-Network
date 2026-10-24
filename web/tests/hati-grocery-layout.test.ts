@@ -91,3 +91,31 @@ describe("Hati grocery balance layout", () => {
     expect(source).toContain("sheet.blocked_legacy ?? 0");
   });
 });
+
+describe("Hati grocery idempotent drafts and the repair door", () => {
+  it("names every draft once so a re-sent queue records one entry", () => {
+    expect(source).toContain("entry_key: string;");
+    expect(source).toContain("entry_key: newEntryKey(),");
+    expect(source).toContain("const keyed = withEntryKeys(stored)");
+    expect(source).toContain("if (keyed !== stored) localStorage.setItem(QUEUE_KEY, JSON.stringify(keyed))");
+  });
+
+  it("says how old the confirmed balance is, next to the reconnecting state", () => {
+    expect(source).toContain("confirmed_at?: string | null");
+    expect(source).toContain("setConfirmedAt(attempt.value.confirmed_at ?? new Date().toISOString())");
+    expect(source).toContain("confirmationAge(confirmedAt, nowMs)");
+    expect(source).toContain('[balanceKey ? t[balanceKey] : null, ageText].filter(Boolean).join(" · ")');
+    expect(source).toContain("setNowMs(Date.now()), BALANCE_AGE_TICK_MS");
+  });
+
+  it("offers the duplicate review only while runs exist, and keeps one through the sheet path", () => {
+    expect(source).toContain("readJsonOnce<DuplicateReview>(`/api/grocery/duplicates?${q}`");
+    expect(source).toContain("duplicates && duplicates.groups.length > 0");
+    expect(source).toContain('fetch("/api/grocery/duplicates/resolve"');
+    expect(source).toContain("keep_id: group.keep_id, cancel_ids: remaining");
+    expect(source).toContain("remaining = body.remaining");
+    expect(source).toContain("if (body.unconfirmed.length || body.cancelled.length === 0)");
+    expect(source).toContain("window.confirm(fill(t.confirmKeepOne, { n: repeats.length }))");
+    expect(source).toContain("{duplicates.can_resolve && (");
+  });
+});

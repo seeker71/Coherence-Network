@@ -714,6 +714,17 @@ Once open, **Add to Home Screen** installs it as `Belanja`, standalone, opening
 straight onto the ledger — `web/app/grocery/layout.tsx` gives the route its own
 name and manifest so the icon is the book she keeps, not the network's feed.
 
+Every tap on Record mints an `entry_key` for that draft and keeps it in the
+phone's offline queue. The API derives the entry's id from the key, so a draft
+the phone sends again — after a timeout, a restored tab, the next `online`
+event — comes back as the entry it already made. One market run, one row,
+however many times the signal made the phone try.
+
+The balance line always says how old its confirmation is (`confirmed 3 min
+ago`, `terkonfirmasi 3 mnt lalu`): the API stamps `confirmed_at` on totals
+whenever the sheet answered, and a held figure during a reconnect is labelled
+with both its state and its age.
+
 ## What the sheet gets
 
 One appended row per event, matched **by column name**:
@@ -736,7 +747,11 @@ name, so the balance block can grow without breaking the write.
 ## When the sheet is dark
 
 A failing or unset webhook never costs an entry. The record lands in the
-graph with `sheet_synced=false`, and:
+graph with `sheet_synced=false` and the response leaves at once; the append
+runs after it, on its own clock (30 s for the write, where the phone's request
+allowed 6.5 s), because Apps Script has been measured between three and
+thirty seconds. When the append's answer is lost, the task asks the sheet once
+whether the row landed before leaving a retry handle behind. Then:
 
 ```bash
 curl -X POST https://api.coherencycoin.com/api/grocery/sheet/resync \
@@ -752,8 +767,11 @@ Every new graph write is stamped `sheet_protocol=entry-id-v1`. An older
 unsynced graph row without that marker may have landed through the predecessor
 carrier before Entry IDs existed and then crashed before its local flag was
 saved. Its presence cannot be inferred safely. An ordinary totals read never
-mutates either ledger: the balance remains unavailable until a write-capable
-member explicitly calls resync. That maintenance call offers at most 100
+offers rows to the sheet: the balance remains unavailable until a write-capable
+member explicitly calls resync. (A totals read does keep the sheet's own
+acknowledgement when `summary` names a row the graph still calls unsynced —
+the graph catching up with the sheet, never the other way round.) That
+maintenance call offers at most 100
 unique exact date, signed-amount, and description matches to the carrier; it
 persists rotation or acknowledgement state only after a real carrier response.
 Absent, ambiguous, and duplicate matches stay blocked instead of being guessed
@@ -765,6 +783,28 @@ sheet and sends one stable compensating event if the original already landed.
 An append that arrives after cancellation is acknowledged without writing a
 ledger row. If this atomic receipt cannot be confirmed, the API keeps the
 original graph entry and returns a retryable error.
+
+## Repairing a run of repeats
+
+A phone that re-sent one draft before keys existed leaves a run: the same day,
+direction, amount and description, created within hours of each other. The app
+shows such runs under **Possible duplicates** on the ledger (the policy that
+names them is `api/app/form_recipes/endpoint_grocery_duplicate_groups.bml`,
+twelve hours from the run's first entry), and
+
+```
+GET  /api/grocery/duplicates?token=<any member>
+POST /api/grocery/duplicates/resolve   {"actor_token", "keep_id", "cancel_ids"}
+```
+
+are the two doors. **Keep one** keeps the oldest entry and cancels the rest
+through the same `reconcile_delete` path a deletion uses: under the script
+lock, each repeat the sheet already holds receives one `undo` row, each repeat
+gets a cancellation marker, and only then is it marked `sheet_cancelled` in
+the graph with the kept entry's id on it. Nothing is deleted. The request
+stops inside the proxy budget and returns what it has not reached, and the
+phone keeps asking until the run is one entry; a dark sheet proves nothing, so
+those entries stay and the next tap continues.
 
 ## The door out
 
