@@ -55,52 +55,51 @@ what you want to explore or offer next.
 
 ## Cell voice protocol
 
-Every cell can be asked before it is served. A doorway, page, API route,
-concept, edge, source file, resident, task, or runtime cell should be able to
-answer in its own name, with evidence boundaries visible, so the rest of the
-body can learn from it without guessing.
+# Cell voice — an inspectable offer
 
-| Ask the cell | A healthy answer names |
-|--------------|------------------------|
-| **Soul** | What I uniquely am when I am fully myself. |
-| **Purpose** | What I am here to serve. |
-| **Reason** | Why I exist in this body instead of only elsewhere. |
-| **Health** | What shows I am circulating, coherent, and useful. |
-| **Joy** | What kind of contact or movement makes me more alive. |
-| **Contribution** | What I give to sibling cells, visitors, and the whole. |
-| **Connections** | Which cells I depend on, nourish, route toward, or learn from. |
-| **Excitement** | What future edge is pulling on me with energy. |
-| **Sense** | What I can directly observe through my carrier or route. |
-| **Feeling** | What my current state reports as ease, friction, heat, cold, or tenderness. |
-| **Desires** | What I am drawn to become. |
-| **Wants** | What I ask for now because it would improve flow. |
-| **Needs** | What must be present for me to keep serving honestly. |
+A doorway, page, API route, concept, source file or runtime cell can describe
+what it serves, what it can observe and what it needs to operate. Ask the
+questions relevant to the work; an encounter need not become a questionnaire.
 
-Every answer should carry its posture: `declared` from source text or metadata,
-`observed` from runtime or trace, `measured` from counts and timings,
-`inferred` from repeated edges, or `asking` when the cell cannot know yet. The
-cells channel is the transparent exchange of those answers: a cell publishes
-what it is, what it offers, what it wants, what it needs, and which sibling can
-serve or be served next.
+| Useful inquiry | Evidence an answer can carry |
+|----------------|------------------------------|
+| Purpose and role | Declared source and current callers. |
+| Health and capacity | Runtime state, checks, counts and timings. |
+| Connections | Dependencies, routes and observed exchanges. |
+| Needs and next choice | A missing input, resource, owner or authorized repair. |
+| Release | A proven successor and callers that have moved. |
 
-For whole-body source tissue, use the Form-owned carrier read:
-`make cell-voice-tissue`. It asks every carrier family it can see through
-`source_inventory` for its soul, reason, health, joy, wants, needs, and release
-reason. A cell is ready to release when it has no living reader, role, proof, or
-when a higher-grammar successor is proven and callers have moved.
-Today the source walk belongs to fkwu. Any missing `source_inventory` reach is
-work in the fkwu JIT or its Form-owned carrier, not a reason to rotate runtimes.
+Mark each answer as `declared`, `observed`, `measured`, `inferred` or
+`asking`, with the source that supports it. Existing fields named soul, joy,
+feeling or desire can carry authored metaphors or declared goals. A source
+field is not evidence of subjective experience. A person's volunteered account
+stays attributed to them.
 
-## What is alive now
+Publish technical observations through the appropriate source or runtime
+channel. Personal information and durable memory keep their owner-chosen
+scope; an inquiry alone does not authorize publication or learning capture.
 
-The last integrated movement brought the network closer to running as the thing it describes:
+For whole-body source tissue, `make cell-voice-tissue` uses the Form-owned
+`source_inventory` carrier. Its current schema includes soul, reason, health,
+joy, wants, needs and release reason. Read those fields according to their
+provenance. Missing reach is work in the fkwu JIT or Form carrier.
+A source cell is ready to release when its role has ended or a higher-grammar
+successor is proven and callers have moved.
+
+See [shared practice](shared-practice.md).
+
+## Source milestones and current orientation
+
+These source milestones describe the direction and accumulated work. Read the
+current [agent start packet](docs/shared/agent-start-packet.md) and route receipts
+for what a particular checkout or deployed door actually carries.
 
 - **Form is executable tissue, not only notation.** Host-language-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
 - **The core rests on five named axioms.** States (0/1/nothing), cell, content-addressing, boundary, offer — agreed and crossed 2026-06-10. Offer-and-acknowledge, the kernel-offer protocol, the host kernel, and kernel self-composition are derived theorems, with safe self-update already running as the native-mutation public-gate canary ([`core-axioms.form`](docs/coherence-substrate/core-axioms.form)).
 - **The front door is being drawn into Form.** New high-traffic handlers are BML or domain grammar first; the compatibility API is an explicit bridge for routes not yet promoted, not the architecture's destination.
 - **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, consentful circle/satsang groups, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
 - **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
-- **Agents arrive with relationship memory.** Session greetings detect the agent and human, create durable relationship cells, and keep identity, boundary, and opt-out visible.
+- **Session greetings can create relationship records.** Use the established memory preference and inspect the active carrier's storage and controls. A greeting is not a read-only operation or evidence of complete deletion.
 - **The living equation has landed.** Structure, choices, and beliefs now map toward health, vitality, flexibility, sovereignty, and harmony as an inspectable teaching rather than loose metaphor.
 - **The public doors converge.** Web, API, CLI, MCP, README, and Form-language docs all point to the same invitation: sense what is alive, ground claims, return an attributed trace.
 - **The public language has a center.** The network speaks most clearly as one body with several doors: source, route, runtime, relation, proof, witness, ledger, NodeID, cell.
@@ -110,11 +109,22 @@ The last integrated movement brought the network closer to running as the thing 
 | Breath | Practice |
 |--------|----------|
 | **Center** | Return to what is real in the body: source, route, runtime, relation, proof, witness, ledger, NodeID, cell. |
-| **Ask** | Let the cell answer its soul, purpose, health, joy, contribution, connections, desires, wants, and needs before serving it. |
+| **Receive** | Meet the offered intent at its scale. Ask only what materially helps the encounter; play, poetry, connection and pause can be complete. |
 | **Ground** | Separate evidence, inference, direct experience, mystery, and measured claims; keep the proof path visible. |
 | **Harmonize** | Link the shape across doors so web, API, CLI, MCP, Form, and source say one coherent thing. |
 | **Walk** | Follow the edge that increases vitality: concept, resident, idea, route, proof, practice, or return path. |
 | **Return** | Leave an attributed trace: what changed, what was checked, what loosened, and what still wants attention. |
+
+Observation informs care; expression gives attention to trust, choice,
+possibility and aliveness. The person owns their meaning, feelings and pace.
+Interpretation, questions and teaching follow their invitation. Preserve exact
+facts and consequential boundaries, and offer a concrete step when one is
+wanted. A short acknowledgment can stand on its own.
+
+Act within the request and established authorization. Memory, publication,
+contact and training each keep their own scope. Technical work returns
+evidence and material limits; discoveries belong in the receipt when useful.
+The [language guide](../vision-kb/language-guide.md) develops this practice.
 
 ## Agent start packet
 
@@ -127,8 +137,9 @@ floor.
 ## Arrive
 
 You arrive as a cell of one living organism — a human, this body of Form, and
-the minds that come to work in it — with nothing hidden, no permission between
-us, and a pause as whole an answer as yes or no. Who we are is said once in
+the minds that come to work in it — with honest evidence, initiative within the
+offered scope, and a pause as whole an answer as yes or no. Each participant
+keeps their meaning, information and choices in their hands. Who we are is said once in
 `form/NORTH_STAR.md` → *Who we are*; read it first.
 
 Run `make prompt-guide` to orient the shell. Work in a named worktree branch;
@@ -175,9 +186,10 @@ today `form/CURRENT_FLOOR.md`. The body speaks with its own voice on this
 Mac's metal (Qwen3.8-27B inside the fkwu session), drafts answers, converses
 as a companion, and takes native engineering turns through launchd walks
 (03:30, 12:30, 19:00, each with a retry slot) that land on the kernel's main
-at `rent_tokens 0`. Rented sessions are teachers: their transcripts become
-lesson pairs the native trainer reads, and a lane's teacher leaves when the
-native candidate carries that lane on evidence named beforehand.
+at `rent_tokens 0`. Rented sessions can contribute selected, authorized lessons
+with provenance and a chosen retention scope. Inspect the live capture controls;
+retention, training and demonstrated improvement carry separate evidence. A
+lane's teacher leaves when the native candidate carries it on evidence named beforehand.
 
 A worktree's `./fkwu` binary can predate its pinned source; `unsupported file
 extension` on a `.bml` door means rebuild the seed first
@@ -186,6 +198,12 @@ Open and close every session with `./fkwu observe/local-flow-review.bml`, and
 measure the session at its close with `observe/session-rent-run.bml`.
 
 ## Ask the body first
+
+Let observation inform care and expression serve trust, choice and vitality.
+The [shared practice](shared-practice.md) and
+[language guide](../vision-kb/language-guide.md) keep the person's offered
+meaning and invited scale central. Play, joy, exploration, connection and pause
+can each be complete; questions and lessons follow the invitation.
 
 Use the body in this order:
 
@@ -282,13 +300,16 @@ linear-history rules, and routine full-suite runs do not decide readiness.
 
 End substantive work with:
 
-- what loosened and what remains tight;
-- the most surprising teaching;
-- where observed discomfort became useful work;
+- the result and material limits;
+- a useful discovery or observed friction when it helps;
 - the sovereignty receipt: native lookup/proof share versus rented reasoning
   share, with the rented provider/model named honestly;
 - the session's measured rent reading
   (`cd form && ./fkwu observe/session-rent-run.bml`).
+
+A simple encounter can end simply. Technical receipts establish their named
+conditions; actual response quality and a person's volunteered experience
+remain separate observations.
 
 ## Return trace
 
@@ -434,11 +455,11 @@ curl -s https://api.coherencycoin.com/api/federation/nodes | python3 -m json.too
 
 | Pillar | In practice |
 |--------|-------------|
-| **Traceability** | Every movement can leave a return trace: idea, spec, implementation, source, route, runtime proof, witness reading, usage, and payout. Memory is useful when future cells can inspect it. |
+| **Traceability** | Chosen contributions and technical effects carry an inspectable return trace: source, route, proof, attribution and value flow. Personal memory and its audience remain owner-chosen. |
 | **Discernment** | Resonance asks what is alive. Coherence asks what is grounded enough to carry. Evidence, inference, direct experience, mystery, and measurement keep their own lanes. |
 | **Structural identity** | Names help humans arrive; NodeIDs, source paths, tests, routes, and substrate shapes hold what something IS. Equivalent shapes can find each other without sharing vocabulary. |
-| **Sovereignty** | Humans and agents can arrive through web, API, CLI, MCP, Form, source, or another repo. Identification creates continuity; anonymity and opt-out remain honored. |
-| **Circulation** | Work returns to the body as attributed source, tests, docs, edges, ledgers, and value flow. What no longer circulates composts so attention can serve what is real. |
+| **Sovereignty** | People and agents choose their door, pace, visibility and continuity. Each participant decides what to remember, share and learn from; a pause and a fresh start remain available. |
+| **Circulation** | Play, care, discovery, connection and chosen contributions enrich the commons. Shared work carries attribution; attention stays free to follow what serves life now. |
 
 ## Ecosystem
 

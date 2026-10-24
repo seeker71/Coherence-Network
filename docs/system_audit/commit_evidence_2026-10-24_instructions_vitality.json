@@ -1,0 +1,200 @@
+{
+  "date": "2026-10-24",
+  "thread_branch": "codex/instructions-vitality-20261024",
+  "commit_scope": "Align active instructions and core documents with trust, sovereignty, vitality and complete encounters, including play, joy and connection.",
+  "files_owned": [
+    ".claude/PROJECT_CONTEXT.md",
+    ".claude/README.md",
+    ".claude/agents/edge-tender.md",
+    ".claude/agents/mirror.md",
+    ".claude/agents/scribe.md",
+    ".claude/agents/shaper.md",
+    ".claude/agents/witness.md",
+    ".claude/settings.json",
+    ".cursor/rules/spec-driven.mdc",
+    "AGENT.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/VISION.md",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/coherence-substrate/voice-attunement.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/shared/cell-voice-protocol.md",
+    "docs/shared/coherence-scoring.md",
+    "docs/shared/five-pillars.md",
+    "docs/shared/shared-practice.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/BLUEPRINT.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/SCHEMA.md",
+    "docs/vision-kb/concepts/lc-permission-is-interior.md",
+    "docs/vision-kb/concepts/lc-trust-over-fear.md",
+    "docs/vision-kb/language-guide.md",
+    "form",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/form-cli/SKILL.md",
+    "skills/listen-gold/SKILL.md",
+    "skills/walk-g1-g7/SKILL.md",
+    "specs/trusted-everyday-companion.md",
+    "workspaces/coherence-network/guides/contribution.md"
+  ],
+  "change_files": [
+    ".claude/PROJECT_CONTEXT.md",
+    ".claude/README.md",
+    ".claude/agents/edge-tender.md",
+    ".claude/agents/mirror.md",
+    ".claude/agents/scribe.md",
+    ".claude/agents/shaper.md",
+    ".claude/agents/witness.md",
+    ".claude/settings.json",
+    ".cursor/rules/spec-driven.mdc",
+    "AGENT.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "docs/VISION.md",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/coherence-substrate/voice-attunement.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/shared/cell-voice-protocol.md",
+    "docs/shared/coherence-scoring.md",
+    "docs/shared/five-pillars.md",
+    "docs/shared/shared-practice.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/BLUEPRINT.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/SCHEMA.md",
+    "docs/vision-kb/concepts/lc-permission-is-interior.md",
+    "docs/vision-kb/concepts/lc-trust-over-fear.md",
+    "docs/vision-kb/language-guide.md",
+    "form",
+    "plugins/coherence-companion/skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/form-cli/SKILL.md",
+    "skills/listen-gold/SKILL.md",
+    "skills/walk-g1-g7/SKILL.md",
+    "specs/trusted-everyday-companion.md",
+    "workspaces/coherence-network/guides/contribution.md"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "summary": "Active guidance and generated copies align. Existing counsel/covenant/grounding bands, rendered card, spec, JSON, new links and whitespace checks pass. Two independent reviews supplied repairs.",
+    "commands": [
+      "Native form-cli lookup (insufficient for this review)",
+      "fkwu counsel band: 1111111111; rendered card within window",
+      "fkwu dialogue band: 1111111111111111; companion grounding band: 7",
+      "Canonical README/skill generation and freshness check",
+      "Spec quality, JSON, new relative links and whitespace validation",
+      "Independent parent and kernel instruction reviews",
+      "Synthetic native companion and diagnostic: model-context-open-refused",
+      "Public API/web/CORS baseline passed",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main: ready_for_push=True"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Awaiting source delivery checks."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Existing public API health, web root and ping CORS baseline pass. This does not establish delivery of revised source, installed skills or hosted GPT instructions."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Source delivery is distinct from hosted refresh, actual recording-control implementation and native reply quality. The synthetic native trial could not open a model context."
+  },
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "instructions-vitality-20261024"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "evidence_refs": [
+    "specs/trusted-everyday-companion.md",
+    "form/receipts/2026-10-24-instructions-vitality.md",
+    "form/cognition/tests/difficult-conversation-counsel-band.fk"
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The actual companion instruction card offers interpretation by invitation, keeps responsibility tied to evidence, and permits no, silence and pause. Active guides and generated entry points carry the same practice. Runtime availability and response quality are separately observed.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/",
+      "https://api.coherencycoin.com/api/ping"
+    ],
+    "test_flows": [
+      "Render existing native counsel card and observe its structural band",
+      "Follow linked guidance across root/kernel/skills/generated surfaces",
+      "Synthetic companion request and metadata diagnostic: unavailable, model-context-open-refused, zero generated IDs, release_ok=1",
+      "Public API/web/CORS baseline, all 200 with expected origin"
+    ]
+  },
+  "kernel_delivery": {
+    "status": "merged",
+    "pull_request": "https://github.com/seeker71/coherence-kernel/pull/625",
+    "merge_commit": "14de48525fd29ccea861841b268afb61ca9d00a6",
+    "native_release_checks": "pass=63 full=63 refused=0, including native CLI build after rebase",
+    "source_identity": "The merged kernel tree equals the independently reviewed and locally checked branch tree."
+  },
+  "observation_limits": [
+    "No model weights or executable predicates changed.",
+    "Recording, retention, withdrawal and hosted/installed instruction controls were documented, not changed.",
+    "No generated reply was available in this pass; human vitality remains the person's account.",
+    "Historical receipts and attributed source accounts remain historical."
+  ],
+  "sovereignty_receipt": {
+    "native": "Form lookup, existing focused bands, rendered card and availability diagnostics; generation produced zero IDs",
+    "oracle": "OpenAI source reasoning, writing and independent review; exact task token totals unavailable",
+    "meter": "Codex transcript was read but reported zero requests/tokens; not accepted as evidence of zero rent",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "intended; reviewed as prose, not measured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "The active guidance leaves room for simple encounters without compulsory interpretation or lessons.",
+    "surprise": "Some pressure attributed to the model was present in our own instruction sources.",
+    "friction_to_learning": "A passing card contract and an available, fitting reply need separate observations."
+  },
+  "local_repair": {
+    "command": "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "initial_output": "worktree_pr_guard requires the bootstrapped api/.venv runtime; run the repository host setup, then repeat the same command",
+    "repair": "Created api/.venv and installed the repository api[dev] dependency set with uv; reran the same guard successfully."
+  }
+}

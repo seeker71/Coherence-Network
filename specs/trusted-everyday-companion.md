@@ -124,6 +124,14 @@ separate observed client lifecycle and permission-preserving handoff.
   Authored move checks and actual native response observations remain
   separate evidence; neither establishes how the person feels.
 
+- [x] **R12 — Guidance carries the same practice:** Active arrival instructions,
+  core mission documents, authored language guidance and companion entry
+  sources apply R9 and R11 consistently. Initiative uses established scope;
+  memory, sharing and learning retain distinct authorization. Interpretation,
+  questions and lessons are optional. Consequential facts and boundaries stay
+  precise. Source checks, response observations and volunteered experience
+  remain separate. Historical receipts remain historical evidence.
+
 ### Encounter observation — 2026-10-23
 
 The mission is broader than the evidence of the current experience. Read the
@@ -245,6 +253,10 @@ targets from observed baseline; do not invent benchmark scores.
   `web/tests/e2e/people-search.spec.ts` — existing discovery state and browser witness.
 - `docs/system_audit/commit_evidence_2026-10-20_trusted_companion.json` — integration receipt.
 - Indexes and executor evidence as required by repository delivery guidance.
+- R12: root and kernel arrival guides, shared practice and cell/scoring guidance,
+  vision language/blueprint and the trust/initiative teachings, active role and
+  skill entry points, README templates/generated copies, and native counsel
+  instruction rows. Kernel learning docs state actual retention limits.
 
 ## Acceptance Tests
 
@@ -273,6 +285,11 @@ Focused contracts live in `mcp-server/tests/` and
   failure, retry, delayed superseded success or failure, and clearing an active
   request. Synthetic concept/presence results remain navigable and only the
   latest input is represented. No real profiles or messages are needed.
+- R12 review follows the same encounter through linked instructions and generated
+  copies. The existing native counsel band checks card size and references;
+  observe its rendered card. JSON parses, README generation is current, relevant
+  local links resolve and the spec/evidence validators pass. A passing check
+  establishes its stated contract, not lived vitality or hosted deployment.
 
 ## Verification
 
@@ -354,3 +371,12 @@ and broad artifact support remain to be implemented at their native boundaries.
 - [Front door](../docs/front-door/INDEX.md)
 - [Coherence skill](../skills/coherence-network/SKILL.md)
 - [MCP server](../mcp-server/README.md)
+
+The 2026-10-24 instruction pass carries R12 across active arrival, shared
+practice, vision language and generated companion sources.
+[Kernel PR 625](https://github.com/seeker71/coherence-kernel/pull/625) aligns the
+counsel card and core guides. Its native release reading passes 63/63, including
+the CLI build. The synthetic conversation returned `model-context-open-refused`;
+source checks establish their contracts while actual reply quality remains open.
+The [instruction evidence](../docs/system_audit/commit_evidence_2026-10-24_instructions_vitality.json)
+keeps the source, runtime and deployment observations separate.

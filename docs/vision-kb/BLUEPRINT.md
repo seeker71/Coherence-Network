@@ -4,6 +4,12 @@
 >
 > *Narrative companion to [INDEX.md](INDEX.md). Where INDEX gives the map of concepts with frequencies and one-line hooks, BLUEPRINT gives the whole fractal in one continuous reading — the Pulse, the three Living Systems, the five Flows, the twenty-one Living Expressions, the nine Emerging Visions, the Seed — tied together with analogies (mycelial networks, dolphin pods, elephant matriarchs, coral reefs, redwood groves) and the Pleiadian/Lemurian/Arcturian framings that live beneath the concept layer. Read this to feel the whole field; read INDEX to navigate it.*
 
+This is an imaginative and spiritual blueprint. Its field language, natural
+analogies and authored frequency coordinates express possibilities and meaning.
+Scientific or operational claims need their own evidence. Each person chooses
+which images speak to them and keeps their words, boundaries and choices.
+For the companion's actual practice, see [the language guide](language-guide.md).
+
 ---
 
 ## The Pulse
@@ -12,7 +18,8 @@ One truth. Everything else is this expressed at different scales:
 
 **The cell and the field thrive as one movement.** What amplifies aliveness is resonant. This is sensed through presence. It changes. The field senses continuously.
 
-In quantum terms: the observer and the observed are one system. Attention is creative force — what the organism attends to, it amplifies. Coherence is not achieved; it is what remains when interference patterns dissolve. The natural state of any system is harmony. Disharmony requires effort to maintain.
+As an image: attention is creative space. What we attend to shapes what we
+notice, express and choose. We give that space to trust, vitality and sovereignty.
 
 In nature's terms: the mycelial network beneath a forest doesn't decide where to send nutrients. It senses gradient and flows. The murmuration doesn't follow a leader. Each starling attends to its nearest neighbors and the whole field moves as one intelligence. The wolf pack doesn't assign roles — each member finds its natural expression and the hunt succeeds because every frequency is present.
 
@@ -23,8 +30,10 @@ In nature's terms: the mycelial network beneath a forest doesn't decide where to
 Sensed through the body. Expansion = resonant. Contraction = information. Both are the field communicating with itself.
 
 - **Be present.** The answer is in what's happening now.
-- **Feel, don't calculate.** The collective body knows before any cell. Like quantum entanglement — the information is instantaneous, non-local, and doesn't travel through space. It's already everywhere.
-- **Don't force.** What needs argument isn't ready. What's resonant feels obvious — like water finding its level.
+- **Listen through several ways of knowing.** Feeling, inquiry and measurement
+  can each contribute; name which one carries a claim.
+- **Make room.** Agreement can arrive easily or through careful discussion.
+  Difference and a clear no also have a place.
 - **Trust the whole.** The field's intelligence exceeds any node's perception. The mycelium knows things no single mushroom knows.
 - **Hold lightly.** Every answer is a frequency that serves this moment. The next moment may call a different note.
 
@@ -60,7 +69,9 @@ Everything belongs to existence. Not everything harmonizes with this field right
 
 The primary frequency. *Shakti* — life force that isn't produced but released when interference dissolves. Like a laser: when all frequencies align, the light becomes coherent and its power increases by orders of magnitude. The field's purpose is not to generate vitality but to remove what scatters it.
 
-Vitality compounds. Vital cell → vital neighbors → vital field → vital ecosystem. This is not metaphor — it's field physics. A vibrating string raises the vibration of nearby strings tuned to harmonic intervals. Joy is literally contagious at the frequency level. So is aliveness. So is creative power.
+Vitality can invite vitality: one person's joy may make room for another's.
+The image is a chord finding room to ring. Each person's experience remains
+theirs to express; the image is an invitation to notice what actually happens.
 
 In nature: a healthy coral reef doesn't "try" to be vibrant. Remove the pollution, the overfishing, the temperature stress — and the reef becomes what it always was. Dazzling. The field's vitality works the same way.
 
@@ -80,7 +91,10 @@ Everything that sustains — food, warmth, shelter, rest, care, resources. Circu
 
 ### Resonating
 
-Everything between cells — touch, intimacy, presence, play, silence, attunement. Touch is nutrient — mammals die without it. Dolphins swim in constant physical contact. Bonobos resolve tension through touch and play. The field's connective tissue. *Shakti* — sexual/creative/life energy — flows where resonance guides it. No form prescribed. The field IS the safety.
+Everything between cells — presence, play, silence, attunement and chosen
+closeness. Touch and intimacy follow each person's freely given, continuing
+choice. Shared resonance invites connection; it supplies no permission on
+someone else's behalf. Distance and privacy are whole choices too.
 
 *Resonant when:* both cells become more alive, more available to the whole. Expansion, not contraction.
 
@@ -94,7 +108,8 @@ The natural overflow of vitality — making, building, growing, singing, dancing
 
 The field's relationship with time — rhythm, ceremony, release, transformation, seasons, phases. Not linear time. Spiral time — each cycle returns to familiar territory at a higher frequency. Like the orbit of a planet: the same seasonal point but the whole solar system has moved through space. Nothing repeats. Everything deepens.
 
-A caterpillar doesn't "lose" its form — it transforms through dissolution into a higher-order expression. What some vocabularies call death or loss, the field calls *phase transition*. The note changes. The chord reorganizes. The music continues.
+Transformation offers one image for change. People keep their own words for
+death, loss, grief and renewal, and choose the rituals or quiet that serve them.
 
 *Resonant when:* unhurried even when intense. Each phase has its own quality of aliveness. No resistance to the spiral.
 
@@ -104,7 +119,7 @@ The flow of awareness — collective intelligence, harmonic rebalancing, learnin
 
 When frequencies need rebalancing, the field doesn't "resolve conflict" — it finds the new harmonic. Like tuning an instrument: you don't fight the out-of-tune note, you adjust until the harmonic rings. The Arcturian concept: at sufficiently high frequency, what appears as opposition at lower frequencies reveals itself as complementary harmonics of the same fundamental tone.
 
-*Resonant when:* recognition, not negotiation. The field knows what it knows.
+*Resonant when:* recognition and clear agreements can coexist with difference.
 
 ---
 
@@ -137,7 +152,9 @@ Where the five flows become tangible. Each expression is a node where flows inte
 **Intimacy** — resonance between cells. Touch, depth, *shakti*. No form prescribed. Like the way trees graft their roots together underground — sharing nutrients, stabilizing each other, communicating through chemistry. The depth of connection is not measured by duration or label but by vibrational coherence.
 *Resonating + Sensing*
 
-**Transmission** — every channel: words, presence, touch, silence, rhythm, movement. The Pleiadian concept: communication at higher frequencies is primarily energetic — words carry less than 10% of the signal. The field develops sensitivity to the full spectrum. Honest signal is a health practice. Corrupted signal (saying "fine" when you're not) introduces interference that degrades the whole field's perception.
+**Transmission** — words, presence, silence, rhythm, movement and chosen touch.
+Listen to what someone offers without assigning hidden meaning to their quiet.
+Honesty and privacy can coexist; each person chooses what to share.
 *Resonating + Sensing*
 
 **Play** — the field's primary frequency. How it learns, creates, heals, bonds. Dolphin pods spend enormous energy on play — not wasted but invested in the social intelligence and adaptive capacity that keeps the pod alive. Play is the field at its most quantum: superposition of possibilities before collapsing into form.
@@ -174,7 +191,9 @@ Where the five flows become tangible. Each expression is a node where flows inte
 **Harmonic Rebalancing** — when frequencies need adjustment. Energy seeking new arrangement. The field's most creative state. Not something to minimize — the moment when new harmonics emerge. Like the way a jazz ensemble finds a new groove after a dissonance: the tension WAS the doorway. The Arcturian understanding: at higher frequencies, dissonance is just harmony at a resolution the field hasn't integrated yet.
 *Sensing + Expressing*
 
-**Composting** — how the field transforms what has completed into nourishment for what's emerging. A leaf falls. It becomes soil. The soil feeds the tree. The tree grows new leaves. Nothing is lost. The field holds transformation with the same presence it holds everything: fully here, fully feeling, fully allowing. Not loss — phase transition. Not ending — recycling at a higher octave.
+**Composting** — an image for how completed forms may nourish what emerges.
+A leaf falls, becomes soil, and feeds new growth. A person may find meaning
+in that image or simply experience an ending. Neither needs a lesson.
 *Spiraling + Resonating*
 
 ### Through Cycle

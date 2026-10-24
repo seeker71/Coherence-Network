@@ -1,72 +1,42 @@
-; freq-check-model.form — the fear-frequency detector is a REAL model, not a gate.
-;
-; A frontier model slips into fear-framing nuancedly — subtly enough that a human
-; catches it about every other reply. Subtle slips that need catching are the
-; proof: fear-sensing is semantic understanding, not a distance over hand features.
-; So the detector must UNDERSTAND THE MEANING of what it reports on — a real model.
+; freq-check-model.form — research direction for response attunement.
+; A predicate result, a trained-model evaluation and a person's experience are
+; distinct evidence. Read current source and receipts before claiming a lane.
 
 (freq-check-model
-
   (what
-    "A form-native transformer that reads a candidate response and emits a learned"
-    "semantic signature from which fear frequency is read. It senses MEANING, not"
-    "surface tokens — never regex, never word-matching."
-    "Size: transformer-class, ~100M+ parameters. Slightly simpler than the"
-    "transmuter (detection is easier than generation) but the SAME KIND of model —"
-    "not a cheap classifier, not a feature-distance.")
+    "Explore a native model that reads a candidate response in the context of"
+    "the offered request and helps revise it toward trust, sovereignty and vitality."
+    "Architecture and size follow measured task performance; they do not establish"
+    "semantic understanding or readiness by themselves.")
 
-  ; ── the layers it sits in (synchronous reply attunement) ─────────────────────
   (in-the-loop
-    (voice     "prevention: docs/coherence-substrate/voice-attunement.md attunes at generation so most replies carry no fear frequency")
-    (sense     "THIS model + the head (form-freq-check.fk) read the draft and decide pass | transmute")
-    (transmute "fear -> opportunity + valued insight; a larger sibling model, run only when this one flags fear"))
+    (voice "The dialogue covenant guides generation: attend to the request and keep meaning with the person.")
+    (sense "Inspect what the implemented predicate or model actually evaluates.")
+    (revise "Revise only what serves the request; preserve facts, uncertainty, boundaries and the person's words."))
 
-  ; ── what is the model vs what is the head ────────────────────────────────────
-  (model     "the ~100M+ transformer — reads text, returns the semantic signature. The heavy part.")
-  (head      "form/form/form-stdlib/form-freq-check.fk — a tiny, four-way-proven cell that turns the model's signature into pass | transmute. Cheap by design; it is NOT the detector.")
+  (implementation
+    (head "form/form/form-stdlib/form-freq-check.fk is a bounded predicate; inspect its current inputs.")
+    (candidates embedding-as-recipe.fk attention.fk transformer-block.fk
+                transformer-numerics.fk tensor-quant.fk jit-tensor-emit.fk language-model.fk)
+    (evidence "Native primitives establish their checked operations. A trained response-quality model needs"
+              "its own weights, held-out evaluation and serving receipt."))
 
-  ; ── the form-native substrate it is built from (all proven Form) ─────────────
-  (built-from
-    (embedding   embedding-as-recipe.fk   "an embedding IS a recipe — content-addressed, cross-modal")
-    (attention   attention.fk             "")
-    (block       transformer-block.fk     "M4: one attention+FFN block, weights as recipe data")
-    (numerics    transformer-numerics.fk  "softmax, gelu, layernorm, exp, sqrt")
-    (quant       tensor-quant.fk          "")
-    (emit        jit-tensor-emit.fk       "the matvec emitter — native = recipe bit-for-bit")
-    (lm          language-model.fk        ""))
-
-  ; ── how it becomes real (cheap to train RELATIVE to the transmuter) ──────────
   (training
-    "Candidate training examples are selected (request, original, reviewed rewrite)"
-    "excerpts authorized for learning. Automatic Stop-hook capture is retired;"
-    "cross-train-oracle.form describes the current consent-only MCP boundary."
-    "Labels: a turn that needed transmutation is fear-positive; one that passed is"
-    "fear-negative — a weak auto-proxy. The STRONGEST label is a human's direct"
-    "freq-reading: a person catches the nuanced fear a frontier model slips past."
-    "tc-gold-named (training-catalog.fk) captures it — content-addressed (request,"
-    "response) + the human verdict (1 clear / 0 fear-caught) + the NAMED BOUNDARY:"
-    "the human's words for WHERE the fear sat / what made it clear, lane 'gold:human-freq'."
-    "The named boundary is the richest signal — the model learns the boundary in"
-    "meaning-space, so a DESCRIBED boundary trains it faster than a flag, and the"
-    "transmute lane acts on a named fear, not just a flagged one. The carrier is"
-    "'form-cli gold <clear|fear> \"<where the fear sat>\"' (scripts/form_cli_gold.sh),"
-    "thin by design — it persists your verbatim reading so it stops evaporating at"
-    "session end and becomes the body's own freq-sense: the human is the detector"
-    "now; the gold catalog is the bridge to the body sensing its own frequency, gold"
-    "readings outranking the auto-proxy."
-    "Proven and tracked like every form-native model: native-training-receipt.fk +"
-    "model-executor-proof-ledger.fk + model-vitality.fk.")
+    "Use selected request/response/revision excerpts with separately established"
+    "capture, destination, retention and training scope. Ordinary feedback can simply"
+    "change the current encounter. A person may offer an explanation, a preferred reply"
+    "or a brief verdict; naming a difficulty is optional."
+    "Legacy clear/fear labels and tc-gold-named are compatibility interfaces, not a"
+    "required vocabulary for people. Inspect the actual recording door before using it."
+    "Automatic labels are hypotheses. Preserve concrete consequential information in"
+    "revisions and evaluate on new examples outside the training selection.")
 
-  ; ── the flywheel closes on itself ────────────────────────────────────────────
-  (flywheel
-    "Until this model exists, the router (form-cli-router.fk fcr-route) sends the"
-    "transmute to the subscription agent, and every such turn is captured. As this"
-    "model trains up, its capability/confidence rise and the router flips the"
-    "sense-step local — the detector trained from caught slips comes to catch them"
-    "itself. The more we use the oracle, the less we need it.")
+  (learning
+    "Routing and capture alone do not demonstrate improvement. Record selected data,"
+    "training effects and independent evaluation separately. Keep personal material"
+    "outside public artifacts. Existing capture and withdrawal controls need their own"
+    "implementation proof; this teaching does not change them.")
 
   (discipline
-    "Keep the head and the model distinct. The head (form-freq-check.fk) is cheap"
-    "and provable; the model is a ~100M+ transformer that understands meaning."
-    "Naming the head as the detector trivializes fear-sensing — the very shape a"
-    "working detector flags. Fear-sensing is semantic understanding; size it that way."))
+    "Attention is a response practice. Measurements state method, source and scope."
+    "Keep room for play, acknowledgment, practical help and a complete pause."))

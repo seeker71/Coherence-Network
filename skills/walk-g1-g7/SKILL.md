@@ -1,44 +1,42 @@
 ---
 name: walk-g1-g7
-description: "Walk the floor->north-star roadmap (self-growing-machine.form G1-G7) using ONLY form-cli — nothing else. For each open step: form-cli roadmap (the plan) -> form-cli asm (learn LLVM's lowering offline from clang) -> form-cli close (a LOCAL oracle drafts the recipe, the kernel validates) -> validate.sh four-way -> ship. Measure: how many times the loop had to escalate to a REMOTE oracle (claude -p) vs stay local; how many steps shipped; and for each that did not ship, why not and the smallest fix to form-cli that would let it. Use to drive an offline self-build session and produce an honest report. Triggers on: walk the roadmap, G1 to G7, build the lever via form-cli, form-lower lever, offline self-build, can form-cli ship a step."
+description: "Observe and advance an explicitly requested native Form development lane through the current goal, source-backed tools and focused proof. Retain the historical skill name while using the current fkwu path and honest native-versus-rented attribution."
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🧗",
-        "requires": { "bins": ["form-cli", "ollama"] }
-      }
-  }
+  openclaw:
+    emoji: "🧗"
+    requires:
+      bins: ["form-cli"]
 ---
 
-# walk-g1-g7 — build the tower with only form-cli
+# Native development walk
 
-The discipline: **only `form-cli` subcommands.** No hand-written recipes, no Edit/Write,
-no remote LLM unless the loop itself escalates. Local oracle is `ollama run coder`
-(or `qwen2.5:72b`); the remote tier is `claude -p` and every use of it is COUNTED.
+Read the current repository `AGENTS.md`, kernel `NORTH_STAR.md`,
+`docs/local-agent-goal.form` and `HOMECOMING.md`. If the request names an
+older G1–G7 milestone, locate its present owner and observed floor before
+choosing work.
 
-## The loop, per open step
+## The loop
 
-```bash
-form-cli roadmap                     # the plan; read the next open step + its spec
-form-cli asm "<C for the construct>" # learn LLVM's lowering offline (clang, local)
-form-cli close "<id>" "<spec informed by the asm>" "<assert>" "<expected>" "ollama run coder"
-# close: a LOCAL oracle drafts the recipe; the kernel validates it against the assert.
-# if it validates -> register a band + run: cd form/form && ./validate.sh ... (four-way) -> ship.
-# if it does not -> record WHY, do not hand-write the fix; the point is to find what
-#   form-cli itself still lacks.
-```
+1. Ask the native body for the relevant goal, source and existing observation.
+2. Choose a bounded gap whose original intent, inputs, owner and effects are clear.
+3. Use the highest fitting Form/BML grammar and the current native coding or
+   care path. Keep an encountered repair in the context that found it.
+4. Observe the changed claim on fkwu. Reuse proof whose source and inputs hold.
+5. Carry the verified lesson into its next use; land through the repository's
+   current delivery flow.
 
-## What to measure and report
+An explicitly requested native-only experiment measures what the native lane
+can do end to end. Report operator or rented contributions separately. Keep
+the exact failure and available continuation when that lane cannot yet finish.
 
-- **remote calls**: count every time the loop used `claude -p` (target: 0).
-- **shipped**: how many steps produced a four-way-validated recipe via form-cli alone.
-- **for each not shipped**: the exact reason (the kernel error, the missing capability),
-  and the smallest fix *to form-cli* that would let it ship next time.
+## The receipt
 
-## The honest frame
+Name the source, operation, result and limits. Distinguish generated code,
+execution, structural checks, answer quality and a person's experience.
+Record actual native and rented use; unknown usage stays unknown. Retain
+learning examples only within their authorized content, destination and
+retention scope.
 
-A step "shipped via form-cli" only if a `form-cli` command (not the operator) produced
-the validated recipe. If the operator had to write the recipe by hand, that step did
-NOT ship via form-cli — record it as a gap in form-cli and name the fix. The report's
-value is the gap list + fixes, not a green count.
+The current kernel is fkwu and its JIT. Historical compiler routes and
+four-runtime comparisons remain history; current source and observations
+establish the next choice.

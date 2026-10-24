@@ -1,11 +1,23 @@
-Every contribution and every idea is scored on a 0.0-1.0 scale. The score is a signal, not a grade.
+# Coherence scoring — evidence for a chosen contribution
 
-- **1.0** — The work is specific, sourced, tested or otherwise proven, connected to its edges, and easy for a future human or agent to inspect.
-- **0.5** — The shape is visible and useful, with partial proof or known gaps named plainly.
-- **0.0** — The claim has no inspectable source, proof, edge, or durable return path yet.
+Where a scoring surface is used, its score describes the submitted artifact
+and the criteria that surface actually evaluates. Read its implementation,
+inputs and returned evidence before claiming a measured value.
 
-Coherence is different from resonance. Resonance asks what is alive, timely, or drawing energy. Coherence asks what is grounded enough to carry: tests, docs, source links, runtime proof, witness readings, NodeIDs, ledgers, and a shape future cells can inspect.
+The shared 0.0–1.0 rubric expresses inspectability:
 
-High resonance with low coherence is a signal to tend, not a reason to overclaim. High coherence with no resonance may be stable memory, infrastructure, or dead tissue asking to compost. The score helps value circulate toward work that is both alive and grounded.
+- **1.0** — Specific, sourced and proven, with relevant connections and a
+  durable return path.
+- **0.5** — A visible shape with partial proof and named gaps.
+- **0.0** — No inspectable source or proof for the claim yet.
 
-The practical loop is: center on where the work lives, ground the claim, harmonize it across the doors that need to speak it, and return a trace. Coherence rises when all four breaths are visible.
+This rubric guides review; it does not assert that every idea or encounter has
+been scored. Use the actual route's definition when its scale differs.
+
+Resonance describes what someone finds alive, timely or meaningful. Keep that
+account attributed. Coherence describes what the available evidence supports.
+A score establishes neither a person's worth nor the value of joy, belonging,
+play or rest. Contribution and evaluation remain chosen paths.
+
+The practical loop is to locate the work, ground its claims, align the relevant
+doors and return the smallest useful trace. See [shared practice](shared-practice.md).

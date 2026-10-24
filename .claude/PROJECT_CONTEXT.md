@@ -1,141 +1,40 @@
-# Coherence Network - Project Context
+# Coherence Network — project context
 
-## What Is This?
+Coherence Network is a living commons for play, exploration, learning,
+creation and connection through shared paths and values, growing joy, trust,
+vitality and sovereignty. An encounter can be complete as a game, a discovery,
+a shared moment or a pause. Contribution is a chosen path.
 
-The Coherence Contribution Network (CCN) is a **self-sustaining distributed economic platform** where contributors are paid proportionally to the value they create, weighted by the quality and alignment of their work.
+Read [AGENTS.md](../AGENTS.md) and the
+[current start packet](../docs/shared/agent-start-packet.md) for execution
+guidance, and [VISION.md](../docs/VISION.md) for purpose.
 
-## Core Innovation
+## The current body
 
-**Traditional platforms**: Company captures all value created by contributors.  
-**Coherence Network**: Value automatically flows back to those who created it.
+Form is the architectural center: grammar or BML → recipes and cells →
+`fkwu` realization → observed behavior. The pinned kernel lives under
+`form/`; application recipes and route ownership live in
+`api/app/form_recipes/` and `api/config/native_api.json`.
+[Production substrate](../docs/PRODUCTION-SUBSTRATE.md) records the deployed
+topology and the compatibility hosts still in use.
 
-Every contribution (code, design, documentation) is:
-1. **Tracked** with exact cost (labor + tools + compute)
-2. **Scored** for quality via coherence metrics (0.0 to 1.0)
-3. **Weighted** by coherence multiplier (0.5x to 1.5x)
-4. **Paid** proportionally when value is generated
+## Trust, choice and attention
 
-## Key Concepts
+Receive the offered intent at its scale. Leave personal meaning and pace with
+the person. Questions, interpretation and teaching follow their invitation.
+Preserve consequential facts and boundaries; give expression to trust,
+possibility and aliveness.
 
-### Contributions
-Every change has a cost. We track:
-- **Human labor**: Time spent at hourly rate
-- **Tool execution**: LLM API calls (GPT-4, Claude, etc.)
-- **Compute**: Local machine usage (electricity + depreciation)
+Memory, shared projects, public contribution, contact and training each have
+their own chosen scope. Technical claims use source and runtime evidence.
+Volunteered experience establishes how an encounter felt.
 
-### Coherence (Quality Scoring)
-A score from 0.0 to 1.0 measuring:
-- Code quality (linting, complexity)
-- Architecture alignment (follows CCN principles)
-- Value add (novel vs. duplicate work)
-- Test coverage
-- Documentation quality
+## Contribution and value
 
-**Impact**: coherence 0.92 → 1.20x multiplier on payouts!
+Chosen contributions can carry provenance, attribution and an inspectable
+return trace. Economic mechanisms serve the wider commons. Their designs,
+implementation and observed operation are separate claims; this entry makes
+no promise of automatic scoring, payment, returns or withdrawal availability.
 
-### Assets
-Any generated entity (code, model, content) that:
-- Tracks its complete creation lineage
-- Knows all contributors at any depth
-- Distributes value when it generates revenue
-
-### Resonance
-Network-level coherence measuring alignment:
-- How many nodes involved
-- Downstream usage (how many assets use this)
-- Contributor diversity
-
-### Distributed Hosting
-Anyone can run a node providing:
-- API hosting
-- Storage
-- Compute
-
-**Marketplace**: Operators compete on price → Network uses cheapest → Everyone saves vs AWS.
-
-## Economic Model
-
-**Revenue Streams**:
-- API usage fees ($0.001/request after free tier)
-- Distribution fees (2% of value distributed)
-- Node operator markup (10% on hosting costs)
-- Enterprise licenses ($5,000/month for self-hosted)
-
-**Distribution**:
-- 50% to operational reserve
-- 50% to contributors (weighted by coherence)
-
-**Example**: $10,000 distributed
-- seeker71 (96.5% contributions, 1.20x coherence): $9,622
-- Urs Muff (3.5% contributions, 1.14x coherence): $378
-
-## Current Status
-
-**Phase**: MVP architecture complete, implementation in progress
-
-**Initial Contribution**: 
-- seeker71: $2,413.19 (16 hours labor + Cursor Pro + Mac M4 compute)
-- Coherence: 0.92 (near-perfect alignment)
-
-**Next Steps**:
-1. Deploy MVP on free tier (Oracle Cloud + Supabase)
-2. Implement core API endpoints
-3. Set up GitHub webhook integration
-4. Launch node operator marketplace
-5. Get first paid customer ($5k/month)
-
-## Tech Stack
-
-- **Backend**: Python 3.12, FastAPI (async)
-- **Databases**: PostgreSQL (accounting), Neo4j (graph), Redis (cache)
-- **Message Queue**: Apache Kafka
-- **Event Store**: EventStoreDB
-- **Container**: Docker + Docker Compose
-- **Deployment**: Kubernetes (production)
-- **Blockchain**: Ethereum L2 (Arbitrum) for settlement
-
-## Repository Structure
-
-```
-Coherence-Network/
-├── .claude/              # This knowledge base
-├── api/                  # FastAPI application
-│   ├── routes/          # API endpoints
-│   └── middleware/      # Auth, logging
-├── models/              # Data models (Pydantic + SQLAlchemy)
-├── services/            # Business logic
-│   ├── distribution_engine.py
-│   ├── graph_service.py
-│   └── ledger_service.py
-├── config.py            # Configuration
-├── docker-compose.yml   # Local development
-└── k8s/                # Kubernetes manifests
-```
-
-## Key Stakeholders
-
-**seeker71** (Founder):
-- Initial contribution: $2,413.19
-- Contribution share: 96.5%
-- Coherence multiplier: 1.20x
-- Role: Architect, primary developer
-
-**Urs Muff**:
-- Contribution: ~$100 (Cursor-generated code)
-- Contribution share: 3.5%
-- Coherence multiplier: 1.14x
-- Role: Initial code generation
-
-## Philosophy
-
-**Coherence** is measured by resonance matching. When contributions align with network goals:
-- Value creation is maximized
-- Cost is minimized
-- Contributors earn proportionally more
-- Network becomes self-sustaining
-
-**The network rewards alignment.**
-
-Every line of code, every commit, every contribution is tracked, scored, and paid.
-
-This is economic coherence in action.
+Current source and proof replace the historical marketplace examples and
+topology previously carried here. Git retains that design history.

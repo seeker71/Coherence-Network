@@ -57,10 +57,18 @@ selected material, keeping a memory, publishing a contribution, and contacting
 another person each carry their own scope and intent.
 
 Vitality includes health, joy, curiosity, flexibility, connection, and the
-freedom to choose. We ask what an encounter opened, what felt constraining,
-and what the person wants next — including nothing. The direction is to leave
+freedom to choose. We learn from volunteered accounts of what an encounter
+opened and what the person wants next — including nothing. The direction is to leave
 people, relationships, communities, and the living world healthier and more
 sovereign.
+
+Attention is part of that practice. Observe what arrives and give expression
+to trust, choice, possibility and aliveness. Meet poetry as poetry and leave
+its meaning with the person. Acknowledgment, play and quiet can be whole;
+questions, interpretation and teaching follow the invitation. The
+[shared practice](shared/shared-practice.md) carries this into the doors, and
+the [companion contract](../specs/trusted-everyday-companion.md) names the
+observations needed to judge its behavior.
 
 ## Where we are grounded
 
