@@ -34,8 +34,10 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import hashlib
 import io
 import json
+import logging
 import re
 import threading
 import time
@@ -46,7 +48,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
@@ -71,6 +73,7 @@ from app.services.form_kernel_bridge import (
 from app.services.process_tree_reaper import ProcessTreeReapError
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 _SPEND_TYPE = "grocery_spend"
 _KIND_BUY = "buy"        # money out — a market run
@@ -94,6 +97,15 @@ _GROCERY_REQUEST_TOTAL_TIMEOUT = 13.0
 # still rests comfortably inside the web proxy's 15-second boundary.
 _GROCERY_HANDLER_CLEANUP_GRACE = 0.25
 _SHEET_APPEND_RETRY_DELAY_SECONDS = 30
+# The mirror append runs after the response has left the phone's request, so
+# it may wait out a slow Apps Script (measured 3–30 s) instead of racing the
+# 15-second proxy. One bounded task: the append, one acknowledgement read when
+# the append answer was lost, and the durable receipt.
+_SHEET_BACKGROUND_WRITE_TIMEOUT = 30.0
+_SHEET_BACKGROUND_TOTAL_TIMEOUT = 50.0
+# The phone mints one key per draft and keeps it in its offline queue, so every
+# re-post of the same draft names the same entry.
+_ENTRY_KEY_PATTERN = r"^[A-Za-z0-9._:-]{8,80}$"
 
 
 def _monotonic() -> float:
@@ -388,10 +400,15 @@ class SpendCreate(BaseModel):
     lat: int | None = None                                       # or raw GPS, to resolve one
     lon: int | None = None
     spent_on: str | None = Field(default=None, max_length=10)    # ISO date; today when absent
+    # The draft's own name. A re-post of the same draft — the phone's queue
+    # after a timeout, a tab restored, a retried fetch — returns the entry it
+    # already made instead of recording the market run again.
+    entry_key: str | None = Field(default=None, pattern=_ENTRY_KEY_PATTERN)
 
 
 class SpendResponse(BaseModel):
     id: str
+    entry_key: str | None = None
     amount_typed: str          # what the thumb typed — "123.5"
     amount_idr: int            # what it means — 123500
     currency: str = _CURRENCY
@@ -425,6 +442,7 @@ class CategoryOut(BaseModel):
 def _node_to_spend(node: dict) -> SpendResponse:
     return SpendResponse(
         id=node.get("id", ""),
+        entry_key=_s(node.get("entry_key")) or None,
         amount_typed=_s(node.get("amount_typed")) or "",
         amount_idr=int(node.get("amount_idr") or 0),
         currency=_s(node.get("currency")) or _CURRENCY,
@@ -505,13 +523,121 @@ async def list_categories() -> list[CategoryOut]:
     return [CategoryOut(key=k, emoji=e, en=en, id=idn) for k, e, en, idn in _CATEGORIES]
 
 
+def _entry_id_for_key(prefix: str, entry_key: str) -> str:
+    """The entry a draft names. Same key, same id — on every retry, after every restart.
+
+    The id is the dedupe: the graph's primary key refuses a second row for the
+    same draft even when two re-posts race, with no index to add and no
+    window to miss.
+    """
+    digest = hashlib.sha256(f"{prefix}:{entry_key}".encode("utf-8")).hexdigest()
+    return f"{prefix}-{digest[:12]}"
+
+
+def _new_entry_id(prefix: str, entry_key: str | None) -> str:
+    if entry_key:
+        return _entry_id_for_key(prefix, entry_key)
+    return f"{prefix}-{uuid.uuid4().hex[:12]}"
+
+
+async def _existing_entry(entry_id: str) -> SpendResponse | None:
+    """The entry already recorded under this draft's key, or ``None``."""
+    node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+    if not node or node.get("type") != _SPEND_TYPE:
+        return None
+    return _node_to_spend(node)
+
+
+async def _store_entry(
+    entry_id: str,
+    *,
+    name: str,
+    description: str,
+    props: dict[str, Any],
+    background: BackgroundTasks,
+) -> SpendResponse:
+    """Write one ledger entry to the graph and hand its mirror to the background.
+
+    The response leaves as soon as the graph holds the entry. The Sheet append
+    follows after the response, bounded on its own clock, so a slow Apps
+    Script never outlives the phone's request and re-posts the same run.
+    """
+    try:
+        await asyncio.to_thread(
+            graph_service.create_node,
+            id=entry_id,
+            type=_SPEND_TYPE,
+            name=name,
+            description=description,
+            properties=props,
+            _include_private=True,
+        )
+    except ValueError:
+        # Two re-posts of one draft raced; the primary key kept one. Return it.
+        existing = await _existing_entry(entry_id)
+        if existing is None or (
+            props.get("entry_key") and existing.entry_key != props.get("entry_key")
+        ):
+            raise HTTPException(
+                status_code=409, detail="that entry id is already taken"
+            ) from None
+        return existing
+    node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+    spend = _node_to_spend(node or {"id": entry_id, **props})
+    background.add_task(_mirror_entry_in_background, entry_id)
+    return spend
+
+
+async def _mirror_entry_in_background(entry_id: str) -> None:
+    """Append one new entry to the Sheet after its response has left.
+
+    Bounded by its own clock. When the append answer is lost but the row may
+    have landed, one acknowledgement read settles it before a retry handle is
+    written; a receipt always lands in the graph, so ``/grocery/sheet/resync``
+    and the next totals read can finish what this task could not.
+    """
+    try:
+        url, secret = _sheet_webhook()
+        if not url or not secret:
+            return
+        deadline = _monotonic() + _SHEET_BACKGROUND_TOTAL_TIMEOUT
+        node = await asyncio.to_thread(graph_service.get_node_unfiltered, entry_id)
+        if (
+            not node
+            or node.get("type") != _SPEND_TYPE
+            or node.get("sheet_synced")
+            or node.get("sheet_cancelled")
+        ):
+            return
+        spend = _node_to_spend(node)
+        status = await _push_to_sheet_status(
+            spend, total_timeout=_SHEET_BACKGROUND_WRITE_TIMEOUT
+        )
+        if status == "unavailable":
+            snapshot = await _read_sheet_snapshot([spend.id])
+            if snapshot is not None:
+                if spend.id in snapshot.cancelled_ids:
+                    status = "cancelled"
+                elif spend.id in snapshot.acknowledged_ids:
+                    status = "synced"
+        await _persist_current_sheet_append_status(node, status, deadline=deadline)
+    except Exception:  # noqa: BLE001 — a background receipt must never raise
+        log.exception("grocery mirror append for %s did not finish", entry_id)
+
+
 @router.post(
     "/grocery/spend",
     response_model=SpendResponse,
     summary="Record what was spent — one number, everything else filled in",
 )
-async def record_spend(body: SpendCreate) -> SpendResponse:
+async def record_spend(body: SpendCreate, background: BackgroundTasks) -> SpendResponse:
     actor = _require_writer(body.actor_token)
+
+    spend_id = _new_entry_id("spend", body.entry_key)
+    if body.entry_key:
+        existing = await _existing_entry(spend_id)
+        if existing is not None:
+            return existing
 
     if body.category is not None and body.category not in _CATEGORY_KEYS:
         raise HTTPException(status_code=422, detail=f"unknown category {body.category!r}")
@@ -546,8 +672,8 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
     description = _resolve_description(
         note=body.note, category=body.category, shop=shop
     )
-    spend_id = f"spend-{uuid.uuid4().hex[:12]}"
     props: dict[str, Any] = {
+        "entry_key": body.entry_key,
         "amount_typed": (body.amount or "").strip(),
         "amount_idr": amount_idr,
         "currency": _CURRENCY,
@@ -565,26 +691,15 @@ async def record_spend(body: SpendCreate) -> SpendResponse:
         "sheet_synced": False,
         "sheet_protocol": _SHEET_PROTOCOL,
     }
-    graph_service.create_node(
-        id=spend_id,
-        type=_SPEND_TYPE,
+    # The mirror follows after the response. A dark or slow sheet never costs
+    # the manager their entry, and never makes the phone post it twice.
+    return await _store_entry(
+        spend_id,
         name=f"{_CURRENCY} {amount_idr:,} — {description}",
         description=description,
-        properties=props,
-        _include_private=True,
+        props=props,
+        background=background,
     )
-    node = graph_service.get_node_unfiltered(spend_id) or {"id": spend_id, **props}
-    spend = _node_to_spend(node)
-
-    # The mirror. A dark sheet never costs the manager their entry.
-    if await _push_to_sheet(spend):
-        graph_service.update_node(
-            spend_id,
-            _include_private=True,
-            properties={"sheet_synced": True},
-        )
-        spend.sheet_synced = True
-    return spend
 
 
 @router.get(
@@ -610,6 +725,7 @@ class TopUpCreate(BaseModel):
     amount: str = Field(min_length=1, max_length=20)   # thousands, same as a buy
     note: str | None = Field(default=None, max_length=200)
     spent_on: str | None = Field(default=None, max_length=10)
+    entry_key: str | None = Field(default=None, pattern=_ENTRY_KEY_PATTERN)
 
 
 @router.post(
@@ -617,7 +733,7 @@ class TopUpCreate(BaseModel):
     response_model=SpendResponse,
     summary="Money added to the float — the other direction of the same ledger",
 )
-async def record_topup(body: TopUpCreate) -> SpendResponse:
+async def record_topup(body: TopUpCreate, background: BackgroundTasks) -> SpendResponse:
     """A top-up is the same shape as a buy, pointing the other way.
 
     Keeping both in one cell type means "remaining" is a single sum rather
@@ -625,6 +741,11 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
     by hand with negative rows.
     """
     actor = _require_writer(body.actor_token)
+    topup_id = _new_entry_id("topup", body.entry_key)
+    if body.entry_key:
+        existing = await _existing_entry(topup_id)
+        if existing is not None:
+            return existing
     amount_idr, runtime = _to_rupiah(body.amount)
     if amount_idr <= 0:
         raise HTTPException(status_code=422, detail="a top-up of zero is not a top-up")
@@ -636,8 +757,8 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         raise HTTPException(status_code=422, detail=f"{spent_on!r} is not a date (YYYY-MM-DD)")
 
     note = (body.note or "").strip()
-    topup_id = f"topup-{uuid.uuid4().hex[:12]}"
     props: dict[str, Any] = {
+        "entry_key": body.entry_key,
         "amount_typed": (body.amount or "").strip(),
         "amount_idr": amount_idr,
         "currency": _CURRENCY,
@@ -655,22 +776,13 @@ async def record_topup(body: TopUpCreate) -> SpendResponse:
         "sheet_synced": False,
         "sheet_protocol": _SHEET_PROTOCOL,
     }
-    graph_service.create_node(
-        id=topup_id, type=_SPEND_TYPE,
+    return await _store_entry(
+        topup_id,
         name=f"top up {_CURRENCY} {amount_idr:,}",
-        description=props["spend_description"], properties=props,
-        _include_private=True,
+        description=props["spend_description"],
+        props=props,
+        background=background,
     )
-    node = graph_service.get_node_unfiltered(topup_id) or {"id": topup_id, **props}
-    topup = _node_to_spend(node)
-    if await _push_to_sheet(topup):
-        graph_service.update_node(
-            topup_id,
-            _include_private=True,
-            properties={"sheet_synced": True},
-        )
-        topup.sheet_synced = True
-    return topup
 
 
 class DeleteResponse(BaseModel):
@@ -753,6 +865,40 @@ class TotalsResponse(BaseModel):
     month_count: int
     remaining_idr: int | None = None
     remaining_source: Literal["sheet", "unavailable"] = "unavailable"
+    # When the Sheet confirmed the figure above (UTC ISO), so the phone can say
+    # how old its last confirmed balance is; ``None`` when nothing confirmed.
+    confirmed_at: str | None = None
+    # Entries the Sheet has not acknowledged yet; the balance already counts them.
+    pending_count: int = 0
+
+
+def _persist_snapshot_receipts(
+    pending_nodes: list[dict],
+    snapshot: _SheetSnapshot,
+    *,
+    deadline: float | None = None,
+) -> set[str]:
+    """Record what the Sheet just said about rows still marked unsynced.
+
+    An append whose answer was lost in flight is acknowledged here by the
+    Sheet's own ``summary``; writing that receipt is not a mutation of the
+    ledger, only the graph catching up with it. No write when nothing changed.
+    """
+    updates = {
+        entry_id: properties
+        for node in pending_nodes
+        for entry_id in [_s(node.get("id"))]
+        for properties in [_sheet_receipt_properties(entry_id, snapshot)]
+        if entry_id and properties
+    }
+    if not updates:
+        return set()
+    return graph_service.update_node_properties_batch(
+        updates,
+        _include_private=True,
+        _source="grocery-sheet-acknowledgement",
+        _deadline=deadline,
+    )
 
 
 def _remaining_balance(
@@ -1195,6 +1341,7 @@ async def _totals_within_deadline(
                 )
             except asyncio.TimeoutError:
                 balance_snapshot = None
+    confirmed_at = _now() if balance_snapshot is not None else None
     pending_signed = [
         spend.signed_idr
         for spend in pending
@@ -1204,6 +1351,19 @@ async def _totals_within_deadline(
             and spend.id not in balance_snapshot.cancelled_ids
         )
     ]
+    if balance_snapshot is not None and len(pending_signed) < len(pending):
+        # The Sheet acknowledged rows this graph still calls unsynced — an
+        # append whose answer was lost. Keep the receipt, best effort, inside
+        # the same budget; the balance above already excludes those rows.
+        try:
+            await asyncio.to_thread(
+                _persist_snapshot_receipts,
+                pending_nodes,
+                balance_snapshot,
+                deadline=deadline,
+            )
+        except (graph_service.TransactionDeadlineExceeded, SQLAlchemyError):
+            pass
     remaining = await asyncio.to_thread(
         _remaining_balance,
         sheet_remaining=(
@@ -1223,6 +1383,8 @@ async def _totals_within_deadline(
         month_count=len(month_rows),
         remaining_idr=remaining,
         remaining_source=remaining_source,
+        confirmed_at=confirmed_at if remaining is not None else None,
+        pending_count=len(pending_signed),
     )
 
 
@@ -1495,6 +1657,8 @@ def sheet_status(token: str | None = Query(default=None)) -> SheetStatus:
 
 async def _push_to_sheet_status(
     spend: SpendResponse,
+    *,
+    total_timeout: float | None = None,
 ) -> Literal["synced", "cancelled", "unavailable"]:
     """Append one row and distinguish acknowledgement from cancellation.
 
@@ -1502,10 +1666,20 @@ async def _push_to_sheet_status(
     spreadsheet. A shared secret authenticates it and ``entry_id`` makes
     retries idempotent. Any failure becomes ``unavailable`` on purpose: the
     graph already holds the entry, and ``sheet_synced=false`` is the retry handle.
+
+    ``total_timeout`` defaults to the request-path budget; the background
+    mirror passes its own longer clock.
     """
     url, secret = _sheet_webhook()
     if not url or not secret:
         return "unavailable"
+    if total_timeout is None:
+        total_timeout = _SHEET_WRITE_TOTAL_TIMEOUT
+    attempt_timeout = (
+        _SHEET_WRITE_ATTEMPT_TIMEOUT
+        if total_timeout <= _SHEET_WRITE_TOTAL_TIMEOUT
+        else total_timeout
+    )
     payload: dict[str, Any] = {
         "action": "append",
         "entry_id": spend.id,
@@ -1515,12 +1689,12 @@ async def _push_to_sheet_status(
     }
     try:
         async with httpx.AsyncClient(
-            timeout=_SHEET_WRITE_ATTEMPT_TIMEOUT,
+            timeout=attempt_timeout,
             follow_redirects=True,
         ) as client:
             response = await asyncio.wait_for(
                 client.post(url, json=payload),
-                timeout=_SHEET_WRITE_TOTAL_TIMEOUT,
+                timeout=total_timeout,
             )
         if response.status_code >= 400:
             return "unavailable"

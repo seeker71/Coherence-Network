@@ -46,3 +46,56 @@ describe("Hati grocery Sheet balance resilience", () => {
     expect(isAuthorizationFailure(503)).toBe(false);
   });
 });
+
+import {
+  BALANCE_AGE_TICK_MS,
+  confirmationAge,
+  newEntryKey,
+  withEntryKeys,
+} from "@/lib/hati-grocery-balance";
+
+describe("Hati grocery balance confirmation age", () => {
+  const confirmed = Date.UTC(2026, 9, 24, 10, 0, 0);
+  const iso = new Date(confirmed).toISOString();
+
+  it("says how old the last confirmed balance is in the unit a person would use", () => {
+    expect(confirmationAge(iso, confirmed + 20_000)).toEqual({ unit: "now" });
+    expect(confirmationAge(iso, confirmed + 3 * 60_000 + 5_000)).toEqual({ unit: "minutes", count: 3 });
+    expect(confirmationAge(iso, confirmed + 2 * 3_600_000)).toEqual({ unit: "hours", count: 2 });
+    expect(confirmationAge(iso, confirmed + 49 * 3_600_000)).toEqual({ unit: "days", count: 2 });
+  });
+
+  it("has no age before the sheet has confirmed anything", () => {
+    expect(confirmationAge(null, confirmed)).toBeNull();
+    expect(confirmationAge(undefined, confirmed)).toBeNull();
+    expect(confirmationAge("not a date", confirmed)).toBeNull();
+  });
+
+  it("reads a confirmation from the future as just now, never a negative age", () => {
+    expect(confirmationAge(iso, confirmed - 90_000)).toEqual({ unit: "now" });
+  });
+
+  it("keeps the age counting more often than the balance refreshes", () => {
+    expect(BALANCE_AGE_TICK_MS).toBeLessThan(60_000);
+  });
+});
+
+describe("Hati grocery draft keys", () => {
+  it("mints a distinct key per draft in the server's accepted shape", () => {
+    const keys = new Set(Array.from({ length: 50 }, () => newEntryKey()));
+    expect(keys.size).toBe(50);
+    for (const key of keys) expect(key).toMatch(/^[A-Za-z0-9._:-]{8,80}$/);
+  });
+
+  it("gives an older queued draft a key once and leaves keyed drafts untouched", () => {
+    const keyed = [{ amount: "160", entry_key: "draft-already-keyed" }];
+    expect(withEntryKeys(keyed)).toBe(keyed);
+
+    const legacy = [{ amount: "160" }, { amount: "204", entry_key: "" }];
+    const migrated = withEntryKeys(legacy);
+    expect(migrated).not.toBe(legacy);
+    expect(migrated.map((d) => d.amount)).toEqual(["160", "204"]);
+    expect(migrated.every((d) => /^[A-Za-z0-9._:-]{8,80}$/.test(d.entry_key))).toBe(true);
+    expect(migrated[0].entry_key).not.toBe(migrated[1].entry_key);
+  });
+});

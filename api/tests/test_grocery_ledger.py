@@ -3232,3 +3232,176 @@ def test_sheet_carrier_binds_to_the_restructured_tab_identity():
     assert "const historicalDeletionSignatures = new Set();" in carrier
     assert "acknowledgedSet.has(originalId)" in carrier
     assert "historicalDeletionSignatures.has(historicalDeletion)" in carrier
+
+
+# --------------------------------------------------------------------------
+# One draft, one entry — and the mirror off the phone's request.
+# --------------------------------------------------------------------------
+
+def _bootstrap_token(client) -> str:
+    resident = client.post("/api/household/bootstrap", json={"name": "Ita"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    return resident.json()["token"]
+
+
+def test_a_repeated_entry_key_records_one_entry(client):
+    token = _bootstrap_token(client)
+    draft = {
+        "actor_token": token, "amount": "160", "category": "fruit",
+        "entry_key": "phone-7f3a2c1e-fruit",
+    }
+
+    first = client.post("/api/grocery/spend", json=draft)
+    assert first.status_code == 200, first.text
+    # The phone's queue re-posts the same draft after a timeout, a restored tab,
+    # and the next `online` event: thirty-one posts, one market run.
+    repeats = [client.post("/api/grocery/spend", json=draft) for _ in range(3)]
+    assert all(r.status_code == 200 for r in repeats)
+    assert {r.json()["id"] for r in repeats} == {first.json()["id"]}
+    assert first.json()["entry_key"] == "phone-7f3a2c1e-fruit"
+
+    rows = client.get(f"/api/grocery/spend?token={token}").json()
+    assert [r["id"] for r in rows].count(first.json()["id"]) == 1
+    assert len(rows) == 1
+
+    # The key survives a restart because it is the entry's own id.
+    assert first.json()["id"] == grocery._entry_id_for_key("spend", "phone-7f3a2c1e-fruit")
+    assert grocery.graph_service.get_node_unfiltered(first.json()["id"])["entry_key"] == (
+        "phone-7f3a2c1e-fruit"
+    )
+
+    # A different draft is a different entry; a top-up key lives in its own lane.
+    other = client.post("/api/grocery/spend", json={**draft, "entry_key": "phone-7f3a2c1e-other"})
+    assert other.json()["id"] != first.json()["id"]
+    top = client.post("/api/grocery/topup", json={
+        "actor_token": token, "amount": "4000", "entry_key": "phone-7f3a2c1e-fruit",
+    })
+    top_again = client.post("/api/grocery/topup", json={
+        "actor_token": token, "amount": "4000", "entry_key": "phone-7f3a2c1e-fruit",
+    })
+    assert top.status_code == 200 and top.json()["kind"] == "topup"
+    assert top_again.json()["id"] == top.json()["id"]
+    assert top.json()["id"] != first.json()["id"]
+    assert len(client.get(f"/api/grocery/spend?token={token}").json()) == 3
+
+    # A key that is not a key is refused before anything is written.
+    assert client.post("/api/grocery/spend", json={**draft, "entry_key": "x"}).status_code == 422
+
+
+def test_the_mirror_append_leaves_the_request_path(client, monkeypatch):
+    appended: list[tuple[str, float | None]] = []
+
+    async def slow_append(spend, *, total_timeout=None):
+        appended.append((spend.id, total_timeout))
+        return "synced"
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", slow_append)
+    token = _bootstrap_token(client)
+
+    created = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "235.6", "category": "egg_dairy"},
+    )
+    assert created.status_code == 200, created.text
+    # The response left before the mirror: the phone's request never waits
+    # on Apps Script, so a slow append can no longer outlive it.
+    assert created.json()["sheet_synced"] is False
+    spend_id = created.json()["id"]
+    # The append ran after the response, on the background clock, and its
+    # receipt is durable in the graph.
+    assert appended == [(spend_id, grocery._SHEET_BACKGROUND_WRITE_TIMEOUT)]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is True
+    assert grocery._SHEET_BACKGROUND_WRITE_TIMEOUT > grocery._SHEET_WRITE_TOTAL_TIMEOUT
+
+
+def test_a_lost_append_answer_is_settled_by_the_sheets_acknowledgement(client, monkeypatch):
+    asked: list[list[str]] = []
+
+    async def lost_answer(_spend, *, total_timeout=None):
+        return "unavailable"
+
+    async def sheet_has_it(pending_ids):
+        asked.append(list(pending_ids))
+        return grocery._SheetSnapshot(0, frozenset(pending_ids), frozenset())
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", lost_answer)
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_has_it)
+    token = _bootstrap_token(client)
+
+    created = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "270", "note": "Nuts for granola"},
+    )
+    spend_id = created.json()["id"]
+    # The row landed while the answer was still in flight: one acknowledgement
+    # read settles it, and no retry handle is left behind.
+    assert asked == [[spend_id]]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is True
+    assert not node.get("sheet_append_retry_after")
+
+
+def test_an_unanswered_append_leaves_a_durable_retry_handle(client, monkeypatch):
+    async def lost_answer(_spend, *, total_timeout=None):
+        return "unavailable"
+
+    async def sheet_dark(_pending_ids):
+        return None
+
+    monkeypatch.setattr(
+        grocery, "_sheet_webhook", lambda: ("https://example.invalid/exec", "secret")
+    )
+    monkeypatch.setattr(grocery, "_push_to_sheet_status", lost_answer)
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", sheet_dark)
+    token = _bootstrap_token(client)
+
+    spend_id = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "212.5", "note": "Ghee"},
+    ).json()["id"]
+    node = grocery.graph_service.get_node_unfiltered(spend_id)
+    assert node["sheet_synced"] is False
+    assert node["sheet_append_retry_after"]      # resync's handle
+
+
+def test_totals_record_sheet_acknowledgements_and_say_when_confirmed(client, monkeypatch):
+    token = _bootstrap_token(client)
+    spend_id = client.post(
+        "/api/grocery/spend",
+        json={"actor_token": token, "amount": "100", "category": "vegetable"},
+    ).json()["id"]
+    assert grocery.graph_service.get_node_unfiltered(spend_id)["sheet_synced"] is False
+
+    async def acknowledged(pending_ids):
+        return grocery._SheetSnapshot(5_000_000, frozenset(pending_ids), frozenset())
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", acknowledged)
+    totals = client.get(f"/api/grocery/totals?token={token}")
+    assert totals.status_code == 200, totals.text
+    body = totals.json()
+    # Sisa already contains the acknowledged row, so nothing is subtracted twice.
+    assert body["remaining_idr"] == 5_000_000
+    assert body["remaining_source"] == "sheet"
+    assert body["pending_count"] == 0
+    # The confirmation instant travels with the figure so the phone can say
+    # how old its last confirmed balance is.
+    confirmed_at = body["confirmed_at"]
+    assert confirmed_at and confirmed_at.endswith("+00:00")
+    # And the graph caught up with what the Sheet said: the receipt is kept.
+    assert grocery.graph_service.get_node_unfiltered(spend_id)["sheet_synced"] is True
+
+    async def dark(_pending_ids):
+        return None
+
+    monkeypatch.setattr(grocery, "_read_sheet_snapshot", dark)
+    dark_totals = client.get(f"/api/grocery/totals?token={token}").json()
+    assert dark_totals["remaining_source"] == "unavailable"
+    assert dark_totals["confirmed_at"] is None

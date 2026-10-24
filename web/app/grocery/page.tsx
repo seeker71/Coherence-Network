@@ -18,14 +18,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  BALANCE_AGE_TICK_MS,
   BALANCE_REFRESH_INTERVAL_MS,
   BALANCE_REQUEST_TIMEOUT_MS,
   BALANCE_RETRY_DELAYS_MS,
   type BalanceReadState,
   baliCalendarDay,
   balanceCopyKey,
+  confirmationAge,
   isAuthorizationFailure,
   isConfirmedSheetBalance,
+  newEntryKey,
+  withEntryKeys,
 } from "@/lib/hati-grocery-balance";
 import { hatiSuciRecoveryHref } from "@/lib/hati-grocery-handoff";
 
@@ -73,6 +77,9 @@ type Totals = {
   month_count: number;
   remaining_idr: number | null;
   remaining_source: "sheet" | "unavailable";
+  // When the sheet confirmed remaining_idr (UTC ISO); null when it did not.
+  confirmed_at?: string | null;
+  pending_count?: number;
 };
 
 type SendResult =
@@ -90,6 +97,9 @@ type Draft = {
   lon: number | null;
   spent_on: string;
   kind: "buy" | "topup";
+  // Minted once per draft and kept in the queue: however many times this
+  // draft is sent, the server records it once.
+  entry_key: string;
 };
 
 const TOKEN_KEY = "hatiSuci.token";
@@ -167,6 +177,10 @@ const T = {
     balanceRetrying: "The sheet is slow — checking again…",
     balanceLastConfirmed: "Last confirmed balance · reconnecting…",
     balanceUnavailable: "Sheet temporarily unavailable",
+    confirmedNow: "confirmed just now",
+    confirmedMinutes: "confirmed {n} min ago",
+    confirmedHours: "confirmed {n} h ago",
+    confirmedDays: "confirmed {n} d ago",
     remove: "Remove",
   },
   id: {
@@ -223,9 +237,17 @@ const T = {
     balanceRetrying: "Sheet lambat — memeriksa lagi…",
     balanceLastConfirmed: "Saldo terakhir terkonfirmasi · menghubungkan lagi…",
     balanceUnavailable: "Sheet sementara tidak tersedia",
+    confirmedNow: "terkonfirmasi baru saja",
+    confirmedMinutes: "terkonfirmasi {n} mnt lalu",
+    confirmedHours: "terkonfirmasi {n} jam lalu",
+    confirmedDays: "terkonfirmasi {n} hari lalu",
     remove: "Hapus",
   },
 } as const;
+
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_m, key: string) => String(values[key] ?? ""));
+}
 
 // Rp 123.500 — Indonesian grouping, the way the manager reads a price tag.
 function rupiah(n: number): string {
@@ -349,6 +371,8 @@ export default function GroceryPage() {
   const [entriesLoading, setEntriesLoading] = useState(true);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [confirmedRemaining, setConfirmedRemaining] = useState<number | null>(null);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [balanceState, setBalanceState] = useState<BalanceReadState>("loading");
   const [queued, setQueued] = useState<Draft[]>([]);
   const [sheet, setSheet] = useState<SheetStatus | null>(null);
@@ -431,7 +455,12 @@ export default function GroceryPage() {
   const readQueue = useCallback((): Draft[] => {
     try {
       const raw = localStorage.getItem(QUEUE_KEY);
-      return raw ? (JSON.parse(raw) as Draft[]) : [];
+      const stored = raw ? (JSON.parse(raw) as Draft[]) : [];
+      // A draft queued before keys existed gets one now, so even an old
+      // queue flushes idempotently from here on.
+      const keyed = withEntryKeys(stored);
+      if (keyed !== stored) localStorage.setItem(QUEUE_KEY, JSON.stringify(keyed));
+      return keyed;
     } catch {
       return [];
     }
@@ -467,6 +496,7 @@ export default function GroceryPage() {
     setEntriesLoading(false);
     setTotals(null);
     setConfirmedRemaining(null);
+    setConfirmedAt(null);
     setBalanceState("loading");
     setQueued([]);
     setSheet(null);
@@ -523,6 +553,10 @@ export default function GroceryPage() {
         if (isConfirmedSheetBalance(attempt.value)) {
           confirmedRemainingRef.current = attempt.value.remaining_idr;
           setConfirmedRemaining(attempt.value.remaining_idr);
+          // The API stamps when the sheet confirmed; the page says how long
+          // ago that was, so a held figure is never mistaken for a fresh one.
+          setConfirmedAt(attempt.value.confirmed_at ?? new Date().toISOString());
+          setNowMs(Date.now());
           setBalanceState("ready");
           return;
         }
@@ -672,10 +706,13 @@ export default function GroceryPage() {
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") recover();
     }, BALANCE_REFRESH_INTERVAL_MS);
+    // The confirmation age keeps counting between reads.
+    const ageTimer = window.setInterval(() => setNowMs(Date.now()), BALANCE_AGE_TICK_MS);
     return () => {
       window.removeEventListener("online", recover);
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(timer);
+      window.clearInterval(ageTimer);
     };
   }, [token, loadTotals, refresh]);
 
@@ -757,6 +794,7 @@ export default function GroceryPage() {
       lon: shop ? null : coords?.lon ?? null,
       spent_on: todayLocal(),
       kind: mode,
+      entry_key: newEntryKey(),
     };
     const result = await send(draft);
     setBusy(false);
@@ -940,7 +978,21 @@ export default function GroceryPage() {
   }
 
   const balanceKey = balanceCopyKey(balanceState, confirmedRemaining !== null);
-  const balanceStatusText = balanceKey ? t[balanceKey] : null;
+  const age = confirmedRemaining !== null ? confirmationAge(confirmedAt, nowMs) : null;
+  const ageText =
+    age === null
+      ? null
+      : age.unit === "now"
+      ? t.confirmedNow
+      : age.unit === "minutes"
+      ? fill(t.confirmedMinutes, { n: age.count })
+      : age.unit === "hours"
+      ? fill(t.confirmedHours, { n: age.count })
+      : fill(t.confirmedDays, { n: age.count });
+  // The figure always says how old its confirmation is; while reconnecting,
+  // the state line comes first and the age keeps it honest.
+  const balanceStatusText =
+    [balanceKey ? t[balanceKey] : null, ageText].filter(Boolean).join(" · ") || null;
 
   return (
     // -mb-16 cancels the layout's bottom-nav reserve: ChromeGate hides that

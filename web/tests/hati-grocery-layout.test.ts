@@ -91,3 +91,20 @@ describe("Hati grocery balance layout", () => {
     expect(source).toContain("sheet.blocked_legacy ?? 0");
   });
 });
+
+describe("Hati grocery idempotent drafts and confirmation age", () => {
+  it("names every draft once so a re-sent queue records one entry", () => {
+    expect(source).toContain("entry_key: string;");
+    expect(source).toContain("entry_key: newEntryKey(),");
+    expect(source).toContain("const keyed = withEntryKeys(stored)");
+    expect(source).toContain("if (keyed !== stored) localStorage.setItem(QUEUE_KEY, JSON.stringify(keyed))");
+  });
+
+  it("says how old the confirmed balance is, next to the reconnecting state", () => {
+    expect(source).toContain("confirmed_at?: string | null");
+    expect(source).toContain("setConfirmedAt(attempt.value.confirmed_at ?? new Date().toISOString())");
+    expect(source).toContain("confirmationAge(confirmedAt, nowMs)");
+    expect(source).toContain('[balanceKey ? t[balanceKey] : null, ageText].filter(Boolean).join(" · ")');
+    expect(source).toContain("setNowMs(Date.now()), BALANCE_AGE_TICK_MS");
+  });
+});

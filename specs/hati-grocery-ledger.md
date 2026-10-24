@@ -3,11 +3,13 @@ idea_id: light-hub-membrane
 status: active
 source:
   - file: api/app/routers/grocery.py
-    symbols: [record_spend(), list_spends(), totals(), nearest_shop(), save_shop(), export_csv(), _to_rupiah(), _resolve_description(), _push_to_sheet()]
+    symbols: [record_spend(), list_spends(), totals(), nearest_shop(), save_shop(), export_csv(), _to_rupiah(), _resolve_description(), _push_to_sheet(), _entry_id_for_key(), _store_entry(), _mirror_entry_in_background(), _persist_snapshot_receipts()]
   - file: api/app/form_recipes/endpoint_grocery_amount.fk
     symbols: [rupiah, scale_frac, pow10]
   - file: web/app/grocery/page.tsx
     symbols: [BalanceCard, GroceryPage, previewIdr(), todayLocal()]
+  - file: web/lib/hati-grocery-balance.ts
+    symbols: [confirmationAge(), newEntryKey(), withEntryKeys()]
   - file: web/tests/hati-grocery-layout.test.ts
     symbols: [Hati grocery balance layout]
   - file: web/middleware.ts
@@ -146,6 +148,23 @@ into a shoebox of receipts, which is the failure this replaces.
   cost the manager their entry: the web queues unsent drafts in localStorage
   and flushes them on the next connection.
 
+- [ ] **R10 — One draft is one entry, however many times it is sent.** The
+  phone mints an `entry_key` when the manager taps Record and keeps it in the
+  queued draft; `POST /grocery/spend` and `POST /grocery/topup` derive the
+  entry's id from that key, so a re-post after a timeout, a restored tab or
+  the next `online` event returns the entry already made. The dedupe is the
+  graph's primary key: it holds across restarts and races, and a draft queued
+  before keys existed receives one the first time the queue is read.
+
+- [ ] **R11 — The mirror never sits on the phone's request.** A record returns
+  as soon as the graph holds the entry. The Sheet append follows after the
+  response on its own bounded clock (`_SHEET_BACKGROUND_WRITE_TIMEOUT`); when
+  its answer is lost, one `summary` read settles whether the row landed before
+  any retry handle is written. A later `summary` that acknowledges a row the
+  graph still calls unsynced becomes a durable receipt in the totals read, and
+  totals carry `confirmed_at` so the page says how old its last confirmed
+  balance is.
+
 ## Files to Create/Modify
 
 - `api/app/routers/grocery.py` — ledger routes, totals, places, export, and sheet mirror.
@@ -153,13 +172,14 @@ into a shoebox of receipts, which is the failure this replaces.
 - `api/app/form_recipes/endpoint_grocery_remaining.fk` — source selection and signed reconciliation policy.
 - `api/tests/test_grocery_ledger.py` — API and ledger-flow acceptance coverage.
 - `web/app/grocery/page.tsx` — contained phone and laptop grocery surface.
+- `web/lib/hati-grocery-balance.ts` — balance resilience, confirmation age, draft keys.
 - `web/tests/hati-grocery-layout.test.ts` — responsive balance-placement invariant.
 - `web/middleware.ts` — `app.hati.earth` host routing.
 - `deploy/hostinger/auto-deploy.sh` — public grocery host labels.
 
 ## Acceptance Tests
 
-- `api/tests/test_grocery_ledger.py` proves exact amounts, signed totals, permissions, places, deletion, export, and sheet resilience.
+- `api/tests/test_grocery_ledger.py` proves exact amounts, signed totals, permissions, places, deletion, export, sheet resilience, one entry per draft key, and the mirror off the request path with a durable receipt.
 - `web/tests/hati-grocery-layout.test.ts` proves the phone balance precedes the entry pad and the laptop balance stays in the ledger column.
 - Manual validation at a 390x844 viewport confirms the visible balance card is fully inside the first screen.
 
