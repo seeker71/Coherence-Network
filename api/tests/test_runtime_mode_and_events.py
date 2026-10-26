@@ -197,3 +197,71 @@ def test_route_side_effects_follow_config_in_test_mode(set_config):
 
     set_config("agent_tasks", "route_side_effects_in_tests", True)
     assert agent_tasks_routes._route_side_effects_enabled_in_tests() is True
+
+
+def test_runtime_events_cache_is_per_key_and_invalidates_by_endpoint_family(monkeypatch):
+    # A single-entry cache cleared on every write made every reader refetch thousands of rows per
+    # request (production's API spent a core on it, 2026-10-26). Now each (limit, since, source,
+    # prefix) key is cached on its own, and a new event drops only the unfiltered lists and the lists
+    # of its own endpoint family.
+    from app.services import runtime_service
+    from app.models.runtime import RuntimeEventCreate
+
+    runtime_service._RUNTIME_EVENTS_CACHE.clear()
+    reads = {"n": 0}
+    real_read = runtime_service._read_store
+
+    def counting_read():
+        reads["n"] += 1
+        return real_read()
+
+    monkeypatch.setattr(runtime_service.runtime_event_store, "enabled", lambda: False)
+    monkeypatch.setattr(runtime_service, "_read_store", counting_read)
+
+    runtime_service.list_events(limit=20, source="api", endpoint_prefix="/api/hati/mesh/organs")
+    runtime_service.list_events(limit=20, source="api", endpoint_prefix="/api/reactions")
+    assert reads["n"] == 2
+    runtime_service.list_events(limit=20, source="api", endpoint_prefix="/api/hati/mesh/organs")
+    assert reads["n"] == 2, "a cached family is served without a store read"
+
+    runtime_service.record_event(RuntimeEventCreate(
+        source="api", endpoint="/api/reactions/recent", method="GET", status_code=200, runtime_ms=1.0,
+    ))
+    after_write = reads["n"]  # the file store reads to append; the DB store would not
+    runtime_service.list_events(limit=20, source="api", endpoint_prefix="/api/hati/mesh/organs")
+    assert reads["n"] == after_write, "an event in another family leaves this family's cache alone"
+    runtime_service.list_events(limit=20, source="api", endpoint_prefix="/api/reactions")
+    assert reads["n"] == after_write + 1, "the written family is read fresh"
+    runtime_service._RUNTIME_EVENTS_CACHE.clear()
+
+
+def test_runtime_event_store_trims_telemetry_past_retention(set_config, tmp_path):
+    # Production held 10.3 million request rows (7 GB), 8.25 million past 30 days, scanned by every
+    # reader. The store trims past its configured retention in bounded batches.
+    from datetime import datetime, timedelta, timezone
+    from app.services import runtime_event_store as store
+    from app.models.runtime import RuntimeEvent
+
+    set_config("runtime", "events_path", "")
+    set_config("database_overrides", "runtime", f"sqlite:///{tmp_path / 'events.db'}")
+    set_config("runtime", "events_retention_days", 30)
+    store._ENGINE_CACHE.update({"url": "", "engine": None, "sessionmaker": None})
+    store._SCHEMA_INITIALIZED = False
+    assert store.enabled() and store.retention_days() == 30
+    now = datetime.now(timezone.utc)
+
+    def event(suffix: str, when: datetime) -> RuntimeEvent:
+        return RuntimeEvent(
+            id=f"rt_{suffix}", source="api", endpoint="/api/ping", raw_endpoint="/api/ping", method="GET",
+            status_code=200, runtime_ms=1.0, idea_id=None, origin_idea_id=None, metadata={},
+            runtime_cost_estimate=0.0, recorded_at=when,
+        )
+
+    store.write_event(event("old", now - timedelta(days=45)))
+    store.write_event(event("edge", now - timedelta(days=29)))
+    store.write_event(event("new", now))
+    assert store.trim_older_than(30) == 1
+    assert sorted(e.id for e in store.list_events(limit=10)) == ["rt_edge", "rt_new"]
+    assert store.trim_older_than(0) == 0, "retention 0 keeps everything"
+    store._ENGINE_CACHE.update({"url": "", "engine": None, "sessionmaker": None})
+    store._SCHEMA_INITIALIZED = False
