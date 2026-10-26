@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-26",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "thread_branch": "codex/native-build-storage-20261026",
+  "commit_scope": "Pin native build private storage after a complete observed CLI rebuild.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-26_native_build_storage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-26_native_build_storage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-live-native-build-storage-20261026"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Four storage checks, 18 build claims (262143), and full native Darwin ARM64 CLI rebuild and lookup exit 0.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-build-store-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-build-band.bml",
+      "form-cli ask 'native bundle source identity'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR630 merged after focused proof, read-only review and passing security check. Application CI follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Current rollout remains with its owners. This pin is not yet serving."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application CI and serving image identity."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/630",
+    "form/receipts/2026-10-26-native-build-storage.md"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A native CLI rebuild selects private runtime storage in owned compiler and proof working directories, preserving sealed-source and artifact checks; the compiled lookup exits cleanly.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-activation identity check remains pending; the completed end-to-end proof is the local full native CLI rebuild and lookup.",
+    "test_flows": [
+      "Compiler and proof child mode 0; parent mode 2 and source bytes intact",
+      "Missing configuration destination refuses launch",
+      "Build identity, closure, seal, attestation, publication and owned cleanup assertions",
+      "Full regeneration, source e640700463a82fce, bundle admission and compiled lookup exit 0"
+    ]
+  },
+  "observed_failure": {
+    "command": "form-cli ask 'native bundle source identity'",
+    "result": "Compiler remained in fk_field_intern_node wait beyond 35 minutes; own process terminated after retaining trace.",
+    "cause": "Private source copy still selected host-wide shared storage; publisher liveness not established."
+  },
+  "sovereignty_receipt": {
+    "native": "Four storage checks, 18 build assertions, full native build and lookup. No model calls for this repair proof.",
+    "oracle": "OpenAI gpt-6-astra implementation/review. This repair's rented tokens are not separately metered.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; human effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Native CLI build completes with owned private working memory.",
+    "surprise": "A private source copy still used a shared runtime field.",
+    "friction_to_learning": "Verify storage mode at child admission and cleanup only the operation's own resources."
+  }
+}
