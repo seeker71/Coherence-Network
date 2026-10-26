@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-26",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "sovereignty_receipt": {
+    "native": "Focused fkwu route/control observations and actual native generated replies; synthetic observations carry zero external provider/server calls.",
+    "oracle": "OpenAI GPT-6 family implementation/review; exact total rental tokens unavailable.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "intended and source-reviewed; no inner-state measurement",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "thread_branch": "codex/api-observation-yield-20261026",
+  "commit_scope": "Keep the compatibility API request loop responsive while existing read sensing and runtime persistence finish.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/middleware/read_tracking.py",
+    "api/tests/test_observation_liveness.py",
+    "specs/native-probe-owners.md",
+    "docs/system_audit/commit_evidence_2026-10-26_observation_liveness.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "api/app/middleware/serialized_observation.py"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/middleware/read_tracking.py",
+    "api/tests/test_observation_liveness.py",
+    "specs/native-probe-owners.md",
+    "docs/system_audit/commit_evidence_2026-10-26_observation_liveness.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "api/app/middleware/serialized_observation.py"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-live-observation-liveness-20261026"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Concurrency barriers prove ping can answer while a read-promotion or runtime write is held. Read observers remain serialized and accepted view/event effects complete. Raw request cancellation keeps the admitted worker slot until completion; queued admission remains cancellable.",
+    "commands": [
+      "cd api && .venv/bin/python -m pytest -q tests/test_observation_liveness.py tests/test_runtime_mode_and_events.py tests/test_read_tracking_lineage_backend.py tests/test_read_tracking_settlement_bridge.py: 30 passed"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Source CI follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Current rollout belongs to b2bc74a; this repair is not deployed yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await source CI and deployed concurrency observation."
+  },
+  "evidence_refs": [
+    "specs/native-probe-owners.md",
+    "api/tests/test_observation_liveness.py"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A slow observer yields the ASGI loop so another request can answer; the original request awaits its serialized observation. An admitted task stays owned through request cancellation. No new persistence authority, detached waiting queue, route or retention is introduced.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping"
+    ],
+    "test_flows": [
+      "ASGI concept response held in read promotion; concurrent ping responds before release; one view persists",
+      "ASGI event persistence held; concurrent ping responds without its own telemetry write; original event persists",
+      "Two concurrent reads admit one sensing worker at a time",
+      "Cancel a request task while its worker is blocked; a second observer stays at admission until the first finishes.",
+      "Graceful shutdown drain remains pending after request cancellation until the admitted worker finishes. The host owns forced process termination."
+    ]
+  },
+  "observed_failure": {
+    "command": "docker exec coherence-network-api-1 curl --max-time 12 http://127.0.0.1:8000/api/ping; curl --max-time 15 https://api.coherencycoin.com/api/ping",
+    "result": "Both timed out (HTTP000); container remained running with RestartCount0.",
+    "trace": "Read-tracking overhead46,111,078us; synchronous promotion/profile and persistence had no await. Host sample also showed70% CPU steal. Their exact time shares were not measured."
+  },
+  "local_fixture_limit": "The older Python-only full-web fixture calls native /api/health and returns404. This repair is proved by concurrent ASGI behavior and existing persistence tests; the unsuitable fixture is not reported as passing.",
+  "work_receipt": {
+    "loosened": "Read scoring and persistence yield the shared request loop.",
+    "surprise": "A trivial ping stalled because another request performed synchronous observation.",
+    "friction_to_learning": "Liveness is a property of concurrent work yielding, not only the ping handler."
+  }
+}

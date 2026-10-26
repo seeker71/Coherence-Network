@@ -16,11 +16,12 @@ from __future__ import annotations
 import re
 import time
 import logging
+
+from app.middleware.serialized_observation import SerializedObservation
 from collections import defaultdict
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +62,9 @@ _asset_vitality: dict[str, float] = {}  # cached frequency score per asset
 # Performance budget: max microseconds per request for sensing overhead
 MAX_TRACKING_US = 500  # 0.5ms
 _tracking_times: list[float] = []
+# One worker preserves the existing serialized tier/counter updates while
+# graph scoring and persistence yield the ASGI event loop.
+_SENSING_WORK = SerializedObservation()
 
 
 def _get_tier(asset_id: str) -> int:
@@ -119,6 +123,73 @@ def _maybe_promote(asset_id: str) -> None:
                    asset_id, count, vitality)
 
 
+def _sense_read(asset_id, reader_id, session_fingerprint, page_route, referrer_contributor_id):
+    concept_id = asset_id if asset_id.startswith("lc-") else None
+    t0 = time.monotonic()
+    # Check if this is an NFT/registered asset (has a graph node)
+    # NFT assets: identified reads encouraged for CC sensing
+    is_nft = asset_id.startswith("visual-") or concept_id is not None
+
+    # Always increment in-memory counter (cheap)
+    _mem_counters[asset_id] += 1
+    _maybe_promote(asset_id)
+
+    tier = _get_tier(asset_id)
+
+    # Identified readers on NFT assets: always track (they want CC)
+    if reader_id and is_nft:
+        tier = min(tier, 1)  # promote to full for identified NFT reads
+
+    if tier == 3:
+        # Untracked — in-memory counter only, no DB write
+        pass
+    elif tier == 2:
+        # Sampled — record 1 in every N reads
+        if _mem_counters[asset_id] % SAMPLE_RATE == 0:
+            try:
+                from app.services import read_tracking_service
+                read_tracking_service.record_read(
+                    asset_id, concept_id,
+                    contributor_id=reader_id or None,
+                )
+            except Exception as e:
+                log.debug("read_tracking: %s", e)
+    elif tier == 1:
+        # Full — every read recorded
+        try:
+            from app.services import read_tracking_service
+            read_tracking_service.record_read(
+                asset_id, concept_id,
+                contributor_id=reader_id or None,
+            )
+        except Exception as e:
+            log.debug("read_tracking: %s", e)
+
+    # Record per-contributor view event for EVERY matched read
+    # (view events are cheap, per-contributor tracking matters for CC)
+    try:
+        from app.services import read_tracking_service
+        read_tracking_service.record_view(
+            asset_id=asset_id,
+            concept_id=concept_id,
+            contributor_id=reader_id or None,
+            session_fingerprint=session_fingerprint or None,
+            source_page=page_route or None,
+            referrer_contributor_id=referrer_contributor_id or None,
+        )
+    except Exception as e:
+        log.debug("read_tracking: view event failed: %s", e)
+
+    # Monitor our own overhead
+    elapsed_us = (time.monotonic() - t0) * 1_000_000
+    _tracking_times.append(elapsed_us)
+    if len(_tracking_times) > 1000:
+        _tracking_times.pop(0)
+    if elapsed_us > MAX_TRACKING_US:
+        log.warning("read_tracking: overhead %dμs exceeds budget %dμs for %s",
+                    int(elapsed_us), MAX_TRACKING_US, asset_id)
+
+
 class ReadTrackingMiddleware(BaseHTTPMiddleware):
     """Adaptive read sensing — tracks only when the value exceeds the cost."""
 
@@ -141,8 +212,6 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
             match = pattern.match(path)
             if match:
                 asset_id = match.group(1)
-                concept_id = asset_id if asset_id.startswith("lc-") else None
-                t0 = time.monotonic()
 
                 # Check if reader voluntarily identified themselves
                 # X-Contributor-Id header: voluntary on reads, required on writes
@@ -151,87 +220,36 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                 page_route = request.headers.get("x-page-route", "")
                 referrer_contributor_id = request.headers.get("x-referrer-contributor-id", "")
 
-                # Check if this is an NFT/registered asset (has a graph node)
-                # NFT assets: identified reads encouraged for CC sensing
-                is_nft = asset_id.startswith("visual-") or concept_id is not None
-
-                # Always increment in-memory counter (cheap)
-                _mem_counters[asset_id] += 1
-                _maybe_promote(asset_id)
-
-                tier = _get_tier(asset_id)
-
-                # Identified readers on NFT assets: always track (they want CC)
-                if reader_id and is_nft:
-                    tier = min(tier, 1)  # promote to full for identified NFT reads
-
-                if tier == 3:
-                    # Untracked — in-memory counter only, no DB write
-                    pass
-                elif tier == 2:
-                    # Sampled — record 1 in every N reads
-                    if _mem_counters[asset_id] % SAMPLE_RATE == 0:
-                        try:
-                            from app.services import read_tracking_service
-                            read_tracking_service.record_read(
-                                asset_id, concept_id,
-                                contributor_id=reader_id or None,
-                            )
-                        except Exception as e:
-                            log.debug("read_tracking: %s", e)
-                elif tier == 1:
-                    # Full — every read recorded
-                    try:
-                        from app.services import read_tracking_service
-                        read_tracking_service.record_read(
-                            asset_id, concept_id,
-                            contributor_id=reader_id or None,
-                        )
-                    except Exception as e:
-                        log.debug("read_tracking: %s", e)
-
-                # Record per-contributor view event for EVERY matched read
-                # (view events are cheap, per-contributor tracking matters for CC)
-                try:
-                    from app.services import read_tracking_service
-                    read_tracking_service.record_view(
-                        asset_id=asset_id,
-                        concept_id=concept_id,
-                        contributor_id=reader_id or None,
-                        session_fingerprint=session_fingerprint or None,
-                        source_page=page_route or None,
-                        referrer_contributor_id=referrer_contributor_id or None,
-                    )
-                except Exception as e:
-                    log.debug("read_tracking: view event failed: %s", e)
-
-                # Monitor our own overhead
-                elapsed_us = (time.monotonic() - t0) * 1_000_000
-                _tracking_times.append(elapsed_us)
-                if len(_tracking_times) > 1000:
-                    _tracking_times.pop(0)
-                if elapsed_us > MAX_TRACKING_US:
-                    log.warning("read_tracking: overhead %dμs exceeds budget %dμs for %s",
-                                int(elapsed_us), MAX_TRACKING_US, asset_id)
+                await _SENSING_WORK.run(
+                    _sense_read, asset_id, reader_id, session_fingerprint,
+                    page_route, referrer_contributor_id,
+                )
 
                 break
 
         return response
 
 
+async def drain_read_sensing() -> None:
+    await _SENSING_WORK.drain()
+
+
 def get_tracking_stats() -> dict:
     """Get sensing overhead stats for monitoring."""
-    avg_us = sum(_tracking_times) / len(_tracking_times) if _tracking_times else 0
+    times = _tracking_times.copy()
+    counters = _mem_counters.copy()
+    tiers = _asset_tiers.copy()
+    avg_us = sum(times) / len(times) if times else 0
     tier_counts = defaultdict(int)
-    for t in _asset_tiers.values():
+    for t in tiers.values():
         tier_counts[t] += 1
     return {
-        "total_in_memory": sum(_mem_counters.values()),
-        "unique_assets_seen": len(_mem_counters),
+        "total_in_memory": sum(counters.values()),
+        "unique_assets_seen": len(counters),
         "tier_1_full": tier_counts.get(1, 0),
         "tier_2_sampled": tier_counts.get(2, 0),
-        "tier_3_untracked": len(_mem_counters) - tier_counts.get(1, 0) - tier_counts.get(2, 0),
+        "tier_3_untracked": len(counters) - tier_counts.get(1, 0) - tier_counts.get(2, 0),
         "avg_overhead_us": round(avg_us, 1),
-        "max_overhead_us": round(max(_tracking_times), 1) if _tracking_times else 0,
+        "max_overhead_us": round(max(times), 1) if times else 0,
         "budget_us": MAX_TRACKING_US,
     }
