@@ -15,6 +15,10 @@ source:
   - file: api/app/form_recipes/native_api_handlers.bml
   - file: api/app/form_recipes/deployment_compose_care.bml
   - file: api/config/native_api.json
+  - file: api/app/main.py
+  - file: api/app/middleware/serialized_observation.py
+  - file: api/app/middleware/read_tracking.py
+  - file: api/tests/test_observation_liveness.py
   - file: api/app/routers/health.py
   - file: api/app/routers/substrate.py
   - file: api/app/routers/agent_diagnostics_routes.py
@@ -27,13 +31,14 @@ requirements:
   - "R1: Form/BML on the fkwu JIT owns public health, readiness, persistence, contention, instance pulse and substrate probe routes."
   - "R2: Public health reports the serving image identity and live PostgreSQL observation without routine audit, kernel challenge or witness work."
   - "R3: Native source offers and cell reads share reusable native persistence; replaced Python owners, unused Neo4j and disconnected release gates retire."
+  - "R4: Compatibility read sensing and runtime-event persistence yield the request loop through bounded serialized workers; concurrent ping stays responsive while accepted observations still complete."
 done_when:
   - "One affected native observation reads health/readiness, contention and substrate source/cell effects with explicit runtime and immutable image identity."
   - "Replaced Python probe owners and unused release-gate functions are absent; compatibility ping/version still describe their actual process."
   - "The merged target serves publicly through native routing; released Neo4j ownership and dependency references are absent from the live Compose model."
 test: "cd form && ./fkwu --check ../api/app/form_recipes/native_api.bml"
 constraints:
-  - "Application implementation stays in Form/BML on the pinned fkwu JIT; no kernel changes or host-language fallback."
+  - "Native probe implementation stays in Form/BML on the pinned fkwu JIT. Compatibility middleware scheduling stays with its existing Python carrier; it adds no probe or persistence authority."
   - "Observe only changed claims; no routine kernel, audit or historical response-parity suites."
   - "Private source stays outside public ingestion; active peer observations and unrelated service state retain their owners."
 ---
@@ -74,6 +79,24 @@ releases only explicitly named service owners and project volumes unheld by
 surviving services. The external native Pulse witness remains the observation
 owner; federation peer records remain active persistence, not duplicate local
 probe work to delete indiscriminately.
+
+## Compatibility observation and liveness
+
+A slow read-promotion scan or runtime-event write must yield the ASGI loop.
+Each existing observer uses one worker admission, preserving serialized state
+updates and awaiting the admitted observation. Admission belongs to the worker
+until it finishes, including after raw request-task cancellation; waiting
+requests remain cancellable. Request headers are copied into
+values before worker admission. The owner retains only its one admitted task;
+no detached waiting queue or new retention is added.
+Graceful shutdown awaits both admitted observers; the host retains its process
+termination deadline. Stats read snapshots of mutable counters. Ping keeps its existing persistence
+exemption and can answer while another request is waiting for observation.
+
+The concurrency proof is `cd api && .venv/bin/python -m pytest -q tests/test_observation_liveness.py`: hold a real observer with a synchronization
+barrier, receive a concurrent ping before releasing it, then verify the accepted
+observation completes. A second request cannot start a second sensing worker.
+This is a compatibility scheduling proof; native health retains its own owner.
 
 ## Verification
 

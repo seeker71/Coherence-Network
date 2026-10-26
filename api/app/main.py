@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 import time
@@ -69,13 +70,15 @@ from app.routers import presence_resonance as presence_resonance_router
 from app.routers import places as places_router
 from app.middleware.attribution import AttributionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
-from app.middleware.read_tracking import ReadTrackingMiddleware
+from app.middleware.read_tracking import ReadTrackingMiddleware, drain_read_sensing
+from app.middleware.serialized_observation import SerializedObservation
 from app.middleware.request_duration import RequestDurationMiddleware
 from app.middleware.request_outcomes import RequestOutcomesMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 _startup_logger = logging.getLogger("coherence.api.slow")
 _RUNTIME_AGGREGATE_LOCK = threading.Lock()
+_RUNTIME_CAPTURE_WORK = SerializedObservation()
 _RUNTIME_AGGREGATE_BUCKETS: dict[tuple[str, str, str, int, int], dict[str, object]] = {}
 _RUNTIME_AGGREGATED_ROUTES = {
     ("POST", "/api/agent/tasks/{task_id}/activity"),
@@ -350,8 +353,13 @@ async def lifespan(app: FastAPI):
 
     dialogue_service.set_grounded_ask_runner(substrate_router._run_grounded_ask)
     dialogue_service.ensure_dialogue_worker()
-    yield
-    dialogue_service.stop_dialogue_worker()
+    try:
+        yield
+    finally:
+        dialogue_service.stop_dialogue_worker()
+        # Request cancellation leaves admitted observations with their owner.
+        # Graceful shutdown waits for them; the host owns forced termination.
+        await asyncio.gather(drain_read_sensing(), _RUNTIME_CAPTURE_WORK.drain())
 
 
 app = FastAPI(
@@ -961,6 +969,12 @@ app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
 
 
+def _persist_runtime_capture(payload: RuntimeEventCreate) -> None:
+    """Keep aggregation and persistence in one serialized worker admission."""
+    for event_payload in _record_or_aggregate_runtime_event(payload):
+        runtime_service.record_event(event_payload)
+
+
 @app.middleware("http")
 async def capture_runtime_metrics(request: Request, call_next):
     if not get_bool("runtime", "telemetry_enabled", default=True):
@@ -1061,8 +1075,7 @@ async def capture_runtime_metrics(request: Request, call_next):
                     idea_id=request.headers.get("x-idea-id"),
                     metadata=metadata,
                 )
-                for event_payload in _record_or_aggregate_runtime_event(runtime_payload):
-                    runtime_service.record_event(event_payload)
+                await _RUNTIME_CAPTURE_WORK.run(_persist_runtime_capture, runtime_payload)
             except Exception:
                 # Telemetry should not affect request success.
                 logger.debug("Telemetry recording failed", exc_info=True)
