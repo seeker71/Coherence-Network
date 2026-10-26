@@ -22,6 +22,8 @@
 
 set -uo pipefail
 
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/deploy-lock.sh" || exit 1
+
 REPO_DIR="${REPO_DIR:?REPO_DIR required}"
 COMPOSE_ROOT="${COMPOSE_ROOT:-/docker/coherence-network}"
 LOG_FILE="${LOG_FILE:-${COMPOSE_ROOT}/deploy.log}"
@@ -74,8 +76,10 @@ npx --yes "gitnexus@${NPM_VERSION}" --version >> "$LOG_FILE" 2>&1 || \
 mkdir -p "$(dirname "$PID_FILE")"
 # Run in background. The sidecar is the long-lived MCP server;
 # nohup detaches from the deploy SSH session so it survives the script.
-nohup npx --yes "gitnexus@${NPM_VERSION}" mcp --port "$GITNEXUS_PORT" \
-  > "$COMPOSE_ROOT/gitnexus.log" 2>&1 < /dev/null &
+(
+  coherence_deploy_close_descriptors /tmp/coh-deploy.lock || exit 1
+  exec nohup npx --yes "gitnexus@${NPM_VERSION}" mcp --port "$GITNEXUS_PORT"
+) > "$COMPOSE_ROOT/gitnexus.log" 2>&1 < /dev/null &
 NEW_PID=$!
 echo "$NEW_PID" > "$PID_FILE"
 sleep 2

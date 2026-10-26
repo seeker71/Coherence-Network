@@ -6,9 +6,11 @@ TARGET_SHA="${2:?target SHA is required}"
 PUBLIC_API_BASE="${3:?public API base URL is required}"
 PUBLIC_WEB_BASE="${4:?public web base URL is required}"
 
-# The caller holds /tmp/coh-deploy.lock around this whole script. Keep rollout
-# and its public proof in one process so a queued cron caller cannot recreate
-# services between auto-deploy returning and the readiness checks completing.
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/deploy-lock.sh"
+coherence_deploy_lock /tmp/coh-deploy.lock 600
+
+# This process retains ownership through rollout and public proof. The child
+# reuses the inherited lock; direct deployment callers acquire it themselves.
 COMPOSE_ROOT="$DEPLOY_PATH" \
 REPO_DIR="$DEPLOY_PATH/repo" \
 BRANCH=main \
