@@ -1075,7 +1075,10 @@ async def capture_runtime_metrics(request: Request, call_next):
                     idea_id=request.headers.get("x-idea-id"),
                     metadata=metadata,
                 )
-                await _RUNTIME_CAPTURE_WORK.run(_persist_runtime_capture, runtime_payload)
+                if response is None:
+                    await _RUNTIME_CAPTURE_WORK.run(_persist_runtime_capture, runtime_payload)
+                else:
+                    _RUNTIME_CAPTURE_WORK.after_response(response, _persist_runtime_capture, runtime_payload)
             except Exception:
                 # Telemetry should not affect request success.
                 logger.debug("Telemetry recording failed", exc_info=True)

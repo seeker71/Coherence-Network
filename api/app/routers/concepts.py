@@ -713,7 +713,7 @@ async def regenerate_visuals(concept_id: str, force: bool = Query(False, descrip
 
 
 @router.get("/concepts/{concept_id}", summary="Get a single concept by ID with full metadata")
-async def get_concept(
+def get_concept(
     concept_id: str,
     background_tasks: BackgroundTasks,
     request: Request,

@@ -220,8 +220,8 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                 page_route = request.headers.get("x-page-route", "")
                 referrer_contributor_id = request.headers.get("x-referrer-contributor-id", "")
 
-                await _SENSING_WORK.run(
-                    _sense_read, asset_id, reader_id, session_fingerprint,
+                _SENSING_WORK.after_response(
+                    response, _sense_read, asset_id, reader_id, session_fingerprint,
                     page_route, referrer_contributor_id,
                 )
 
