@@ -5,6 +5,7 @@ import asyncio
 import logging
 
 import anyio
+from starlette.background import BackgroundTasks
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +21,22 @@ class SerializedObservation:
     def __init__(self):
         self._limiter = anyio.CapacityLimiter(1)
         self._pending: set[asyncio.Task] = set()
+
+    def after_response(self, response, function, *args):
+        """The ASGI request owns observation after its body has been delivered."""
+        tasks = BackgroundTasks()
+        if response.background is not None:
+            tasks.add_task(response.background)
+        tasks.add_task(self._after_response, function, args)
+        response.background = tasks
+
+    async def _after_response(self, function, args):
+        try:
+            await self.run(function, *args)
+        except Exception:
+            # The completed response remains successful; the owner records
+            # admitted worker failures through its existing completion callback.
+            log.debug("Response observation failed", exc_info=True)
 
     async def run(self, function, *args):
         token = object()

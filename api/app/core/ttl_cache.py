@@ -33,6 +33,7 @@ import functools
 import os
 import threading
 import time
+from concurrent.futures import Future
 from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
@@ -46,7 +47,7 @@ def _is_disabled() -> bool:
 
 
 class _TtlEntry:
-    __slots__ = ("value", "expires_at")
+    __slots__ = ("expires_at", "value")
 
     def __init__(self, value: Any, expires_at: float) -> None:
         self.value = value
@@ -65,14 +66,16 @@ def ttl_cached(
     - `max_entries`: hard cap to prevent unbounded growth. When
       exceeded, the oldest entry (by insertion order) is evicted.
 
-    Thread-safe via a single per-decorator lock. Not async-aware; wrap
-    the sync function and call it from async handlers.
+    Same-key callers share one computation; different keys can progress
+    independently. Call this synchronous wrapper from a framework worker.
     """
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         cache: dict[tuple, _TtlEntry] = {}
         order: list[tuple] = []
         lock = threading.Lock()
+        inflight: dict[tuple, Future] = {}
+        generation = 0
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -80,32 +83,51 @@ def ttl_cached(
                 return func(*args, **kwargs)
             try:
                 key = (args, tuple(sorted(kwargs.items())))
+                hash(key)
             except TypeError:
                 # Unhashable argument — skip cache entirely.
                 return func(*args, **kwargs)
 
-            now = time.monotonic()
-
             with lock:
                 entry = cache.get(key)
-                if entry is not None and entry.expires_at > now:
+                if entry is not None and entry.expires_at > time.monotonic():
                     return entry.value  # fresh hit
+                epoch = generation
+                flight_key = (epoch, key)
+                future = inflight.get(flight_key)
+                leader = future is None
+                if leader:
+                    future = Future()
+                    inflight[flight_key] = future
 
-            value = func(*args, **kwargs)
+            if not leader:
+                return future.result()
 
-            with lock:
-                cache[key] = _TtlEntry(value, now + ttl_seconds)
-                if key in order:
-                    order.remove(key)
-                order.append(key)
-                while len(order) > max_entries:
-                    evicted = order.pop(0)
-                    cache.pop(evicted, None)
+            try:
+                value = func(*args, **kwargs)
+                with lock:
+                    if epoch == generation:
+                        cache[key] = _TtlEntry(value, time.monotonic() + ttl_seconds)
+                        if key in order:
+                            order.remove(key)
+                        order.append(key)
+                        while len(order) > max_entries:
+                            evicted = order.pop(0)
+                            cache.pop(evicted, None)
+                    inflight.pop(flight_key, None)
+            except BaseException as exc:
+                with lock:
+                    inflight.pop(flight_key, None)
+                future.set_exception(exc)
+                raise
 
+            future.set_result(value)
             return value
 
         def _cache_clear() -> None:
+            nonlocal generation
             with lock:
+                generation += 1
                 cache.clear()
                 order.clear()
 
