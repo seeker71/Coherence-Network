@@ -177,7 +177,8 @@ def test_api_server_reads_internal_proxy_trust_from_file_backed_config(monkeypat
     assert 'CMD ["python", "-m", "app.server"]' in dockerfile
     assert "EXPOSE 8000" in dockerfile
     assert "http://127.0.0.1:8000/api/ping" in dockerfile
-    assert "HEALTHCHECK --interval=30s --timeout=5s" in dockerfile
+    # a 5 s probe flapped under the VPS host's 60 % steal (2026-10-26) and restarted a healthy API 142 times one night
+    assert "HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5" in dockerfile
     assert "FORWARDED_ALLOW_IPS" not in dockerfile
     assert "--forwarded-allow-ips=*" not in dockerfile
 

@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-26",
+  "thread_branch": "claude/pulse-edge-bound",
+  "commit_scope": "The pulse pile-up was never a respawn: the native dispatcher forks one handler per connection and a public read of /pulse or /pulse/history computes for tens of seconds, so bots at the edge multiplied children until the API starved. Pulse now admits two in-flight requests at Traefik; the API's health probe waits 10 s with 5 retries instead of flapping at 5 s under the host's 60 % steal.",
+  "files_owned": [
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "Dockerfile.api"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "vps-health-2026-10-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "root cause",
+        "heal"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "After #4141 rolled out (manual roll-forward, 2026-10-26 ~05:00 UTC), pulse's `http.bml` process count still rose by one per round (2 \u2192 4 in 70 s) at 748 % CPU and the deploy's API-stability step failed again. A probe BML run inside the pulse image (default seccomp and unconfined) showed host_wait answering nothing() while a child lives and 137 after a kill, so the -2 path of #4141 never fires; the memory note's respawn diagnosis was inferred, not observed.",
+    "docker top on a running pulse showed exactly one listener owned by main.bml after three idle rounds; the extra `http.bml` processes are children of the listener \u2014 `native-socket-dispatch.bml` nsd-begin forks one handler per accepted connection (nps-fork), and the child's argv is the listener's. strace of one child (26 s old, 19 % CPU): 195 syscalls in 3 s, re-reading a 166-byte FormPersistentSequence block \u2014 CPU-bound inside fkwu, i.e. the read path itself (read.bml takes the persistence lock through nw-locked, ws-care commits, read-view renders) costs seconds per request; dir-lock waiters back off at most 32 ms. Connections came from Traefik (172.19.0.1), i.e. public hits on pulse.coherencycoin.com.",
+    "Heal at the edge: dcc-pulse in deployment_compose_care.bml adds traefik.http.middlewares.pulse-inflight.inflightreq.amount=2 and attaches it to the pulse and pulse-web routers, so at most two handlers compute at once and the rest answer 429; `./fkwu --check` passes. The API's HEALTHCHECK goes from 5 s/3 retries to 10 s/5 retries (the 5 s probe timed out under steal and restarted a healthy API 142 times on 2026-10-23); test_api_dockerfile_contract follows.",
+    "Named, not done: the pulse read path's own cost \u2014 a per-round snapshot of /pulse/now and /pulse/health served without the lock, and a dir-lock backoff cap above 32 ms in the kernel \u2014 proposed as its own task.",
+    "Proof after rollout: pulse http.bml count stays \u2264 3 (listener + 2 children) under load, the deploy's stability step passes and stamps the revision, API healthy with idle CPU between requests, app.hati.earth 200, the malformed entry_key probe answers 422."
+  ],
+  "change_files": [
+    "Dockerfile.api",
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-10-26_pulse_inflight_bound_and_health_probe.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "fkwu --check on the compose owner; dockerfile contract tests 13 passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Manual roll-forward under nohup; pulse child count, stability verdict, revision stamp."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Pulse holds at most two request children; deploys pass their stability step; the API no longer restarts on a slow probe.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://pulse.coherencycoin.com/pulse/now",
+      "https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "docker top coherence-network-pulse-1 | grep -c http.bml"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check."
+  }
+}
