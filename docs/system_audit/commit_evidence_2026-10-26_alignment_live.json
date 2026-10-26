@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-26",
+  "thread_branch": "codex/alignment-live-20261026",
+  "commit_scope": "Carry companion alignment into actual native replies, scoped learning, graph source, installed skills, served Action and versioned release.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/front-door/connectors.md",
+    "docs/vision-kb/concepts/lc-permission-is-interior.md",
+    "docs/vision-kb/concepts/lc-trust-over-fear.md",
+    "form",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/plugin.json",
+    "skills/coherence-network/daily-brief/SKILL.md",
+    "web/public/llms.txt",
+    "docs/system_audit/commit_evidence_2026-10-26_alignment_live.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/front-door/connectors.md",
+    "docs/vision-kb/concepts/lc-permission-is-interior.md",
+    "docs/vision-kb/concepts/lc-trust-over-fear.md",
+    "form",
+    "plugins/coherence-companion/README.md",
+    "plugins/coherence-companion/plugin.json",
+    "skills/coherence-network/daily-brief/SKILL.md",
+    "web/public/llms.txt",
+    "docs/system_audit/commit_evidence_2026-10-26_alignment_live.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "summary": "Native scope/voice and Action observations, package tests, generated-copy check, graph export roundtrip and independent review.",
+    "commands": [
+      "fkwu session-scope-band: 17 passed, model_calls 0",
+      "fkwu form-cli-code-lesson-review-band: 1048575",
+      "fkwu chatgpt-plugin-band: 111111111",
+      "fkwu visitor-ledger-band: 1111111111",
+      "pytest mcp-server/tests/test_companion_plugin.py: 4 passed",
+      "python3 scripts/build_readmes.py --check",
+      "Live graph export: 2 concepts; 0 files would change",
+      "Workflow YAML parse and nested timeout budget check",
+      "Web production build passed",
+      "Runtime scope classifier: published llms.txt excluded; executable web/API/config paths retained (6 cases)"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Parent source checks follow push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Public API health, web root, ping and CORS baseline pass. Served Sema manifest matches canonical descriptions. This does not establish the new parent deployment or GPT editor publication."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Parent CI has not run; release installation and updated application deployment follow source landing."
+  },
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "alignment-live-20261026"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "GPT-6 family; exact serving variant unavailable"
+  },
+  "evidence_refs": [
+    "form/receipts/2026-10-26-native-companion-scope.md",
+    "form/receipts/2026-10-26-action-attunement.md",
+    "specs/trusted-everyday-companion.md"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Actual native small encounters return complete replies; retained experience and training have separate scope; graph export preserves revised guidance. Installed release and new application deployment need their own delivery readback.",
+    "public_endpoints": [
+      "https://sema.hati.earth/.well-known/ai-plugin.json",
+      "https://sema.hati.earth/ask?q=trust",
+      "https://sema.hati.earth/trace?path=ingest/judged-trust.fk",
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/",
+      "https://api.coherencycoin.com/api/ping"
+    ],
+    "test_flows": [
+      "Synthetic cloud-name play, explicit stop and tiny drawing encounters completed natively, 40 generated IDs total; provider_calls 0, model_server_calls 0",
+      "Graph concept_service + translation_cache_service update followed by existing exporter dry run: 0 changes",
+      "Installed daily brief byte comparison; stale standalone skill disabled",
+      "Public manifest description_for_model SHA256 3d00940bf7617d20dc1df33c5d660318e5dc8000149cbc6f5c462b91a6ef39e2; trace returned 200"
+    ]
+  },
+  "kernel_delivery": {
+    "scope_pull_request": "https://github.com/seeker71/coherence-kernel/pull/626",
+    "scope_merge_commit": "553a56c3af586682b8ff6a31e31693ee9533b9d2",
+    "action_pull_request": "https://github.com/seeker71/coherence-kernel/pull/627",
+    "action_merge_commit": "3c933f7148d01d8015e5abb6a06bc23546cb2882",
+    "privacy_pull_request": "https://github.com/seeker71/coherence-kernel/pull/628",
+    "privacy_merge_commit": "63b94552ee97ef647bbaeaed342b3016f15bdfe2"
+  },
+  "local_repair": {
+    "guard_bootstrap": "Created this worktree api/.venv and installed api[dev] after the guard reported the missing runtime.",
+    "native_voice": "Existing Metal carrier admission now precedes model open; diagnostics retain failure state before cleanup.",
+    "deployment": "Previous SSH step stopped the native CLI build at 35 minutes. Its owner allows 2 hours; outer budget now allows build, existing lock wait and activation.",
+    "runtime_check": {
+      "command": "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "observed": "Python-only fixture repeatedly returned GET /api/health 404; health moved to the Form API in 69c6745f4.",
+      "change": "Exclude the static web/public/llms.txt guidance file from executable runtime validation selection. Executable web, API and configuration paths retain that check. The Python-only fixture remains unsuitable for native-health proof; public health and focused native observations are recorded separately."
+    }
+  },
+  "observation_limits": [
+    "Personal experience remains the person's account; generated replies alone do not establish vitality.",
+    "Training withdrawal excludes future admission and publication; no unlearning or erasure claim.",
+    "GPT editor loaded blank in this session; editor instructions and fresh hosted conversation remain unverified.",
+    "Installed catalog requires a fresh host session; filesystem changes do not prove this chat reloaded."
+  ],
+  "sovereignty_receipt": {
+    "native": "Focused fkwu route/control observations and actual native generated replies; synthetic observations carry zero external provider/server calls.",
+    "oracle": "OpenAI GPT-6 family implementation/review; exact total rental tokens unavailable.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "intended and source-reviewed; no inner-state measurement",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Native voice opens, source scope governs learning, and installed/served guidance moves toward the actual encounter.",
+    "surprise": "The served Action response could override a corrected manifest.",
+    "friction_to_learning": "Following returned fields and actual carrier state exposed causes that document review alone missed."
+  }
+}
