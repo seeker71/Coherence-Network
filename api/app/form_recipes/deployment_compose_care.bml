@@ -91,7 +91,8 @@ section [form.bml] {
    let environment = dcc-labels(json-object-get(native,"environment"));
    let kept = json-node-object(filter(pair => str_find(json-pair-key(pair),"PULSE_",0) != 0,node_children(environment)));
    let labels = dcc-labels(json-object-get(native,"labels"));
-   let routes = [["traefik.http.routers.pulse.service","pulse"],["traefik.http.routers.pulse-web.rule",web_rules ++ " && (Path(`/pulse`) || Path(`/pulse/`))"],["traefik.http.routers.pulse-web.priority","200"],["traefik.http.routers.pulse-web.entrypoints","websecure"],["traefik.http.routers.pulse-web.tls.certresolver","letsencrypt"],["traefik.http.routers.pulse-web.service","pulse"]];
+   // Every request forks one native handler; a public hit on /pulse or /pulse/history computes for seconds. Two in flight at the edge keeps pulse's children from starving the API (2026-10-26).
+   let routes = [["traefik.http.routers.pulse.service","pulse"],["traefik.http.routers.pulse-web.rule",web_rules ++ " && (Path(`/pulse`) || Path(`/pulse/`))"],["traefik.http.routers.pulse-web.priority","200"],["traefik.http.routers.pulse-web.entrypoints","websecure"],["traefik.http.routers.pulse-web.tls.certresolver","letsencrypt"],["traefik.http.routers.pulse-web.service","pulse"],["traefik.http.middlewares.pulse-inflight.inflightreq.amount","2"],["traefik.http.routers.pulse.middlewares","pulse-inflight"],["traefik.http.routers.pulse-web.middlewares","pulse-inflight"]];
    let owned = foldl((out,p) => dcc-set(out,p[0],json-node-string(p[1])),labels,routes);
    dcc-set(dcc-set(dcc-set(native,"environment",kept),"shm_size",json-node-string("1gb")),"labels",owned);
   }
