@@ -2,8 +2,11 @@
   "store_path": "/data/form-persistence",
   "work_path": "/data/native-io",
   "port": 8100,
-  "interval_seconds": 30,
+  "interval_seconds": 180,
   "api_base": "https://api.coherencycoin.com",
   "web_base": "https://coherencycoin.com",
-  "cors_origins": ["https://coherencycoin.com", "https://www.coherencycoin.com"]
+  "cors_origins": [
+    "https://coherencycoin.com",
+    "https://www.coherencycoin.com"
+  ]
 }
