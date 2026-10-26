@@ -54,13 +54,12 @@ can follow the [existing GPT guide](../integration/chatgpt-setup.md) for later c
 
 ## Install the free companion
 
-The [Coherence Companion 0.6.3 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.3)
+The [Coherence Companion 0.6.4 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.4)
 contains a small plugin ZIP, the existing Coherence icon, and `SHA256SUMS` for
 checking the download. The optional MCP package remains in the
 [0.6.0 release](https://github.com/seeker71/Coherence-Network/releases/tag/companion-v0.6.0).
-The broader play, exploration, and connection guidance on this branch is a
-source update awaiting a new release. The immutable 0.6.3 download retains its
-published guidance; the examples above express the updated direction.
+This release carries the play, exploration and connection invitation above,
+with attention to trust, choice and vitality at the scale of the encounter.
 The plugin is Apache-2.0 source and adds no charge. You need no
 Coherence account, payment or API key for ordinary assistance. Your chosen host's
 availability, plans, tools and retention still apply.
@@ -74,7 +73,7 @@ verification is separate from recipients' usage.
 For a Codex CLI with plugin support:
 
 ```sh
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.3 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.4 --sparse .agents/plugins --sparse plugins/coherence-companion
 codex plugin add coherence-companion@coherence-network
 ```
 
@@ -83,7 +82,7 @@ Bring a curiosity, a game, or something you want help with. The installed skill 
 optional MCP. You can ask for a three-line continuation brief to take elsewhere;
 saving that brief is your choice.
 
-In a host supporting plugin archive import, use `coherence-companion-0.6.3.zip`.
+In a host supporting plugin archive import, use `coherence-companion-0.6.4.zip`.
 For a skills-only host, use the archive's complete `skills/coherence-network/`
 folder, including its references. Host install controls vary; the release is
 publicly downloadable but does not imply acceptance into a universal directory.
@@ -96,18 +95,18 @@ connected services. Optional network access is configured separately below.
 
 Release pins keep the installed guidance predictable. A marketplace pinned to
 an earlier tag stays on that release when refreshed. To move an existing
-`coherence-network` registration to 0.6.3, use:
+`coherence-network` registration to 0.6.4, use:
 
 ```sh
 codex plugin marketplace remove coherence-network
-codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.3 --sparse .agents/plugins --sparse plugins/coherence-companion
+codex plugin marketplace add seeker71/Coherence-Network --ref companion-v0.6.4 --sparse .agents/plugins --sparse plugins/coherence-companion
 codex plugin add coherence-companion@coherence-network
 codex plugin list --marketplace coherence-network --json
 ```
 
 The first command removes this marketplace registration; the following commands
 register the selected release and update its installed companion. Check that the
-last result reports version `0.6.3`, installed and enabled. On the observed CLI,
+last result reports version `0.6.4`, installed and enabled. On the observed CLI,
 adding a different release pin over an existing registration returns “already
 added from a different source”; the remove/add sequence resolved that condition.
 The remove/add sequence was verified for the 0.6.0 → 0.6.2 update on October 21,

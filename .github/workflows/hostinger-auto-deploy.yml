@@ -38,7 +38,7 @@ concurrency:
 jobs:
   deploy-hostinger:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 160
     permissions:
       contents: read
     env:
@@ -122,16 +122,18 @@ jobs:
           retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming && mv ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh && mv ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh && mv ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
 
       - name: Roll forward VPS
-        timeout-minutes: 40
+        # The native CLI's owned build has a two-hour bound. Allow its result,
+        # the existing ten-minute lock wait and image activation to return.
+        timeout-minutes: 155
         run: |
           set +e
-          timeout 35m ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "${HOSTINGER_SSH_HOST}" \
+          timeout 150m ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "${HOSTINGER_SSH_HOST}" \
             "flock -w 600 /tmp/coh-deploy.lock bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}"
           rc=$?
           set -e
           if [[ "$rc" -ne 0 ]]; then
             if [[ "$rc" -eq 124 ]]; then
-              echo "::error::Roll forward VPS timed out after 35m; tailing remote deploy log"
+              echo "::error::Roll forward VPS timed out after 150m; tailing remote deploy log"
             fi
             echo "::group::Remote deploy log tail"
             ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=2 "${HOSTINGER_SSH_HOST}" \

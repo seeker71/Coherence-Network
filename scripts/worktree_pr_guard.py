@@ -589,6 +589,10 @@ def _is_web_build_scoped_change(path: str) -> bool:
 
 
 def _is_runtime_web_scoped_change(path: str) -> bool:
+    # This published guidance file carries no executable route or application
+    # configuration. Its text/package checks do not require a local API stack.
+    if path == "web/public/llms.txt":
+        return False
     prefixes = (
         "api/app/",
         "api/config/",
