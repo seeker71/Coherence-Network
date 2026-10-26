@@ -44,12 +44,12 @@ from app.services import (
 logger = logging.getLogger(__name__)
 
 
-_RUNTIME_EVENTS_CACHE: dict[str, Any] = {
-    "expires_at": 0.0,
-    "cache_key": "",
-    "rows": [],
-}
+# One entry per (limit, since, source, prefix) key. A single-entry cache thrashed between the
+# readers (mesh organs, inventory, usage) and a write of any endpoint cleared it, so every
+# request made every reader refetch thousands of rows; production's API spent a core on it.
+_RUNTIME_EVENTS_CACHE: dict[str, dict[str, Any]] = {}
 _RUNTIME_EVENTS_CACHE_TTL_SECONDS = 30.0
+_RUNTIME_EVENTS_CACHE_MAX_KEYS = 64
 _RUNTIME_EVENTS_FILE_LOCK = threading.Lock()
 
 _LIVE_CHANGE_CACHE: dict[str, Any] = {
@@ -408,9 +408,27 @@ def _coerce_runtime_event_rows(payload: Any, *, limit: int) -> list[RuntimeEvent
     return rows[: max(1, min(int(limit), 5000))]
 
 
-def _invalidate_runtime_events_cache() -> None:
-    _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
-    _RUNTIME_EVENTS_CACHE["rows"] = []
+def _invalidate_runtime_events_cache(endpoint: str | None = None) -> None:
+    """Drop the cached lists a new event could change: every unfiltered list, and the lists whose
+    endpoint family the event belongs to. A mesh organ announce leaves the reactions list alone."""
+    if endpoint is None:
+        _RUNTIME_EVENTS_CACHE.clear()
+        return
+    for key in list(_RUNTIME_EVENTS_CACHE):
+        prefix = str(_RUNTIME_EVENTS_CACHE[key].get("prefix") or "")
+        if not prefix or endpoint.startswith(prefix):
+            _RUNTIME_EVENTS_CACHE.pop(key, None)
+
+
+def _remember_runtime_events(cache_key: str, prefix: str, rows: list[RuntimeEvent], now: float) -> None:
+    if len(_RUNTIME_EVENTS_CACHE) >= _RUNTIME_EVENTS_CACHE_MAX_KEYS:
+        oldest = min(_RUNTIME_EVENTS_CACHE, key=lambda k: _RUNTIME_EVENTS_CACHE[k].get("expires_at", 0.0))
+        _RUNTIME_EVENTS_CACHE.pop(oldest, None)
+    _RUNTIME_EVENTS_CACHE[cache_key] = {
+        "expires_at": now + _RUNTIME_EVENTS_CACHE_TTL_SECONDS,
+        "prefix": prefix,
+        "rows": rows,
+    }
 
 
 def _ensure_events_store() -> None:
@@ -625,7 +643,7 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
             data = _read_store()
             data["events"].append(event.model_dump(mode="json"))
             _write_store(data)
-    _invalidate_runtime_events_cache()
+    _invalidate_runtime_events_cache(event.endpoint)
     return event
 
 
@@ -642,12 +660,9 @@ def list_events(
         requested_limit, since, source_value or None, prefix_value or None
     )
     now = time.time()
-    if (
-        _RUNTIME_EVENTS_CACHE.get("expires_at", 0.0) > now
-        and _RUNTIME_EVENTS_CACHE.get("cache_key") == cache_key
-        and isinstance(_RUNTIME_EVENTS_CACHE.get("rows"), list)
-    ):
-        return [row.model_copy(deep=True) for row in _RUNTIME_EVENTS_CACHE["rows"][:requested_limit]]
+    cached = _RUNTIME_EVENTS_CACHE.get(cache_key)
+    if cached is not None and cached.get("expires_at", 0.0) > now and isinstance(cached.get("rows"), list):
+        return [row.model_copy(deep=True) for row in cached["rows"][:requested_limit]]
 
     if runtime_event_store.enabled():
         rows = runtime_event_store.list_events(
@@ -672,9 +687,7 @@ def list_events(
                 continue
         out.sort(key=lambda x: x.recorded_at, reverse=True)
         out = out[:requested_limit]
-        _RUNTIME_EVENTS_CACHE["expires_at"] = now + _RUNTIME_EVENTS_CACHE_TTL_SECONDS
-        _RUNTIME_EVENTS_CACHE["cache_key"] = cache_key
-        _RUNTIME_EVENTS_CACHE["rows"] = out
+        _remember_runtime_events(cache_key, prefix_value, out, now)
         return out
 
     data = _read_store()
@@ -696,9 +709,7 @@ def list_events(
             continue
     out.sort(key=lambda x: x.recorded_at, reverse=True)
     out = out[:requested_limit]
-    _RUNTIME_EVENTS_CACHE["expires_at"] = now + _RUNTIME_EVENTS_CACHE_TTL_SECONDS
-    _RUNTIME_EVENTS_CACHE["cache_key"] = cache_key
-    _RUNTIME_EVENTS_CACHE["rows"] = out
+    _remember_runtime_events(cache_key, prefix_value, out, now)
     return out
 
 

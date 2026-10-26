@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, func, inspect
@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.config_loader import api_config, database_url, get_str
+from app.config_loader import api_config, database_url, get_str, get_int
 from app.models.runtime import RuntimeEvent
 
 logger = logging.getLogger(__name__)
@@ -150,6 +150,60 @@ def _session() -> Session:
         session.close()
 
 
+_WRITES_SINCE_TRIM = 0
+_TRIM_EVERY_WRITES = 1000
+_TRIM_BATCH = 50000
+
+
+def retention_days() -> int:
+    """How long request telemetry stays; 0 keeps everything (file-backed config, never the environment)."""
+    return max(0, get_int("runtime", "events_retention_days", 30))
+
+
+def trim_older_than(days: int, *, max_batches: int = 20) -> int:
+    """Delete telemetry recorded more than ``days`` ago, in bounded batches; returns rows removed.
+
+    On 2026-10-26 production held 10.3 million rows (7 GB) of per-request telemetry, 8.25 million older
+    than 30 days, scanned 18,495 times for 61 billion tuples; every reader paid for history nobody read.
+    """
+    if days <= 0 or not enabled():
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    removed = 0
+    try:
+        ensure_schema()
+        for _ in range(max(1, max_batches)):
+            with _session() as session:
+                ids = [
+                    row[0]
+                    for row in session.query(RuntimeEventRecord.id)
+                    .filter(RuntimeEventRecord.recorded_at < cutoff)
+                    .order_by(RuntimeEventRecord.recorded_at)
+                    .limit(_TRIM_BATCH)
+                    .all()
+                ]
+                if not ids:
+                    break
+                session.query(RuntimeEventRecord).filter(RuntimeEventRecord.id.in_(ids)).delete(
+                    synchronize_session=False
+                )
+                removed += len(ids)
+            if len(ids) < _TRIM_BATCH:
+                break
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store trim failed after %s rows: %s", removed, exc)
+    return removed
+
+
+def _trim_on_write_budget() -> None:
+    global _WRITES_SINCE_TRIM
+    _WRITES_SINCE_TRIM += 1
+    if _WRITES_SINCE_TRIM < _TRIM_EVERY_WRITES:
+        return
+    _WRITES_SINCE_TRIM = 0
+    trim_older_than(retention_days(), max_batches=1)
+
+
 def write_event(event: RuntimeEvent) -> None:
     try:
         ensure_schema()
@@ -171,6 +225,8 @@ def write_event(event: RuntimeEvent) -> None:
             session.add(row)
     except SQLAlchemyError as exc:
         logger.warning("runtime_event_store write failed; dropping event: %s", exc)
+        return
+    _trim_on_write_budget()
 
 
 def list_events(

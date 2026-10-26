@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-26",
+  "thread_branch": "claude/grocery-balance",
+  "commit_scope": "Three self-imposed blocks resolved at their causes: pulse respawned an http.bml listener every round because host_wait answers -2 where Linux refuses pidfd_open, so workers piled up at four cores; the API's runtime-event cache held one entry and was cleared on every request, so every reader refetched thousands of telemetry rows; and the runtime_events table kept 10.3 million request rows (7 GB) with no retention. Pulse respawns only on a real exit or a dead pid (host_alive); the event cache is per key and invalidated by endpoint family; telemetry past 30 days is trimmed at startup and every thousand writes.",
+  "files_owned": [
+    "pulse/main.bml",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/main.py"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "vps-health-2026-10-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "root cause",
+        "heal"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "VPS on 2026-10-26 04:0x UTC: load 10 on a host with 60 % steal; coherence-network-pulse-1 at 437 % CPU, coherence-network-api-1 at 288 % with 344 zombie health-check curls and health probes timing out at 5 s; every Hostinger deploy since 2026-10-23 05:05 UTC failed because CI's 35-minute roll-forward watchdog cut the image build while the starved VPS compiled the kernel and built form-cli (run logs end inside kernel-builder step 5/5); the API ran the 23 October image, so #4139's ledger heal never reached production.",
+    "Pulse: form/runtime/fkwu-uni.c documents host_wait (list pid ms) as nothing() while the child runs, the exit status on exit, and -2 when the host cannot wait on a child's end (pidfd_open refused; Docker's default seccomp). pulse/main.bml treated any non-nothing answer as an exit and spawned a new listener each round while the old kept serving. The loop now respawns only when the wait answers a real status or host_alive(pid) says the pid is gone; `./fkwu --check ../pulse/main.bml` passes.",
+    "API: strace of the hottest thread (after a restart, with no request in flight) streamed runtime_events rows out of Postgres without end; pg_stat_user_tables showed 18,495 sequential scans reading 61 billion tuples; the table held 10,336,682 rows (7,092 MB), 8,252,070 older than 30 days, oldest 2026-06-18; its newest 200,000 rows are the web's polled routes (reactions/recent, concepts/voices/recent, presence/summary). runtime_service's events cache was a single entry keyed by one (limit, since, source, prefix) and cleared by every record_event, i.e. by every request.",
+    "Heals: runtime_service keeps up to 64 cached lists by key and a new event drops only the unfiltered lists and the lists of its own endpoint family; runtime_event_store.trim_older_than deletes past `runtime.events_retention_days` (30, file-backed config) in 50,000-row batches, run once per start in a daemon thread and once per thousand writes with a single batch; the operator trimmed production's 8.25 million old rows the same hour (see the rollout note). Pulse container stopped by hand first; the API restarted (health probes had timed out), answered ping in 5 ms, and the trace named the reader.",
+    "Proof: test_runtime_events_cache_is_per_key_and_invalidates_by_endpoint_family and test_runtime_event_store_trims_telemetry_past_retention; runtime, mesh and store test files 16 passed; the whole suite in the suite log of this push; the pulse check by the kernel. Rollout by hand on the VPS with nohup (outside CI's watchdog), then: pulse http.bml worker count stays 1 across rounds, API CPU idle, app.hati.earth 200, a malformed entry_key answers 422 (the #4139 heal live)."
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/config/api.json",
+    "api/tests/test_runtime_mode_and_events.py",
+    "docs/system_audit/commit_evidence_2026-10-26_pulse_respawn_and_runtime_events_retention.json",
+    "pulse/main.bml"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "16 runtime/mesh/store tests pass incl. the two new claims; pulse passes fkwu --check; whole suite in the push log."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow runs the API suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Manual roll-forward with nohup; then pulse worker count, API CPU, app.hati.earth, the 422 probe."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Pulse holds one listener; the API idles between requests; runtime_events stays within 30 days; deploys finish inside the watchdog again.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://pulse.coherencycoin.com/pulse/now",
+      "https://app.hati.earth/"
+    ],
+    "test_flows": [
+      "docker top coherence-network-pulse-1 | grep -c http.bml",
+      "curl -s -o /dev/null -w '%{http_code}' https://app.hati.earth/"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check."
+  }
+}

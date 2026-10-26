@@ -247,6 +247,21 @@ def _warm_startup_caches() -> None:
         _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
 
 
+def _start_runtime_events_retention() -> None:
+    """Trim request telemetry past its retention once per start, in a daemon thread, bounded batches."""
+    from app.services import runtime_event_store
+
+    days = runtime_event_store.retention_days()
+    if days <= 0 or not runtime_event_store.enabled():
+        return
+
+    def _run() -> None:
+        removed = runtime_event_store.trim_older_than(days)
+        _startup_logger.info("runtime_events_retention days=%s removed=%s", days, removed)
+
+    threading.Thread(target=_run, name="runtime-events-retention", daemon=True).start()
+
+
 def _start_startup_cache_warm() -> bool:
     """Start the optional cache prefill without making it an availability tax."""
     if not get_bool("server", "startup_cache_warm_enabled", False):
@@ -302,6 +317,7 @@ async def lifespan(app: FastAPI):
     # user traffic. Operators can opt in through file-backed configuration for
     # a measured environment where the warm remains beneficial.
     _start_startup_cache_warm()
+    _start_runtime_events_retention()
     await _setup_service_registry(app)
 
     # Register the on-demand translator backend. Because the app uses a
