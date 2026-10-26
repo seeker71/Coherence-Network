@@ -1,5 +1,5 @@
 # Default local/agent pytest circulation.
-# Full CI uses COHERENCE_TEST_SUITE=full.
+# Use --suite full for an explicitly broader collection.
 tests/test_agent_monitor_helpers.py
 tests/test_breath_service.py
 tests/test_commit_evidence_validator.py
@@ -26,6 +26,7 @@ tests/test_flow_reactions.py
 tests/test_flow_vitality.py
 tests/test_flow_workspaces.py
 tests/test_mvp_acceptance.py
+tests/test_observation_liveness.py
 tests/test_persistence_contract_config.py
 tests/test_portfolio_governance.py
 tests/test_pytest_suite_budget.py
@@ -37,4 +38,5 @@ tests/test_smart_reaper_module_boundary.py
 tests/test_source_artifact_sensing_graph.py
 tests/test_stale_task_reaper.py
 tests/test_task_dedup_service.py
+tests/test_ttl_cache_ownership.py
 tests/test_worktree_continuity_guard.py

@@ -16,7 +16,7 @@
     "version": "gpt-6-astra (session metadata)"
   },
   "thread_branch": "codex/response-delivery-20261026",
-  "commit_scope": "Deliver compatibility responses before owned observation and yield the actual concept read.",
+  "commit_scope": "Keep compatibility response delivery independent of owned observation, synchronous reads and duplicated expensive cache work.",
   "files_owned": [
     "api/app/main.py",
     "api/app/middleware/read_tracking.py",
@@ -25,7 +25,11 @@
     "api/tests/test_observation_liveness.py",
     "specs/native-probe-owners.md",
     "docs/system_audit/commit_evidence_2026-10-26_response_delivery.json",
-    "docs/system_audit/model_executor_runs.jsonl"
+    "docs/system_audit/model_executor_runs.jsonl",
+    "api/app/core/ttl_cache.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_ttl_cache_ownership.py",
+    "api/tests/core_suite.txt"
   ],
   "change_files": [
     "api/app/main.py",
@@ -35,7 +39,11 @@
     "api/tests/test_observation_liveness.py",
     "specs/native-probe-owners.md",
     "docs/system_audit/commit_evidence_2026-10-26_response_delivery.json",
-    "docs/system_audit/model_executor_runs.jsonl"
+    "docs/system_audit/model_executor_runs.jsonl",
+    "api/app/core/ttl_cache.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_ttl_cache_ownership.py",
+    "api/tests/core_suite.txt"
   ],
   "change_intent": "runtime_fix",
   "idea_ids": [
@@ -49,9 +57,10 @@
   ],
   "local_validation": {
     "status": "pass",
-    "summary": "Three actual route/body-delivery regressions failed before repair. Focused concept, runtime and ownership tests now42passed, including preserved existing background work. Ruff introduces zero findings relative to77existing. The local guard passes API tests and source checks, but its Python-only web fixture requests the now-native /api/health and returns404; that fixture is not reported as passing. The spec validator returns existing format advisories.",
+    "summary": "50 focused tests pass after observed regressions. Both ownership test files join the configured core suite. New cache code/tests pass Ruff; existing touched files introduce no new findings against baseline. The local guard passes API/source checks but its Python-only web fixture requests the native /api/health and returns404. A broader legacy rollup fixture also requests the moved GET /api/ideas/{id} from Python and has5failures (405); it is not claimed passing. Spec format advisories remain.",
     "commands": [
-      "cd api && .venv/bin/python -m pytest -q tests/test_observation_liveness.py tests/test_concept_views.py tests/test_concept_story_crud.py tests/test_runtime_api.py tests/test_runtime_mode_and_events.py"
+      "cd api && .venv/bin/python -m pytest -q tests/test_observation_liveness.py tests/test_ttl_cache_ownership.py tests/test_concept_views.py tests/test_concept_story_crud.py tests/test_runtime_api.py tests/test_runtime_mode_and_events.py",
+      "cd api && uvx ruff check app/core/ttl_cache.py tests/test_ttl_cache_ownership.py"
     ]
   },
   "ci_validation": {
@@ -82,7 +91,11 @@
       "Actual concept route blocks graph work in a worker while ping answers",
       "Full ASGI response body precedes each blocked observer",
       "Prior response background task runs once before observation",
-      "Worker serialization, raw cancellation ownership and graceful drain remain verified"
+      "Worker serialization, raw cancellation ownership and graceful drain remain verified",
+      "Actual idea-children route yields during parent lookup",
+      "Completed cache result receives full TTL",
+      "Same-key waiters share success or BaseException while distinct keys run independently",
+      "Cache clear protects a live replacement generation from old completion"
     ]
   },
   "observed_failure": {
@@ -103,7 +116,18 @@
   },
   "work_receipt": {
     "loosened": "Response delivery completes while the request owns later observation.",
-    "surprise": "A responsive event loop and a delivered response are separate boundaries.",
+    "surprise": "A long computation could publish a cache entry already expired; response delivery and observer completion are also separate boundaries.",
     "friction_to_learning": "Test actual route and wire delivery, then verify serving behavior; a passing synthetic observer test is narrower."
+  },
+  "observed_profile": {
+    "method": "py-spy0.4.2 --nonblocking --json; no locals, no process pause",
+    "serving": "application026209f / kernel191ba24",
+    "observed": [
+      "MainThread synchronous list_idea_children\u2192idea registry lineage database read",
+      "Two concurrent inventory _cached_flow aggregation workers",
+      "Host vmstat samples70percent CPU steal"
+    ],
+    "source_cause": "Cache TTL began before expensive computation; a computation longer than TTL published an expired result and same-key callers duplicated work.",
+    "limits": "A process snapshot is bounded; it does not assign every latency to one function."
   }
 }

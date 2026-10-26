@@ -57,6 +57,23 @@ def test_actual_concept_read_yields_while_graph_is_waiting(monkeypatch):
     _run_while_blocked(app, "/api/concepts/lc-synthetic?lang=en", entered, release)
 
 
+def test_actual_idea_children_yields_while_parent_read_waits(monkeypatch):
+    from app.routers import ideas
+    entered, release = threading.Event(), threading.Event()
+    def read(idea_id):
+        entered.set()
+        release.wait(3)
+        return object()
+    monkeypatch.setattr(ideas.idea_service, "get_idea", read)
+    monkeypatch.setattr(ideas.idea_service, "list_children_of", lambda *args: [])
+    app = FastAPI()
+    app.include_router(ideas.router, prefix="/api")
+    @app.get("/api/ping")
+    async def ping():
+        return {"pong": True}
+    _run_while_blocked(app, "/api/ideas/synthetic/children", entered, release)
+
+
 def _body_before_observation(app, entered, release):
     async def run():
         sent = []

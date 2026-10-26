@@ -21,6 +21,10 @@ source:
   - file: api/tests/test_observation_liveness.py
   - file: api/app/routers/health.py
   - file: api/app/routers/concepts.py
+  - file: api/app/routers/ideas.py
+  - file: api/app/core/ttl_cache.py
+  - file: api/tests/test_ttl_cache_ownership.py
+  - file: api/tests/core_suite.txt
   - file: api/app/routers/substrate.py
   - file: api/app/routers/agent_diagnostics_routes.py
   - file: api/app/routers/pulse.py
@@ -33,6 +37,7 @@ requirements:
   - "R2: Public health reports the serving image identity and live PostgreSQL observation without routine audit, kernel challenge or witness work."
   - "R3: Native source offers and cell reads share reusable native persistence; replaced Python owners, unused Neo4j and disconnected release gates retire."
   - "R4: Compatibility concept reads yield through the framework worker; read sensing and runtime-event persistence follow completed response delivery through bounded serialized workers. Concurrent ping stays responsive while the request still owns accepted observations."
+  - "R5: Synchronous idea-child reads yield through the framework worker. The existing expensive-read cache shares same-key computation, starts freshness at completion and preserves generation ownership across invalidation and failure."
 done_when:
   - "One affected native observation reads health/readiness, contention and substrate source/cell effects with explicit runtime and immutable image identity."
   - "Replaced Python probe owners and unused release-gate functions are absent; compatibility ping/version still describe their actual process."
@@ -104,6 +109,15 @@ observation completes. An actual concept-route barrier covers its graph read;
 ASGI send observations prove the full response body precedes read and runtime
 observation. A second request cannot start a second sensing worker.
 This is a compatibility scheduling proof; native health retains its own owner.
+
+The same worker boundary holds for idea-child reads, observed blocking the main
+thread on a registry lineage query. The existing inventory-view cache shares
+one in-flight computation per key and generation. Its TTL begins at completion;
+clearing it admits a new generation without letting old work replace or remove
+that generation's result or active computation. Followers receive the owner's
+failure and a later request can retry. Different keys remain independent.
+`tests/test_ttl_cache_ownership.py` observes these boundaries with clock and
+worker barriers, including invalidation while replacement work is active.
 
 ## Verification
 

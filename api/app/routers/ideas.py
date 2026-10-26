@@ -541,7 +541,7 @@ async def translate_idea_view(
 
 
 @router.get("/ideas/{idea_id}/children", response_model=list[IdeaWithScore], summary="Return all child ideas whose parent_idea_id equals {idea_id}")
-async def list_idea_children(idea_id: str) -> list[IdeaWithScore]:
+def list_idea_children(idea_id: str) -> list[IdeaWithScore]:
     """Return all child ideas whose parent_idea_id equals {idea_id}.
 
     Used by the idea detail page to render absorbed ideas under a super-idea.
