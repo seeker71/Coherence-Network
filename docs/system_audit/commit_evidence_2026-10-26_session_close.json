@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-26",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "thread_branch": "codex/session-close-pin-20261026",
+  "commit_scope": "Carry the verified native session-close ownership repair into the application.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-26_session_close.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-26_session_close.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-live-session-close-20261026"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "22 native scope assertions pass. Actual native source-runtime lookup returns its result and exits 0; before repair it returned the result then failed appending an unowned settlement event.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/session-scope-band.bml: 22 passed; model_calls=0",
+      "cd form && printf '%s\\n' 'ask native bundle source identity' | ./fkwu form/form-stdlib/form-cli-repl.fk: exit 0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR629 merged after passing security check and focused native proof. Application CI follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Active deployments remain with their existing owners. This pin is not yet serving."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application CI and serving image identity."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/629",
+    "form/receipts/2026-10-26-session-close-ownership.md",
+    "form/form/form-stdlib/tests/session-scope-band.bml"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A lookup without an owned learning supervisor closes without writing. Admitted owned work still settles after withdrawal, including exact failure evidence.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/health"],
+    "public_endpoint_scope": "Post-activation image identity only; deployment validation remains pending. The observed behavior proof is the local native CLI lifecycle.",
+    "test_flows": [
+      "Unconfigured close creates no learning home",
+      "Unowned live PID receives no write or wait",
+      "Owned successful child is reaped after scope withdrawal",
+      "Owned failed child retains positive exit and exact stderr; prior examples stay intact",
+      "Actual lookup through fkwu source runtime exits cleanly"
+    ]
+  },
+  "observed_failure": {
+    "command": "form-cli ask 'native bundle source identity'",
+    "result": "Lookup text followed by fkwu: form_error: session learning event write failed; exit 1",
+    "cause": "nsm-session-settle appended an event for an unowned or absent supervisor"
+  },
+  "sovereignty_receipt": {
+    "native": "22 scoped control observations and native lookup; no model calls for this repair proof.",
+    "oracle": "OpenAI gpt-6-astra implementation/review. Rented token totals for this repair alone are not isolated.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; personal effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Quiet native lookups close without acquiring a learning obligation.",
+    "surprise": "Session shutdown, rather than the answer path, caused the lookup's failure.",
+    "friction_to_learning": "Retention permission and responsibility for admitted work remain separate."
+  }
+}
