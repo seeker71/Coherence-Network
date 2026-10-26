@@ -116,6 +116,8 @@ jobs:
             done
           }
           ssh_opts=(-i ~/.ssh/id_hostinger -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=2)
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/deploy-lock.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/deploy-lock.sh.incoming"
+          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "mv ${HOSTINGER_DEPLOY_PATH}/deploy-lock.sh.incoming ${HOSTINGER_DEPLOY_PATH}/deploy-lock.sh"
           retry_remote scp "${ssh_opts[@]}" deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh.incoming"
           retry_remote scp "${ssh_opts[@]}" deploy/hostinger/deploy-and-verify.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh.incoming"
           retry_remote scp "${ssh_opts[@]}" deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh.incoming"
@@ -128,7 +130,7 @@ jobs:
         run: |
           set +e
           timeout 150m ssh -i ~/.ssh/id_hostinger -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "${HOSTINGER_SSH_HOST}" \
-            "flock -w 600 /tmp/coh-deploy.lock bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}"
+            "bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}"
           rc=$?
           set -e
           if [[ "$rc" -ne 0 ]]; then

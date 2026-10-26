@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/deploy-lock.sh"
+coherence_deploy_lock /tmp/coh-deploy.lock 600
+
 COMPOSE_ROOT="${COMPOSE_ROOT:-/docker/coherence-network}"
 REPO_DIR="${REPO_DIR:-${COMPOSE_ROOT}/repo}"
 BRANCH="${BRANCH:-main}"

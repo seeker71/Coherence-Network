@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-26",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "thread_branch": "codex/deploy-owner-boundary-20261026",
+  "commit_scope": "Enforce shared deployment ownership at direct and verification entry points, including descriptor lifetime.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/test.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "deploy/hostinger/deploy-lock.sh",
+    "deploy/hostinger/install-gitnexus.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/test_hostinger_deploy_lock.sh",
+    "specs/hostinger-deploy-target-fetch.md",
+    "docs/system_audit/commit_evidence_2026-10-26_deploy_owner.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/test.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/hostinger/deploy-and-verify.sh",
+    "deploy/hostinger/deploy-lock.sh",
+    "deploy/hostinger/install-gitnexus.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/test_hostinger_deploy_lock.sh",
+    "specs/hostinger-deploy-target-fetch.md",
+    "docs/system_audit/commit_evidence_2026-10-26_deploy_owner.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "deploy-reliability"
+  ],
+  "spec_ids": [
+    "hostinger-deploy-target-fetch"
+  ],
+  "task_ids": [
+    "alignment-live-deploy-owner-20261026"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Real Linux processes prove exclusion through verification, inherited and legacy ownership reuse, bounded timeout, inode aliases, duplicate/unlocked descriptors, and detached-child closure without releasing the parent. Existing deploy-path proof, syntax, spec and workflow-reference checks pass. Independent review clear.",
+    "commands": [
+      "bash scripts/test_hostinger_deploy_lock.sh: pass in isolated Linux fixture",
+      "bash scripts/test_hostinger_deploy_form_paths.sh: PASS",
+      "bash -n deploy/hostinger/deploy-lock.sh deploy/hostinger/auto-deploy.sh deploy/hostinger/deploy-and-verify.sh deploy/hostinger/install-gitnexus.sh scripts/test_hostinger_deploy_lock.sh",
+      "python3 scripts/validate_workflow_references.py: 0 missing",
+      "python3 scripts/validate_spec_quality.py --file specs/hostinger-deploy-target-fetch.md: pass"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Linux process proof is now part of CI; source CI follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Active026209f rollout retains its owner. This ownership repair follows through the normal source deployment."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await source CI and installed entry-point identity."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/40272586152",
+    "scripts/test_hostinger_deploy_lock.sh",
+    "specs/hostinger-deploy-target-fetch.md"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Direct and workflow callers serialize before mutation, retain ownership through public proof, and release it when the owner exits even if a detached service continues.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-rollout identity is pending; process ownership is proven in an isolated Linux fixture.",
+    "test_flows": [
+      "Nested deployment reuses verification ownership",
+      "Competing caller enters only after verification completes",
+      "Bounded wait exits75 without executing work",
+      "Legacy outer flock and hardlink alias remain compatible",
+      "Duplicate descriptors do not self-wait; an unlocked inherited descriptor is acquired",
+      "Detached child closes its copies while parent remains owner; lock is available after parent exit"
+    ]
+  },
+  "observed_failure": {
+    "command": "Workflow40272586152 with concurrent direct auto-deploy.sh caller",
+    "result": "FAIL: post-deploy /api/health reports deployed_sha=de4dd0bb1b50 but target=b2bc74a00130; workflow exit1",
+    "cause": "The direct entry point could mutate shared Compose state outside the workflow lock."
+  },
+  "sovereignty_receipt": {
+    "native": "No new Form-native generation. Real OS-process proof exercises the existing deployment host carrier.",
+    "oracle": "OpenAI gpt-6-astra implementation and review; repair-specific token totals are not isolated.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; personal effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "The shared deployment lock now governs direct entry and detached child lifetime.",
+    "surprise": "A successful image build did not establish which concurrent caller activated it.",
+    "friction_to_learning": "Ownership belongs at the mutation boundary and must end at detached children."
+  }
+}

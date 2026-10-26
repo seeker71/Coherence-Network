@@ -11,6 +11,9 @@ on:
       - "Dockerfile.api"
       - "scripts/fkwu_run.sh"
       - ".github/workflows/test.yml"
+      - ".github/workflows/hostinger-auto-deploy.yml"
+      - "deploy/hostinger/**"
+      - "scripts/test_hostinger_deploy_lock.sh"
       - "web/**"
   workflow_dispatch:
 
@@ -19,6 +22,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deployment-ownership:
+    name: Deployment ownership
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash scripts/test_hostinger_deploy_lock.sh
+
   api:
     name: API suite
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login != 'dependabot[bot]' }}

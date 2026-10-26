@@ -378,8 +378,12 @@ grep -Fq "'form/form/form-stdlib/**'" "$WORKFLOW" \
 
 DEPLOY_AND_VERIFY="$ROOT_DIR/deploy/hostinger/deploy-and-verify.sh"
 
-grep -Fq 'flock -w 600 /tmp/coh-deploy.lock bash ${HOSTINGER_DEPLOY_PATH}/deploy-and-verify.sh ${HOSTINGER_DEPLOY_PATH} ${TARGET_SHA} ${PUBLIC_DEPLOY_API_BASE} ${PUBLIC_DEPLOY_WEB_BASE}' "$WORKFLOW" \
-  || fail "GitHub and VPS cron deploys do not share the same deployment lock"
+for entry in "$DEPLOY_SCRIPT" "$DEPLOY_AND_VERIFY"; do
+  grep -Fq 'coherence_deploy_lock /tmp/coh-deploy.lock 600' "$entry" \
+    || fail "deployment entry does not acquire the shared ownership boundary: $entry"
+done
+grep -Fq 'deploy/hostinger/deploy-lock.sh' "$WORKFLOW" \
+  || fail "workflow does not install the shared ownership helper"
 grep -Fq 'bash "$DEPLOY_PATH/auto-deploy.sh" "$TARGET_SHA"' "$DEPLOY_AND_VERIFY" \
   || fail "locked Hostinger carrier does not run auto-deploy"
 grep -Fq './scripts/verify_web_api_deploy.sh "$PUBLIC_API_BASE" "$PUBLIC_WEB_BASE"' "$DEPLOY_AND_VERIFY" \
@@ -423,7 +427,7 @@ if [[ -z "$deploy_line" || -z "$verify_line" || "$deploy_line" -ge "$verify_line
   fail "locked Hostinger carrier does not keep deploy before public verification"
 fi
 
-grep -Fq "COPY form/form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
+grep -Fq "COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
 
 grep -Fq "form/form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
