@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-26",
+  "thread_branch": "claude/edge-bounds-and-window",
+  "commit_scope": "Three more self-imposed blocks: the deploy declared a healthy API unstable because its 75-second window could not fit a cold API on a host that steals 60 % of its CPU; the Python API saturated its own loop under eight bot requests a minute, each tens of CPU-seconds, so ping and the health probe starved; pulse's round of eleven fetch workers every 30 seconds took three cores beside it. The serving window becomes 300 s with a 20 s local probe; the compose owner gives the Python API's routers an eight-request in-flight bound at Traefik (applied live by hand); pulse's round moves to every 180 s.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "pulse/config.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "coherence-network-api-runtime"
+  ],
+  "spec_ids": [
+    "transmuted-field-surfaces"
+  ],
+  "task_ids": [
+    "vps-health-2026-10-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "observe",
+        "root cause",
+        "heal"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude (Sema)",
+    "version": "Fable 5.1"
+  },
+  "evidence_refs": [
+    "Two manual roll-forwards on 2026-10-26 (872b08ef, de4dd0bb; CI's own of 026209f5) each recreated every container and ran the new code, yet ended FAIL in api_serving_window: three consecutive local (10 s) + public (15 s) pings within 75 s. The API's first minute after start saw /api/coherence/score, /api/contributors, /api/contributions at 21\u201324 s and /api/ping at 13\u201318 s; the script's bounded repair recreated the API again, and no revision was stamped (deployed_sha empty since 2026-10-23).",
+    "Load on the host reached 31 during a build and sat at 8\u201315 otherwise with 60 % steal; strace of the API's hottest thread showed 851 syscalls in 5 s and almost no file or SQL calls \u2014 pure Python CPU per request \u2014 while the access log held 42 requests in 5 minutes from Cloudflare addresses. With pulse paused the API still oscillated (ping 0.2 s \u2192 15 s timeouts, 100\u2013295 % CPU).",
+    "Pulse's steady cost is its round, not its listener: `docker top` during a round showed eleven `fetch.bml` workers plus `round.bml`, ~250\u2013370 % CPU every 30 s, each worker a full fkwu boot.",
+    "Heals: api_serving_window deadline 75 \u2192 300 s and the local probe 10 \u2192 20 s (the public probe keeps its contracted 15 s; scripts/test_hostinger_deploy_form_paths.sh PASS); deployment_compose_care.bml dcc-api adds traefik.http.middlewares.api-inflight.inflightreq.amount=8 to the coherence-api and existing-api-reads routers (`./fkwu --check` passes) and was applied live from this checkout with activate [api] \u2014 the recreated container carries the labels; pulse/config.json interval_seconds 30 \u2192 180 (reaches the image on the next build).",
+    "The compose owner is an operator door, not a deploy step: auto-deploy.sh never runs it, so router label changes reach the VPS only through `mode: apply` from a checkout."
+  ],
+  "change_files": [
+    "api/app/form_recipes/deployment_compose_care.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-10-26_api_edge_bound_serving_window_pulse_cadence.json",
+    "pulse/config.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "bash -n and the deploy path test pass; fkwu --check on the compose owner and pulse main; the API bound verified live on the recreated container."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR's Test workflow."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger",
+    "summary": "Manual roll-forward under nohup; expected: Deploy complete stamped; pulse round every 180 s."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Deploys stamp their revision; at most eight requests in flight reach the Python API, the rest answer 429; pulse costs a sixth of before.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ping",
+      "https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "for i in $(seq 1 12); do curl -s -o /dev/null -w '%{http_code} ' https://api.coherencycoin.com/api/ping & done; wait"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The rollout is the live check."
+  }
+}

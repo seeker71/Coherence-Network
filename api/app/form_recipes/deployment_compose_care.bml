@@ -80,6 +80,13 @@ section [form.bml] {
    },node_children(labels)));
    nil?(rules) ? form_error("native Pulse routing needs the current web host rules") : "(" ++ hch-join(rules," || ") ++ ")";
   }
+  // The Python compatibility host is heavy per request on this host; eight in flight at the edge keeps
+  // bots from saturating its loop so /api/ping and the health probe keep answering (2026-10-26).
+  def dcc-api(service) {
+   let labels = dcc-labels(json-object-get(service,"labels"));
+   let bounds = [["traefik.http.middlewares.api-inflight.inflightreq.amount","8"],["traefik.http.routers.coherence-api.middlewares","api-inflight"],["traefik.http.routers.existing-api-reads.middlewares","api-inflight"]];
+   dcc-set(service,"labels",foldl((out,p) => dcc-set(out,p[0],json-node-string(p[1])),labels,bounds));
+  }
   def dcc-pulse(service,web_rules) {
    let build = json-object-get(service,"build");
    let context = dcc-get(build,"context");
@@ -107,7 +114,7 @@ section [form.bml] {
   def dcc-body(body,release) {
    let web_rules = dcc-web-rules(body);
    let retained = map(pair => json-node-pair(json-pair-key(pair),dcc-dependencies(json-pair-value(pair),release)),filter(pair => !dcc-retired?(json-pair-key(pair),release) && json-pair-key(pair) != "native-api",dcc-owners(body)));
-   let services = json-node-object(append(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : json-pair-key(pair) == "api" ? json-node-pair("api",dcc-native-dependency(body,json-pair-value(pair))) : pair,retained),[json-node-pair("native-api",dcc-native-api(body))]));
+   let services = json-node-object(append(map(pair => json-pair-key(pair) == "web" ? json-node-pair("web", dcc-web(json-pair-value(pair))) : json-pair-key(pair) == "api" ? json-node-pair("api", dcc-api(json-pair-value(pair))) : json-pair-key(pair) == "pulse" ? json-node-pair("pulse", dcc-pulse(json-pair-value(pair),web_rules)) : json-pair-key(pair) == "api" ? json-node-pair("api",dcc-native-dependency(body,json-pair-value(pair))) : pair,retained),[json-node-pair("native-api",dcc-native-api(body))]));
    let used = dcc-volume-sources(services);
    json-node-object(map(pair => json-pair-key(pair) == "services" ? json-node-pair("services", services) : json-pair-key(pair) == "volumes" ? json-node-pair("volumes",json-node-object(filter(volume => any?(name => name == json-pair-key(volume),used),node_children(json-pair-value(pair))))) : pair,node_children(body)));
   }

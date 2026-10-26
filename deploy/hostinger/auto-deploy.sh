@@ -331,7 +331,9 @@ api_serving_window() {
   # uvicorn can answer; the public probe proves Traefik still owns the Host
   # route. Keeping the same container id and restart count across the window
   # catches a restart loop that can otherwise look healthy for one request.
-  deadline=$(( $(date +%s) + 75 ))
+  # 300 s, not 75: the Hostinger host steals ~60 % of its CPU and a cold API warms its caches
+  # under the first bot requests; 75 s declared a healthy body unstable and recreated it (2026-10-26).
+  deadline=$(( $(date +%s) + 300 ))
   while (( $(date +%s) < deadline )); do
     current_container="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps -q api 2>/dev/null)"
     current_restarts="$(docker inspect "$container" --format '{{.RestartCount}}' 2>/dev/null || true)"
@@ -340,7 +342,7 @@ api_serving_window() {
       return 1
     fi
     if docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-        sh -lc 'curl -fsS --max-time 10 http://127.0.0.1:8000/api/ping >/dev/null' \
+        sh -lc 'curl -fsS --max-time 20 http://127.0.0.1:8000/api/ping >/dev/null' \
         >/dev/null 2>&1 \
       && curl -fsS --max-time 15 https://api.coherencycoin.com/api/ping >/dev/null 2>&1; then
       consecutive=$((consecutive + 1))
