@@ -53,16 +53,16 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Application checks follow push."
+    "status": "pass",
+    "summary": "Application CI40631063897 succeeded."
   },
   "deploy_validation": {
-    "status": "pending",
-    "summary": "Fresh public observation confirms existing app 4f3039b and kernel be97c13 healthy. New measurement pin awaits rollout."
+    "status": "pass",
+    "summary": "Deployment40631369063 succeeded; native public wave verified app629c8813/kernel452b959, native-postgres connected, all three HTTP200."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Await application checks and serving identity."
+    "can_move_next_phase": true,
+    "blocked_reason": ""
   },
   "evidence_refs": [
     "https://github.com/seeker71/coherence-kernel/pull/631",

@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-28",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (current session metadata)"
+  },
+  "thread_branch": "codex/pulse-request-lifetime-20261028",
+  "commit_scope": "Bound native Pulse request workers, recover child-owned locks and rebuild every native consumer of changed kernel inputs.",
+  "files_owned": [
+    "form",
+    "pulse/http.bml",
+    "pulse/config.json",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-28_native_request_lifetime.json",
+    "docs/system_audit/commit_evidence_2026-10-28_session_usage.json",
+    "docs/system_audit/commit_evidence_2026-10-28_linux_fingerprint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "pulse/http.bml",
+    "pulse/config.json",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-10-28_native_request_lifetime.json",
+    "docs/system_audit/commit_evidence_2026-10-28_session_usage.json",
+    "docs/system_audit/commit_evidence_2026-10-28_linux_fingerprint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-observation-native-lifetime-20261028"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Native socket/identity/lock-recovery band127 on Darwin ARM64 and Linux x86-64; Pulse entry source check; hostinger form deploy paths pass; independent review resolved. Native release verdict32767/32767 includes renewed C-bootstrap and full CLI build.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/native-dispatch-lifetime-band.bml",
+      "cd form && ./fkwu --check ../pulse/http.bml",
+      "bash scripts/test_hostinger_deploy_form_paths.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Application checks follow publication."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Operational restart removed retained workers and restored Pulse health; new native lifetime limits await this pin's rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await checked publication and public proof for new listener limits."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/633",
+    "Kernel merged a40afc434f97434596c174dc184b6956c86684a3",
+    "form/receipts/2026-10-28-native-request-lifetime.md",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/40637383634"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Pulse admits at most four native requests and expires each after30s, including partial framing and abandoned handlers. Expired direct children are reaped and dead-owner locks remain recoverable. Shared kernel changes rebuild Pulse as well as API.",
+    "public_endpoints": [
+      "https://pulse.coherencycoin.com/pulse/health",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Pulse restart health200/0.67s and app5787a138/kernel1eff6d7 serving verified; changed owner executed in isolated actual socket proofs on both platforms.",
+    "test_flows": [
+      "Partial HTTP request expires without a worker",
+      "Capacity returns503 through a nonblocking refusal",
+      "Observed child lock ownership precedes expiry and exit137/reaping",
+      "A subsequent valid write-half-closed request recovers the lock and returns200",
+      "Real gitlink expansion selects API and Pulse consumers"
+    ]
+  },
+  "observed_failure": {
+    "command": "docker top/stats/inspect coherence-network-pulse-1; native-dispatch-lifetime-band.bml",
+    "result": "48 processes,717% CPU,9.87GiB; handlers older than11hr; health timeout. Native recovery band initially15 on Darwin.",
+    "cause": "No native lifetime/admission bound; Darwin cached PID survived native fork; deployment mapping left Pulse behind shared kernel changes."
+  },
+  "sovereignty_receipt": {
+    "native": "Socket tests, deadline enforcement and production health proof through fkwu; no inference calls.",
+    "oracle": "OpenAI gpt-6-astra implementation/review. Repair-specific usage is not separately metered.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; human effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Native request owners reclaim resources and preserve valid response/lock-recovery behavior.",
+    "surprise": "A recovered capacity exposed inherited process identity in the lock witness.",
+    "friction_to_learning": "Observe ownership before interruption, then observe recovery; route shared repairs to all consumers."
+  }
+}

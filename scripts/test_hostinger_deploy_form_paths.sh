@@ -252,8 +252,8 @@ grep -Fxq 'form/form/form-stdlib/kernel-band.fk' <<<"$expanded_paths" \
   || fail "gitlink path expansion does not expose changed stdlib recipes"
 grep -Fxq 'form/form/form-stdlib/form-ontology.json' <<<"$expanded_paths" \
   || fail "gitlink path expansion does not expose changed Blueprint tissue"
-[[ "$(services_to_rebuild "$SUPER_V1" "$SUPER_V2")" == "api" ]] \
-  || fail "an exact form gitlink bump does not route to an API rebuild"
+[[ "$(services_to_rebuild "$SUPER_V1" "$SUPER_V2")" == "api pulse" ]] \
+  || fail "an exact stdlib gitlink bump does not rebuild both native consumers"
 
 printf '%s\n' 'CMD ["node", "web/server.js"]' >"$SUPER_REPO/Dockerfile.web"
 git -C "$SUPER_REPO" add Dockerfile.web
@@ -429,9 +429,6 @@ fi
 
 grep -Fq "COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
-
-grep -Fq "form/form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
-  || fail "deploy service routing does not send form/form-stdlib changes to api"
 
 grep -Fq "sync_form_stdlib()" "$DEPLOY_SCRIPT" \
   || fail "deploy script does not sync form stdlib into the api container"
