@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-28",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (current session metadata)"
+  },
+  "thread_branch": "codex/alignment-observation-20261028",
+  "commit_scope": "Pin corrected native session usage and align closing guidance with scoped measurement.",
+  "files_owned": [
+    "form",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-10-28_session_usage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-10-28_session_usage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-observation-session-usage-20261028"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Focused native bands: session rent 8191, progression 31, local flow 4194303; independent read-only review clear.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/session-rent-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/session-progress-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/local-flow-reading-band.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Application checks follow push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Fresh public observation confirms existing app 4f3039b and kernel be97c13 healthy. New measurement pin awaits rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application checks and serving identity."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/631",
+    "form/receipts/2026-10-28-session-usage-observation.md"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The closing meter reads Codex cumulative usage once, preserves unknown fields and attributes native work by provider session ID without rewriting receipt history.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Fresh public read/ping/health transport and HTTP success; changed measurement observed locally.",
+    "test_flows": [
+      "Claude deduplication and subagents retained",
+      "Codex latest cumulative, partial and invalid samples, explicit zero",
+      "Missing usage and ownership remain unknown",
+      "Provider ID joins native drafts, turns and voice runs",
+      "Old schema loads and unversioned cache readings refresh"
+    ]
+  },
+  "observed_failure": {
+    "command": "cd form && ./fkwu observe/session-rent-run.bml < own-transcript-path",
+    "result": "Old closing meter emitted zero usage despite positive Codex provider counters.",
+    "cause": "Claude-only parser and filename-based native joins."
+  },
+  "sovereignty_receipt": {
+    "native": "Usage parsing, attribution and proof executed by fkwu; no model calls in these checks.",
+    "oracle": "OpenAI Codex implementation and review; repair-specific rented usage is not separately metered.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; human effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Closing observations carry provider usage and honest unknowns.",
+    "surprise": "Transcript receipt identity differs from native-work ownership.",
+    "friction_to_learning": "Keep stable history keys and explicit provider identity; observe both."
+  }
+}

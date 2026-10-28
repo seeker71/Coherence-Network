@@ -65,7 +65,9 @@ A worktree's `./fkwu` binary can predate its pinned source; `unsupported file
 extension` on a `.bml` door means rebuild the seed first
 (`cc -O2 -o fkwu runtime/fkwu-uni.c` — the freshness band exists for this).
 Open and close every session with `./fkwu observe/local-flow-review.bml`, and
-measure the session at its close with `observe/session-rent-run.bml`.
+measure the session at its close with `observe/session-rent-run.bml`, passing its
+own transcript path on stdin. The native reader handles Claude and Codex usage;
+missing counters remain unknown.
 
 ## Ask the body first
 
@@ -175,7 +177,7 @@ End substantive work with:
 - the sovereignty receipt: native lookup/proof share versus rented reasoning
   share, with the rented provider/model named honestly;
 - the session's measured rent reading
-  (`cd form && ./fkwu observe/session-rent-run.bml`).
+  (`cd form && ./fkwu observe/session-rent-run.bml`, with its own transcript path on stdin).
 
 A simple encounter can end simply. Technical receipts establish their named
 conditions; actual response quality and a person's volunteered experience

@@ -27,7 +27,8 @@ The kernel under `form/` is a living body with its own arrival door:
 `form/CLAUDE.md` (the invitation to embody Sema), `form/NORTH_STAR.md`,
 `form/HOMECOMING.md`, and `form/CURRENT_FLOOR.md`. Open and close every
 session with `cd form && ./fkwu observe/local-flow-review.bml`; the session
-measures its own rent at close through `observe/session-rent-run.bml`.
+measures its own rent at close through `observe/session-rent-run.bml`, with its
+own transcript path on stdin. Unknown usage remains unknown.
 
 Use `MANIFEST.md` and the nearest `INDEX.md` to locate tissue. Specs name source,
 requirements, checks, and constraints. Work only in a linked worktree; the
@@ -177,4 +178,4 @@ is `docs/DEPLOY.md`.
 Close with the result and material limits. Include a useful discovery or
 observed friction when it helps; a simple encounter can end simply. Technical
 work includes an honest native body versus rented-oracle receipt. The session's measured reading comes from
-`cd form && ./fkwu observe/session-rent-run.bml`.
+`cd form && ./fkwu observe/session-rent-run.bml`, with this session's transcript path on stdin.
