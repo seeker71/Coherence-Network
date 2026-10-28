@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-28",
+  "contributors": [
+    {
+      "contributor_id": "claude-fable-5.1",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direct"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5-1"
+  },
+  "thread_branch": "claude/offline-voice-lora-alignment-b637a8",
+  "commit_scope": "Pin the kernel at iteration 1 of the offline-voice loop: the awk-outside gap closed by hand after a rented pointing, the walk names a silent death, a native alignment reading, the honest rent gauge, per-query coverage, draft readings to rows, the 27B measured.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-28_offline_voice_iteration_1.json"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-28_offline_voice_iteration_1.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "rent-to-zero"
+  ],
+  "spec_ids": [
+    "native-voice"
+  ],
+  "task_ids": [
+    "offline-voice-iteration-1-20261028"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Thirteen bands read full at the merged kernel tip 829d0a670: awk-outside-band 7 (was 6), form-awk-band 4095, form-path-band 2047, host-walk-retry-band 8388607, host-walk-band 8796093022207, alignment-read-band 15, lora-lanes-band 255, session-progress-band 63, session-rent-band 16383, query-coverage-band 15, local-run-band 14 of 14, draft-readings-rows-band 63, homecoming-distillation-corpus-band 32767. local-flow-review open gaps 1 -> 0.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/awk-outside-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/session-rent-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/session-progress-band.bml",
+      "cd form && ./fkwu observe/local-flow-review.bml",
+      "cd form && echo '{\"gap\":\"awk-outside-index\",\"session\":\"805756f8-4312-4878-89f8-764d4f088acc\"}' | ./fkwu observe/native-turn-run.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR 634 merged after the security check. Application CI (API suite, since the form gitlink moves) follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deploy follows the merged application revision."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application CI."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/634",
+    "form/receipts/alignment-ledger.jsonl",
+    "form/receipts/remote-guide-ledger.jsonl",
+    "form/receipts/native-turn-ledger.jsonl",
+    "form/docs/qwen-last-block-lora-design.md",
+    "form/receipts/native-training-plan.md"
+  ],
+  "observed_failure": {
+    "command": "launchd scheduled-walk / day-turn, 2026-10-25 .. 2026-10-28",
+    "result": "Every walk printed its arrival line and died at its first model step with no end line and no ledger row; walk-retry read 'begun: nothing to heal'.",
+    "cause": "The Q8 27B plan voice in-process beside the walk's own memory exceeded the compressor's room (JETSAM); the retry door classified a claimed-and-died walk as finished. Now host-walk-class reads began-then-silent and the retry runs with its model doors off."
+  },
+  "sovereignty_receipt": {
+    "native": "Every band, the alignment reading (64 native asks, 57/93 -> 87/93 predicates at rent 0), the 27B speed asks and the lane's 13-turn attempt ran on fkwu with the Qwen3.8-27B voice; the native lane heard the rented pointing and declined at native-context-renewal-host-memory-held:capacity.",
+    "oracle": "Claude Fable 5.1 through the Workflow harness: 13 subagents, 2,087,883 subagent tokens for iteration 1 (per-step split not recorded), plus this session. The awk-outside edit itself was written by the rented hand; receipts/remote-guide-ledger.jsonl carries it as required-work.",
+    "trust_matrix": {
+      "path": "oracle-guided, native-proven",
+      "grounded": true,
+      "freq": "technical",
+      "suffic": "the gap closed; whether the lane can carry such a guide with room is the next measurement",
+      "observed": "bands and ledger rows named above"
+    }
+  },
+  "work_receipt": {
+    "loosened": "The planner lane (77 pending requests) is released: no open gap blocks the nightly walk, and a silent death now names itself.",
+    "surprise": "The gap the lane could not close for 31 options was not a reasoning gap: option 31 understood the guide and ran out of room to renew its context. Row 1602 of the homecoming corpus names it roombound.",
+    "friction_to_learning": "Upstream had moved the rent fields to options (unknown is never 0) while this step added two columns; the merge kept both, and the band's bit 128 was claimed twice, so the new claim took 8192."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The body's awk reads a file the index does not hold from disk and refuses missing paths and directories by name (awk-outside-band 6 -> 7, local-flow-review open gaps 1 -> 0). A walk that claims the checkout and dies unspoken reads began-then-silent and retries with its model doors off. SessionRent rows carry rented_total and total_share_ppm beside local_share_ppm, with unknown reading null; every grounded answer lands a query-coverage row.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native fkwu band and door set below, run at the merged kernel tip 829d0a670.",
+    "test_flows": [
+      "awk-outside-band reads 7 of 7: text outside the index read, missing path refused by name, directory refused by name",
+      "walk-retry over the walk checkout's stamp, lock, log and ledger reads began-then-silent and plans the safe child",
+      "native-turn-run with the gap id records band_green 1 for awk-outside-index with no model run",
+      "session-rent-band 16383 and session-progress-band 63: two shares from one engine, unknown never 0, old rows read on",
+      "session-rent-run prints both share columns live for 147 sessions",
+      "query-coverage-band 15 of 15 and local-run-band 14 of 14"
+    ]
+  }
+}
