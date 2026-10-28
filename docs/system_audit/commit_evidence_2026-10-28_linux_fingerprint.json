@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-28",
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (current session metadata)"
+  },
+  "thread_branch": "codex/native-fingerprint-20261028",
+  "commit_scope": "Pin the witnessed Linux CPU image for exact body fingerprints.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-28_linux_fingerprint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-28_linux_fingerprint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "alignment-observation-linux-fingerprint-20261028"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Fingerprint band127 on Darwin ARM64 and Linux x86-64; build band262143. Linux baseline lane0 becomes lane1 with identical fingerprints; independent review clear.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/body-fingerprint-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-build-band.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Application CI follows pin publication."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Previous usage repair app629c8813/kernel452b959 deployed successfully in run40631369063. This fingerprint pin awaits rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application checks and serving identity for the new pin."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/632",
+    "form/receipts/2026-10-28-linux-fingerprint.md",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/40631369063"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Linux x86-64 artifact fingerprints use the existing CPU image door while preserving exact FNV-1a identity and ARM/reference behavior.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Current deployed usage repair verified; changed fingerprint path executed on the Linux host in an isolated private fixture.",
+    "test_flows": [
+      "Exact reference agreement for text and all binary byte values",
+      "Direct machine-code zero length and continued state",
+      "Mapped file offsets, empty and missing files",
+      "Count above65535 and explicit acceleration witness",
+      "Existing build identity, attestation and publication contracts"
+    ]
+  },
+  "observed_failure": {
+    "command": "Linux fkwu fingerprint baseline probe",
+    "result": "bfp-lane0 with correct digest; production postcompile CPU sample mostly in fk_walk.",
+    "cause": "Fingerprint organ emitted only an untagged ARM image; Linux admits explicitly tagged x86 images."
+  },
+  "sovereignty_receipt": {
+    "native": "Both platform proofs and Linux CPU sampling; new code is a Form-emitted image through existing fkwu JIT. No model calls in checks.",
+    "oracle": "OpenAI gpt-6-astra implementation/review; repair-specific rented usage not separately metered.",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "source-reviewed; human effect unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Linux can execute the exact fingerprint fold through its existing native door.",
+    "surprise": "Correct fallback output concealed a missing native path.",
+    "friction_to_learning": "Witness acceleration separately from digest correctness; preserve artifact identity checks."
+  }
+}
