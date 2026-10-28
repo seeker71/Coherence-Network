@@ -32,7 +32,7 @@
     "form",
     "docs/system_audit/commit_evidence_2026-10-28_offline_voice_iteration_1.json"
   ],
-  "change_intent": "kernel_pin",
+  "change_intent": "runtime_fix",
   "idea_ids": [
     "rent-to-zero"
   ],
@@ -93,5 +93,21 @@
     "loosened": "The planner lane (77 pending requests) is released: no open gap blocks the nightly walk, and a silent death now names itself.",
     "surprise": "The gap the lane could not close for 31 options was not a reasoning gap: option 31 understood the guide and ran out of room to renew its context. Row 1602 of the homecoming corpus names it roombound.",
     "friction_to_learning": "Upstream had moved the rent fields to options (unknown is never 0) while this step added two columns; the merge kept both, and the band's bit 128 was claimed twice, so the new claim took 8192."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The body's awk reads a file the index does not hold from disk and refuses missing paths and directories by name (awk-outside-band 6 -> 7, local-flow-review open gaps 1 -> 0). A walk that claims the checkout and dies unspoken reads began-then-silent and retries with its model doors off. SessionRent rows carry rented_total and total_share_ppm beside local_share_ppm, with unknown reading null; every grounded answer lands a query-coverage row.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native fkwu band and door set below, run at the merged kernel tip 829d0a670.",
+    "test_flows": [
+      "awk-outside-band reads 7 of 7: text outside the index read, missing path refused by name, directory refused by name",
+      "walk-retry over the walk checkout's stamp, lock, log and ledger reads began-then-silent and plans the safe child",
+      "native-turn-run with the gap id records band_green 1 for awk-outside-index with no model run",
+      "session-rent-band 16383 and session-progress-band 63: two shares from one engine, unknown never 0, old rows read on",
+      "session-rent-run prints both share columns live for 147 sessions",
+      "query-coverage-band 15 of 15 and local-run-band 14 of 14"
+    ]
   }
 }
