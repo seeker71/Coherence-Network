@@ -7,6 +7,9 @@ section [form.bml] {
  let view = cell_call("../pulse/read-view.bml",nothing(),"check");
  record_get(read,"errors")>0 || record_get(view,"errors")>0 ? form_error("native HTTP read admission failed") : {
   let organs = ws-organs();
-  nsd-serve(nsd-open(wr-number(cfg,"port"),raw => ph-handle(wr-overlay(cfg,fp-object([["request_began_ms",host_monotonic_ms()]])),organs,raw)));
+  let owner = nsd-open(wr-number(cfg,"port"),raw => ph-handle(wr-overlay(cfg,fp-object([["request_began_ms",host_monotonic_ms()]])),organs,raw));
+  let capacity = json-object-has?(cfg,"request_capacity") ? wr-number(cfg,"request_capacity") : 4;
+  let lifetime = json-object-has?(cfg,"request_lifetime_ms") ? wr-number(cfg,"request_lifetime_ms") : 30000;
+  nsd-serve(nsd-bounded(owner,capacity,lifetime));
  };
 }

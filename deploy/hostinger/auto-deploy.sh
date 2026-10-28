@@ -682,7 +682,10 @@ services_to_rebuild() {
       web/*)           need_web=1 ;;
       pulse/*)         need_pulse=1 ;;
       form)                     need_api=1 ;;
-      form/form/form-stdlib/*)      need_api=1 ;;
+      # Both native images copy these kernel inputs. Keep Pulse on the same
+      # repaired runtime and stdlib instead of leaving its workers behind.
+      form/runtime/*|form/form/form-stdlib/*|form/form/native/*|form/observe/*|form/.gitlink-diff-unavailable)
+        need_api=1; need_pulse=1 ;;
       # scripts/ is mounted as content but also copied into the api image
       # at build time for the substrate ingester. Rebuild api when they change.
       scripts/*.py)    need_api=1 ;;

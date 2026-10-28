@@ -46,16 +46,16 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Application CI follows pin publication."
+    "status": "pass",
+    "summary": "Application CI40637107259 succeeded."
   },
   "deploy_validation": {
-    "status": "pending",
-    "summary": "Previous usage repair app629c8813/kernel452b959 deployed successfully in run40631369063. This fingerprint pin awaits rollout."
+    "status": "pass",
+    "summary": "Deployment40637383634 succeeded; native public wave verified app5787a138/kernel1eff6d7 from image identity, native-postgres connected, all three HTTP200."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Await application checks and serving identity for the new pin."
+    "can_move_next_phase": true,
+    "blocked_reason": ""
   },
   "evidence_refs": [
     "https://github.com/seeker71/coherence-kernel/pull/632",
@@ -68,7 +68,7 @@
     "public_endpoints": [
       "https://api.coherencycoin.com/api/health"
     ],
-    "public_endpoint_scope": "Current deployed usage repair verified; changed fingerprint path executed on the Linux host in an isolated private fixture.",
+    "public_endpoint_scope": "Changed fingerprint path verified in an isolated Linux fixture; its merged app5787a138/kernel1eff6d7 image pair is now publicly verified.",
     "test_flows": [
       "Exact reference agreement for text and all binary byte values",
       "Direct machine-code zero length and continued state",

@@ -2,6 +2,8 @@
   "store_path": "/data/form-persistence",
   "work_path": "/data/native-io",
   "port": 8100,
+  "request_capacity": 4,
+  "request_lifetime_ms": 30000,
   "interval_seconds": 180,
   "api_base": "https://api.coherencycoin.com",
   "web_base": "https://coherencycoin.com",
