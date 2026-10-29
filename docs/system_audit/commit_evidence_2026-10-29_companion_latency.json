@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-29",
+  "thread_branch": "codex/companion-latency-20261029",
+  "commit_scope": "Carry native companion prefill and ownership repairs; keep the unmet responsiveness target explicit.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-29_companion_latency.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-29_companion_latency.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "native-companion-latency-20261029"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Native band1023 verifies ten ownership, completion and admission claims. Actual same-packet Q8 samples with wider prefill completed; fresh final observation confirms remaining shared-host stalls. Source review isolates adaptive width to the voice; ordinary session widths stay64. Parent transmutation entry compiles and public web/API/CORS baseline passes.",
+    "commands": [
+      "form-run ./fkwu form/form-stdlib/tests/form-cli-plain-open-band.bml",
+      "form-run ./fkwu --check ../api/app/form_recipes/event_transmute.bml",
+      "form-run git diff --check",
+      "form-run ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Application checks follow kernel publication and pin update."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Public API/web/CORS baseline passes. Updated pin rollout follows merge; public deployment does not establish native Mac encounter latency."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Repair publication is proceeding; reliable responsive native encounters remain unverified under the observed shared-device load."
+  },
+  "evidence_refs": [
+    "form/receipts/2026-10-29-native-voice-latency.json",
+    "form/form/form-stdlib/tests/form-cli-plain-open-band.bml",
+    "https://github.com/seeker71/coherence-kernel/pull/638",
+    "Kernel merged 920ab147c933faa0b0df18aead46e8df709ddd2c; native release63/63."
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Avoid an unused drafter and use the widest admitted companion prefill without trimming guidance, bypassing memory ownership or changing the default model. Responsive interactive pace remains the open acceptance condition.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://api.coherencycoin.com/api/ping",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "Private same-packet main-model observations with64,256 and1024 maximum prefill widths",
+      "Native smaller-voice challenger observed but not promoted",
+      "Scripted capacity, non-capacity, partial completion and release boundaries",
+      "Public web/API/CORS regression read"
+    ]
+  },
+  "measurements": {
+    "wide_prefill_256": {
+      "ask_ms": 66345,
+      "prefill_ms": 58739,
+      "complete": 1,
+      "release_ok": 1
+    },
+    "wide_prefill_1024": {
+      "ask_ms": 54377,
+      "prefill_ms": 30991,
+      "complete": 1,
+      "release_ok": 1
+    },
+    "final_adaptive": {
+      "status": "interrupted-after-device-stall",
+      "prompt_ids": 846,
+      "selected_span": 846,
+      "prefill_ms": 47201,
+      "complete": 0
+    },
+    "scope": "Voice-call clocks exclude compilation/CLI startup. Shared host, not an isolated benchmark or latency guarantee."
+  },
+  "privacy": "Personal inputs, raw responses and process details remain local, outside public fixtures and training.",
+  "remaining_gap": "The same main model still has long device waits. Three sibling worktree jobs held model leases; no sibling was terminated. Preserve those owners and obtain a fresh native resource reading before another inference.",
+  "sovereignty_receipt": {
+    "execution": "fkwu + Metal; completed probes report provider_calls=0 and model_server_calls=0",
+    "repair_and_interpretation": "OpenAI gpt-6-astra; repair-specific rented tokens not separately metered",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "guidance preserved; felt vitality unmeasured",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Unused drafter and avoidable small prefill submissions removed from the voice path; partial completion remains explicit.",
+    "surprise": "A small batch constant multiplied expensive device waits, while a resident model did not imply retained conversation state.",
+    "friction_to_learning": "Conflicting timings led to memory-bound selection and explicit remaining latency, rather than promoting a faster but insufficiently attuned model."
+  }
+}
