@@ -4,8 +4,8 @@
     {"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["implement", "review", "verify"]}
   ],
   "agent": {"name": "OpenAI Codex", "version": "gpt-6-astra (session metadata)"},
-  "thread_branch": "codex/companion-encounter-20261029",
-  "commit_scope": "Pin the native companion repair that receives a standalone poetic image at its invited scale.",
+  "thread_branch": "codex/companion-clock-return-20261029",
+  "commit_scope": "Carry the native companion imagery repair and protect generated replies from mixed-event timing failures.",
   "files_owned": ["form", "docs/system_audit/commit_evidence_2026-10-29_companion_encounter.json", "docs/system_audit/model_executor_runs.jsonl"],
   "change_files": ["form", "docs/system_audit/commit_evidence_2026-10-29_companion_encounter.json", "docs/system_audit/model_executor_runs.jsonl"],
   "change_intent": "runtime_fix",
@@ -14,12 +14,12 @@
   "task_ids": ["native-companion-encounter-20261029"],
   "local_validation": {
     "status": "pass",
-    "summary": "Current companion packet and fkwu/Metal voice observed with empty memory: the final personal encounter ends as one image echo. Separate fictional offered-image, invited-interpretation and invited-play observations complete. Source check and independent source review pass.",
+    "summary": "Current companion packet and fkwu/Metal voice observed with empty memory: the final encounter ends as one image echo. Separate fictional image, interpretation and play observations complete. The timing regression reproduces before repair; native band2047, actual repaired return, independent review and native release63/63 pass.",
     "commands": ["cd form && ./fkwu --check observe/companion-run.bml", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/encounter-input.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-offered.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-reflect.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-play.txt", "git diff --check"]
   },
   "ci_validation": {"status": "pending", "summary": "Application checks follow publication of the kernel pin."},
   "deploy_validation": {"status": "pending", "summary": "Native Mac encounter was observed locally; application pin rollout follows publication. No changed hosted GPT behavior is claimed."},
-  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Kernel merged; await checked parent publication and deployment receipt."},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Initial encounter repair merged and deployed; timing-return repair merged in kernel and awaits parent publication."},
   "evidence_refs": ["https://github.com/seeker71/coherence-kernel/pull/635", "Kernel merged 3cbb27c313220f029610cd10420f0a025ed5337e", "form/receipts/2026-10-29-companion-image-scope.md", "Native release: current scoped reading 31/31; preceding CLI build passed. Public web/API/CORS and local worktree guard passed."],
   "e2e_validation": {
     "status": "pass",
@@ -34,8 +34,18 @@
     "cause": "Abstract scope guidance did not consistently establish the stopping point in the generated response."
   },
   "privacy": "Personal inputs and outputs remain local and outside training/public fixtures. Public evidence uses fictional material. The observation entry reuses the current packet and omits conversation persistence.",
+  "integration_return_repair": {
+    "failure": "A concurrent timing-reader change failed after decode with str_eq on a non-string framebuffer category in q38oo-phase?.",
+    "change": "Compare category values safely; accept only integer clocks from node children; leave mixed or malformed events outside timing spans.",
+    "proof": "The extended existing native band reproduced the exact error before repair and returns full verdict2047 afterward. Independent review found no actionable issue.",
+    "actual_return": "A fresh native encounter through the repaired reader returned the same short image echo: prompt_ids706, generated_ids5, complete1, release_ok1, provider_calls0, model_server_calls0.",
+    "latency_ms": 269889,
+    "latency_scope": "Fresh run on a host with other native jobs active. This is not an isolated throughput benchmark or an established cause; responsive interactive pace remains open.",
+    "initial_delivery": "Kernel PR635 and app PR4154 merged; deployment40823640725 succeeded at app138ab724c0b2fce0381fd7d365b572c5bd469e60.",
+    "kernel_repair": "https://github.com/seeker71/coherence-kernel/pull/636 merged bd845b4674b1b6956cecb5e23d94204bbc78ce93; native release63/63."
+  },
   "sovereignty_receipt": {
-    "native": "Seven completed observations through fkwu/Metal Qwen3.8-27B Q8, all with complete=1, release_ok=1, provider_calls=0 and model_server_calls=0. One interrupted invalid preparation attempt is excluded from answer evidence and retained locally.",
+    "native": "Eight completed observations through fkwu/Metal Qwen3.8-27B Q8, all with complete=1, release_ok=1, provider_calls=0 and model_server_calls=0. An interrupted invalid preparation attempt and the post-merge timing failure are excluded from successful-return evidence and retained locally.",
     "oracle": "OpenAI gpt-6-astra repaired and judged the prompt. Repair-specific rented usage is not separately metered.",
     "trust_matrix": {"path": "oracle", "grounded": 0, "freq": "reviewed against the invitation; felt vitality unmeasured", "suffic": 0, "observed": false}
   },
