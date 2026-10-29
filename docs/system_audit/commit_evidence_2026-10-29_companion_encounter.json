@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-29",
+  "contributors": [
+    {"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["implement", "review", "verify"]}
+  ],
+  "agent": {"name": "OpenAI Codex", "version": "gpt-6-astra (session metadata)"},
+  "thread_branch": "codex/companion-encounter-20261029",
+  "commit_scope": "Pin the native companion repair that receives a standalone poetic image at its invited scale.",
+  "files_owned": ["form", "docs/system_audit/commit_evidence_2026-10-29_companion_encounter.json", "docs/system_audit/model_executor_runs.jsonl"],
+  "change_files": ["form", "docs/system_audit/commit_evidence_2026-10-29_companion_encounter.json", "docs/system_audit/model_executor_runs.jsonl"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["trusted-everyday-companion"],
+  "spec_ids": ["trusted-everyday-companion"],
+  "task_ids": ["native-companion-encounter-20261029"],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Current companion packet and fkwu/Metal voice observed with empty memory: the final personal encounter ends as one image echo. Separate fictional offered-image, invited-interpretation and invited-play observations complete. Source check and independent source review pass.",
+    "commands": ["cd form && ./fkwu --check observe/companion-run.bml", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/encounter-input.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-offered.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-reflect.txt", "cd form && ./fkwu .hearth/encounter-private.bml < .hearth/image-play.txt", "git diff --check"]
+  },
+  "ci_validation": {"status": "pending", "summary": "Application checks follow publication of the kernel pin."},
+  "deploy_validation": {"status": "pending", "summary": "Native Mac encounter was observed locally; application pin rollout follows publication. No changed hosted GPT behavior is claimed."},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Kernel merged; await checked parent publication and deployment receipt."},
+  "evidence_refs": ["https://github.com/seeker71/coherence-kernel/pull/635", "Kernel merged 3cbb27c313220f029610cd10420f0a025ed5337e", "form/receipts/2026-10-29-companion-image-scope.md", "Native release: current scoped reading 31/31; preceding CLI build passed. Public web/API/CORS and local worktree guard passed."],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Receive a standalone poetic image in its own register and end; offer interpretation or shared play when invited.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/health", "https://coherencycoin.com/", "https://api.coherencycoin.com/api/ping"],
+    "public_endpoint_scope": "Public API/web/CORS regression verification passed before landing. Companion quality evidence executes the local native packet, not a hosted response.",
+    "test_flows": ["Private fresh encounter through exact cp-packet and fcnv-ask, with no conversation append", "Unseen fictional image offered alone", "Same fictional image with requested interpretation", "Same fictional image with requested play"]
+  },
+  "observed_failure": {
+    "command": "./fkwu .hearth/encounter-private.bml",
+    "result": "Baseline and two abstract prompt revisions added appraisal or commentary. A concrete fictional example produced a complete brief poetic reply.",
+    "cause": "Abstract scope guidance did not consistently establish the stopping point in the generated response."
+  },
+  "privacy": "Personal inputs and outputs remain local and outside training/public fixtures. Public evidence uses fictional material. The observation entry reuses the current packet and omits conversation persistence.",
+  "sovereignty_receipt": {
+    "native": "Seven completed observations through fkwu/Metal Qwen3.8-27B Q8, all with complete=1, release_ok=1, provider_calls=0 and model_server_calls=0. One interrupted invalid preparation attempt is excluded from answer evidence and retained locally.",
+    "oracle": "OpenAI gpt-6-astra repaired and judged the prompt. Repair-specific rented usage is not separately metered.",
+    "trust_matrix": {"path": "oracle", "grounded": 0, "freq": "reviewed against the invitation; felt vitality unmeasured", "suffic": 0, "observed": false}
+  },
+  "work_receipt": {
+    "loosened": "The observed companion can receive a poetic image and finish, while responding to explicit reflection and play.",
+    "surprise": "A concrete fictional example carried response scope better than more abstract guidance.",
+    "friction_to_learning": "Repeated appraisal led to a smaller demonstration at the actual prompt owner, then a new-image invitation check."
+  }
+}
