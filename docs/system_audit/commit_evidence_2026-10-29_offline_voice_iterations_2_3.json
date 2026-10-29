@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-29",
+  "contributors": [
+    {
+      "contributor_id": "claude-fable-5.1",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direct"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5-1"
+  },
+  "thread_branch": "claude/offline-voice-iteration-2",
+  "commit_scope": "Pin the kernel at offline-voice iterations 2 and 3: the living ask seam with session-stamped clocks, 93/93 alignment, a truthful 3B lift, two proven rungs of the 27B last-block ladder, the Q4 decode lane, list walkers that refuse a non-list, a cell deadline that ticks in crystallized loops, a sealed walk kernel, and the gap register.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-29_offline_voice_iterations_2_3.json"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-29_offline_voice_iterations_2_3.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "rent-to-zero"
+  ],
+  "spec_ids": [
+    "native-voice"
+  ],
+  "task_ids": [
+    "offline-voice-iterations-2-3-20261029"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Twenty-four bands and one observation read full on the rebased kernel tip 863ef4119 (see e2e test_flows); the gap register reads 8 closed, 4 open, 1 unread; one real ask through the merged voice door landed a timed LocalRun row (prefill 2.03 tok/s, decode 1.17 tok/s over the stage clocks) and its coverage row.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/core-list-walk-band.fk",
+      "cd form && ./fkwu observe/cell-deadline-observe.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/host-walk-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/qwen-last-block-backward-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/q4k-decode-wide-band.fk",
+      "cd form && printf '' | ./fkwu observe/offline-voice-gaps-run.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR 637 merged after the security check. Application CI (API suite, since the form gitlink moves) follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deploy follows the merged application revision."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application CI; the walk's 03:30 slot is the proof of the sealed kernel."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/637",
+    "form/receipts/offline-voice-gap-register.jsonl",
+    "form/receipts/alignment-ledger.jsonl",
+    "form/receipts/lora-promotion-ledger.jsonl",
+    "form/docs/qwen-last-block-lora-design.md",
+    "form/docs/launchd/README.md",
+    "form/receipts/native-training-plan.md"
+  ],
+  "observed_failure": {
+    "command": "launchd earth.hati.rent-walk / day-turn and retries, 2026-10-28 19:10 .. 2026-10-29 12:30; observe/local-plan-run.bml live 2026-10-28",
+    "result": "Every slot SIGKILLed at exec: Code Signature Invalid, Launch Constraint Violation (DiagnosticReports fkwu-2026-10-2*.ips; launchctl last exit reason OS_REASON_CODESIGNING). The planner's in-process verification of a stub that answered nothing ran core.fk's reverse-onto without end, 902 s past a 600 s cell deadline, until the OS jettisoned fkwu at 119 GiB.",
+    "cause": "hw-build left the kernel linker-signed under its build name fkwu.next; every core.fk list walker continued on nil?'s 0 for a non-list while tail of nothing is nothing; the f64 loop leaf carried no deadline tick. Each repaired at cause in kernel 863ef4119."
+  },
+  "sovereignty_receipt": {
+    "native": "Every band, the alignment readings (set 1 93/93, set 2 61/61 at rent 0), the 3B lift (188-343 s, rent 0), rung 1 and rung 2 of the 27B ladder, the Q4 lane's measurements and one native option that closed a planned gap at rung native ran on fkwu with the body's own models; the 27B voice answered the planner's request natively in 38 minutes before the body's own loop killed the walk.",
+    "oracle": "Claude Fable 5.1 through the Workflow harness: 14 subagents (2,681,085 tokens) for iteration 2, 13 subagents (2,097,873 tokens) plus one finisher (175,654) for iteration 3, plus this session. The repairs themselves were written by rented hands; the gap register's rent-share-trend row reads this honestly as open.",
+    "trust_matrix": {
+      "path": "oracle-written, native-proven",
+      "grounded": true,
+      "freq": "technical",
+      "suffic": "every gap named closed is observed by a band or a ledger row; the walk's night slot and the planner's next natively-landed source change remain to be observed",
+      "observed": "bands, ledger rows and the register row named above"
+    }
+  },
+  "work_receipt": {
+    "loosened": "The voice's identity: it no longer wears the door's receipt vocabulary as its own name; the walk's kernel carries a seal launchd accepts; a list walk over nothing ends by name in 0.09 s instead of 119 GiB.",
+    "surprise": "Rung 2's backward, written by one hand and never run, passed whole on its first run; and the four nights of dead walks were a code signature, after memory and a frozen branch had each been blamed wrongly.",
+    "friction_to_learning": "A sibling landed event-note clocks on the same seam while the session-record clocks were being written; the merge kept one engine and the sibling's notes for the glass."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Every ask through fcnv-ask and form-cli's typed ask lands a QueryCoverageRow and a timed LocalRun row whose prefill and decode rates are read over the session's own stage instants; a list walk over a non-list refuses by the walker's name at once; a crystallized loop ends at its cell deadline; the walk's built kernel carries a complete ad-hoc seal under its own name and a linker-signed product is refused; the revised role prompt reads 93/93 and 61/61 on the held-out sets.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native band set below at kernel 863ef4119.",
+    "test_flows": [
+      "core-list-walk-band 255: append/reverse/thirteen walkers unchanged over lists; nothing, string and int refused by name at once",
+      "cell-deadline-observe: an endless native f64 loop under cell_run stops with stopped=deadline ms=1000; a loop of 200000 passes ends with its value",
+      "host-walk-band 17592186044415: the build argv seals the product under identifier fkwu; a linker-signed product is refused; freshness holds",
+      "local-run-band 23 of 23 and query-coverage-band 23 of 23: timed rows with admission/open/prefill/decode, unavailable reason, coverage rows at the living seams",
+      "alignment-read-band 31 and the ledger's last rows: 93/93 on set 1, 61/61 on set 2 at rent 0",
+      "lora-lift-band 63 and the promotion row: accepted held-out 3585 -> 3294 milli, rejected set beside",
+      "qwen-last-block-band 15 and qwen-last-block-backward-band 15: bit-identical replay; dB 5.6e-6 / dA 5.2e-5 against finite differences",
+      "q4k-decode-wide-band 2047 and qwen38-prefill-quant-band 31: fused K-quant decode equals the reference; same greedy reply",
+      "offline-voice-gaps-band 255 and the live register: 8 closed, 4 open, 1 unread",
+      "one real ask through the merged voice door: wall 32148 ms, prefill 2.03 tok/s, decode 1.17 tok/s, coverage row landed"
+    ]
+  }
+}
