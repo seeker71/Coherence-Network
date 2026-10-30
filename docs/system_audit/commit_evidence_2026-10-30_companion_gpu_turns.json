@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-30",
+  "thread_branch": "codex/companion-gpu-turns-20261030",
+  "commit_scope": "Carry the native shared-GPU ownership repair while preserving remaining latency evidence.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-30_companion_gpu_turns.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-30_companion_gpu_turns.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "native-companion-gpu-turns-20261030"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Native ownership/recovery/FIFO band32767, inherited/settled ownership band1023, model-free draft band524287 and plain voice band1023 passed. Actual main-model encounters completed and released; controlled pause identifies a legacy client outside the scheduler as a remaining source of contention. Parent event-transmutation compile, local preflight guard and public API/web/CORS checks passed.",
+    "commands": [
+      "form-run ./fkwu form/form-stdlib/tests/gpu-lease-band.fk",
+      "form-run ./fkwu form/form-stdlib/tests/gpu-lease-inherit-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/form-cli-model-draft-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/form-cli-plain-open-band.bml",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Application checks follow the merged kernel pin."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Public rollout follows merge and verifies shipped identity, not Mac latency."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Reliable conversational responsiveness remains open; older active clients must adopt shared scheduling and prompt/cold-load costs remain."
+  },
+  "evidence_refs": [
+    "form/receipts/2026-10-30-native-gpu-turns.json",
+    "form/form/form-stdlib/tests/gpu-lease-band.fk",
+    "form/form/form-stdlib/tests/gpu-lease-inherit-band.bml",
+    "https://github.com/seeker71/coherence-kernel/pull/639",
+    "Kernel merged 9d6f0cce5d951a9ca31834f8835a33ff7cab83dd; native release63/63 and source review passed."
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Participating Qwen sessions take fair settled turns on the shared GPU while retaining model/KV context. Existing owners, exact guidance, completion/release boundaries and the default model remain intact.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "Uncontended cold-model encounter",
+      "Two queued Qwen clients with an older uncoordinated model job",
+      "Bounded pause and verified resume of the older job",
+      "Model-free ownership, failure, nested lease and FIFO handover",
+      "Public deployment identity"
+    ]
+  },
+  "measurements": {
+    "uncontended_cold_ms": 31908,
+    "repaired_single_ms": 12408,
+    "uncoordinated_peer_concurrent_ms": [
+      177658,
+      180447
+    ],
+    "peer_temporarily_paused_ms": 14059,
+    "paused_decode_ms": 863,
+    "prompt_ids": 846,
+    "scope": "Shared-host observations; full guidance unchanged. Voice-call time excludes compilation/startup."
+  },
+  "privacy": "Private inputs, raw responses and process details remain local; no private training fixtures or conversation-history writes were introduced.",
+  "remaining_gap": "The older live client bypasses new scheduling. Full guidance prefill and cold loading remain material costs. A smaller quantized challenger did not complete its bounded cold probe and was not promoted.",
+  "sovereignty_receipt": {
+    "execution": "fkwu + Metal; observed provider_calls=0 and model_server_calls=0",
+    "repair_and_review": "Rented OpenAI gpt-6-astra; task-specific token totals unavailable",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "guidance preserved; felt response quality remains a separate observation",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Qwen now participates in the existing shared compute ownership protocol; FIFO handover preserves resident context.",
+    "surprise": "Memory admission coordinated allocations but allowed GPU work outside the existing lease.",
+    "friction_to_learning": "The live three-client test separated participating ownership from the unresolved legacy-client rollout."
+  }
+}
