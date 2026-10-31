@@ -1,18 +1,16 @@
 {
   "date": "2026-10-31",
-  "thread_branch": "codex/companion-responsive-20261031",
-  "commit_scope": "Carry concise companion guidance, bounded interactive GPU scheduling and atomic lease release.",
+  "thread_branch": "codex/companion-shared-proof-20261031",
+  "commit_scope": "Record coordinated adoption, native encounters and deployment proof for the merged companion and GPU changes.",
   "files_owned": [
-    "form",
     "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "change_files": [
-    "form",
     "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "docs_only",
   "idea_ids": [
     "trusted-everyday-companion"
   ],
@@ -53,26 +51,28 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Kernel PR641 and PR642 merged; native release63/63 and security check pass. Application checks follow the merged kernel pin."
+    "status": "pass",
+    "summary": "Kernel PR641/642 merged with native release63/63. Application PR4160 API suite, web build, deployment ownership and security checks passed at2950802d03524ae1eb69c20deda5f3673c341f4d."
   },
   "deploy_validation": {
-    "status": "pending",
-    "summary": "Rollout verifies public identity; native Mac responsiveness is measured separately."
+    "status": "pass",
+    "summary": "Hostinger run41179168880 succeeded. Public API/web/CORS pass; API health reports applicationbc0e61a087b854a55c3b34c531ad1a7a8c76e9f7 and kernel2a4b8c48abc24fcb238bdd79b8e3edd91d0de4a4 from image identity. Native Mac timings are separate observations."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "Shared responsiveness remains under observation after coordinated adoption."
+    "can_move_next_phase": true,
+    "blocked_reason": ""
   },
   "evidence_refs": [
     "form/receipts/2026-10-31-companion-responsive.json",
     "https://github.com/seeker71/coherence-kernel/pull/641",
     "form/receipts/2026-10-31-interactive-gpu-turns.json",
     "https://github.com/seeker71/coherence-kernel/pull/642",
-    "kernel:2a4b8c48abc24fcb238bdd79b8e3edd91d0de4a4"
+    "kernel:2a4b8c48abc24fcb238bdd79b8e3edd91d0de4a4",
+    "https://github.com/seeker71/Coherence-Network/pull/4160",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/41179168880"
   ],
   "e2e_validation": {
-    "status": "pending",
+    "status": "pass",
     "expected_behavior_delta": "Companion guidance is concise with the full covenant; native Qwen prefill yields in bounded layer groups and training shares its GPU lease.",
     "public_endpoints": [
       "https://api.coherencycoin.com/api/health",
@@ -86,7 +86,24 @@
     ]
   },
   "privacy": "Private inputs, raw responses, process identities and local continuation data remain local.",
-  "remaining_gap": "Active older peers still need to adopt bounded layer turns and atomic release. Three-job encounter104.518s; after third job exited, two-job encounter10.072s (open816/prefill8271/decode811ms). Different host loads do not isolate policy effects. Coordinated same-version measurement remains pending.",
+  "shared_gpu_observation": {
+    "adoption": "Peer owner verified an atomic checkpoint and baseline source bytes with no source window open, gracefully restarted, and resumed the same task with both candidate files and38 checks intact. Actual qwen prefill layers ownership was observed on the merged kernel.",
+    "background_progress": "The resumed owner's native framebuffer recorded a completed8768-position prefill after restart. Checkpoint action counters remained at the adopted baseline when read; no completed-action advancement is claimed.",
+    "native_answer_ms": [3979,4745,4813],
+    "normal_path_ms": [4745,4813],
+    "cached_process_wall_ms": 5560,
+    "recompilation_process_wall_ms": 17010,
+    "last_stage_ms": {"open":629,"prefill":3514,"decode":497},
+    "prompt_ids": 440,
+    "generated_ids": 4,
+    "complete": 1,
+    "release_ok": 1,
+    "provider_calls": 0,
+    "model_server_calls": 0,
+    "reply": "Stable across the shared trials; raw text remains private.",
+    "measurement_limits": "The3979ms diagnostic trial had temporary timing instrumentation; it was removed before both normal-path trials. The17010ms process trial rebuilt source caches; the next unchanged-source command took5560ms. These are small-sample observations, not a general latency guarantee."
+  },
+  "remaining_gap": "Prefill still accounts for about3.5s in the final shared trial. Source-cache rebuilds add startup time. No persistent companion prefix cache or instantaneous response is claimed; long prompts and other loads need their own observation.",
   "sovereignty_receipt": {
     "execution": "Native fkwu/Metal; provider_calls=0 and model_server_calls=0",
     "repair_and_review": "Rented OpenAI gpt-6-astra; task-specific token totals unavailable",
