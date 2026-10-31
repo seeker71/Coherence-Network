@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-31",
+  "thread_branch": "codex/companion-responsive-20261031",
+  "commit_scope": "Carry concise companion guidance, bounded interactive GPU scheduling and atomic lease release.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "native-companion-responsive-20261031"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-6-astra (session metadata)"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Focused native proofs: prefill255, training511, mapped ownership31, fill31, lease32767, inheritance1023, interactive scope255, strict JSON request63 and atomic release31. Companion and parent event route compile. Five fresh companion scenarios complete and release. Private poetic encounter preserves its response, complete/release1, provider/model-server calls0.",
+    "commands": [
+      "form-run ./fkwu form/form-stdlib/tests/qwen-prefill-turns-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/qwen-training-gpu-turn-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/metal-mapped-ownership-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/metal-buf-fill-band.bml",
+      "form-run git diff --check",
+      "form-run ./fkwu form/form-stdlib/tests/gpu-lease-intent-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/native-voice-intent-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/gpu-lease-release-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/gpu-lease-band.fk"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR641 and PR642 merged; native release63/63 and security check pass. Application checks follow the merged kernel pin."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Rollout verifies public identity; native Mac responsiveness is measured separately."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Shared responsiveness remains under observation after coordinated adoption."
+  },
+  "evidence_refs": [
+    "form/receipts/2026-10-31-companion-responsive.json",
+    "https://github.com/seeker71/coherence-kernel/pull/641",
+    "form/receipts/2026-10-31-interactive-gpu-turns.json",
+    "https://github.com/seeker71/coherence-kernel/pull/642",
+    "kernel:2a4b8c48abc24fcb238bdd79b8e3edd91d0de4a4"
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Companion guidance is concise with the full covenant; native Qwen prefill yields in bounded layer groups and training shares its GPU lease.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "Private poetic encounter",
+      "Fresh play, pause, private action, identity and uncertainty",
+      "Coordinated shared-GPU adoption",
+      "Public deployment identity"
+    ]
+  },
+  "privacy": "Private inputs, raw responses, process identities and local continuation data remain local.",
+  "remaining_gap": "Active older peers still need to adopt bounded layer turns and atomic release. Three-job encounter104.518s; after third job exited, two-job encounter10.072s (open816/prefill8271/decode811ms). Different host loads do not isolate policy effects. Coordinated same-version measurement remains pending.",
+  "sovereignty_receipt": {
+    "execution": "Native fkwu/Metal; provider_calls=0 and model_server_calls=0",
+    "repair_and_review": "Rented OpenAI gpt-6-astra; task-specific token totals unavailable",
+    "trust_matrix": {
+      "path": "oracle",
+      "grounded": 0,
+      "freq": "native encounter and five fresh scenarios observed; full covenant retained",
+      "suffic": 0,
+      "observed": false
+    }
+  },
+  "work_receipt": {
+    "loosened": "Shorter guidance preserves care; compute turns retain model/KV ownership while yielding.",
+    "surprise": "Wide token matmuls and GPU scheduling width can be adjusted independently.",
+    "friction_to_learning": "A peer's release failure exposed a path-recreation race; atomic detachment preserves the next holder while cleanup reports independently."
+  }
+}
