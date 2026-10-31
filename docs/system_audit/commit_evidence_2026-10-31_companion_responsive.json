@@ -1,18 +1,16 @@
 {
   "date": "2026-10-31",
   "thread_branch": "codex/companion-shared-proof-20261031",
-  "commit_scope": "Carry concise companion guidance, bounded interactive GPU scheduling and atomic lease release.",
+  "commit_scope": "Record coordinated adoption, native encounters and deployment proof for the merged companion and GPU changes.",
   "files_owned": [
-    "form",
     "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "change_files": [
-    "form",
     "docs/system_audit/commit_evidence_2026-10-31_companion_responsive.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "docs_only",
   "idea_ids": [
     "trusted-everyday-companion"
   ],
