@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-31",
+  "contributors": [
+    {
+      "contributor_id": "claude-opus-5.5",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direct"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-5-5"
+  },
+  "thread_branch": "claude/offline-voice-iteration-5",
+  "commit_scope": "Pin the kernel at offline-voice iterations 4 and 5: the 27B's last-block LoRA trained through its frozen head and judged on held-out rows, a dead or absent band parking on one contract row, a floor that keeps up with a moving tree, a bad-list keyed on bytes, atomic candidate writes, a pinned launcher launchd holds still, a native reader of drafts, and a repaired check witness.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-31_offline_voice_iterations_4_5.json"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-10-31_offline_voice_iterations_4_5.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "rent-to-zero"
+  ],
+  "spec_ids": [
+    "native-voice"
+  ],
+  "task_ids": [
+    "offline-voice-iterations-4-5-20261031"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Sixteen bands read full on the rebased tree before kernel PR 640 merged (see e2e test_flows). The walk then ran the merged kernel under launchd on 2026-10-31 03:30 to exit 0 and landed be329dc8c with drift gates pass=63 full=63 refused=0. The pinned launcher pair was installed on 2026-10-31 14:16 and both retry jobs ran through it under launchd to exit 0.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/native-turn-ladder-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/bml-bad-list-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/walk-launch-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/host-walk-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/spawn-guard-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-check-witness-band.bml",
+      "launchctl print gui/501/earth.hati.day-turn-retry"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR 640 merged after the security check. Application CI (API suite, since the form gitlink moves) follows push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deploy follows the merged application revision."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Await application CI and deploy. The 19:00 slot is the first calendar spawn of a first-slot job through the launcher."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/640",
+    "form/docs/launchd/README.md",
+    "form/docs/qwen-last-block-lora-design.md",
+    "form/receipts/lora-promotion-ledger.jsonl",
+    "form/receipts/native-training-plan.md",
+    "form/receipts/crossings-ledger.jsonl"
+  ],
+  "observed_failure": {
+    "command": "launchd earth.hati.day-turn and retries, 2026-10-29 19:00 .. 2026-10-31 12:40; observe/native-turn-run.bml in the walk",
+    "result": "The 19:00 walk of 2026-10-29 spent its 149-minute window on a queue row whose band stood only in another checkout's ignored tree. Every candidate after a refused band read null for the life of the process. Each rebuild of the launchd-spawned kernel cost each job one killed spawn: on 2026-10-31 launchd killed 03:40, 12:30 and 12:40. fccw-covers read arg == fat-exit(name) since e06d7217e, so a check on a writable read as fixed.",
+    "cause": "No band-standing check before a climb; a bad-list keyed by path alone; launchd holding an ad-hoc program to its content; a wrong line under an unread band. Each repaired at cause in kernel 9a8fdc6fb, and the launcher is installed."
+  },
+  "sovereignty_receipt": {
+    "native": "Every band, the 27B training (1.7920 to 1.7322 over 20 Adam steps on 8 accepted rows), the held-out judgment (parent 2.77947, child 2.76970, better 1), and the 2026-10-31 03:30 walk with its six drafts, drift gates and landing ran on fkwu with the body's own models and no rented mind.",
+    "oracle": "Claude Opus 5.5 through the Workflow harness wrote the repairs, with subagents reading each other's work adversarially. Session rent is measured at close by observe/session-rent-run.bml; rented-work share is what the register's trend row reads.",
+    "trust_matrix": {
+      "path": "oracle-written, native-proven",
+      "grounded": true,
+      "freq": "technical",
+      "suffic": "every repair named is read by a band, a ledger row or launchd's own line; the launcher under a calendar spawn of a first-slot job and a planner-landed native change remain to be observed",
+      "observed": "bands, launchctl print and /usr/bin/log lines, the walk's log and ledgers"
+    }
+  },
+  "work_receipt": {
+    "loosened": "A band that does not stand no longer costs a window; a repaired unit is asked again in the same process; a rebuilt kernel no longer reaches launchd.",
+    "surprise": "Rung 0's syntax repair could never land through the real door: the band's first read put it on the bad-list by path, so every candidate in that process read null. The scratch gap read declined on the prior kernel and green on the new one.",
+    "friction_to_learning": "A sibling landed a mean-square Adam loop on the same rung while the head's cross-entropy door was uncommitted; the design doc and the plan now carry both as two doors of one rung."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A queue row whose band does not stand or read lands one contract row and parks; a unit the floor refused is asked again once its bytes move; a cached lowering is served only over the bytes it was made from; launchd spawns a pinned pair that begins the job's door as its child; the code lane's rung-0 check reads a writable path as original.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native band set and launchd's own lines below.",
+    "test_flows": [
+      "native-turn-ladder-band 262143 and native-turn-green-band 511: an absent band parks on one contract row; a dead band is one row naming its unit",
+      "bml-bad-list-band 511, 227 on the prior kernel: a repaired unit is asked again; a refused unit unchanged costs 0 bytes and about 1 ms",
+      "host-walk-band 17592186044415 and walk-launch-band 511: atomic candidate writes, the pair pinned door first and kernel last",
+      "coordination-band 2047: the turn's rows read the one coordination rule",
+      "task-ab0fbebcbf44b3b1-band 1 over a fixture session; form-cli-check-witness-band 1023; spawn-guard-band 131071; frq-4800c7e5209c93bc-band 1 tracked",
+      "launchctl print after a launchd spawn of earth.hati.day-turn-retry and earth.hati.rent-walk-retry through launch/fkwu: runs 1, last exit code 0, [walk-launch] observe/walk-retry.bml ended 0, no codesigning kill"
+    ]
+  }
+}
