@@ -137,7 +137,7 @@ export default async function DemoMvpPage() {
 
   const [flowData, demoFlowData, taskData] = await Promise.all([
     fetchJsonOrNull<FlowResponse>(
-      `${apiBase}/api/inventory/flow?${buildFlowSearchParams().toString()}`,
+      `${apiBase}/api/inventory/flow?${buildFlowSearchParams({ includeItems: false }).toString()}`,
       { cache: "no-store" },
       5000,
     ),

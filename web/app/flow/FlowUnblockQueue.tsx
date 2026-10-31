@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { formatUsd, humanizeStatus } from "@/lib/humanize";
 
-import type { FlowResponse } from "./types";
+import { UNBLOCK_QUEUE_PREVIEW_LIMIT, type FlowResponse } from "./types";
 
 type Props = { flow: FlowResponse };
 
@@ -66,8 +66,10 @@ function groupByStage(items: QueueItem[]): Map<string, QueueItem[]> {
 }
 
 export function FlowUnblockQueue({ flow }: Props) {
-  const queue = flow.unblock_queue.slice(0, 12);
-  const overflow = Math.max(0, flow.unblock_queue.length - 12);
+  const queue = flow.unblock_queue.slice(0, UNBLOCK_QUEUE_PREVIEW_LIMIT);
+  // The response carries a bounded queue; summary.queue_items is the whole count.
+  const queueTotal = Math.max(flow.summary.queue_items ?? 0, flow.unblock_queue.length);
+  const overflow = Math.max(0, queueTotal - queue.length);
   const grouped = groupByStage(queue);
 
   return (
