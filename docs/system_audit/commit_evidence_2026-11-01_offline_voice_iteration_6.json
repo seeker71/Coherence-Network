@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-01",
+  "contributors": [
+    {"contributor_id": "claude-opus-5.5", "contributor_type": "machine", "roles": ["implement", "review", "verify"]},
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direct"]}
+  ],
+  "agent": {"name": "Claude Code", "version": "claude-opus-5-5"},
+  "thread_branch": "claude/offline-voice-iteration-6",
+  "commit_scope": "Pin the kernel at offline-voice iteration 6: a planner window that stops re-asking what it already heard, a walk window that reaches real work, a rung-0 green that must answer its manifest and kinds and neighbours, an exit proof that reads live, a reader wired into the walk, a voice that can wear a named adapter with serving unchanged, and a request ledger that reads main's own history.",
+  "files_owned": ["form", "docs/system_audit/commit_evidence_2026-11-01_offline_voice_iteration_6.json"],
+  "change_files": ["form", "docs/system_audit/commit_evidence_2026-11-01_offline_voice_iteration_6.json"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["rent-to-zero"],
+  "spec_ids": ["native-voice"],
+  "task_ids": ["offline-voice-iteration-6-20261101"],
+  "local_validation": {
+    "status": "pass",
+    "summary": "The bands named in e2e test_flows read their heads over the assembled tree on 2026-11-01 before kernel PR 646 merged, and the drift gates exited 0. The 19:00 walk of 2026-10-31 and the 03:30 walk of 2026-11-01 ran through the pinned launcher with no kill, and the 19:00 walk of 2026-11-01 began on the merged kernel.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/host-walk-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/native-turn-green-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-local-plan-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/local-plan-parks-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/exit-proof-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/findings-requests-band.bml",
+      "cd form && ./fkwu gate/drift-gates.bml"
+    ]
+  },
+  "ci_validation": {"status": "pending", "summary": "Kernel PRs 643, 644, 645 and 646 merged. Application CI (API suite, since the form gitlink moves) follows push."},
+  "deploy_validation": {"status": "pending", "summary": "Deploy follows the merged application revision."},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Await application CI and deploy. The next walks are the first real run of the reader and of care's bound on the merged kernel."},
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/643",
+    "https://github.com/seeker71/coherence-kernel/pull/644",
+    "https://github.com/seeker71/coherence-kernel/pull/645",
+    "https://github.com/seeker71/coherence-kernel/pull/646",
+    "form/docs/launchd/README.md",
+    "form/docs/offline-voice-gaps.md",
+    "form/docs/qwen-last-block-lora-design.md",
+    "form/receipts/voice-wear-decisions.jsonl"
+  ],
+  "observed_failure": {
+    "command": "launchd earth.hati.day-turn and earth.hati.rent-walk, 2026-10-31 19:00 .. 2026-11-01 12:30; observe/local-plan-run.bml and observe/native-turn-run.bml in the walk",
+    "result": "Two walks spent whole windows on one request: 26 options and 38 options, about ten minutes each, with replies byte-identical at the ladder's end. Rung 0 landed a wrong line that read green at 19:25 on 2026-10-31. The gap register read 12 of 13 closed on rows that were false. Row files holding the person's words were carried by the walk's landings into a public repository.",
+    "cause": "flp-swerve answers resume from the last lens and voice while flp-outcome-still? asks for three distinct approaches, so the ladder's end never declined; a band was rung 0's only judge; register rows read a row's existence rather than what it stood for; hw-learned named row files. Each repaired at cause in kernel d81bea263 or earlier in the PRs named."
+  },
+  "sovereignty_receipt": {
+    "native": "Every band, door and landing ran on fkwu. The reader's asks, the alignment readings and the wear decisions ran on the native voice at rent_tokens 0 in their own rows. The walk's coordination reads rented_mind 0 from launchd.",
+    "oracle": "Claude Opus 5.5 wrote the repairs, with skeptics reading each step from clean state. Session rent is measured at close by observe/session-rent-run.bml.",
+    "trust_matrix": {
+      "path": "oracle-written, native-proven",
+      "grounded": true,
+      "freq": "technical",
+      "suffic": "each repair named is read by a band or a door; the reader on the real checkout, care's bound under a real model, a real loss of network and a real voice on lanes after a refused rung remain to be observed",
+      "observed": "bands, launchctl print, the walk's log and ledgers, repository visibility through gh"
+    }
+  },
+  "work_receipt": {
+    "loosened": "A window no longer repeats a reply it already heard, a closed gap spends no turn, and the register reads open what stands open: 42 gaps with closed 14 and open 28 where 13 read closed 12.",
+    "surprise": "The body's own no-model rung re-landed a wrong line a day after a session repaired it, every reader agreed, and it read green because the real repair its gap asked for had never been made.",
+    "friction_to_learning": "Hook timeouts on the host stalled most tool calls for hours, so the repairs went through the body's exact-edit cell and the shell, and the workflow's agents did the same."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A planner window parks a request whose ways are spent on what it stands on and goes on to the next; a door's flow is held under a stub; a closed gap read again spends no turn and the planner is reached; a rung-0 candidate refused by manifest, kind or neighbour names itself and lands nothing; the exit proof and the register read live; no landing carries the person's words; serving does not change.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/health"],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native band set and the walk's own lines below.",
+    "test_flows": [
+      "local-plan-parks-band 255 and form-cli-local-plan-band 33554431: the ladder's end declines, parking keys on source_digest, a flow is held under a stub, with each repair taken out reading short",
+      "host-walk-band 2251799813685247, host-walk-learn-band 255 and form-cli-landing-band 524287: reads are free, a sync names its step, offline is a state, an absent path is left out by name, the walk's learning steps run in order",
+      "native-turn-green-band 32767 and check-witness-pattern-band 15: the observed wrong candidates are refused by name and true repairs still land",
+      "exit-proof-band 511 and offline-voice-gaps-band 4095: every living gap row over a true and a false fixture world",
+      "findings-requests-band 1048575: the ledger's commits read main's history, and the door's check reads 364 rows whole",
+      "qwen-last-block-train-band 31 and qwen-last-block-judge-band 63 over the assembled tree; drift gates exit 0",
+      "launchctl print after calendar spawns of earth.hati.day-turn and earth.hati.rent-walk through launch/fkwu: last exit code 0, [walk-launch] ended 0, no codesigning kill"
+    ]
+  }
+}
