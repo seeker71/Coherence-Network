@@ -64,7 +64,10 @@ effect.
 
 Ask the body before a rented mind:
 
-- `form-cli ask` for grounded prose lookup and sufficiency judgment.
+- `form-cli ask` for grounded prose lookup and sufficiency judgment. A lane's
+  grounded hit answers at once; a miss goes through the voice (S1) while the GPU
+  is free, which takes minutes, and names its reason when it is busy.
+  `form-cli ask-lanes` reads the lanes only.
 - `form/fkwu form/observe/form-find-ask.bml` for exact structural source lookup.
 - `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when prose
   must be generated rather than retrieved — the body's own voice on a host that

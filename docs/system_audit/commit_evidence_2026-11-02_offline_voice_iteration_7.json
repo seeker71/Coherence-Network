@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-02",
+  "contributors": [
+    {"contributor_id": "claude-opus-5.5", "contributor_type": "machine", "roles": ["implement", "review", "verify"]},
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direct"]}
+  ],
+  "agent": {"name": "Claude Code", "version": "claude-opus-5-5"},
+  "thread_branch": "claude/offline-voice-iteration-7",
+  "commit_scope": "Pin the kernel at offline-voice iteration 7: a keyed exam on the schedule with the network denied, a register that reads the walk and not a rented rehearsal, a planner whose voice climbs and whose wrong plans are held out, one door for an ordinary enquiry, and the person's row files out of the tree.",
+  "files_owned": ["form", "CLAUDE.md", "docs/system_audit/commit_evidence_2026-11-02_offline_voice_iteration_7.json"],
+  "change_files": ["form", "CLAUDE.md", "docs/system_audit/commit_evidence_2026-11-02_offline_voice_iteration_7.json"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["rent-to-zero"],
+  "spec_ids": ["native-voice"],
+  "task_ids": ["offline-voice-iteration-7-20261102"],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Each branch was read by a skeptic from clean state with its repairs in. The merged set read its bands at their heads and drift gates with refused 0 on a clean rehearsal before kernel PRs 648, 649 and 650 merged. The first night walk on the learning steps ran under launchd on 2026-11-02 03:30 to exit 0 and landed f3ea0a6b1.",
+    "commands": [
+      "cd form && ./fkwu form/form-stdlib/tests/offline-exam-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/offline-voice-gaps-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/local-plan-gradient-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/local-plan-false-green-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/form-cli-one-door-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/host-walk-learn-band.bml",
+      "cd form && ./fkwu gate/drift-gates-run.bml"
+    ]
+  },
+  "ci_validation": {"status": "pending", "summary": "Kernel PRs 647, 648, 649 and 650 merged. Application CI (API suite, since the form gitlink moves) follows push."},
+  "deploy_validation": {"status": "pending", "summary": "Deploy follows the merged application revision."},
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "Await application CI and deploy. The exam's first schedule row comes the night after the first walk on the new tree."},
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/647",
+    "https://github.com/seeker71/coherence-kernel/pull/648",
+    "https://github.com/seeker71/coherence-kernel/pull/649",
+    "https://github.com/seeker71/coherence-kernel/pull/650",
+    "form/docs/offline-voice-gaps.md",
+    "form/docs/rent-to-zero-goal.form",
+    "form/receipts/offline-exam-ledger.jsonl",
+    "form/receipts/2026-11-02-one-door.md"
+  ],
+  "observed_failure": {
+    "command": "observe/offline-voice-gaps-run.bml, observe/exit-proof-run.bml and the walk's ledgers, 2026-11-01 and 2026-11-02",
+    "result": "No door had ever denied the network, and no answer was graded. All 728 local-run rows of the last seven days on main carried one rented session's id, so the query rows read a rehearsal. The walk's own rows never reached main. The planner never verified a real option: near misses of 20 of 27 cases collapsed to a band reading 0 of 1. Seven scripted wrong plans verified on the first gradient. An ordinary enquiry never reached S1, and a nested key left every current Codex rollout unread by the share meter.",
+    "cause": "The doors measured what crossed them, not who asked or whether it was right; a witness with one conjunction gave the ladder no gradient; ranking read file names. Each repaired at cause in the PRs named."
+  },
+  "sovereignty_receipt": {
+    "native": "Every band, door and gate ran on fkwu. The first exam, the plan on its fixture and the alignment sets were answered by the native voice at rent 0 with the network denied. The 03:30 walk ran every learning step at rented_mind 0 from launchd.",
+    "oracle": "Claude Opus 5.5 wrote the repairs through headless agents with one skeptic per step, because the desktop host's hook has been unreachable since 2026-10-31. One real Codex provider turn holding only public text read kind=observed at 15114 tokens. Session rent is measured at close by observe/session-rent-run.bml.",
+    "trust_matrix": {
+      "path": "oracle-written, native-proven",
+      "grounded": true,
+      "freq": "technical",
+      "suffic": "each repair named is read by a band or a door; the exam under launchd, a voice-written landing on the schedule and answer quality beyond word lists remain to be observed",
+      "observed": "bands, the walk's log and ledgers, launchctl print, repository visibility through gh"
+    }
+  },
+  "work_receipt": {
+    "loosened": "The register stopped counting a rehearsal as traffic, the walk's rows reach main, and the voice can be read with the network denied on a schedule.",
+    "surprise": "The register's most confident closed row was a document: a table with no date said Q4 beat Q8, while the voice's own rows put Q8 at about 2.5 times Q4.",
+    "friction_to_learning": "Real quotes made false evidence: an answer read 12 of 12 citations by existing paths, and one of six sampled supported its sentence, so E4's reading now says it counts citations and leaves support unread."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The night walk asks the keyed exam first with the network denied and lands its rows; the turns leave the window thirty minutes for what learns; the planner parks a spent request and climbs on cases held; an ordinary form-cli ask answers from a lane's hit at once and otherwise through S1; rows hold no person's words and no home path in new rows.",
+    "public_endpoints": ["https://api.coherencycoin.com/api/health"],
+    "public_endpoint_scope": "Post-deploy image identity only; the observed behavior proof is the native band set and the walk's own lines below.",
+    "test_flows": [
+      "offline-exam-band 255 and one real end-to-end exam with a witness dial refused inside the profile: structural, lookup, code and plan graded, prose answered and missed its key, alignment 254 of 281, held-out set 45 of 56",
+      "offline-voice-gaps-band 262143 with true and false fixture worlds; query-coverage-band 31 of 31; local-run-band 23 of 23",
+      "local-plan-gradient-band 8191, local-plan-false-green-band 2047, local-plan-parks-band 511, form-cli-local-plan-band 33554431: seven scripted wrong plans refused by name, and a real climb from 20 of 27 to 8 of 8 on one request, then refused at rung 8",
+      "form-cli-one-door-band 2047, provider-turn-band 63, exit-proof-band 511, review-panel-band 511",
+      "host-walk-band 2251799813685247, host-walk-learn-band 511, drift gates with refused 0",
+      "launchctl print after the calendar spawn of earth.hati.rent-walk through launch/fkwu on 2026-11-02 03:30: last exit code 0, [walk-launch] observe/scheduled-walk.bml ended 0, every learning step's line in its log"
+    ]
+  }
+}
