@@ -1,18 +1,16 @@
 {
   "date": "2026-11-02",
-  "thread_branch": "codex/companion-startup-20261102",
-  "commit_scope": "Pin native companion prefix reuse and owned session lifetime.",
+  "thread_branch": "codex/companion-prefix-proof-20261102",
+  "commit_scope": "Close CI and deployment evidence for merged native companion prefix reuse.",
   "files_owned": [
-    "form",
     "docs/system_audit/commit_evidence_2026-11-02_companion_prefix.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
   "change_files": [
-    "form",
     "docs/system_audit/commit_evidence_2026-11-02_companion_prefix.json",
     "docs/system_audit/model_executor_runs.jsonl"
   ],
-  "change_intent": "runtime_fix",
+  "change_intent": "docs_only",
   "idea_ids": [
     "trusted-everyday-companion"
   ],
@@ -48,20 +46,23 @@
     ]
   },
   "ci_validation": {
-    "status": "pending",
-    "summary": "Kernel PR654 merged at1c75ce0f474de162d88e94fcc183c40525831dd8; native release1023/1023 and GitGuardian pass. Application PR checks pending."
+    "status": "pass",
+    "summary": "Kernel PR654 merged at 1c75ce0f474de162d88e94fcc183c40525831dd8; native release 1023/1023 and GitGuardian pass. Application PR4164 merged at a6d3bfbca4e4e7185af037589144a2af281ea006 after API suite, web build, deployment ownership and GitGuardian passed in run41449346752."
   },
   "deploy_validation": {
-    "status": "pending",
-    "summary": "Awaiting merged pin deployment and public identity verification. Native Metal timings are local Mac observations."
+    "status": "pass",
+    "summary": "Hostinger run41449772450 succeeded. Public API health, web root and CORS passed. Native health at 2026-11-02T13:12:42.689Z reports app a6d3bfbca4e4e7185af037589144a2af281ea006 and kernel 1c75ce0f474de162d88e94fcc183c40525831dd8 from image:config/image_identity.json, with native PostgreSQL connected. A brief health404 during container replacement recovered before final verification. Native Metal timings are local Mac observations."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_reason": "CI and deployment verification pending; local native proof passed."
+    "can_move_next_phase": true,
+    "blocked_reason": ""
   },
   "evidence_refs": [
     "form/receipts/2026-11-02-companion-prefix.json",
-    "https://github.com/seeker71/coherence-kernel/pull/654"
+    "https://github.com/seeker71/coherence-kernel/pull/654",
+    "https://github.com/seeker71/Coherence-Network/pull/4164",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/41449346752",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/41449772450"
   ],
   "e2e_validation": {
     "status": "pass",
