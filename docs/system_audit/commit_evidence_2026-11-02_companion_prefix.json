@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-02",
+  "thread_branch": "codex/companion-startup-20261102",
+  "commit_scope": "Pin native companion prefix reuse and owned session lifetime.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-11-02_companion_prefix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-11-02_companion_prefix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "trusted-everyday-companion"
+  ],
+  "spec_ids": [
+    "trusted-everyday-companion"
+  ],
+  "task_ids": [
+    "native-companion-prefix-20261102"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "review",
+        "verify"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "Serving model variant not exposed by this turn"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Native boundary65535, real recurrent copy/refusal127, companion compile and EOF release1. Final live two-checkpoint run frees1205/1205 buffers. Exact generated-ID parity holds for initial/warm/afterinterveninginput/play/pause against fresh controls.",
+    "commands": [
+      "form-run ./fkwu form/form-stdlib/tests/native-voice-intent-band.bml",
+      "form-run ./fkwu form/form-stdlib/tests/recur-recycle-band.fk",
+      "form-run ./fkwu --check observe/companion-run.bml",
+      "form-run git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR654 merged at1c75ce0f474de162d88e94fcc183c40525831dd8; native release1023/1023 and GitGuardian pass. Application PR checks pending."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Awaiting merged pin deployment and public identity verification. Native Metal timings are local Mac observations."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment verification pending; local native proof passed."
+  },
+  "evidence_refs": [
+    "form/receipts/2026-11-02-companion-prefix.json",
+    "https://github.com/seeker71/coherence-kernel/pull/654"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Successive native companion requests retain model preparation, reuse exact token prefixes, refresh changed context from fixed guidance, and release the complete owner at EOF.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "Native private encounter cold and warm",
+      "Novel input, play and accepted pause",
+      "Exact-ID comparison after intervening inputs",
+      "Language change invalidates preparation",
+      "Complete resource release and refused enqueue"
+    ]
+  },
+  "measurements": {
+    "cold_ms": 10437,
+    "warm_ms": 1148,
+    "warm_prefill_ms": 506,
+    "warm_open_ms": 0,
+    "novel_input_ms": 3944,
+    "ordinary_fresh_control_ms": 9891,
+    "prompt_ids": 566,
+    "warm_reused_ids": 542,
+    "guidance_ids": 306,
+    "provider_calls": 0,
+    "model_server_calls": 0
+  },
+  "limits": "Small samples with one scheduled background native GPU worker. Another owner safely released its model for this comparison and verified resuming the original checkpoint afterward. Cold first use and host-wide pressure from overlapping residents remain separate limits; this change is not a host-wide memory admission fix.",
+  "privacy": "Private utterances, raw replies and owner/checkpoint identities remain in ignored local traces.",
+  "sovereignty_receipt": {
+    "execution": "Native fkwu/Metal; no provider or model-server calls.",
+    "repair_and_review": "Rented OpenAI Codex reasoning; exact serving variant and task-specific token totals unavailable."
+  }
+}
