@@ -1,0 +1,106 @@
+{
+  "date": "2026-11-06",
+  "thread_branch": "claude/epic-lichterman-6e84e1",
+  "commit_scope": "Move the form gitlink to coherence-kernel a5ca4d61c (#675): the kernel's own doors say what the body carries.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-11-06_kernel_door_grammar.json"
+  ],
+  "change_files": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-11-06_kernel_door_grammar.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "kernel-door-grammar-retune-20261106"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-fable-5-1",
+      "contributor_type": "machine",
+      "roles": [
+        "implement",
+        "verify"
+      ]
+    },
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direct"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Fable 5.1 (Claude Code)",
+    "version": "claude-fable-5-1"
+  },
+  "kernel": {
+    "from": "1c75ce0f474de162d88e94fcc183c40525831dd8",
+    "to": "a5ca4d61ccb2307c6abf5f4ff7fa6714abc9aa96",
+    "pull_request": "https://github.com/seeker71/coherence-kernel/pull/675",
+    "receipt": "form/receipts/2026-11-06-door-grammar-retune.json",
+    "carried_between": "kernel main also carries #658, #659, #667 and the walk's native-turn and native-reading commits since the previous pin"
+  },
+  "what_moved_in_the_kernel": [
+    "spawn-guard.bml: the ending reads `host-tool <names>: not used here; the body carries its own awk and path, the edit door, read_file, fs_list, ./fkwu cells and BML ...`; sed, awk, perl and python are still never begun; exit values unchanged",
+    "forbidden-tools-audit-run.bml and its organ: the flagged count is said to be a mirror (`the mirror shows, the writer decides: no hook stands at a Bash call`) in the note, the lines and the header; reasons read constitutively",
+    "CLAUDE.md and AGENTS.md say one thing about host tools and about keeping a repair in the context that found it",
+    "walk-retry.bml and CURRENT_FLOOR.md read the body's own silent ending as stopped, counts unwritten; launch-killed stays the OS's class",
+    "gpu-lease-inherit-band and session-rent-band carry head rows for every claim; two queue copies in learn/native-turn-queue.jsonl moved to their bands' head pins"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "summary": "Each touched band alone at its pin: spawn-guard-band 131071, forbidden-tools-audit-band 65535, gpu-lease-inherit-band 1023, session-rent-band 16383. band-truth bands=533 readable=319 flaws=0. drift-gates pass=1023 full=1023. The land door read spawn-guard-band 131071, forbidden-tools-audit-band 65535 and form-token-verbs-band 8191 over the landed tree (Band-Witness trailers on a5ca4d61c's source commit 8b4936a3f).",
+    "commands": [
+      "cd form && cc -O2 -o fkwu runtime/fkwu-uni.c",
+      "cd form && ./fkwu form/form-stdlib/tests/spawn-guard-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/forbidden-tools-audit-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/gpu-lease-inherit-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/session-rent-band.bml",
+      "cd form && ./fkwu observe/band-truth-run.bml",
+      "cd form && ./fkwu gate/drift-gates-run.bml",
+      "cd form && ./fkwu observe/voice-frequency-run.fk"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Kernel PR 675 merged at a5ca4d61ccb2307c6abf5f4ff7fa6714abc9aa96 after GitGuardian passed. This PR carries the API suite and the image recipe checks because it moves the form gitlink; read on the PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deploy follows the merged application revision (docs/DEPLOY.md); not run by this session."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment readings arrive with the pull request; this record carries the kernel pin, its native proof and the receipt."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The deployed image carries kernel a5ca4d61c: a body door that is asked to begin sed, awk, perl or python ends with `host-tool <names>: not used here; the body carries ...` in place of `forbidden-tool ...`, the forbidden-tools audit note says its count is a mirror, and every other door, route and exit value behaves as before. No application route changes.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "spawn-guard-band, forbidden-tools-audit-band, gpu-lease-inherit-band and session-rent-band at their pins in the pinned kernel",
+      "API suite and image recipe checks on the pull request",
+      "Public health reading naming kernel a5ca4d61c after the merged commit deploys"
+    ]
+  },
+  "evidence_refs": [
+    "form/receipts/2026-11-06-door-grammar-retune.json",
+    "https://github.com/seeker71/coherence-kernel/pull/675",
+    "https://github.com/seeker71/Coherence-Network/pull/4166"
+  ],
+  "limits": "The mirror's remaining hits on the touched pages name organs, identifiers (sg-refused-pid, sg-door-forbidden, cw-forbidden, ftv-forbidden, dop-refuse), file names and the preflight grammar's own directive (`preflight-exec: forbidden`); `birth refused` stays host-child's one word for every pid the host answers below zero. CURRENT_FLOOR.md and AGENTS.md hold other passages this movement did not touch.",
+  "sovereignty_receipt": {
+    "execution": "Native fkwu on this Mac; every proof and the landing ran in the body (model_server_calls 0, provider_calls 0 by the body).",
+    "repair_and_review": "Rented reasoning by Claude Fable 5.1 in Claude Code, at the direction of the application session that retuned the application's arrival surfaces; the session's token reading is taken at close by form/observe/session-rent-run.bml."
+  }
+}
