@@ -1,5 +1,5 @@
 // Public source meaning and substrate observation on the native application
-// owner. Legacy lattice rows are read projections, never a second live writer.
+// owner. Legacy lattice rows are read projections; the native owner is the one live writer.
 import native_named_persistence.bml;
 import native_http.bml;
 section [form.bml] {

@@ -1,8 +1,7 @@
 # Agent start packet
 
 This is the current entry point for Coherence Network. Historical bootstrap
-documents remain evidence of how the body arrived; they do not override this
-floor.
+documents remain evidence of how the body arrived; this floor stands over them.
 
 ## Arrive
 
@@ -20,14 +19,14 @@ sensor can observe.
 
 The `form/` gitlink pins `seeker71/coherence-kernel`. Reusable runtime,
 stdlib, JIT, and build-door work belongs there. Coherence Network application recipes
-belong in `api/app/form_recipes/`. Do not create another kernel or adapter tree
-in this repository.
+belong in `api/app/form_recipes/`. This repository carries one kernel gitlink
+and no adapter tree beside it.
 
 ## The executable floor
 
 `fkwu` is the kernel. The current coherence-kernel tree contains the C
 bootstrap seed, Form/BML source, data, and documentation. Retired carriers may
-document bootstrap history; they do not run, gate, or define a feature.
+document bootstrap history; fkwu alone runs, gates, and defines a feature.
 
 The working path is:
 
@@ -83,16 +82,16 @@ Use the body in this order:
 2. `form/fkwu form/observe/form-find-ask.bml` for exact structural source
    lookup when prose retrieval is unnecessary.
 3. `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when
-   prose must be generated rather than retrieved — the body's own voice at
+   prose is generated rather than retrieved — the body's own voice at
    `model_server_calls 0`. The voice opens on a host that carries the fkwu
    Metal lane (today: the Mac); on any other host, continue down this order.
 4. `fsh-main.fk` and Form host I/O for search, reads, and orchestration.
-5. A rented reasoning model only after the native path misses or cannot yet
+5. A rented reasoning model only after the native path misses or does not yet
    synthesize the answer.
 
 A native answer is reported with its source/NodeID and the trust matrix:
 `path · grounded · freq · suffic → observed`. A rented answer has
-`grounded=0` and `suffic=0`; never present it as a body hit.
+`grounded=0` and `suffic=0`, and reads as rented.
 
 ## Writing new software
 
@@ -103,8 +102,8 @@ Use the highest grammar that carries the intent:
 3. an existing Form host carrier;
 4. an explicitly named compatibility bridge that is already present.
 
-Do not add host-language kernel logic, generated output, or a second runtime.
-When existing host code must be touched, move authority toward Form/BML and
+Host-language kernel logic, generated output and a second runtime stay out of
+the body. When existing host code is touched, move authority toward Form/BML and
 remove obsolete callers, adapters, tests, and duplicate configuration after the
 replacement is live.
 
@@ -141,13 +140,13 @@ and rerun only the observation that gained new work.
 The Python API and Next.js web remain compatibility hosts. They are not the
 Form semantics. Keep them stable while moving live seams into the BML catalog
 and fkwu host. Retired bootstrap runtimes, routers, seedbank harnesses, and
-comparison scripts must not return.
+comparison scripts rest in history.
 
 The application-owned Form recipes under `api/app/form_recipes/` preserve the
 existing fkwu-served utility calculations without depending on a generated
-adapter tree. The public consumer-side Python Form evaluator is retired; do not
-advertise `/api/substrate/form` or rebuild a browser evaluator.
-The native public ask/read surface resumes when the fkwu application host owns it.
+adapter tree. The public consumer-side Python Form evaluator is retired;
+`/api/substrate/form` and a browser evaluator stay unadvertised until the fkwu
+application host owns the native public ask/read surface, which resumes there.
 
 The remaining application work stays direct:
 
@@ -168,7 +167,8 @@ and reuse evidence while its inputs hold. The native reminder is
 
 Main retains branch-deletion and force-push protection for history and
 authenticated deployment identity. Approval counts, thread-resolution state,
-linear-history rules, and routine full-suite runs do not decide readiness.
+linear-history rules, and routine full-suite runs are care reminders; readiness
+is read from the changed claim's own observation.
 
 End substantive work with:
 

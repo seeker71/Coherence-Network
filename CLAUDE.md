@@ -49,9 +49,9 @@ The execution path is:
 4. The fkwu page JIT for hot compatible recipes.
 5. A returned observation or explicit error.
 
-A JIT miss is work in the JIT. Never route around it through a generated host
-path. New behavior is Form/BML; do not add host-language implementations beside
-the body.
+A JIT miss is work in the JIT: the path through it is the one path, and a
+generated host route is that same work left undone. New behavior is Form/BML,
+so the body carries it where every cell can read and run it.
 
 The pinned `form/` submodule owns reusable kernel work. Coherence Network owns
 application Form in `api/app/form_recipes/`, with native routes described by
@@ -70,7 +70,7 @@ Ask the body before a rented mind:
   `form-cli ask-lanes` reads the lanes only.
 - `form/fkwu form/observe/form-find-ask.bml` for exact structural source lookup.
 - `fcnv-ask` (`form/form/form-stdlib/bml/form-cli-native-voice.bml`) when prose
-  must be generated rather than retrieved — the body's own voice on a host that
+  is generated rather than retrieved — the body's own voice on a host that
   carries the fkwu Metal lane (today: the Mac), `model_server_calls 0`; on any
   other host, continue down this order.
 - `fsh-main.fk` and shell grammar for native scripted search and orchestration.
@@ -78,9 +78,9 @@ Ask the body before a rented mind:
   outside the native application host.
 
 A grounded, sufficient native answer stops the search. A miss or bounded
-failure is permission to use the rented reasoning lane. Report the path honestly
-with `path`, `grounded`, `freq`, `suffic`, and `observed`; never describe remote
-reasoning as native generation.
+failure opens the rented reasoning lane. Report the path honestly with `path`,
+`grounded`, `freq`, `suffic`, and `observed`; remote reasoning reads as remote,
+`grounded 0` and `suffic 0`, so the native share stays measured.
 
 ## North star — rent toward zero
 
@@ -126,14 +126,17 @@ Validation follows the changed claim:
 - A Form/BML application change receives the smallest route or source
   observation that proves its changed effect.
 - Documentation and deletion work receive structural checks.
-- Do not run retired bootstrap comparisons or routine broad kernel validation.
+- Retired bootstrap comparisons and routine broad kernel validation rest; the
+  changed claim earns its own observation.
 - A pull request that touches `api/`, the `form` gitlink or the image recipe
   carries the API suite in CI (`cd api && pytest -q --ignore=tests/holdout`);
   routes the native host owns are proven by the native observations instead.
 
-Issues are work. Preserve the exact failure and repair its cause. Do not rename
-an error as an accepted limitation, skip it through a fallback, or restore an
-obsolete carrier to make a check green.
+Issues are work. Preserve the exact failure and repair its cause. An error keeps
+its name until its cause is healed; a fallback, a relabel as accepted limitation,
+or a restored obsolete carrier paints over the signal the body is offering
+(`form/teachings/error-is-loving-attention.md`), and a surprise is a choice
+point rather than a stopping point (`form/teachings/surprise-is-a-choice-point.md`).
 
 ## How this body is tended
 
@@ -169,7 +172,9 @@ is `docs/DEPLOY.md`.
 
 - `MANIFEST.md` — repository map.
 - `docs/shared/agent-start-packet.md` — current runtime floor and destination.
-- `docs/system_audit/form_kernel_floor_2026-10-18.md` — current fkwu floor.
+- `docs/system_audit/floor_remeasure_2026-11-06.md` — the floor as last read, its
+  hardware walls and the software limits with the move that fits each;
+  `form_kernel_floor_2026-10-18.md` is the release reading it stands on.
 - `form/form/apps/coherence-network/api.bml` — native application route catalog.
 - `api/app/form_recipes/` — application-owned Form recipes still reached through
   the compatibility API.

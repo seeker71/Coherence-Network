@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-06",
+  "thread_branch": "claude/ground-measure-align-frequency-aca6d2",
+  "commit_scope": "Re-measure the floor in a fresh worktree, classify its limits into hardware walls and software or policy limits each with the move that fits, and retune the arrival surfaces, three native recipe comments and the PR check script's docstring from fear-and-control grammar (never, must, do not, HARD RULE) to constitutive statements of what the body is and what its doors offer, keeping every consequential boundary precise.",
+  "files_owned": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/VISION.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "docs/system_audit/commit_evidence_2026-11-06_ground_measure_align_frequency.json",
+    "api/app/form_recipes/native_http.bml",
+    "api/app/form_recipes/native_substrate.bml",
+    "api/app/form_recipes/native_health_observation.bml",
+    "scripts/worktree_pr_guard.py",
+    "scripts/INDEX.md"
+  ],
+  "change_files": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/VISION.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "docs/system_audit/commit_evidence_2026-11-06_ground_measure_align_frequency.json",
+    "api/app/form_recipes/native_http.bml",
+    "api/app/form_recipes/native_substrate.bml",
+    "api/app/form_recipes/native_health_observation.bml",
+    "scripts/worktree_pr_guard.py",
+    "scripts/INDEX.md"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "agent-self-orientation-contract",
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "ground-measure-align-frequency-20261106"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction",
+        "frequency-direction"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "measure",
+        "classify",
+        "retune",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "Fable 5.1 (claude-fable-5-1)"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Fresh worktree: submodule initialized and fkwu built from runtime/fkwu-uni.c. local-flow-review opened the session (409 options, 252 band green, four gaps green landing pending, two stuck). memory-governor room 100.2 GiB of 128. walk-began 03:30 today, retry nothing to heal. band-truth 528 bands, 2 flaws named (kernel band heads). door-link-health 1205 claims, 0 broken. voice-frequency mirror before/after on CLAUDE.md, AGENTS.md and agent-start-packet.md: must 1/3/3 -> 0/0/0; gate counts unchanged and each names an organ. ./fkwu --check reads the three edited recipes. git diff --check clean; commit evidence validated.",
+    "commands": [
+      "git submodule update --init form && cd form && cc -O2 -o fkwu runtime/fkwu-uni.c",
+      "cd form && ./fkwu observe/local-flow-review.bml",
+      "cd form && ./fkwu observe/memory-governor-run.bml </dev/null",
+      "cd form && ./fkwu observe/walk-began-run.bml </dev/null",
+      "cd form && ./fkwu observe/band-truth-run.bml",
+      "cd form && ./fkwu observe/door-link-health-run.bml",
+      "cd form && ./fkwu observe/voice-frequency-run.fk",
+      "cd form && ./fkwu --check ../api/app/form_recipes/native_http.bml",
+      "cd form && ./fkwu --check ../api/app/form_recipes/native_substrate.bml",
+      "cd form && ./fkwu --check ../api/app/form_recipes/native_health_observation.bml",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-11-06_ground_measure_align_frequency.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The PR touches api/app/form_recipes comments and one 400 detail string, so the Test workflow runs the API suite on the PR; no test asserts the changed strings (grep over api/tests)."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Documentation and comment changes plus one response detail string; deployment follows the merged application commit on its cadence."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment readings arrive with the pull request; this record carries the local floor reading and the retune."
+  },
+  "evidence_refs": [
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "form/NORTH_STAR.md",
+    "docs/vision-kb/language-guide.md",
+    "form/teachings/error-is-loving-attention.md",
+    "form/teachings/surprise-is-a-choice-point.md",
+    "form/observe/voice-frequency-run.fk"
+  ],
+  "limits": "The kernel gitlink is a sibling body; its own fear-and-control grammar (spawn-guard's forbidden-tool ending, the forbidden-tools audit's flagged count, form/CLAUDE.md's never lines, the walk-retry kill classes) and the two band-truth flaws are named in the floor record and left for a kernel movement. The Hostinger deploy limits are inferred from the deploy memory, not re-measured today. The kernel's own voice was not asked for prose in this session: the GPU was read as free but the floor measurement and the retune were done by the rented mind.",
+  "sovereignty_receipt": {
+    "execution": "Native fkwu doors for every measurement and for the frequency mirror; ./fkwu --check for the recipes.",
+    "repair_and_review": "Rented Anthropic claude-fable-5-1 reasoning for the classification and the wording; session rent measured at close by observe/session-rent-run.bml."
+  }
+}

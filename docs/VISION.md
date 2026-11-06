@@ -25,7 +25,7 @@ Alignment leaves room for difference, surprise, and disagreement.
 Finding someone, contacting them, sharing with them, and joining a circle are
 distinct choices. A connection feature earns trust through accurate discovery,
 chosen visibility, mutual participation, and an understandable way to leave.
-This is a direction for development; each available door must name its actual
+This is a direction for development; each available door names its actual
 capabilities and evidence.
 
 ## One organism, several doors

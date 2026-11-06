@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Worktree PR guard: prevent common CI failures and track PR check failures."""
+"""Worktree PR care: read the checks a pull request will run before it runs them, and track PR check readings."""
 
 from __future__ import annotations
 
