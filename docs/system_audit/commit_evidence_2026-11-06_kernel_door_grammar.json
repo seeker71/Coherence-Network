@@ -10,9 +10,13 @@
     "form",
     "docs/system_audit/commit_evidence_2026-11-06_kernel_door_grammar.json"
   ],
-  "change_intent": "kernel_gitlink",
-  "idea_ids": [],
-  "spec_ids": [],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
   "task_ids": [
     "kernel-door-grammar-retune-20261106"
   ],
@@ -74,8 +78,20 @@
     "summary": "Deploy follows the merged application revision (docs/DEPLOY.md); not run by this session."
   },
   "phase_gate": {
-    "can_move_next_phase": true,
-    "blocked_reason": ""
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment readings arrive with the pull request; this record carries the kernel pin, its native proof and the receipt."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The deployed image carries kernel a5ca4d61c: a body door that is asked to begin sed, awk, perl or python ends with `host-tool <names>: not used here; the body carries ...` in place of `forbidden-tool ...`, the forbidden-tools audit note says its count is a mirror, and every other door, route and exit value behaves as before. No application route changes.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "spawn-guard-band, forbidden-tools-audit-band, gpu-lease-inherit-band and session-rent-band at their pins in the pinned kernel",
+      "API suite and image recipe checks on the pull request",
+      "Public health reading naming kernel a5ca4d61c after the merged commit deploys"
+    ]
   },
   "evidence_refs": [
     "form/receipts/2026-11-06-door-grammar-retune.json",
