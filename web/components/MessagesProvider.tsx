@@ -50,7 +50,6 @@ export function useT(): (key: string, params?: Record<string, string | number>) 
     const hit = lookup(ctx.messages, key) ?? lookup(ctx.fallback, key);
     if (hit === undefined) {
       if (process.env.NODE_ENV !== "production") {
-        // eslint-disable-next-line no-console
         console.warn(`[i18n] missing key: ${key} (lang=${ctx.lang})`);
       }
       return key;

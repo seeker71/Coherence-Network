@@ -1,5 +1,6 @@
-// Explicit authenticated deployment observations. Normal runtime probes never
-// enter this source: a live one-use OIDC challenge admits the expensive effect.
+// Explicit authenticated deployment observations. This source opens to one
+// door: a live one-use OIDC challenge admits the expensive effect, and normal
+// runtime probes read the lighter health owner instead.
 import native_health.bml;
 import native_http.bml;
 import form-stdlib/bml/host-child.bml;
@@ -51,7 +52,7 @@ section [form.bml] {
   }
   def nh-observation(conn,request,settings) {
    let nonce = nha-value(request,"observation_nonce","");
-   !nho-nonce?(nonce) ? record_new(0,"status",400,"body","{\"detail\":\"Native observation nonce must be a URL-safe 32-byte challenge\"}") : {
+   !nho-nonce?(nonce) ? record_new(0,"status",400,"body","{\"detail\":\"Native observation nonce reads as a URL-safe 32-byte challenge; this one did not\"}") : {
     let digest = nho-sha(nonce); let target = ncf-string(ncf-file("../config/image_identity.json"),"deployed_sha");
     let admitted = nho-active(conn,digest,target);
     !admitted ? record_new(0,"status",403,"body","{\"detail\":\"Native observation requires an active authenticated deployment challenge for this image\"}") : {

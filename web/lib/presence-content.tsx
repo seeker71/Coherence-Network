@@ -219,7 +219,6 @@ export function renderBlockMarkdown(text: string): ReactNode {
             <div
               key={i}
               className="my-6"
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{ __html: a.html }}
             />
           );

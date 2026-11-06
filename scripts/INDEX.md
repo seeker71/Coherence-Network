@@ -205,4 +205,4 @@
 | [whisper_block0_carrier.py](whisper_block0_carrier.py) | scripts/whisper_block0_carrier.py — M6 carrier: load safetensors, slice, quantize, and run reference forward pass. |
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
-| [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
+| [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR care: read the checks a pull request will run before it runs them, and track PR check readings. |

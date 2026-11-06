@@ -12,6 +12,7 @@
  * what resonated with them. It changes as they change.
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 
@@ -252,12 +253,12 @@ export function FrequencySpectrum({ contributorId }: FrequencySpectrumProps) {
           <p className="text-sm text-muted-foreground">
             Every frequency spectrum begins from stillness.
           </p>
-          <a
+          <Link
             href="/vision/lc-stillness"
             className="mt-2 inline-block text-xs text-violet-400 hover:text-violet-300 transition-colors"
           >
             Begin with stillness →
-          </a>
+          </Link>
         </div>
       )}
     </section>

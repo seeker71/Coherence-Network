@@ -21,7 +21,7 @@ section [form.bml] {
   def nha-join-methods(methods) = nil?(methods) ? "" : methods[0] ++ str-spans(map(method => ", " ++ method,methods[1:]));
   def nha-route-rule(route) = "((Method(`OPTIONS`) || Method(`" ++ ncf-string(route,"method") ++ "`)) && " ++ (any?(part => nha-variable(part),split-on(ncf-string(route,"path"),"/")) ? "PathRegexp(`" ++ nha-regex(ncf-string(route,"path")) ++ "`)" : "Path(`" ++ ncf-string(route,"path") ++ "`)") ++ ")";
   // Existing literal declarations retain their owner ahead of a new parameter
-  // template. This reads source metadata at deployment, never a request fallback.
+  // template. This reads source metadata at deployment; a request supplies none of it.
   def nha-existing-literals(source,base) {
    let prefix = "@router.get(\"";
    let lines = filter(line => str_find(trim(line),prefix,0) == 0,split-on(source,"\n"));
@@ -34,7 +34,7 @@ section [form.bml] {
    json-node-pair(ncf-uri(nha-space(at<0 ? text : substring(text,0,at))),json-node-string(ncf-uri(nha-space(at<0 ? "" : substring(text,at+1,len(text))))));
   }
   // The socket dispatcher has admitted framing. Decode the payload once here;
-  // content bytes and chunk extensions never become application semantics.
+  // content bytes and chunk extensions stay transport, apart from application semantics.
   def nha-unchunk(text,at,parts) {
    let end = str_find(text,"\r\n",at);
    end<0 ? form_error("request chunk source is incomplete") : {
