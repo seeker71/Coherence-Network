@@ -28,7 +28,7 @@
     "scripts/worktree_pr_guard.py",
     "scripts/INDEX.md"
   ],
-  "change_intent": "docs_only",
+  "change_intent": "runtime_fix",
   "idea_ids": [
     "agent-cli"
   ],
@@ -101,6 +101,18 @@
     "form/teachings/surprise-is-a-choice-point.md",
     "form/observe/voice-frequency-run.fk"
   ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The native deployment observation route answers an unreadable observation_nonce with the same 400 status and a detail that states what a nonce reads as (a URL-safe 32-byte challenge) and that this one did not; the three recipe comments carry no runtime effect. Every other route behaves as before.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "./fkwu --check on native_http.bml, native_substrate.bml and native_health_observation.bml (exit 0 each)",
+      "API suite on the pull request",
+      "Public health reading after the merged commit deploys"
+    ]
+  },
   "limits": "The kernel gitlink is a sibling body; its own fear-and-control grammar (spawn-guard's forbidden-tool ending, the forbidden-tools audit's flagged count, form/CLAUDE.md's never lines, the walk-retry kill classes) and the two band-truth flaws are named in the floor record and left for a kernel movement. The Hostinger deploy limits are inferred from the deploy memory, not re-measured today. The kernel's own voice was not asked for prose in this session: the GPU was read as free but the floor measurement and the retune were done by the rented mind.",
   "sovereignty_receipt": {
     "execution": "Native fkwu doors for every measurement and for the frequency mirror; ./fkwu --check for the recipes.",
