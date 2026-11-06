@@ -4914,6 +4914,93 @@ def _sorted_limited(values: set[str], *, limit: int) -> tuple[list[str], int, bo
     return rows[:limit], total, True
 
 
+# The list shape of the flow: per section, the keys a page reads, and `tracked` on every
+# section (the stage state the dropped `chain` block echoed). Readers, 2026-10-21:
+#   /flow (FlowItemCard, FlowSummaryCards, page filters): tracked flags, spec_ids, task_ids,
+#     validation local/ci/e2e pass, contributors.all + total_unique, runtime_events_count,
+#     usage_events_count, interdependencies blocked/blocking_stage/estimated_unblock_cost,
+#     idea_signals confidence/value_gap.
+#   /specs, /contributors, /demo: spec_ids, task_ids, implementation_refs, contributors.all,
+#     contributors.by_role.
+#   /specs/{spec_id}: thread_branches, source_files, evidence_refs, lineage_ids,
+#     public_endpoints, contributors.by_role.
+# The builder's full row is the detail shape — every other key: the total and truncation
+# flag of each bounded list, chain, by_role_meta, assets, phase_gate, the deploy counts,
+# registry contribution fields, the queue scores per item, task_fingerprint and the
+# next-unblock direction paragraph. One idea (idea_id=) answers in the detail shape;
+# detail=true asks for it over the whole list.
+# Measured on production 2026-10-21: 4,597 ideas, 84 with anything tracked; the full list
+# serialized to 16.1 MB. The shape is data: add a key here when a page starts reading it.
+_FLOW_LIST_ITEM_KEYS: tuple[str, ...] = ("idea_id", "idea_name", "idea_classification")
+_FLOW_LIST_SECTION_KEYS: dict[str, tuple[str, ...]] = {
+    "spec": ("tracked", "spec_ids"),
+    "process": ("tracked", "task_ids", "thread_branches", "evidence_refs", "source_files"),
+    "implementation": (
+        "tracked",
+        "lineage_ids",
+        "implementation_refs",
+        "runtime_events_count",
+        "runtime_total_ms",
+        "runtime_cost_estimate",
+    ),
+    "validation": ("tracked", "local", "ci", "e2e", "public_endpoints"),
+    "contributors": ("tracked", "total_unique", "all", "by_role"),
+    "contributions": ("tracked", "usage_events_count", "measured_value_total"),
+    "assets": ("tracked",),
+    "interdependencies": ("blocked", "blocking_stage", "estimated_unblock_cost"),
+    "idea_signals": ("value_gap", "confidence"),
+}
+FLOW_UNBLOCK_QUEUE_DEFAULT_LIMIT = 50
+
+
+def flow_list_item(row: dict[str, Any]) -> dict[str, Any]:
+    """One flow item in the list shape: the keys of `_FLOW_LIST_SECTION_KEYS`, nothing else."""
+    item: dict[str, Any] = {key: row[key] for key in _FLOW_LIST_ITEM_KEYS if key in row}
+    for section, keys in _FLOW_LIST_SECTION_KEYS.items():
+        source = row.get(section)
+        if isinstance(source, dict):
+            item[section] = {key: source[key] for key in keys if key in source}
+    return item
+
+
+def project_flow_payload(
+    payload: dict[str, Any],
+    *,
+    detail: bool,
+    unblock_queue_limit: int | None,
+    include_items: bool = True,
+) -> dict[str, Any]:
+    """The route's answer from the builder's payload.
+
+    `detail` keeps the builder's full rows; otherwise each item takes the list shape.
+    `unblock_queue_limit` bounds the queue (None keeps every row); `summary.queue_items`
+    stays the whole count. `include_items=False` answers the summary and queue alone.
+    The `filter` block records the shape so a reader can see what it was given.
+    """
+    queue = payload.get("unblock_queue")
+    queue_rows = queue if isinstance(queue, list) else []
+    items = payload.get("items")
+    item_rows = items if isinstance(items, list) else []
+    projected = {key: value for key, value in payload.items() if key not in ("unblock_queue", "items")}
+    filter_block = payload.get("filter")
+    projected["filter"] = {
+        **(filter_block if isinstance(filter_block, dict) else {}),
+        "detail": bool(detail),
+        "unblock_queue_limit": unblock_queue_limit,
+        "include_items": bool(include_items),
+    }
+    projected["unblock_queue"] = (
+        list(queue_rows) if unblock_queue_limit is None else queue_rows[: max(0, int(unblock_queue_limit))]
+    )
+    if not include_items:
+        projected["items"] = []
+    elif detail:
+        projected["items"] = list(item_rows)
+    else:
+        projected["items"] = [flow_list_item(row) for row in item_rows if isinstance(row, dict)]
+    return projected
+
+
 def build_spec_process_implementation_validation_flow(
     idea_id: str | None = None,
     include_internal_ideas: bool = False,
