@@ -180,7 +180,6 @@ def test_observer_reproduction_follows_kernel_archive_layout() -> None:
     ).read_text(encoding="utf-8")
     expected_paths = (
         "$reproduced_dir/form-cli.source.id",
-        "$reproduced_dir/form-cli.sym",
         "$reproduced_dir/form-cli.native.attestation",
     )
     for path in expected_paths:
@@ -439,7 +438,6 @@ def _health(nonce: str, *, timestamp: str = "2026-07-15T10:00:00Z") -> bytes:
             "binary_sha256": "2" * 64,
             "wrapper_sha256": "6" * 64,
             "source_sha256": "3" * 64,
-            "table_sha256": "4" * 64,
             "stamp_sha256": "5" * 64,
         },
     }
@@ -468,12 +466,10 @@ def _direct(nonce: str) -> bytes:
             "reproduced_form_cli_binary_sha256": "2" * 64,
             "source_wrapper_sha256": "6" * 64,
             "source_form_cli_source_sha256": "3" * 64,
-            "source_form_cli_table_sha256": "4" * 64,
             "source_form_cli_stamp_sha256": "5" * 64,
             "form_cli_binary_sha256": "2" * 64,
             "form_cli_wrapper_sha256": "6" * 64,
             "form_cli_source_sha256": "3" * 64,
-            "form_cli_table_sha256": "4" * 64,
             "form_cli_stamp_sha256": "5" * 64,
         },
         separators=(",", ":"),
@@ -713,7 +709,6 @@ def test_authenticated_observation_persists_and_reverifies_the_complete_witness(
                     "binary_sha256": "2" * 64,
                     "wrapper_sha256": "6" * 64,
                     "source_stamp": "3" * 64,
-                    "table_sha256": "4" * 64,
                     "stamp_sha256": "5" * 64,
                     "challenge_response": _form_cli_result(challenge_input),
                 },

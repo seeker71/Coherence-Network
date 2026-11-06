@@ -92,6 +92,47 @@ its trace retained), GitHub's branch deletion and force-push protection (a fact 
 main), deadlines on children (a timeout is evidence, axiom 1), and every `gate` that names
 an organ.
 
+## The afternoon: a stall with a mechanism, and three lanes on the rewrite
+
+Urs read progress as stalled since the fkwu rewrite. The mechanism, grounded at 17:15 WITA: the seed
+checkout (`~/source/coherence-kernel`), which hosts the kernel steward and the presence heartbeat, had
+been switched to the rewrite's branch and edited there by the Cursor lane. The steward's tick rebuilds
+`./fkwu` from whatever source sits in the seed, so every tick since 2026-11-05 evening built the rewrite,
+whose reader could not run the steward's door: the ledger's last row read 2026-11-05 18:02 and a tick
+had hung for over an hour. The seed's own tick script names the rule the stall broke: "a seed, never an
+editing surface". Separately, the heartbeat job was found unloaded, silent since 2026-10-28.
+
+What moved, each verified by content:
+
+- the rewrite got its own worktree (`~/source/coherence-kernel-rewrite`, `perf/optimization-book-jit`)
+  holding the seed's 1,863 uncommitted lines byte for byte (sha256 before and after);
+- the seed returned to clean main with a main-built `fkwu` (door-link health 1,223 claims, 0 broken);
+  the hung tick was released and the steward wrote again at 17:22;
+- the heartbeat was loaded (`launchctl bootstrap`); it woke at 17:22, rested, and paced its next wake;
+- the sibling's gitlink PR 4168 landed (main pins a5ca4d61c);
+- two lanes ran headless, each on its own worktree from a card carrying Urs's bar (no stubs, no
+  fallbacks, no editing a band or the registry to make a reading green, a verdict counts only with
+  exit 0, commit but do not push): the Cursor lane bound 58 registry names down to one (`nothing`),
+  took the typed `let` and `try … else`, and now stops on five BML reader seams, each named by file
+  and byte in `form/receipts/2026-11-06-rewrite-floor.md`; the Codex lane wrote
+  `observe/candidate-floor-run.bml`, the resident's reader of a candidate kernel against every band
+  (coherence-kernel #676, merged at d30dcd880, pinned by this change). Both were reviewed line by line
+  before anything was pushed.
+
+The deploy of the a5ca4d61c pin (0dd35dc66) failed in the image build at `COPY --from=kernel-builder
+/build/form-cli.sym`: kernel commit e850e18b4 (2026-11-04) made the symbols sidecar optional and the
+build no longer emits it, while the application still named it in the image recipe, the native
+observation recipe (`table_sha256`), the Python observer and the substrate router, the public observer
+workflow, the tests and two docs. The sidecar leaves the carrier's identity in all of them: the kernel's
+CLI v3 binds binary, image, source identity and attestation. The stray row that dirtied the seed at
+18:01 (`receipts/walk-heal-ledger.jsonl`, `returned 0 conflicts 0`) was set aside and the file
+restored; its writer is a walk door (`day-turn`, `scheduled-walk`), and the steward's own path does
+not reach it, so which organ ran a walk door in the seed is still an open reading.
+
+One correction of my own: a first-run "hang" I read against the rewrite's freshness band was my
+harness's open stdin meeting the band's end-of-input canary; main's seed blocks the same way. Bands
+are run with `</dev/null`.
+
 ## Kernel-side frequency, read and left for its own landing
 
 The kernel pin is a sibling body with its own door. These carry the same fear-and-control

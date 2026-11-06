@@ -230,7 +230,7 @@ tracks that same authority. The optional curated distribution is not a second
 place to author fixes or a release gate. The accepted source seal and observed
 image establish the deployed revision. Keep retired limitations retired on main
 as well as in any distribution carry.
-Native bundle copy publication carries recipe, symbols, attestation and the
+Native bundle copy publication carries recipe, attestation and the
 source-ID derivative from that same verified seal, with the executable renamed
 last. Keep missing bundle artifacts with that publisher rather than synthesizing
 identity in Docker or a host-language adapter.

@@ -286,9 +286,6 @@ def stable_health_projection(
         "form_cli_source_sha256": _hex_field(
             form_cli.get("source_sha256"), "form-cli-source-sha256"
         ),
-        "form_cli_table_sha256": _hex_field(
-            form_cli.get("table_sha256"), "form-cli-table-sha256"
-        ),
         "form_cli_stamp_sha256": _hex_field(
             form_cli.get("stamp_sha256"), "form-cli-stamp-sha256"
         ),
@@ -340,7 +337,6 @@ def validate_direct_probe(
         "form_cli_binary_sha256",
         "form_cli_wrapper_sha256",
         "form_cli_source_sha256",
-        "form_cli_table_sha256",
         "form_cli_stamp_sha256",
     )
     for field in digest_fields:
@@ -362,10 +358,6 @@ def validate_direct_probe(
         "form_cli_source_sha256": _hex_field(
             body.get("source_form_cli_source_sha256"),
             "source-form-cli-source-sha256",
-        ),
-        "form_cli_table_sha256": _hex_field(
-            body.get("source_form_cli_table_sha256"),
-            "source-form-cli-table-sha256",
         ),
         "form_cli_stamp_sha256": _hex_field(
             body.get("source_form_cli_stamp_sha256"),
@@ -393,9 +385,6 @@ def validate_direct_probe(
             "source_wrapper_sha256": reproduced["form_cli_wrapper_sha256"],
             "source_form_cli_source_sha256": reproduced[
                 "form_cli_source_sha256"
-            ],
-            "source_form_cli_table_sha256": reproduced[
-                "form_cli_table_sha256"
             ],
             "source_form_cli_stamp_sha256": reproduced[
                 "form_cli_stamp_sha256"
