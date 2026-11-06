@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import ConceptGardenClient from "./ConceptGardenClient";
 
@@ -72,12 +73,12 @@ export default async function ConceptGardenPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
           <h1 className="text-3xl font-bold tracking-tight">Concept Garden</h1>
-          <a
+          <Link
             href="/concepts"
             className="text-xs text-muted-foreground border rounded px-2 py-1 hover:bg-muted transition-colors"
           >
             Graph view
-          </a>
+          </Link>
         </div>
         <p className="text-muted-foreground text-sm max-w-2xl">
           You don&apos;t need to understand graph theory to add a concept. Share

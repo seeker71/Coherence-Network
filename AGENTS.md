@@ -325,7 +325,7 @@ Configure the `telegram` block in `~/.coherence-network/config.json` (overlaying
 - In Windows PowerShell, use `py -3` for Python and `npm.cmd` for npm commands.
 - Repo `.sh` scripts run through Git Bash at `C:\Program Files\Git\bin\bash.exe`; the Makefile startup targets call it automatically.
 - `ruff` is not listed in `pyproject.toml` dev dependencies and `make lint` needs it in the API venv.
-- `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
+- `cd web && npm run lint` runs ESLint 9 directly over `web/eslint.config.mjs` (Next 16 ships no `next lint`); it runs without a prompt and reads the web as it is: 0 errors and 60 warnings on 2026-11-06 under the contract stated in that file, a reading rather than a merge gate. `next build` carries the type reading.
 - No external databases (PostgreSQL) are required for local dev or tests; the API falls back to an in-memory store with optional JSON persistence.
 - Tests run with: `cd api && .venv/bin/pytest -v --ignore=tests/holdout`
 - Lint runs with: `cd api && .venv/bin/ruff check .`

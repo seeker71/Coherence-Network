@@ -226,9 +226,9 @@ python scripts/local_runner.py --timeout 300`}</code></pre>
       <section className="border-t border-border/20 pt-8 text-center space-y-3">
         <p className="text-sm text-muted-foreground uppercase tracking-wider">Where to go next</p>
         <div className="flex justify-center gap-6 text-sm">
-          <a href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Explore ideas</a>
-          <a href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance feed</a>
-          <a href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</a>
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Explore ideas</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance feed</Link>
+          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</Link>
         </div>
       </section>
     </main>

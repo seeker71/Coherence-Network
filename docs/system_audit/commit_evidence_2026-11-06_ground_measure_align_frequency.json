@@ -26,7 +26,17 @@
     "api/app/form_recipes/native_substrate.bml",
     "api/app/form_recipes/native_health_observation.bml",
     "scripts/worktree_pr_guard.py",
-    "scripts/INDEX.md"
+    "scripts/INDEX.md",
+    "web/eslint.config.mjs",
+    "web/package.json",
+    "web/package-lock.json",
+    "web/app/blog/page.tsx",
+    "web/app/concepts/garden/page.tsx",
+    "web/app/concepts/page.tsx",
+    "web/app/error.tsx",
+    "web/app/profile/[contributorId]/_components/FrequencySpectrum.tsx",
+    "web/components/MessagesProvider.tsx",
+    "web/lib/presence-content.tsx"
   ],
   "change_intent": "runtime_fix",
   "idea_ids": [
@@ -65,7 +75,7 @@
   },
   "local_validation": {
     "status": "pass",
-    "summary": "Fresh worktree: submodule initialized and fkwu built from runtime/fkwu-uni.c. local-flow-review opened the session (409 options, 252 band green, four gaps green landing pending, two stuck). memory-governor room 100.2 GiB of 128. walk-began 03:30 today, retry nothing to heal. band-truth 528 bands, 2 flaws named (kernel band heads). door-link-health 1205 claims, 0 broken. voice-frequency mirror before/after on CLAUDE.md, AGENTS.md and agent-start-packet.md: must 1/3/3 -> 0/0/0; gate counts unchanged and each names an organ. ./fkwu --check reads the three edited recipes. git diff --check clean; commit evidence validated.",
+    "summary": "Fresh worktree: submodule initialized and fkwu built from runtime/fkwu-uni.c. local-flow-review opened the session (409 options, 252 band green, four gaps green landing pending, two stuck). memory-governor room 100.2 GiB of 128. walk-began 03:30 today, retry nothing to heal. band-truth 528 bands, 2 flaws named (kernel band heads). door-link-health 1205 claims, 0 broken. voice-frequency mirror before/after on CLAUDE.md, AGENTS.md and agent-start-packet.md: must 1/3/3 -> 0/0/0; gate counts unchanged and each names an organ. ./fkwu --check reads the three edited recipes. git diff --check clean; commit evidence validated. Afternoon: web lint restored under Next 16 (eslint.config.mjs, eslint 9, lint script eslint .): first reading 212 findings, then 0 errors / 60 warnings after the stated contract, five Link repairs and two stale directives removed; npm run build, npm run test (24 files, 161 tests) and tsc --noEmit green. Kernel movement landed as coherence-kernel PR 674 (manifest-words split into two band-first gaps, two queue rows re-pinned; band-truth flaws 4 -> 2; drift-gates 63/63).",
     "commands": [
       "git submodule update --init form && cd form && cc -O2 -o fkwu runtime/fkwu-uni.c",
       "cd form && ./fkwu observe/local-flow-review.bml",
@@ -78,7 +88,13 @@
       "cd form && ./fkwu --check ../api/app/form_recipes/native_substrate.bml",
       "cd form && ./fkwu --check ../api/app/form_recipes/native_health_observation.bml",
       "git diff --check",
-      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-11-06_ground_measure_align_frequency.json"
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-11-06_ground_measure_align_frequency.json",
+      "cd web && npm ci && npm run lint",
+      "cd web && npm run build && npm run test",
+      "cd web && npx tsc --noEmit -p .",
+      "cd form && ./fkwu form/form-stdlib/tests/manifest-words-space-band.bml",
+      "cd form && ./fkwu form/form-stdlib/tests/manifest-words-clean-band.bml",
+      "cd form && ./fkwu gate/drift-gates-run.bml"
     ]
   },
   "ci_validation": {
@@ -99,7 +115,8 @@
     "docs/vision-kb/language-guide.md",
     "form/teachings/error-is-loving-attention.md",
     "form/teachings/surprise-is-a-choice-point.md",
-    "form/observe/voice-frequency-run.fk"
+    "form/observe/voice-frequency-run.fk",
+    "https://github.com/seeker71/coherence-kernel/pull/674"
   ],
   "e2e_validation": {
     "status": "pending",

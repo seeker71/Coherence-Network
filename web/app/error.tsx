@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function GlobalError({
   error,
   reset,
@@ -32,12 +34,12 @@ export default function GlobalError({
         >
           Try again
         </button>
-        <a
+        <Link
           href="/"
           className="rounded-xl border border-border/30 px-6 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200"
         >
           Go home
-        </a>
+        </Link>
       </div>
       {isFetchError && (
         <p className="text-xs text-muted-foreground/80 max-w-sm mx-auto">
