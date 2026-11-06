@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 import tomllib
 
+import pytest
+
 from app import server
 
 
@@ -77,13 +79,14 @@ def test_kernel_toolchain_is_an_immutable_shared_image_without_apt_drift() -> No
     assert "__TIME__" not in fkwu_source
 
 
-def test_staged_form_runner_executes_with_the_flattened_image_stdlib(tmp_path) -> None:
-    # the image's layout: the source home is the root (/app), its stdlib /app/form/form-stdlib and
-    # the runtime source beside form/ at /app/runtime — fkwu_run.sh reads it as <source root>/../runtime
+@pytest.mark.parametrize("stdlib_home", ["form", "form/form"])
+def test_staged_form_runner_executes_with_image_stdlib_layouts(tmp_path, stdlib_home) -> None:
+    # Both the legacy flat image and the nested source layout keep the pinned
+    # runtime at /app/form/runtime, independent of the stdlib's location.
     root = tmp_path / "image"
     scripts = root / "scripts"
-    runtime = root / "runtime"
-    stdlib = root / "form" / "form-stdlib"
+    runtime = root / "form" / "runtime"
+    stdlib = root / stdlib_home / "form-stdlib"
     scripts.mkdir(parents=True)
     runtime.mkdir(parents=True)
     stdlib.mkdir(parents=True)

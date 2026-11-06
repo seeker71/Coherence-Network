@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-06",
+  "thread_branch": "codex/hati-runtime-path-fix",
+  "commit_scope": "Restore the API source launcher and preserve the image's canonical source home during deployment.",
+  "files_owned": ["scripts/fkwu_run.sh", "api/tests/test_api_dockerfile_contract.py", "deploy/hostinger/auto-deploy.sh", "scripts/test_hostinger_deploy_form_paths.sh"],
+  "change_files": ["scripts/fkwu_run.sh", "api/tests/test_api_dockerfile_contract.py", "deploy/hostinger/auto-deploy.sh", "scripts/test_hostinger_deploy_form_paths.sh"],
+  "change_intent": "runtime_fix",
+  "idea_ids": ["hati-grocery-runtime-availability"],
+  "spec_ids": ["docs/grocery-sheets-setup.md"],
+  "task_ids": ["hati-runtime-path-fix"],
+  "contributors": [{"contributor_id": "openai-codex", "contributor_type": "machine", "roles": ["implement", "review", "verify"]}],
+  "agent": {"name": "OpenAI Codex", "version": "GPT-6; exact serving variant not exposed"},
+  "local_validation": {
+    "status": "pass",
+    "summary": "git diff --check passed. The existing image-layout fixture was corrected to put runtime under form/runtime and cover both flat and nested stdlib paths. No local Python interpreter was invoked. Native orientation reported six witnessed cells; its unrelated local authoring guide could not resolve host_cwd, so the focused calculation proof used the already-serving fkwu in the API image.",
+    "commands": ["form-run git diff --check", "form-run bash -n scripts/fkwu_run.sh", "form-run bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh"],
+    "before": {
+      "command": "docker compose exec -T api /bin/bash /app/scripts/fkwu_run.sh --src /app/form/form-stdlib/tests/binary-freshness-band.fk",
+      "exit_code": 3,
+      "stderr": "fkwu_run: pinned c-bootstrap source is absent from form/runtime"
+    }
+  },
+  "ci_validation": {"status": "pending", "summary": "The initial launcher fix passed API suite, deployment ownership, web build and GitGuardian in run 42175740526. The deployment-copy removal earns a new run on the final commit."},
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The launcher repair was applied atomically to the running API container after isolated verification. The original launcher and obsolete flat stdlib copy are retained under /tmp/hati-runtime-path-check in that container. Removing the flat copy restores selection of the canonical /app/form source home already carried by the image. Durable release deployment remains pending at commit time."
+  },
+  "phase_gate": {"can_move_next_phase": false, "blocked_reason": "CI and durable release remain to be observed."},
+  "evidence_refs": ["scripts/fkwu_run.sh", "Dockerfile.api", "api/tests/test_api_dockerfile_contract.py", "api/app/form_recipes/endpoint_grocery_amount.fk", "api/app/form_recipes/endpoint_grocery_remaining.fk"],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The launcher finds pinned runtime sources under the kernel home, and deployment no longer overlays the image with an obsolete flat stdlib that redirects source discovery away from that home.",
+    "public_endpoints": ["https://app.hati.earth/", "https://app.hati.earth/api/grocery/categories"],
+    "test_flows": [
+      "Isolated flat layout in the live API image: amount 123.5 thousands becomes 123500; balance 1000000 less signed pending [123500,-50000] becomes [1,926500]; unavailable baseline returns [0,0].",
+      "The same three native recipe checks pass in an isolated nested stdlib layout.",
+      "The same three native recipe checks pass through /app/scripts/fkwu_run.sh after the atomic repair.",
+      "After retiring the duplicate flat stdlib, native amount conversion, pending-balance reconciliation and empty reconciliation selection pass from the canonical /app/form working directory.",
+      "The BML reconciliation authority also compiles and executes to [] when invoked with its core prelude. The initial standalone ./fkwu --check /app/app/form_recipes/endpoint_grocery_reconcile_selection.bml exited 1 for missing str_to_int and ord; a temporary source wrapper naming core.fk and the BML authority corrected the probe and exited 0.",
+      "Public app and category endpoint both return HTTP 200 after the repair."
+    ],
+    "limits": "Browser automation is disabled in Work settings. These are synthetic read-only Form calculations, not an authenticated browser submission. No ledger entries were created or changed."
+  },
+  "sovereignty_receipt": {"execution": "Calculation proof ran in native fkwu; shell carried file staging and deployment.", "repair_and_review": "OpenAI Codex reasoning; no reconciled session contribution percentage available."}
+}

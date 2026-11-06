@@ -944,28 +944,6 @@ sync_field_docs() {
 
 sync_field_docs
 
-sync_form_stdlib() {
-  if [[ ! -d "$REPO_DIR/form/form/form-stdlib" ]]; then
-    log "form stdlib: no form/form/form-stdlib directory found (skipped)"
-    return 0
-  fi
-
-  local changed
-  changed="$(changed_paths_between "$DIFF_BASE" "$TARGET_SHA" 2>/dev/null || true)"
-  if ! grep -Eq '^(form$|form/form/form-stdlib/)' <<< "$changed"; then
-    log "form stdlib: no changes"
-    return 0
-  fi
-
-  log "form stdlib: syncing form/form/form-stdlib to api:/app/form/form-stdlib"
-  docker compose exec -T api sh -lc 'mkdir -p /app/form && rm -rf /app/form/form-stdlib' \
-    2>&1 | tee -a "$LOG_FILE" || true
-  docker compose cp "$REPO_DIR/form/form/form-stdlib" api:/app/form/form-stdlib \
-    2>&1 | tee -a "$LOG_FILE"
-}
-
-sync_form_stdlib
-
 # Content resources for the compatibility readers. Retrieval projections are
 # explicit changed-source work owned by source_maintenance.bml, not release gates.
 # Runs AFTER wait_for_running api so the DB connection is stable.

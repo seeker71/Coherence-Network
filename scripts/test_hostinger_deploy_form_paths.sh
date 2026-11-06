@@ -243,7 +243,6 @@ SUPER_V2="$(git -C "$SUPER_REPO" rev-parse HEAD)"
 
 eval "$(extract_shell_function changed_paths_between "$DEPLOY_SCRIPT")"
 eval "$(extract_shell_function services_to_rebuild "$DEPLOY_SCRIPT")"
-eval "$(extract_shell_function sync_form_stdlib "$DEPLOY_SCRIPT")"
 REPO_DIR="$SUPER_REPO"
 expanded_paths="$(changed_paths_between "$SUPER_V1" "$SUPER_V2")"
 grep -Fxq 'form' <<<"$expanded_paths" \
@@ -261,20 +260,6 @@ git -C "$SUPER_REPO" commit -qm 'repair web standalone entrypoint'
 SUPER_V3="$(git -C "$SUPER_REPO" rev-parse HEAD)"
 [[ "$(services_to_rebuild "$SUPER_V2" "$SUPER_V3")" == "web" ]] \
   || fail "a root Dockerfile.web change does not route to a web rebuild"
-
-DOCKER_CALLS="$ROUTING_FIXTURE/docker.calls"
-LOG_FILE="$ROUTING_FIXTURE/deploy.log"
-DIFF_BASE="$SUPER_V1"
-TARGET_SHA="$SUPER_V2"
-docker() {
-  printf '%s\n' "$*" >>"$DOCKER_CALLS"
-}
-log() {
-  printf '%s\n' "$*" >>"$LOG_FILE"
-}
-sync_form_stdlib
-grep -Fq "compose cp $SUPER_REPO/form/form/form-stdlib api:/app/form/form-stdlib" "$DOCKER_CALLS" \
-  || fail "stdlib sync does not run for an exact form gitlink bump"
 
 unset -f changed_paths_between
 eval "$(extract_shell_function sync_pinned_submodules "$SUBSTRATE_HOOK")"
@@ -430,8 +415,9 @@ fi
 grep -Fq "COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
 
-grep -Fq "sync_form_stdlib()" "$DEPLOY_SCRIPT" \
-  || fail "deploy script does not sync form stdlib into the api container"
+if grep -Fq 'api:/app/form/form-stdlib' "$DEPLOY_SCRIPT"; then
+  fail "deploy script replaces the image's canonical source home with a flat stdlib copy"
+fi
 
 if awk '/^is_static_only_change\(\)/,/^}/ { print }' "$DEPLOY_SCRIPT" | grep -Fq "form/*) ;;"; then
   fail "form/* is still treated as static-only"
