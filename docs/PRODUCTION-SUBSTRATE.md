@@ -102,7 +102,6 @@ The image builds fkwu from the pinned submodule and builds `form-cli` through
 
 - `form-cli`
 - `form-cli.fkb`
-- `form-cli.sym`
 - `form-cli.native.attestation`
 - `form-cli.source.id`
 

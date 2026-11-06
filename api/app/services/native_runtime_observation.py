@@ -196,7 +196,6 @@ def _observe_form_cli(
 ) -> dict[str, Any]:
     binary = _selected_form_cli_binary(root)
     image = Path(f"{binary}.fkb")
-    symbols = Path(f"{binary}.sym")
     attestation = Path(f"{binary}.native.attestation")
     source_identity_file = Path(f"{binary}.source.id")
     wrapper = root / "bin" / "form-cli"
@@ -204,7 +203,6 @@ def _observe_form_cli(
     for path in (
         binary,
         image,
-        symbols,
         attestation,
         source_identity_file,
         wrapper,
@@ -265,9 +263,7 @@ def _observe_form_cli(
         "binary_sha256": binary_sha,
         "digest_authority": digest_authority,
         "image_sha256": _sha256_file(image),
-        "symbols_sha256": _sha256_file(symbols),
         "attestation_sha256": _sha256_file(attestation),
-        "table_sha256": _sha256_file(symbols),
         "stamp_sha256": _sha256_file(attestation),
         "wrapper_sha256": wrapper_sha,
         "wrapper_digest_authority": str(wrapper_manifest),
@@ -324,7 +320,6 @@ def _artifact_fingerprint(root: Path) -> str:
         root / "form" / "form-cli.sha256",
         root / ".cache" / "form-cli-native" / "selected.json",
         classic_root / "form-cli.fkb",
-        classic_root / "form-cli.sym",
         classic_root / "form-cli.native.attestation",
         classic_root / "form-cli.source.id",
         root / "bin" / "form-cli",

@@ -119,6 +119,16 @@ What moved, each verified by content:
   (coherence-kernel #676, merged at d30dcd880, pinned by this change). Both were reviewed line by line
   before anything was pushed.
 
+The deploy of the a5ca4d61c pin (0dd35dc66) failed in the image build at `COPY --from=kernel-builder
+/build/form-cli.sym`: kernel commit e850e18b4 (2026-11-04) made the symbols sidecar optional and the
+build no longer emits it, while the application still named it in the image recipe, the native
+observation recipe (`table_sha256`), the Python observer and the substrate router, the public observer
+workflow, the tests and two docs. The sidecar leaves the carrier's identity in all of them: the kernel's
+CLI v3 binds binary, image, source identity and attestation. The stray row that dirtied the seed at
+18:01 (`receipts/walk-heal-ledger.jsonl`, `returned 0 conflicts 0`) was set aside and the file
+restored; its writer is a walk door (`day-turn`, `scheduled-walk`), and the steward's own path does
+not reach it, so which organ ran a walk door in the seed is still an open reading.
+
 One correction of my own: a first-run "hang" I read against the rewrite's freshness band was my
 harness's open stdin meeting the band's end-of-input canary; main's seed blocks the same way. Bands
 are run with `</dev/null`.

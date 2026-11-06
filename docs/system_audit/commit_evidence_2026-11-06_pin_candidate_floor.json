@@ -1,14 +1,34 @@
 {
   "date": "2026-11-06",
   "thread_branch": "claude/pin-kernel-candidate-floor",
-  "commit_scope": "Pin the kernel at d30dcd880, which adds observe/candidate-floor-run.bml: the resident runtime reads a candidate kernel against every band the body keeps, so a rewritten runtime has a second witness without a second kernel. The floor record carries the afternoon: the stall's mechanism (the seed checkout used as the rewrite's editing surface, the steward dead since 2026-11-05 18:02), the restoration, and the coordination of the Cursor and Codex lanes on the rewrite.",
+  "commit_scope": "Pin the kernel at d30dcd880, which adds observe/candidate-floor-run.bml: the resident runtime reads a candidate kernel against every band the body keeps, so a rewritten runtime has a second witness without a second kernel. The symbols sidecar form-cli.sym leaves the carrier's identity everywhere the application still named it (image recipe, native observation recipe, Python observer and router, public observer workflow, tests, two docs): kernel commit e850e18b4 made .sym optional and the build no longer emits it, which failed the deploy of 0dd35dc66 at COPY --from=kernel-builder /build/form-cli.sym. The floor record carries the afternoon: the stall's mechanism (the seed checkout used as the rewrite's editing surface, the steward dead since 2026-11-05 18:02), the restoration, and the coordination of the Cursor and Codex lanes on the rewrite.",
   "files_owned": [
     "form",
+    "Dockerfile.api",
+    "api/app/form_recipes/native_health_observation.bml",
+    "api/app/services/native_runtime_observation.py",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/routers/substrate.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    ".github/workflows/public-deployment-observer.yml",
+    "docs/DEPLOY.md",
+    "docs/PRODUCTION-SUBSTRATE.md",
     "docs/system_audit/commit_evidence_2026-11-06_pin_candidate_floor.json",
     "docs/system_audit/floor_remeasure_2026-11-06.md"
   ],
   "change_files": [
     "form",
+    "Dockerfile.api",
+    "api/app/form_recipes/native_health_observation.bml",
+    "api/app/services/native_runtime_observation.py",
+    "api/app/services/deployment_observation.py",
+    "api/app/services/deployment_observer_service.py",
+    "api/app/routers/substrate.py",
+    "api/tests/test_deployment_observer_oidc.py",
+    ".github/workflows/public-deployment-observer.yml",
+    "docs/DEPLOY.md",
+    "docs/PRODUCTION-SUBSTRATE.md",
     "docs/system_audit/commit_evidence_2026-11-06_pin_candidate_floor.json",
     "docs/system_audit/floor_remeasure_2026-11-06.md"
   ],
@@ -87,7 +107,7 @@
   ],
   "e2e_validation": {
     "status": "pending",
-    "expected_behavior_delta": "The deployed image carries kernel d30dcd880; every route behaves as before, and the kernel gains the candidate-floor door, which no deployed route calls. The native health reading names the new kernel identity once deployed.",
+    "expected_behavior_delta": "The image builds again against a kernel whose build emits no form-cli.sym; the deployed image carries kernel d30dcd880. The native deployment observation and the substrate carrier bindings no longer carry table_sha256 / form_cli_table_sha256; every other field and every route behave as before, and the kernel gains the candidate-floor door, which no deployed route calls.",
     "public_endpoints": [
       "https://api.coherencycoin.com/api/health"
     ],

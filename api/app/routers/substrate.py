@@ -152,7 +152,6 @@ class GroundedAskResponse(BaseModel):
     payload: str
     native_challenge_digest: str
     form_cli_binary_sha256: str
-    form_cli_table_sha256: str
     form_cli_wrapper_sha256: str
     form_cli_source_stamp: str
     form_cli_build_id: str
@@ -587,7 +586,6 @@ def _run_grounded_ask(
     carrier_bindings_before = {
         "native_challenge_digest": observation_before.get("challenge_digest"),
         "form_cli_binary_sha256": form_cli_before.get("binary_sha256"),
-        "form_cli_table_sha256": form_cli_before.get("table_sha256"),
         "form_cli_wrapper_sha256": form_cli_before.get("wrapper_sha256"),
         "form_cli_source_stamp": form_cli_before.get("source_stamp"),
         "form_cli_build_id": form_cli_before.get("build_id"),
@@ -598,7 +596,6 @@ def _run_grounded_ask(
     for key in (
         "native_challenge_digest",
         "form_cli_binary_sha256",
-        "form_cli_table_sha256",
         "form_cli_wrapper_sha256",
         "form_cli_source_stamp",
     ):
@@ -660,7 +657,6 @@ def _run_grounded_ask(
     carrier_bindings_after = {
         "native_challenge_digest": observation_after.get("challenge_digest"),
         "form_cli_binary_sha256": form_cli_after.get("binary_sha256"),
-        "form_cli_table_sha256": form_cli_after.get("table_sha256"),
         "form_cli_wrapper_sha256": form_cli_after.get("wrapper_sha256"),
         "form_cli_source_stamp": form_cli_after.get("source_stamp"),
         "form_cli_build_id": form_cli_after.get("build_id"),
@@ -699,9 +695,6 @@ def _run_grounded_ask(
         ),
         form_cli_binary_sha256=str(
             carrier_bindings_before["form_cli_binary_sha256"]
-        ),
-        form_cli_table_sha256=str(
-            carrier_bindings_before["form_cli_table_sha256"]
         ),
         form_cli_wrapper_sha256=str(
             carrier_bindings_before["form_cli_wrapper_sha256"]

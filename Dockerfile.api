@@ -87,7 +87,6 @@ RUN python -m pip install --upgrade pip \
 COPY --from=kernel-builder /build/form/fkwu /app/form/fkwu
 COPY --from=kernel-builder /build/form-cli /app/form/form-cli
 COPY --from=kernel-builder /build/form-cli.fkb /app/form/form-cli.fkb
-COPY --from=kernel-builder /build/form-cli.sym /app/form/form-cli.sym
 COPY --from=kernel-builder /build/form-cli.native.attestation /app/form/form-cli.native.attestation
 COPY --from=kernel-builder /build/form-cli.source.id /app/form/form-cli.source.id
 COPY --from=kernel-builder /build/form-cli.sha256 /app/form/form-cli.sha256
@@ -99,7 +98,6 @@ COPY --from=kernel-builder /build/form/form/form-stdlib/ /app/form/form/form-std
 RUN mkdir -p /app/bin \
  && ln /app/form/form-cli /app/bin/form-cli \
  && ln /app/form/form-cli.fkb /app/bin/form-cli.fkb \
- && ln /app/form/form-cli.sym /app/bin/form-cli.sym \
  && ln /app/form/form-cli.native.attestation /app/bin/form-cli.native.attestation \
  && ln /app/form/form-cli.source.id /app/bin/form-cli.source.id \
  && ln /app/form/form-cli.sha256 /app/bin/form-cli.sha256 \

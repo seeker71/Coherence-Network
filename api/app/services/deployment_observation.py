@@ -66,7 +66,6 @@ _FIELDS = (
     "kernel_result",
     "form_cli_binary_sha256",
     "form_cli_wrapper_sha256",
-    "form_cli_table_sha256",
     "form_cli_stamp_sha256",
     "form_cli_source_sha256",
     "form_cli_result",
@@ -79,7 +78,6 @@ _FIELDS = (
     "reproduced_form_cli_binary_sha256",
     "source_wrapper_sha256",
     "source_form_cli_source_sha256",
-    "source_form_cli_table_sha256",
     "source_form_cli_stamp_sha256",
     "direct_probe_body_hex",
     "direct_probe_body_sha256",
@@ -181,7 +179,6 @@ def _answer(payload: dict[str, Any]) -> str:
         "kernel_result": payload["kernel_result"],
         "form_cli_binary_sha256": payload["form_cli_binary_sha256"],
         "form_cli_wrapper_sha256": payload["form_cli_wrapper_sha256"],
-        "form_cli_table_sha256": payload["form_cli_table_sha256"],
         "form_cli_stamp_sha256": payload["form_cli_stamp_sha256"],
         "form_cli_source_sha256": payload["form_cli_source_sha256"],
         "form_cli_result": payload["form_cli_result"],
@@ -197,9 +194,6 @@ def _answer(payload: dict[str, Any]) -> str:
         "source_wrapper_sha256": payload["source_wrapper_sha256"],
         "source_form_cli_source_sha256": payload[
             "source_form_cli_source_sha256"
-        ],
-        "source_form_cli_table_sha256": payload[
-            "source_form_cli_table_sha256"
         ],
         "source_form_cli_stamp_sha256": payload[
             "source_form_cli_stamp_sha256"
@@ -484,9 +478,6 @@ def record_authenticated_deployment_observation(
         "form_cli_wrapper_sha256": host_projection[
             "form_cli_wrapper_sha256"
         ],
-        "form_cli_table_sha256": host_projection[
-            "form_cli_table_sha256"
-        ],
         "form_cli_stamp_sha256": host_projection[
             "form_cli_stamp_sha256"
         ],
@@ -510,9 +501,6 @@ def record_authenticated_deployment_observation(
         "source_wrapper_sha256": direct_projection["source_wrapper_sha256"],
         "source_form_cli_source_sha256": direct_projection[
             "source_form_cli_source_sha256"
-        ],
-        "source_form_cli_table_sha256": direct_projection[
-            "source_form_cli_table_sha256"
         ],
         "source_form_cli_stamp_sha256": direct_projection[
             "source_form_cli_stamp_sha256"
@@ -763,7 +751,6 @@ def _verified_payload(
         "kernel_result": host_projection["kernel_result"],
         "form_cli_binary_sha256": host_projection["form_cli_binary_sha256"],
         "form_cli_wrapper_sha256": host_projection["form_cli_wrapper_sha256"],
-        "form_cli_table_sha256": host_projection["form_cli_table_sha256"],
         "form_cli_stamp_sha256": host_projection["form_cli_stamp_sha256"],
         "form_cli_source_sha256": host_projection["form_cli_source_sha256"],
         "form_cli_result": host_projection["form_cli_result"],
@@ -785,9 +772,6 @@ def _verified_payload(
         "source_wrapper_sha256": direct_projection["source_wrapper_sha256"],
         "source_form_cli_source_sha256": direct_projection[
             "source_form_cli_source_sha256"
-        ],
-        "source_form_cli_table_sha256": direct_projection[
-            "source_form_cli_table_sha256"
         ],
         "source_form_cli_stamp_sha256": direct_projection[
             "source_form_cli_stamp_sha256"
@@ -922,7 +906,6 @@ def _require_current_deployment(
         "kernel_result": str(kernel.get("result")),
         "form_cli_binary_sha256": form_cli.get("binary_sha256"),
         "form_cli_wrapper_sha256": form_cli.get("wrapper_sha256"),
-        "form_cli_table_sha256": form_cli.get("table_sha256"),
         "form_cli_stamp_sha256": form_cli.get("stamp_sha256"),
         "form_cli_source_sha256": form_cli.get("source_stamp"),
         "form_cli_result": form_cli.get("challenge_response"),

@@ -203,7 +203,6 @@ jobs:
           kernel_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/fkwu | cut -d' ' -f1)"
           form_cli_binary_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli | cut -d' ' -f1)"
           form_cli_wrapper_sha256="$(docker exec "$container_id" sha256sum /app/bin/form-cli | cut -d' ' -f1)"
-          form_cli_table_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.sym | cut -d' ' -f1)"
           form_cli_stamp_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.native.attestation | cut -d' ' -f1)"
           form_cli_source_sha256="$(docker exec "$container_id" sha256sum /app/form/form-cli.source.id | cut -d' ' -f1)"
           form_cli_source_id="$(docker exec "$container_id" sh -c 'tr -d "\r\n" < /app/form/form-cli.source.id')"
@@ -220,13 +219,13 @@ jobs:
             "$container_id" "$image_id" "$image_revision" "$image_form_revision" \
             "$api_build_context_sha" "$kernel_result" "$kernel_binary_sha256" \
             "$form_result" "$form_cli_binary_sha256" "$form_cli_wrapper_sha256" \
-            "$form_cli_source_sha256" "$form_cli_table_sha256" "$form_cli_stamp_sha256" \
+            "$form_cli_source_sha256" "$form_cli_stamp_sha256" \
             "$form_cli_source_id" <<'PY'
           import json,sys
           (
               target,form_commit,challenge,container,image,image_revision,image_form_revision,
               context_sha,kernel_result,kernel_sha,form_result,form_sha,wrapper_sha,
-              source_sha,table_sha,stamp_sha,source_id,
+              source_sha,stamp_sha,source_id,
           )=sys.argv[1:]
           print(json.dumps({
               "schema":"direct-native-carrier-probe-v1",
@@ -246,7 +245,6 @@ jobs:
               "form_cli_binary_sha256":form_sha,
               "form_cli_wrapper_sha256":wrapper_sha,
               "form_cli_source_sha256":source_sha,
-              "form_cli_table_sha256":table_sha,
               "form_cli_stamp_sha256":stamp_sha,
           },sort_keys=True,separators=(",",":")))
           PY
@@ -287,7 +285,6 @@ jobs:
           docker cp "$reproduced_container:/build/fkwu" "$reproduced_dir/fkwu"
           docker cp "$reproduced_container:/build/form-cli" "$reproduced_dir/form-cli"
           docker cp "$reproduced_container:/build/form-cli.fkb" "$reproduced_dir/form-cli.fkb"
-          docker cp "$reproduced_container:/build/form-cli.sym" "$reproduced_dir/form-cli.sym"
           docker cp "$reproduced_container:/build/form-cli.native.attestation" "$reproduced_dir/form-cli.native.attestation"
           docker cp "$reproduced_container:/build/form-cli.source.id" "$reproduced_dir/form-cli.source.id"
           docker rm "$reproduced_container"
@@ -295,24 +292,23 @@ jobs:
           reproduced_form_sha="$(sha256sum "$reproduced_dir/form-cli" | cut -d' ' -f1)"
           reproduced_kernel_sha="$(sha256sum "$reproduced_dir/fkwu" | cut -d' ' -f1)"
           source_digest="$(sha256sum "$reproduced_dir/form-cli.source.id" | cut -d' ' -f1)"
-          source_table_sha="$(sha256sum "$reproduced_dir/form-cli.sym" | cut -d' ' -f1)"
           source_stamp_sha="$(sha256sum "$reproduced_dir/form-cli.native.attestation" | cut -d' ' -f1)"
           reproduced_source_id="$(tr -d '\r\n' < "$reproduced_dir/form-cli.source.id")"
           reproduced_form_line="$(printf 'carrier-challenge %s\n' "${challenge[0]}" | "$reproduced_dir/form-cli")"
           python3 - \
             "$direct_body" "$TARGET_SHA" "$form_source_commit" "$builder" \
             "$reproduced_kernel_sha" "$reproduced_form_sha" \
-            "$source_digest" "$source_table_sha" "$source_stamp_sha" \
+            "$source_digest" "$source_stamp_sha" \
             "$reproduced_source_id" "$reproduced_form_line" <<'PY'
           import json,re,sys
           (
               path,target,form_commit,builder,reproduced_kernel,reproduced_form,
-              source_digest,source_table,source_stamp,reproduced_source_id,reproduced_form_line,
+              source_digest,source_stamp,reproduced_source_id,reproduced_form_line,
           )=sys.argv[1:]
           body=json.load(open(path,encoding="utf-8"))
           if body.get("target_sha")!=target or body.get("form_source_commit")!=form_commit:
               raise SystemExit("direct probe source identity mismatch")
-          for field in ("container_id","kernel_binary_sha256","form_cli_binary_sha256","form_cli_wrapper_sha256","form_cli_source_sha256","form_cli_table_sha256","form_cli_stamp_sha256"):
+          for field in ("container_id","kernel_binary_sha256","form_cli_binary_sha256","form_cli_wrapper_sha256","form_cli_source_sha256","form_cli_stamp_sha256"):
               if re.fullmatch(r"[0-9a-f]{64}",str(body.get(field) or "")) is None:
                   raise SystemExit(f"direct probe {field} malformed")
           if re.fullmatch(r"sha256:[0-9a-f]{64}",str(body.get("image_id") or "")) is None:
@@ -327,7 +323,6 @@ jobs:
               "form_cli_binary_sha256":reproduced_form,
               "form_cli_wrapper_sha256":reproduced_form,
               "form_cli_source_sha256":source_digest,
-              "form_cli_table_sha256":source_table,
               "form_cli_stamp_sha256":source_stamp,
           }
           for field,value in expected.items():
@@ -339,7 +334,6 @@ jobs:
               "reproduced_form_cli_binary_sha256":reproduced_form,
               "source_wrapper_sha256":reproduced_form,
               "source_form_cli_source_sha256":source_digest,
-              "source_form_cli_table_sha256":source_table,
               "source_form_cli_stamp_sha256":source_stamp,
           })
           open(path,"w",encoding="utf-8").write(json.dumps(body,sort_keys=True,separators=(",",":")))
@@ -444,7 +438,6 @@ jobs:
               "form_cli_binary_sha256":form.get("binary_sha256"),
               "form_cli_wrapper_sha256":form.get("wrapper_sha256"),
               "form_cli_source_sha256":form.get("source_sha256"),
-              "form_cli_table_sha256":form.get("table_sha256"),
               "form_cli_stamp_sha256":form.get("stamp_sha256"),
           }
           if any(not isinstance(v,str) or hex64.fullmatch(v) is None for v in digest_fields.values()):

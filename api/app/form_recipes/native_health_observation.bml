@@ -45,7 +45,7 @@ section [form.bml] {
     identity != ("carrier-id|form-cli-carrier-v3|" ++ source ++ "|coherence-kernel-fkwu-native-v2") ? form_error("native CLI carrier identity differs") : {
      let line = nho-cli-line(io,"challenge","carrier-challenge " ++ input); let fields = split-on(line,"|");
      len(fields) != 4 || fields[0] != "carrier-challenge-v2" || fields[1] != source || fields[2] != input || !nho-hex?(fields[3],16) ? form_error("native CLI challenge binding differs") : json-node-object([
-      json-node-pair("input_sha256",json-node-string(input)),json-node-pair("result",json-node-string(fields[3])),json-node-pair("verified",json-node-bool(true)),json-node-pair("protocol",json-node-string("form-cli-v3")),json-node-pair("binary_sha256",json-node-string(binary)),json-node-pair("wrapper_sha256",json-node-string(wrapper)),json-node-pair("source_sha256",json-node-string(nho-file-sha("/app/form/form-cli.source.id"))),json-node-pair("table_sha256",json-node-string(nho-file-sha("/app/form/form-cli.sym"))),json-node-pair("stamp_sha256",json-node-string(nho-file-sha("/app/form/form-cli.native.attestation")))
+      json-node-pair("input_sha256",json-node-string(input)),json-node-pair("result",json-node-string(fields[3])),json-node-pair("verified",json-node-bool(true)),json-node-pair("protocol",json-node-string("form-cli-v3")),json-node-pair("binary_sha256",json-node-string(binary)),json-node-pair("wrapper_sha256",json-node-string(wrapper)),json-node-pair("source_sha256",json-node-string(nho-file-sha("/app/form/form-cli.source.id"))),json-node-pair("stamp_sha256",json-node-string(nho-file-sha("/app/form/form-cli.native.attestation")))
      ]);
     };
    };
