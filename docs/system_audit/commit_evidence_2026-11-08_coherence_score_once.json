@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-08",
+  "thread_branch": "cursor/coherence-score-once-20261108",
+  "commit_scope": "Read the idea portfolio once per coherence score and hold that score across a witness round, so the homepage no longer waits on a cold recompute past the web organ's line.",
+  "files_owned": [
+    "api/app/services/coherence_signal_depth_service.py",
+    "api/tests/test_cc_scoring.py",
+    "docs/system_audit/commit_evidence_2026-11-08_coherence_score_once.json"
+  ],
+  "change_files": [
+    "api/app/services/coherence_signal_depth_service.py",
+    "api/tests/test_cc_scoring.py",
+    "docs/system_audit/commit_evidence_2026-11-08_coherence_score_once.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "coherence-algorithm-spec"
+  ],
+  "task_ids": [
+    "coherence-score-once-20261108"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnose",
+        "repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "A cold public /api/coherence/score took 2417ms and the repeat took 255ms. The homepage waits on that score. The cold compute now reads the idea portfolio once, and the score is held for 300s, longer than the 180s witness round. test_cc_scoring.py: 7 passed.",
+    "commands": [
+      "PYTHONPATH=. /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_cc_scoring.py -q"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The Test workflow runs because api/ changed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The web organ's next rounds are the reading. A cold score should no longer set the homepage past 2000ms on every witness round."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Repeated /api/coherence/score stays on the cached score for five minutes, and the web organ's latency stops sitting above 2000ms on every round.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/coherence/score",
+      "https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "Cold score reads list_ideas once",
+      "Homepage data wave is no longer paced by a cold score on every witness round"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The witness round after deploy is the reading."
+  },
+  "evidence_refs": [
+    "api/app/services/coherence_signal_depth_service.py",
+    "specs/coherence-algorithm-spec.md"
+  ],
+  "limits": "The score is still computed in full on a cold process. The hold is five minutes, not a faster algorithm for specs, evidence, or runtime events.",
+  "sovereignty_receipt": {
+    "execution": "Public timings and the local pytest are the body's readings.",
+    "repair_and_review": "Rented Cursor Grok 4.7 named the cold score and made the portfolio read once."
+  }
+}

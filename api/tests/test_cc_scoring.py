@@ -49,6 +49,27 @@ def test_coherence_score_computed_at_is_iso(client):
     assert "T" in body["computed_at"]
 
 
+def test_cold_score_reads_the_idea_portfolio_once(monkeypatch):
+    """Task completion and value realization share one portfolio read."""
+    from app.services import coherence_signal_depth_service as svc
+    import app.services.idea_service as idea_service
+
+    svc.invalidate_cache()
+    calls = {"n": 0}
+
+    class _Portfolio:
+        ideas: list = []
+
+    def _list_ideas(**_kwargs):
+        calls["n"] += 1
+        return _Portfolio()
+
+    monkeypatch.setattr(idea_service, "list_ideas", _list_ideas)
+    svc.compute_coherence_score()
+    assert calls["n"] == 1
+    svc.invalidate_cache()
+
+
 def test_signal_depth_service_returns_dict():
     """Unit-test the underlying service the router wraps."""
     from app.services import coherence_signal_depth_service
