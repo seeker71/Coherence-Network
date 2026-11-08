@@ -15,6 +15,10 @@ COPY form/form/form-stdlib /app/form/form/form-stdlib
 COPY form/form/native /app/form/form/native
 COPY form/observe /app/form/observe
 COPY form/runtime /app/form/runtime
+# Cell publication reads flatten/form-flatten.fk from the checkout root.
+# Without it every cell_call stops, /pulse/now answers 500, and Traefik
+# withdraws the host so the public witness is a 404.
+COPY form/flatten /app/form/flatten
 COPY pulse/*.bml pulse/config.json pulse/organs.json /app/pulse/
 COPY pulse/fkwu.conf /app/form/fkwu.conf
 WORKDIR /app/form
@@ -28,7 +32,8 @@ RUN --mount=type=tmpfs,target=/dev/shm ./fkwu --check ../pulse/main.bml \
  && ./fkwu --check ../pulse/read.bml \
  && ./fkwu --check ../pulse/read-view.bml \
  && ./fkwu --check ../pulse/index.bml \
- && ./fkwu --check ../pulse/health.bml
+ && ./fkwu --check ../pulse/health.bml \
+ && ./fkwu ../pulse/cell-image-door.bml
 ARG COHERENCE_SOURCE_SHA
 ARG COHERENCE_FORM_SHA
 LABEL org.opencontainers.image.title="pulse"
