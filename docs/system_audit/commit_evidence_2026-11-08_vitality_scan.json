@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-08",
+  "thread_branch": "cursor/vitality-scan-20261108",
+  "commit_scope": "Read vitality from the rows it actually counts, so the witness no longer waits on a copy of every event node.",
+  "files_owned": [
+    "api/app/form_recipes/graph_projection.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_vitality_scan.json"
+  ],
+  "change_files": [
+    "api/app/form_recipes/graph_projection.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_vitality_scan.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "vitality-scan-20261108"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnose",
+        "repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "On the live graph the previous vitality scan and this one returned the same signals and the same score 0.5821824880836522. The narrower scan's execution time was 155ms. fkwu --check on graph_projection.bml exited 0. The week of witness history had this organ's p95 over its 1500ms line every day.",
+    "commands": [
+      "/Users/ursmuff/source/coherence-kernel/fkwu --check api/app/form_recipes/graph_projection.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The Test workflow runs because api/ changed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The next endpoint_vitality samples are the reading. Server time should sit near the 155ms scan rather than the previous half-second to one-second copy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /api/workspaces/coherence-network/vitality keeps the same signals and answers inside the witness line without copying every event node.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/workspaces/coherence-network/vitality",
+      "https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "Live score matches the previous projection",
+      "The vitality organ's next samples stay under 1500ms"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The witness round after deploy is the reading."
+  },
+  "evidence_refs": [
+    "api/app/form_recipes/graph_projection.bml",
+    "specs/native-probe-owners.md"
+  ],
+  "limits": "The node-count and recent-event count still walk the graph table. They no longer build a property object for each of the seventy thousand event rows.",
+  "sovereignty_receipt": {
+    "execution": "The live PostgreSQL comparison and fkwu --check are the body's readings.",
+    "repair_and_review": "Rented Cursor Grok 4.7 named the event copy and wrote the narrower scan."
+  }
+}
