@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-08",
+  "thread_branch": "cursor/vitality-one-walk-20261108",
+  "commit_scope": "Count graph nodes and recent events in one walk, closing the second pass the vitality scan still made.",
+  "files_owned": [
+    "api/app/form_recipes/graph_projection.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_vitality_one_walk.json"
+  ],
+  "change_files": [
+    "api/app/form_recipes/graph_projection.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_vitality_one_walk.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "native-probe-owners"
+  ],
+  "task_ids": [
+    "vitality-one-walk-20261108"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnose",
+        "repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "On the live graph the two-pass count and the one-pass count agree: 77651 nodes, 3662 recent events. The one pass executed in 40ms. fkwu --check on graph_projection.bml exited 0.",
+    "commands": [
+      "/Users/ursmuff/source/coherence-kernel/fkwu --check api/app/form_recipes/graph_projection.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The Test workflow runs because api/ changed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The next endpoint_vitality sample is the reading. The signals stay the same; the count no longer walks the table twice."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /api/workspaces/coherence-network/vitality keeps the same signals while the node and recent-event counts share one walk.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/workspaces/coherence-network/vitality",
+      "https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "One-pass counts match the two-pass counts on the live graph",
+      "The vitality organ stays under 1500ms"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The witness round after deploy is the reading."
+  },
+  "evidence_refs": [
+    "api/app/form_recipes/graph_projection.bml",
+    "specs/native-probe-owners.md"
+  ],
+  "limits": "Ideas, contributors and edges are still their own reads. The shared walk is the count of nodes and of recent events.",
+  "sovereignty_receipt": {
+    "execution": "The live PostgreSQL comparison and fkwu --check are the body's readings.",
+    "repair_and_review": "Rented Cursor Grok 4.7 closed the second walk."
+  }
+}
