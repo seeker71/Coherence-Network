@@ -1,0 +1,8 @@
+// The image admits a cell only when its publisher can read the checkout.
+// A missing flatten table stops every request cell and the public witness goes dark.
+// preludes: form/form-stdlib/core.fk form/form-stdlib/json.fk
+section [form.bml] {
+ let called = cell_call("../pulse/cell-image-target.bml", nothing(), nothing());
+ let stopped = record_get(called, "stopped");
+ nothing?(stopped) && record_get(called, "value") == 1 ? 0 : form_error("pulse cell image did not publish");
+}

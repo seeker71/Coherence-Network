@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-08",
+  "thread_branch": "cursor/pulse-cell-image-20261108",
+  "commit_scope": "Give the pulse image the flatten table its cell publisher reads, and refuse an image whose request cell cannot publish.",
+  "files_owned": [
+    "pulse/Dockerfile",
+    "pulse/cell-image-door.bml",
+    "pulse/cell-image-target.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_pulse_cell_image.json"
+  ],
+  "change_files": [
+    "pulse/Dockerfile",
+    "pulse/cell-image-door.bml",
+    "pulse/cell-image-target.bml",
+    "docs/system_audit/commit_evidence_2026-11-08_pulse_cell_image.json"
+  ],
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair"
+  ],
+  "task_ids": [
+    "pulse-cell-image-20261108"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnose",
+        "repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "On the live pulse container, / answered 200 and /pulse/health and /pulse/now answered 500 {\"detail\":\"native request source needs care\"}. cell_call stopped image-publication because the publisher could not read flatten/form-flatten.fk. The same door returns 0 when that file is on the checkout, compiled with the pinned runtime.",
+    "commands": [
+      "cc -O2 -o /tmp/fkwu-pulse-pin form/runtime/fkwu-uni.c && cd form && /tmp/fkwu-pulse-pin ../pulse/cell-image-door.bml"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The Test workflow does not list pulse/. Hostinger Auto Deploy rebuilds pulse from this change."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Public https://pulse.coherencycoin.com/pulse/now is still the proxy 404 until the rebuilt image is healthy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The pulse container becomes healthy, Traefik keeps its route, and /pulse/now returns the witness JSON.",
+    "public_endpoints": [
+      "https://pulse.coherencycoin.com/pulse/now",
+      "https://pulse.coherencycoin.com/pulse/health"
+    ],
+    "test_flows": [
+      "Pinned fkwu runs pulse/cell-image-door.bml to exit 0",
+      "After deploy, public /pulse/now is JSON with an overall field"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The public witness is the proof, and it arrives with the pulse image deploy."
+  },
+  "evidence_refs": [
+    "pulse/Dockerfile",
+    "pulse/cell-image-door.bml"
+  ],
+  "limits": "The local Docker daemon was not running, so the image itself was not built on this machine. The door was run with the pinned fkwu against the checkout that contains flatten/.",
+  "sovereignty_receipt": {
+    "execution": "The live container and the pinned fkwu door are the body's readings.",
+    "repair_and_review": "Rented Cursor Grok 4.7 diagnosed the publisher stop and wrote the image repair."
+  }
+}
