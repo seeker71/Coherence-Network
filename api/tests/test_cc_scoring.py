@@ -70,6 +70,33 @@ def test_cold_score_reads_the_idea_portfolio_once(monkeypatch):
     svc.invalidate_cache()
 
 
+def test_expired_score_is_served_while_it_refreshes(monkeypatch):
+    """A witness round receives the held score; the refresh does not block it."""
+    from app.services import coherence_signal_depth_service as svc
+    import app.services.idea_service as idea_service
+
+    stale = {
+        "score": 0.25,
+        "signals": {},
+        "signals_with_data": 0,
+        "total_signals": 5,
+        "computed_at": "stale-marker",
+    }
+    svc._CACHE["result"] = stale
+    svc._CACHE["expires_at"] = 0.0
+    svc._CACHE["refreshing"] = False
+
+    class _Portfolio:
+        ideas: list = []
+
+    monkeypatch.setattr(idea_service, "list_ideas", lambda **_kwargs: _Portfolio())
+    served = svc.compute_coherence_score()
+    assert served["computed_at"] == "stale-marker"
+    if svc._refresh_thread is not None:
+        svc._refresh_thread.join(timeout=5)
+    svc.invalidate_cache()
+
+
 def test_signal_depth_service_returns_dict():
     """Unit-test the underlying service the router wraps."""
     from app.services import coherence_signal_depth_service

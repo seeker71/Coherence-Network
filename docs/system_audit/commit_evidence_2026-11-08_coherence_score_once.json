@@ -45,7 +45,7 @@
   },
   "local_validation": {
     "status": "pass",
-    "summary": "A cold public /api/coherence/score took 2417ms and the repeat took 255ms. The homepage waits on that score. The cold compute now reads the idea portfolio once, and the score is held for 300s, longer than the 180s witness round. test_cc_scoring.py: 7 passed.",
+    "summary": "A cold public /api/coherence/score took 2417ms and the repeat took 255ms. The homepage waits on that score. The cold compute now reads the idea portfolio once. A fresh score is held for 300s, and a request after that receives the held score while the refresh runs aside, so a 180s witness round does not wait on the recompute. test_cc_scoring.py covers the single portfolio read and the held-score return.",
     "commands": [
       "PYTHONPATH=. /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_cc_scoring.py -q"
     ]

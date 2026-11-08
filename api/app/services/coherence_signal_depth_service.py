@@ -13,6 +13,7 @@ Each signal is normalized to 0.0-1.0 and weighted to produce an aggregate score.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -31,9 +32,13 @@ SIGNAL_WEIGHTS: dict[str, float] = {
 # The homepage and the witness both re-read this slower than a request
 # burst: the witness round is 180s. A 30s cache had already expired by
 # then, so every round paid a cold recompute and the homepage waited
-# past the web organ's 2s line. Hold the score across one round.
-_CACHE: dict[str, Any] = {"expires_at": 0.0, "result": None}
+# past the web organ's 2s line. Hold a fresh score for 300s. A request
+# that arrives after that returns the held score and refreshes aside,
+# so the page does not wait out the gap between rounds.
+_CACHE: dict[str, Any] = {"expires_at": 0.0, "result": None, "refreshing": False}
 _CACHE_TTL_SECONDS = 300.0
+_refresh_lock = threading.Lock()
+_refresh_thread: threading.Thread | None = None
 
 
 def _portfolio_ideas():
@@ -246,7 +251,37 @@ def compute_coherence_score() -> dict[str, Any]:
     cached = _CACHE.get("result")
     if cached and _CACHE.get("expires_at", 0.0) > now:
         return cached
+    if cached is not None:
+        _refresh_score_aside()
+        return cached
 
+    return _compute_coherence_score(now)
+
+
+def _refresh_score_aside() -> None:
+    """Recompute off the request so a witness round never waits on a cold score."""
+    global _refresh_thread
+    with _refresh_lock:
+        if _CACHE.get("refreshing"):
+            return
+        _CACHE["refreshing"] = True
+
+        def _run() -> None:
+            try:
+                _compute_coherence_score(time.time())
+            finally:
+                with _refresh_lock:
+                    _CACHE["refreshing"] = False
+
+        _refresh_thread = threading.Thread(
+            target=_run,
+            name="coherence-score-refresh",
+            daemon=True,
+        )
+        _refresh_thread.start()
+
+
+def _compute_coherence_score(now: float) -> dict[str, Any]:
     ideas = _portfolio_ideas()
     signal_fns = {
         "task_completion": lambda: _task_completion_score(ideas),
@@ -300,3 +335,4 @@ def invalidate_cache() -> None:
     """Clear cached score — useful for testing."""
     _CACHE["expires_at"] = 0.0
     _CACHE["result"] = None
+    _CACHE["refreshing"] = False
