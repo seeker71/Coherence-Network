@@ -133,6 +133,44 @@ One correction of my own: a first-run "hang" I read against the rewrite's freshn
 harness's open stdin meeting the band's end-of-input canary; main's seed blocks the same way. Bands
 are run with `</dev/null`.
 
+## The evening: production verified, the lanes' rounds, and where the seed's dirt comes from
+
+- **Production** (read 19:16 WITA at `https://api.coherencycoin.com/api/health`): `deployed_sha
+  6e003ac19…`, `form_sha d30dcd880…`, `kernel_runtime fkwu`, `persistence native-postgres`,
+  `db_connected true`. The deploy of the previous pin had died at the copied symbols sidecar; this one
+  succeeded, so the sidecar's removal holds where it mattered.
+- **Cursor lane, four rounds reviewed by bands and pushed** (`perf/optimization-book-jit` at
+  `2673d5392`): the registry's 58 missing names down to one and then none; the typed `let`, `try …
+  else` in expressions and then as a statement; `;` read as a statement separator rather than a
+  comment everywhere; `primitive-registry-band` 47; `door-options-band` 1023; `band-truth` to its
+  summary with 0 flaws; canonical conformance to its summary with 11 of 13 expressions agreeing. Each
+  round's claims were re-read on a fresh build with stdin at EOF, and two were corrected: the registry
+  file's value of 0 is the file's own value on main too, so the band is the contract; and the
+  remaining "hang" is no hang: `dlh-lint()` ends in 18 s on the rewrite against 1 s on main (with
+  1223 claims against main's 1224) and `dlh-reach()` ends with 0 after 417 s and a 1.2 GB peak
+  resident set against main's 5 s, an eighty-fold slowdown with unbounded allocation. Profiled on an
+  unoptimized build, 6,053 of 6,055 samples sit inside the driver's dispatch loop and almost none
+  inside any step: a loop that iterates far more times than the program has steps. One divergence the lane introduced as a
+  guard (`str_find` with an empty needle answering -1 where main answers `from`) is named for
+  reversal. Two canonical vectors still diverge (`make_nodeid` rendering, native-over-portable binding
+  precedence).
+- **Codex lane**: `observe/candidate-floor-run.bml`, written in BML in its own worktree, proven
+  outside its sandbox, merged (#676) and pinned (#4169). The resident now reads a candidate kernel
+  against every band; the rewrite's floor can be taken by one door instead of by hand.
+- **The seed's dirt has a source**: a `scheduled-walk.bml` launched at about 17:58 from the Cursor
+  application's window on the seed checkout (its process descends from a Cursor extension-host
+  command shell) ran for over two hours inside the seed, landing native turns on kernel main
+  (`38c84bf3d`, `4c71c969d`) and leaving its in-flight turn as uncommitted edits there: a 34-line
+  `stat`-based presence change to `runtime/fkwu-uni.c` that the steward's tick built into the organs'
+  binary at 18:46, and appended rows in twenty tracked receipts. Both Claude siblings working on the
+  kernel that evening ruled themselves out by their own accounts (one in `coherence-kernel-repro`, one
+  in a `core-native-tuning` worktree with read-only probes). While that walk runs the seed cannot
+  fast-forward and sits behind main; walks belong to their launchd slots from `coherence-kernel-walk`,
+  and the seed stays the organs' clean host. The row I set aside at 18:01 was that walk's heal row.
+- **Two dead ear-lane births** (reported by the Glass session): each re-stand of the live ear lane
+  after a TERM cost one birth that never opened inside the sensor's 120 s patience before the second
+  opened in 2 s.
+
 ## Kernel-side frequency, read and left for its own landing
 
 The kernel pin is a sibling body with its own door. These carry the same fear-and-control
