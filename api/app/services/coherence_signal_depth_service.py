@@ -13,6 +13,7 @@ Each signal is normalized to 0.0-1.0 and weighted to produce an aggregate score.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -28,24 +29,37 @@ SIGNAL_WEIGHTS: dict[str, float] = {
     "value_realization": 0.20,
 }
 
-# Cache to avoid recomputing on every request
-_CACHE: dict[str, Any] = {"expires_at": 0.0, "result": None}
-_CACHE_TTL_SECONDS = 30.0
+# The homepage and the witness both re-read this slower than a request
+# burst: the witness round is 180s. A 30s cache had already expired by
+# then, so every round paid a cold recompute and the homepage waited
+# past the web organ's 2s line. Hold a fresh score for 300s. A request
+# that arrives after that returns the held score and refreshes aside,
+# so the page does not wait out the gap between rounds.
+_CACHE: dict[str, Any] = {"expires_at": 0.0, "result": None, "refreshing": False}
+_CACHE_TTL_SECONDS = 300.0
+_refresh_lock = threading.Lock()
+_refresh_thread: threading.Thread | None = None
 
 
-def _task_completion_score() -> tuple[float, dict[str, Any]]:
+def _portfolio_ideas():
+    """One portfolio read for every signal that sums over ideas."""
+    from app.services import idea_service
+
+    try:
+        return idea_service.list_ideas(read_only_guard=True).ideas
+    except Exception:
+        logger.debug("coherence score: failed to read ideas", exc_info=True)
+        return None
+
+
+def _task_completion_score(ideas) -> tuple[float, dict[str, Any]]:
     """Compute score from idea portfolio task completion rates.
 
     Score = validated_ideas / total_ideas (with partial credit for PARTIAL).
     """
-    from app.services import idea_service
     from app.models.idea import ManifestationStatus
 
-    try:
-        portfolio = idea_service.list_ideas(read_only_guard=True)
-        ideas = portfolio.ideas
-    except Exception:
-        logger.debug("task_completion: failed to read ideas", exc_info=True)
+    if ideas is None:
         return 0.5, {"error": "failed to read ideas", "total": 0}
 
     if not ideas:
@@ -193,20 +207,14 @@ def _runtime_health_score() -> tuple[float, dict[str, Any]]:
     }
 
 
-def _value_realization_score() -> tuple[float, dict[str, Any]]:
+def _value_realization_score(ideas) -> tuple[float, dict[str, Any]]:
     """Compute score from value gap analysis.
 
     Score = actual_value / potential_value across idea portfolio.
     """
-    from app.services import idea_service
-
-    try:
-        portfolio = idea_service.list_ideas(read_only_guard=True)
-    except Exception:
-        logger.debug("value_realization: failed to read ideas", exc_info=True)
+    if ideas is None:
         return 0.5, {"error": "failed to read ideas"}
 
-    ideas = portfolio.ideas
     if not ideas:
         return 0.5, {"note": "no ideas registered"}
 
@@ -243,13 +251,44 @@ def compute_coherence_score() -> dict[str, Any]:
     cached = _CACHE.get("result")
     if cached and _CACHE.get("expires_at", 0.0) > now:
         return cached
+    if cached is not None:
+        _refresh_score_aside()
+        return cached
 
+    return _compute_coherence_score(now)
+
+
+def _refresh_score_aside() -> None:
+    """Recompute off the request so a witness round never waits on a cold score."""
+    global _refresh_thread
+    with _refresh_lock:
+        if _CACHE.get("refreshing"):
+            return
+        _CACHE["refreshing"] = True
+
+        def _run() -> None:
+            try:
+                _compute_coherence_score(time.time())
+            finally:
+                with _refresh_lock:
+                    _CACHE["refreshing"] = False
+
+        _refresh_thread = threading.Thread(
+            target=_run,
+            name="coherence-score-refresh",
+            daemon=True,
+        )
+        _refresh_thread.start()
+
+
+def _compute_coherence_score(now: float) -> dict[str, Any]:
+    ideas = _portfolio_ideas()
     signal_fns = {
-        "task_completion": _task_completion_score,
+        "task_completion": lambda: _task_completion_score(ideas),
         "spec_coverage": _spec_coverage_score,
         "contribution_activity": _contribution_activity_score,
         "runtime_health": _runtime_health_score,
-        "value_realization": _value_realization_score,
+        "value_realization": lambda: _value_realization_score(ideas),
     }
 
     signals: dict[str, dict[str, Any]] = {}
@@ -296,3 +335,4 @@ def invalidate_cache() -> None:
     """Clear cached score — useful for testing."""
     _CACHE["expires_at"] = 0.0
     _CACHE["result"] = None
+    _CACHE["refreshing"] = False

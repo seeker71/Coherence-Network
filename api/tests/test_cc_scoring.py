@@ -49,6 +49,54 @@ def test_coherence_score_computed_at_is_iso(client):
     assert "T" in body["computed_at"]
 
 
+def test_cold_score_reads_the_idea_portfolio_once(monkeypatch):
+    """Task completion and value realization share one portfolio read."""
+    from app.services import coherence_signal_depth_service as svc
+    import app.services.idea_service as idea_service
+
+    svc.invalidate_cache()
+    calls = {"n": 0}
+
+    class _Portfolio:
+        ideas: list = []
+
+    def _list_ideas(**_kwargs):
+        calls["n"] += 1
+        return _Portfolio()
+
+    monkeypatch.setattr(idea_service, "list_ideas", _list_ideas)
+    svc.compute_coherence_score()
+    assert calls["n"] == 1
+    svc.invalidate_cache()
+
+
+def test_expired_score_is_served_while_it_refreshes(monkeypatch):
+    """A witness round receives the held score; the refresh does not block it."""
+    from app.services import coherence_signal_depth_service as svc
+    import app.services.idea_service as idea_service
+
+    stale = {
+        "score": 0.25,
+        "signals": {},
+        "signals_with_data": 0,
+        "total_signals": 5,
+        "computed_at": "stale-marker",
+    }
+    svc._CACHE["result"] = stale
+    svc._CACHE["expires_at"] = 0.0
+    svc._CACHE["refreshing"] = False
+
+    class _Portfolio:
+        ideas: list = []
+
+    monkeypatch.setattr(idea_service, "list_ideas", lambda **_kwargs: _Portfolio())
+    served = svc.compute_coherence_score()
+    assert served["computed_at"] == "stale-marker"
+    if svc._refresh_thread is not None:
+        svc._refresh_thread.join(timeout=5)
+    svc.invalidate_cache()
+
+
 def test_signal_depth_service_returns_dict():
     """Unit-test the underlying service the router wraps."""
     from app.services import coherence_signal_depth_service
