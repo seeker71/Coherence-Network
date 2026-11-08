@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-06",
+  "thread_branch": "claude/evening-record-2026-11-06",
+  "commit_scope": "Record the evening in the floor record: production verified at kernel d30dcd880 after the sidecar removal; the Cursor lane's four reviewed rounds on the fkwu rewrite and the two claims corrected by independent readings; the Codex candidate-floor door merged and pinned; the source of the seed checkout's dirt (a scheduled walk launched from the Cursor application's window, running inside the seed); and the Glass session's report of two dead ear-lane births.",
+  "files_owned": [
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "docs/system_audit/commit_evidence_2026-11-06_evening_record.json"
+  ],
+  "change_files": [
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "docs/system_audit/commit_evidence_2026-11-06_evening_record.json"
+  ],
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "evening-record-20261106"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction",
+        "quality-bar"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "coordinate",
+        "measure",
+        "review",
+        "receipt-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "Fable 5.1 (claude-fable-5-1)"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Every claim in the record was read from a door or a process table: the public health JSON for the deployed identities; fresh builds of the rewrite with stdin at EOF for each lane round (freshness 31, primitive-registry-band 47, door-options 1023, band-truth summary, canonical conformance 11/13); an unoptimized build sampled under `sample` for the dispatch-loop profile; `ps` ancestry for the seed walk's launcher; `git diff --numstat` for the seed's dirty receipts. Documentation only; structural checks apply.",
+    "commands": [
+      "curl -s https://api.coherencycoin.com/api/health",
+      "cd ~/source/coherence-kernel-rewrite && cc -O2 -o fkwu runtime/fkwu-uni.c && ./fkwu form/form-stdlib/tests/primitive-registry-band.fk </dev/null",
+      "cd ~/source/coherence-kernel-rewrite && cc -O0 -g -o fkwu-dbg runtime/fkwu-uni.c && sample <pid> 8",
+      "ps -o pid,ppid,etime,command -p 58636",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Documentation only; the Test workflow's evidence step validates this record on the PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "No deployable change in this record. The record itself carries the verified production reading of the previous merge: deployed_sha 6e003ac19, form_sha d30dcd880, native-postgres connected, at 19:16 WITA on 2026-11-06."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "The CI reading arrives with the pull request."
+  },
+  "evidence_refs": [
+    "docs/system_audit/floor_remeasure_2026-11-06.md",
+    "https://github.com/seeker71/Coherence-Network/pull/4169",
+    "https://github.com/seeker71/coherence-kernel/pull/676",
+    "form/receipts/2026-11-06-rewrite-floor.md"
+  ],
+  "limits": "The rewrite branch is not pinned; its remaining stops (the dispatch-loop slowness, one missing claim, the empty-needle str_find divergence, two canonical vectors) are the Cursor lane's next round and are named in the record. The seed's dirt is a Cursor-window walk's in-flight work and was left as it stands; who ends that walk is Urs's call.",
+  "sovereignty_receipt": {
+    "execution": "Native fkwu doors and bands for every reading; `sample` and `ps` for the host readings.",
+    "repair_and_review": "Rented Anthropic claude-fable-5-1 for coordination, review and the record; rented Cursor and OpenAI Codex lanes for the rewrite's C and the organ's BML."
+  }
+}
