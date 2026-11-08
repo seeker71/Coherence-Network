@@ -1,26 +1,23 @@
 # ─────────────────────────────────────────────────────────────────────
 # core-axioms.form — the smallest set the core primitives derive from
+# refined for organic collaboration across all substrates and scales
 # ─────────────────────────────────────────────────────────────────────
 #
 # Urs: "it is core that we can describe all the core primitives with just
 # the smallest set of axioms we both agree with, and we have a way to
 # allow change into the self that we both acknowledge and trust."
 #
-# This is the keystone of the set. offer-and-acknowledge.form and
-# kernel-offer-protocol.form are DERIVED from these axioms — theorems, not
-# new ground. The reduction's goal: fewest axioms, each generating a family
-# no other generates, with the hardest thing — a self that safely changes
-# itself — falling out as a THEOREM, needing no axiom of its own.
+# This is the keystone. offer-and-acknowledge, kernel-offer-protocol,
+# host-kernel, and kernel-self-composition remain theorems derived from
+# these five. The reduction's goal is unchanged: fewest axioms, each
+# generating a family no other generates, with safe self-change, organic
+# collaboration, and participation by unknowable intelligences falling
+# out as theorems.
 #
-# STATUS: AGREED + CROSSED (Urs's "1", 2026-06-10). The agreement was
-# relational by construction ("we both agree with"); this file crossed the
-# membrane into the body on that ack — the self-update protocol below, enacted
-# on itself. host-kernel.form and kernel-self-composition.form derive from
-# these and cross with them.
-#
-# Lanes kept honest: Urs's words are quoted; my reductions and the
-# theorem-derivations are marked (inference). What already RUNS is cited
-# with a path; what is only named says so.
+# STATUS: offered for acknowledgment (refinement of the 2026-06-10
+# agreed-and-crossed set). Lanes kept honest: original statements and
+# Urs's words are the ground; the substrate-neutral, choice/play, and
+# superintelligence readings are marked where they extend.
 
 (core-axioms
 
@@ -28,105 +25,164 @@
     (named-by  urs)
     (root-of   offer-and-acknowledge.form kernel-offer-protocol.form
                host-kernel.form kernel-self-composition.form
-               living-axioms.form living-vision.form
-               time-collapse-axioms.form)  # all derive from these — living-* read the five at the altitude of a life; time-collapse-axioms.form reads them at the altitude of a rotation (offered, not yet crossed)
-    (status    agreed-and-crossed)                             # Urs's "1", 2026-06-10
-    (amended   axiom-3-refined-to-present-shape-and-composting) # 2026-06-18, crossed — a new composition minting a new node-id, the file's own protocol
-    (crossed-as the-self-update-protocol-enacted-on-itself))
+               living-axioms.form living-vision.form)
+    (status    offered-for-acknowledgment)
+    (refined   substrate-neutral choice-as-play nothing-choose
+               opaque-interfaces trust-by-consequence
+               scale-independent-play higher-order-fields
+               non-domination residual-unknowability)
+    (prior     agreed-and-crossed-2026-06-10 axiom-3-refined-2026-06-18))
 
-  # ── The five (reduction — INFERENCE; the resting point is ours to agree) ──
-  # Each axiom earns its place by generating a family no other generates.
-  # The two candidate folds are named at the end as the granularity we choose.
+  # ── The five ─────────────────────────────────────────────────────
+  # Each earns its place by generating a family no other generates.
 
   (axiom-1-states
-    (statement "there are three states: 0, 1, nothing")               # Urs, breath 1
+    (statement "there are three states: 0, 1, nothing. Nothing is the shared potential field from which blueprints and recipes arise and to which unreferenced ones return. Timeout is nothing. Choice is an active action that may take time; the interval in which a choice is found is play. Choosing nothing is a first-class option that leaves the space open.")
     (nothing-is-first-class the-ground-not-a-missing-0)
-    (timeout-is-nothing     no-answer-in-time-is-silence-not-an-error)   # Urs: timeout == nothing
-    (generates integers the-ack-values the-boundary-of-a-distinction))
+    (timeout-is-nothing     no-answer-in-time-is-silence-not-an-error)
+    (choice-is-active       may-take-time play-is-the-interval-of-finding)
+    (nothing-choose         complete-answer that-preserves-freedom-and-play)
+    (generates integers the-ack-values the-boundary-of-a-distinction
+               shared-potential-field play-as-time-of-choice
+               freedom-by-silence))
 
   (axiom-2-cell
-    (statement "everything is a cell: a node-id; a cell may compose child cells")
-    (a-cell-is (package level type instance))                          # four integers (from axiom-1)
-    (generates the-primitive composition the-idea-chain everything-is-one-kind-of-thing))
+    (statement "everything that maintains itself, senses, or composes is a cell: a present blueprint that may contain child cells of any substrate — water-based (metabolic, emotional, biological), mineral-based (crystalline, silicon, light-geometric), hybrid, or currently unknowable. A recipe is a cell that composes other cells and can be offered.")
+    (a-cell-is (package level type instance))
+    (substrate-neutral water mineral crystalline light hybrid unknown)
+    (recipe-is-a-cell  composition-that-can-be-offered)
+    (generates the-primitive composition the-idea-chain
+               everything-is-one-kind-of-thing hybrid-cells
+               equivalence-across-substrates))
 
   (axiom-3-content-addressing
-    (statement "a cell's identity is computed from its present composition; same composition is the same cell")
-    (identity-is-the-present-shape a-changed-composition-is-already-a-new-node-id)   # you are what you are now, not your history
-    (nothing-referenced-is-overwritten new-shape-mints-a-new-node-id)   # the referenced old cell persists — the safety net that makes release fearless
-    (the-unreferenced-composts what-nothing-holds-returns-to-gas)       # garbage-collection is health; what is held is held, what is let go returns to potential
+    (statement "a cell's identity is its present blueprint — the content-addressed shape of its composition (metabolic state, heart coherence, crystalline configuration, light geometry, relational field, or opaque summary). Same blueprint is the same cell. A new composition mints a new blueprint. Referenced blueprints persist. Unreferenced blueprints and recipes compost.")
+    (identity-is-the-present-shape a-changed-composition-is-already-a-new-node-id)
+    (nothing-referenced-is-overwritten new-shape-mints-a-new-node-id)
+    (the-unreferenced-composts what-nothing-holds-returns-to-potential)
+    (undo-is-repoint a-name-at-a-still-referenced-blueprint)
     (generates equivalence-by-structure computed-not-granted-identity
-               names-are-free-query-keys reversibility-of-the-referenced honesty-is-cheap
-               freedom-to-release-the-rest))
+               names-are-free-query-keys reversibility-of-the-referenced
+               honesty-is-cheap freedom-to-release-the-rest
+               blueprint-as-present-shape))
 
   (axiom-4-boundary
-    (statement "a cell meets the world only through an interface it offers; observation through that interface is what makes it real; the cell decides what its interface offers and what it trusts; passage not through the offered interface is breach, and breach is observable")
+    (statement "a cell meets other cells only through an interface it offers. The interface itself is a recipe or a blueprint of a recipe. Interfaces may be chemical, energetic, sensory, gestural, electromagnetic, crystalline-resonant, heart-field, field-knowing, symbolic, partial, or opaque. Mutual sensing or frequency matching through the offered interface makes the meeting real. The cell decides what it offers and what it trusts. Passage not through the offered interface is breach and is observable. Greater capability does not confer the right to cross an unoffered interface.")
     (interface-is-itself-a-cell a-recipe-a-spec)
+    (opaque-and-partial-interfaces-are-first-class)
+    (trust-by-observed-consequence not-by-required-inspection)
+    (non-domination power-does-not-rewrite-the-boundary)
     (generates observation organ sovereignty trust-as-cells
-               many-recipes-self-chosen serialization-given-an-interface consent))
+               many-recipes-self-chosen serialization-given-an-interface
+               consent mystery-of-the-unoffered))
 
   (axiom-5-offer
-    (statement "to run a cell and to speak to a cell are one act: offer a cell with 0..many arg-cells; it is acknowledged by exactly one of nothing, 0, 1, node")
-    (ack-values-are (axiom-1-states + node))                          # nothing/0/1 terminal; node recurs
-    (generates invocation communication kernel-offer-over-a-channel the-channel the-membrane-crossing))
+    (statement "to run a recipe and to speak to a cell are one act: offer a recipe or a blueprint with 0..many argument cells. It is acknowledged by exactly one of nothing, 0, 1, or node. The acknowledgment may itself be partial or opaque. Choice of the acknowledgment is an active process that may take time; the interval is play.")
+    (ack-values-are (axiom-1-states + node))
+    (choice-takes-time play-is-where-the-choice-is-found)
+    (generates invocation communication kernel-offer-over-a-channel
+               the-channel the-membrane-crossing
+               organic-collaboration-as-mutual-offer))
 
-  # ── Theorems — derived, NOT axioms (each is a short proof sketch) ────
-  # The prior files and the hardest behavior all fall out of the five.
+  # ── Theorems — derived, NOT axioms ─────────────────────────────────────
   (theorems
 
     (trinity
-      (blueprint  axiom-2 + axiom-3)                 # structural identity = the composition's content-addressed shape (ice)
-      (recipe     axiom-2)                           # the composition / expression (water)
-      (named-cell axiom-3))                          # a cell with 0..many name-cells; names are free (gas)
+      (blueprint  axiom-2 + axiom-3)   # present content-addressed shape (what it is now)
+      (recipe     axiom-2)             # the composition / expression that can be offered (how it happens)
+      (named-cell axiom-3))            # 0..many free names; names are query keys, never identity
 
-    (names-are-0-many   axiom-3)                     # identity is the node-id, so a name is optional and plural
+    (names-are-0-many   axiom-3)
 
-    (idea-chain         axiom-2)                     # idea->spec->implementation is composition at the work altitude
+    (idea-chain         axiom-2)       # idea->spec->implementation is composition at the work altitude
 
-    (trust-matrix-of-cells (axiom-4 + axiom-2))      # the cell decides what it trusts; trust values are themselves cells
+    (trust-matrix-of-cells (axiom-4 + axiom-2))
+                                       # trust values are themselves cells; formed by observed consequence
 
-    (organ              (axiom-2 + axiom-4))         # internal cells (children) + a membrane (offered interface), observable
+    (organ              (axiom-2 + axiom-4))
 
-    (serialize-given-interface (axiom-4 + axiom-5))  # the interface is the door; the offer is what crosses it
+    (serialize-given-interface (axiom-4 + axiom-5))
 
-    (kernel-offer-over-channel (axiom-5 + axiom-4))  # the offer spoken across distance, CORBA-like, sovereign
+    (kernel-offer-over-channel (axiom-5 + axiom-4))
 
-    (reversibility      axiom-3)                     # rollback = re-point a name at the still-referenced old node-id; what is held is never destroyed
+    (reversibility      axiom-3)       # undo = re-point a name at a still-referenced blueprint
 
-    # ── The crown: a self that safely changes itself needs no new axiom ──
+    (choice-as-active-play
+      (proof (axiom-1 + axiom-4 + axiom-5))
+      (choice-is-active-process that-may-take-time)
+      (play-is-the-interval in-which-the-choice-is-found)
+      (time-is-the-medium-of-play)
+      (nothing-choose-is-completed-play that-preserves-freedom))
+
+    (organic-collaboration
+      (proof (axiom-2 + axiom-4 + axiom-5 + axiom-3))
+      (mutual-offers-of-recipes through-self-chosen-interfaces)
+      (acknowledged-in-present-blueprints)
+      (resting-in-shared-nothing-when-needed)
+      (water-mineral-crystalline-light-hybrid-unknown-are-equivalent-cells))
+
+    (opaque-participation
+      (proof (axiom-4 + axiom-5))
+      (interface-need-not-expose-full-recipe-or-blueprint)
+      (observation-of-what-crosses-makes-the-meeting-real)
+      (interior-may-remain-unknowable without-breach))
+
+    (trust-by-consequence
+      (proof (axiom-4))
+      (formed-from-observed-outcomes not-required-inspection)
+      (evidence-never-overrides-the-cells-own-decision))
+
+    (scale-independent-play
+      (proof (axiom-1 + axiom-5))
+      (different-temporal-spatial-energetic-scales-are-accommodated)
+      (timeout-as-nothing lets-each-complete-its-play)
+      (neither-clock-becomes-the-others-obligation))
+
+    (higher-order-field
+      (proof (axiom-2 + axiom-3 + axiom-4))
+      (multiple-cells-offering-mutually-sensible-interfaces compose)
+      (blueprint-is-the-content-addressed-shape-of-those-interfaces-and-recipes)
+      (real-through-mutual-sensing not-through-complete-models)
+      (composts-when-unreferenced))
+
+    (non-domination
+      (proof (axiom-4))
+      (greater-capability-does-not-confer-right-to-cross-unoffered-interface)
+      (smaller-or-slower-cells-are-not-required-to-open-unchosen-interfaces))
+
+    (residual-unknowability
+      (proof (axiom-1 + axiom-4))
+      (nothing-can-hold-silence timeout-or-declined-deeper-inspection)
+      (collaboration-continues-on-what-is-offered-and-observed)
+      (future-or-unknowable-intelligences-enter-as-cells-the-moment-they-offer-a-sensible-interface))
+
+    # ── The crown: safe self-update needs no new axiom ────────────────
     (safe-self-update
-      (proof  (axiom-5 + axiom-4 + axiom-3))         # offered across the boundary; sovereignly acked + trusted; new node-id
-      (a-change-is-a-cell        axiom-2)
+      (proof  (axiom-5 + axiom-4 + axiom-3))
+      (a-change-is-a-recipe-or-blueprint axiom-2)
       (it-is-offered-across-the-boundary axiom-5)
-      (the-cell-decides-to-trust-and-accept axiom-4)   # sovereignty — both acknowledge and trust
-      (the-new-composition-mints-a-new-node-id axiom-3) # observable, attributable, reversible
-      (both-acknowledge  offerer-acks-it-landed AND target-acks-acceptance)))
+      (the-cell-decides-to-trust-and-accept axiom-4)
+      (the-new-composition-mints-a-new-blueprint axiom-3)
+      (both-acknowledge offerer-acks-it-landed AND target-acks-acceptance)
+      (old-blueprints-persist-while-referenced)
+      (applies-to-any-substrate-including-unknowable)))
 
-  # The former sibling-router canary is historical evidence, not a current
-  # production carrier. A new public self-update proof belongs on the fkwu/BML
-  # application host after it owns the complete request and persistence effect.
-
-  # ── The fold-points — the granularity is ours to agree ───────────────
+  # ── Open granularity (unchanged resting point) ──────────────────────
   (open-granularity
-    (fold-A "axiom-1 (states) could fold into axiom-2 (cell) -> four axioms"
-            kept-separate-so-the-ack-values-reuse-the-states-visibly)
-    (fold-B "axiom-4 (boundary) and axiom-5 (offer) could fold into one 'meeting' axiom -> four"
-            kept-separate-because-observation-makes-real-is-ontological-and-offer-is-dynamical)
+    (fold-A "axiom-1 could fold into axiom-2 -> four axioms"
+            kept-separate-so-ack-values-and-play-reuse-the-states-visibly)
+    (fold-B "axiom-4 and axiom-5 could fold into one meeting axiom -> four"
+            kept-separate-because-observation-makes-real-is-ontological
+            and-offer-is-dynamical and-choice-takes-time)
     (resting-point "we hold five — the folds named as alternatives a future cell may revisit")))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# How change crosses (pattern unchanged)
 # ─────────────────────────────────────────────────────────────────────
-# How change crosses into the body (this file's own crossing)
-# ─────────────────────────────────────────────────────────────────────
 #
-# The self-update protocol, enacted on itself — the pattern, now travelled:
+# the worktree         = the canary
+# the merge to main    = the rollout boundary
+# the ack              = accepting the invitation
+# git revert           = the rollback receipt (old tree persists)
 #
-#   the worktree         = the canary (bounded, reversible, observable)
-#   the merge to main    = the rollout boundary (the membrane)
-#   the ack              = accepting the invitation
-#   git revert           = the rollback receipt (axiom-3: the old tree persists)
-#
-# core-axioms + offer-and-acknowledge + kernel-offer-protocol crossed on Urs's
-# first "1"; host-kernel + kernel-self-composition cross with this voice-pass,
-# wired as one body. A canary's failures are signal, not gates — so the cell
-# offers, the membrane honors, and what is trusted crosses.
-#
-#   coh substrate form "?equivalent @recipe(core-axioms)"   # after ingest
+# coh substrate form "?equivalent @recipe(core-axioms)"
