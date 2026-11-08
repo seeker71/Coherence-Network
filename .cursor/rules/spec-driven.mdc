@@ -44,7 +44,7 @@ The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It i
 
 ## Principles (from Living Codex)
 
-- Everything is a Node (data as nodes / edges where applicable)
+- A cell is a present blueprint. A recipe is a composition that can be offered. Names are query keys.
 - Adapters over features — external I/O stays thin
 - Tiny deltas — minimal, git-like changes
 - Real data and algorithms over mocks

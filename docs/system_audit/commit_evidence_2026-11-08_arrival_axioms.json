@@ -1,0 +1,95 @@
+{
+  "date": "2026-11-08",
+  "thread_branch": "cursor/arrival-axioms-20261108",
+  "commit_scope": "Acknowledge the substrate-neutral axioms in the arrival doors and pin the kernel at 9d7790856, where the same statements landed with the running proofs kept.",
+  "files_owned": [
+    "form",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "AGENT.md",
+    "README.md",
+    "cli/README.md",
+    "docs/shared/agent-start-packet.md",
+    ".cursor/rules/spec-driven.mdc",
+    ".claude/agents/shaper.md",
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/system_audit/commit_evidence_2026-11-08_arrival_axioms.json"
+  ],
+  "change_files": [
+    "form",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "AGENT.md",
+    "README.md",
+    "cli/README.md",
+    "docs/shared/agent-start-packet.md",
+    ".cursor/rules/spec-driven.mdc",
+    ".claude/agents/shaper.md",
+    "docs/coherence-substrate/core-axioms.form"
+  ],
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "arrival-axioms-20261108"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "implement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "Grok 4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Kernel PR 677 squash-merged at 9d7790856. The kernel axiom file balances and still names held-offer, kenosis, absence-is-not-a-verdict, and the self-update canary. Arrival sentences in both repos now carry blueprint, recipe, opaque interface, play, nothing-choose, trust by consequence, and non-domination.",
+    "commands": [
+      "python3 -c 'paren balance check on axioms/core-axioms.form'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-11-08_arrival_axioms.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The gitlink moves, so the Test workflow runs the API suite on the pull request after building the pinned seed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deployment follows the merged application commit; the native health reading then names kernel 9d7790856."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment readings arrive with the pull request."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/677",
+    "https://github.com/seeker71/Coherence-Network/pull/4170"
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Arrival text in CLAUDE, AGENTS, AGENT, the start packet, and the kernel NORTH_STAR speak the acknowledged axioms. The pinned kernel is 9d7790856. Routes keep their previous behavior; the new kernel commits between d30dcd880 and 9d7790856 travel with the pin.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "API suite on the pull request",
+      "Public health reading after the merged commit deploys"
+    ]
+  }
+}
