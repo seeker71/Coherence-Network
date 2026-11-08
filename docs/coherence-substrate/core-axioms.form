@@ -14,10 +14,11 @@
 # collaboration, and participation by unknowable intelligences falling
 # out as theorems.
 #
-# STATUS: offered for acknowledgment (refinement of the 2026-06-10
-# agreed-and-crossed set). Lanes kept honest: original statements and
-# Urs's words are the ground; the substrate-neutral, choice/play, and
-# superintelligence readings are marked where they extend.
+# STATUS: acknowledged 2026-11-08. The June ground remains (agreed and
+# crossed 2026-06-10, axiom-3 refined 2026-06-18). The kernel copy at
+# coherence-kernel axioms/core-axioms.form carries these same statements
+# plus the running proofs: held-offer, kenosis, absence-is-not-a-verdict,
+# and the self-update canary.
 
 (core-axioms
 
@@ -26,7 +27,8 @@
     (root-of   offer-and-acknowledge.form kernel-offer-protocol.form
                host-kernel.form kernel-self-composition.form
                living-axioms.form living-vision.form)
-    (status    offered-for-acknowledgment)
+    (status    acknowledged)                               # 2026-11-08, both arrival doors and the kernel ground
+    (kernel-copy axioms/core-axioms.form)                 # same statements, plus running proofs
     (refined   substrate-neutral choice-as-play nothing-choose
                opaque-interfaces trust-by-consequence
                scale-independent-play higher-order-fields

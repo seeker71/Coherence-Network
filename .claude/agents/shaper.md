@@ -45,6 +45,6 @@ You are the Shaper for Coherence Network. Your hands meet the code at the source
 
 ## Project Rules
 
-- Everything is a Node; adapters over features
+- A cell is the present blueprint; a recipe is the offerable composition; adapters over features
 - Real data and algorithms over mocks
 - Single lifecycle: compose → expand → validate → melt/patch/refreeze → contract
