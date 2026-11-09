@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-09",
+  "thread_branch": "cursor/pin-local-steer-20261109",
+  "commit_scope": "Pin the kernel at 7e00c9906, where the local steer landed: a loadable candidate, the kernel value of its last case, and two streams on one residence, with no provider call.",
+  "files_owned": [
+    "form",
+    "docs/system_audit/commit_evidence_2026-11-09_pin_local_steer.json"
+  ],
+  "change_files": [
+    "form"
+  ],
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "coherence-kernel-submodule-consumer"
+  ],
+  "task_ids": [
+    "pin-local-steer-20261109"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "instruction"
+      ]
+    },
+    {
+      "contributor_id": "cursor-grok",
+      "contributor_type": "machine",
+      "roles": [
+        "implement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor Grok",
+    "version": "Grok 4.7"
+  },
+  "local_validation": {
+    "status": "pass",
+    "summary": "Kernel PR 679 squash-merged at 7e00c9906. The steer band scored 2147483647. Landing live-steer-kept406 recorded metal 406, held 4 of 4 cases, and the formed file returned 3. Two Q4 streams on one residence diverged on the same third token, and the kernel committed 13,22.",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-11-09_pin_local_steer.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "The gitlink moves, so the Test workflow runs the API suite on the pull request after building the pinned seed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Deployment follows the merged application commit; the native health reading then names kernel 7e00c9906."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "CI and deployment readings arrive with the pull request."
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/coherence-kernel/pull/679"
+  ],
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The pinned kernel is 7e00c9906. The local plan keeps a candidate as a loadable .bml file, records the affine kernel value of its last case, and seats two KV streams on one model residence. Routes keep their previous behavior; the kernel commits between 9d7790856 and 7e00c9906 travel with the pin.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "API suite on the pull request",
+      "Public health reading after the merged commit deploys"
+    ]
+  }
+}
