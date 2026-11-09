@@ -41,6 +41,8 @@ export function buildSystemLineageSearchParams(
 export function buildFlowSearchParams(options: {
   ideaId?: string;
   runtimeWindowSeconds?: number;
+  /** false asks for the summary and queue without items. */
+  includeItems?: boolean;
 } = {}): URLSearchParams {
   const params = new URLSearchParams();
   setNumeric(params, "runtime_window_seconds", options.runtimeWindowSeconds ?? UI_RUNTIME_WINDOW);
@@ -50,6 +52,9 @@ export function buildFlowSearchParams(options: {
   const ideaId = (options.ideaId || "").trim();
   if (ideaId) {
     params.set("idea_id", ideaId);
+  }
+  if (options.includeItems === false) {
+    params.set("include_items", "false");
   }
   return params;
 }

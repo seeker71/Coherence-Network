@@ -22,12 +22,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 0 # versionCode = commit count needs full history
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
@@ -48,7 +48,7 @@ jobs:
              sema-companion-${{ steps.ver.outputs.code }}.apk
 
       - name: Refresh rolling release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: sema-companion-latest
           name: Sema Companion (rolling)
