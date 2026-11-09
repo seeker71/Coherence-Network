@@ -541,3 +541,63 @@ async def test_multi_device_identity_flow():
         assert (await c.post("/api/contributors/claim-by-identity", json={})).status_code == 400
         assert (await c.post("/api/contributors/claim-by-identity",
                              json={"email": f"ghost+{uuid4().hex[:6]}@nowhere.test"})).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Inventory flow — the list shape and the detail shape
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_inventory_flow_answers_the_list_shape_and_idea_id_reaches_the_detail():
+    """/api/inventory/flow carries, per idea, what the pages read; the builder's full
+    row (list totals and truncation flags, chain, by_role_meta, task fingerprint, the
+    next-unblock direction) answers for one idea or on detail=true. The queue is
+    bounded by unblock_queue_limit while summary.queue_items keeps the whole count,
+    and include_items=false answers the summary and queue alone. Measured before this
+    claim: 15 MB for 4,597 ideas of which 84 carried anything tracked."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        idea_id = (await _create_idea(c))["id"]
+
+        listing = (await c.get("/api/inventory/flow", params={"unblock_queue_limit": 1})).json()
+        item = next(row for row in listing["items"] if row["idea_id"] == idea_id)
+        signals = item.pop("idea_signals")
+        assert signals["confidence"] == 0.8 and signals["value_gap"] > 0 and set(signals) == {"confidence", "value_gap"}
+        counts = {"pass": 0, "fail": 0, "pending": 0}
+        assert item == {
+            "idea_id": idea_id,
+            "idea_name": f"Idea {idea_id}",
+            "idea_classification": {"internal": False, "actionable": True},
+            "spec": {"tracked": False, "spec_ids": []},
+            "process": {"tracked": False, "task_ids": [], "thread_branches": [], "evidence_refs": [], "source_files": []},
+            "implementation": {
+                "tracked": False, "lineage_ids": [], "implementation_refs": [],
+                "runtime_events_count": 0, "runtime_total_ms": 0.0, "runtime_cost_estimate": 0.0,
+            },
+            "validation": {"tracked": False, "local": counts, "ci": counts, "e2e": counts, "public_endpoints": []},
+            "contributors": {"tracked": False, "total_unique": 0, "all": [], "by_role": {}},
+            "contributions": {"tracked": False, "usage_events_count": 0, "measured_value_total": 0.0},
+            "assets": {"tracked": False},
+            "interdependencies": {"blocked": True, "blocking_stage": "spec", "estimated_unblock_cost": 2.0},
+        }
+        assert len(listing["unblock_queue"]) == 1
+        assert listing["summary"]["queue_items"] >= 1
+        assert listing["filter"] == {
+            "idea_id": None, "include_internal_ideas": False, "detail": False, "unblock_queue_limit": 1, "include_items": True,
+        }
+
+        detail = (await c.get("/api/inventory/flow", params={"idea_id": idea_id})).json()
+        assert [row["idea_id"] for row in detail["items"]] == [idea_id]
+        row = detail["items"][0]
+        assert row["chain"]["spec"] == "missing"
+        assert row["process"]["task_ids_total"] == 0 and row["process"]["task_ids_truncated"] is False
+        assert row["contributors"]["by_role_meta"] == {}
+        assert row["interdependencies"]["next_unblock_task"]["task_type"] == "spec"
+        assert idea_id in row["interdependencies"]["next_unblock_task"]["direction"]
+        assert detail["unblock_queue"][0]["task_fingerprint"] == row["interdependencies"]["task_fingerprint"]
+        assert detail["filter"]["detail"] is True
+
+        summary_only = (await c.get("/api/inventory/flow", params={"include_items": "false", "detail": "true"})).json()
+        assert summary_only["items"] == []
+        assert summary_only["summary"]["ideas"] == listing["summary"]["ideas"]
+        assert summary_only["filter"]["detail"] is True and summary_only["filter"]["include_items"] is False
